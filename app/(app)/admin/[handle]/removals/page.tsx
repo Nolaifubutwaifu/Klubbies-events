@@ -27,7 +27,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
   const { data: requests } = await supabase
     .from("media_removal_requests")
     .select("id, media_id, status, requested_at, auto_delete_at, resolved_at, requested_by")
-    .eq("club_id", ctx.club.id)
+    .eq("event_id", ctx.event.id)
     .order("status", { ascending: true })
     .order("requested_at", { ascending: false })
     .limit(30);
@@ -41,7 +41,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
       ? supabase.from("media").select("id, album_id, display_path, thumb_path, original_filename").in("id", mediaIds)
       : Promise.resolve({ data: [] }),
     askerIds.length
-      ? supabase.from("memberships").select("user_id, roster_name, claimed_name, users!memberships_user_id_fkey(display_name)").eq("club_id", ctx.club.id).in("user_id", askerIds)
+      ? supabase.from("memberships").select("user_id, roster_name, claimed_name, users!memberships_user_id_fkey(display_name)").eq("event_id", ctx.event.id).in("user_id", askerIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -63,14 +63,14 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
 
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
-      <PageTitle kicker={ctx.club.name} title="Removal requests">
+      <PageTitle kicker={ctx.event.name} title="Removal requests">
         A member asked for a photo to come down. It is already hidden from everyone — you decide whether the original
         goes too.
       </PageTitle>
 
       {open.length === 0 ? (
         <EmptyState title="Nothing waiting on you." art={<ConfettiArt />}>
-          When someone asks for a photo to come down it lands here, hidden from the club until you answer.
+          When someone asks for a photo to come down it lands here, hidden from the event until you answer.
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-5">
@@ -107,7 +107,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
                   </p>
                   <RemovalDecision requestId={request.id} />
                   {item?.album_id ? (
-                    <Link href={`/c/${handle}/a/${item.album_id}`} className="text-[14px] font-bold">
+                    <Link href={`/e/${handle}/a/${item.album_id}`} className="text-[14px] font-bold">
                       Open the album
                     </Link>
                   ) : null}

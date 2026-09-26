@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CalendarIcon, CameraIcon, ChevronLeftIcon, ChevronRightIcon, PlayIcon, PlusIcon, SearchIcon, XIcon } from "@/components/soft/icons";
 import { ConfettiArt, PhotoStackArt } from "@/components/soft/illustrations";
-import { EmptyClub } from "@/components/soft/EmptyClub";
+import { EmptyEvent } from "@/components/soft/EmptyEvent";
 import { formatDate, formatLongDate, plural } from "@/lib/format";
 import { findAnniversary } from "@/lib/media/anniversary";
 import { eventTypeLabel } from "@/lib/media/event-types";
@@ -58,7 +58,7 @@ export function SoftEvents({
   albums,
   hrefBase,
   canManage,
-  clubName,
+  eventName,
   newAlbumHref,
   firstName,
   notifiesOnNewAlbums = false,
@@ -67,9 +67,9 @@ export function SoftEvents({
   albums: StackedAlbum[];
   hrefBase: string;
   canManage: boolean;
-  clubName: string;
+  eventName: string;
   newAlbumHref: string;
-  /** Used for the greeting; empty falls back to the club name. */
+  /** Used for the greeting; empty falls back to the event name. */
   firstName?: string;
   /** Whether this member already gets the new-album email. */
   notifiesOnNewAlbums?: boolean;
@@ -110,14 +110,14 @@ export function SoftEvents({
     <div className="w-full px-4 pb-16 pt-6 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-[260px]">
-          {/* The club is the identity; the greeting is a nicety. A member in
-              four clubs needs to know which one this is at a glance. */}
+          {/* The event is the identity; the greeting is a nicety. A member in
+              four events needs to know which one this is at a glance. */}
           {firstName ? (
             <p className="mb-1 text-[14px] font-semibold text-ink-55" suppressHydrationWarning>
               {greeting()}, {firstName}
             </p>
           ) : null}
-          <h1 className="text-[clamp(30px,4.5vw,44px)]">{clubName}</h1>
+          <h1 className="text-[clamp(30px,4.5vw,44px)]">{eventName}</h1>
           <p className="mt-2 text-[15px] text-ink-55">
             {newCount
               ? `${plural(newCount, "album")} landed since you were last here.`
@@ -295,7 +295,7 @@ export function SoftEvents({
       ) : null}
 
       {albums.length === 0 ? (
-        <EmptyClub clubName={clubName} alreadySubscribed={notifiesOnNewAlbums} />
+        <EmptyEvent eventName={eventName} alreadySubscribed={notifiesOnNewAlbums} />
       ) : filtered.length === 0 ? (
         <div className="soft-card mt-6 flex flex-col items-start gap-3 p-8">
           <span className="text-accent-400">
@@ -410,7 +410,7 @@ export function SoftEvents({
                   </div>
 
                   {/* Title leads — it is the only thing anyone scans for. The
-                      old "Members only" line is gone: every album in a club is
+                      old "Members only" line is gone: every album in a event is
                       members-only, so repeating it on all six taught nothing. */}
                   <div className="p-3 sm:p-3.5">
                     <div className="soft-display line-clamp-2 text-[16px] text-ink sm:text-[20px]">{album.title}</div>

@@ -19,8 +19,8 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
           <button type="button" className="btn btn-primary" onClick={() => retry()}>
             Try again
           </button>
-          <Link href="/clubs" className="btn btn-secondary">
-            My clubs
+          <Link href="/events" className="btn btn-secondary">
+            My events
           </Link>
         </div>
       </div>

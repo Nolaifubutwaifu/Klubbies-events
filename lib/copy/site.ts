@@ -12,7 +12,7 @@
 //   - the new album email is sent when an album is published
 //   - "Save to Photos" uses the phone's share sheet; laptops get a zip
 //   - roster import reads CSV, TSV, XLSX and XLS
-//   - face recognition is on for every club by default (the committee can
+//   - face recognition is on for every event by default (the committee can
 //     turn it off); each member still chooses whether to add a selfie
 //
 // Not claimed anywhere, because it is not true: a free period before the
@@ -21,10 +21,10 @@
 
 export const PRICE = {
   amount: "A$20",
-  line: "A$20 a month per club",
-  trust: ["A$20 a month per club", "Unlimited members", "Cancel any time"],
+  line: "A$20 a month per event",
+  trust: ["A$20 a month per event", "Unlimited members", "Cancel any time"],
   /** What is and isn't charged, stated the way billing actually works. */
-  note: "Setting up is free. You pay when you activate the club to add members and upload.",
+  note: "Setting up is free. You pay when you activate the event to add members and upload.",
   includes: [
     "Unlimited members and albums",
     "Full quality photos and video",
@@ -36,7 +36,7 @@ export const PRICE = {
 
 export const FACE = {
   title: "Find every photo of you",
-  lead: "Add one selfie and Klubbies finds the photos you're in, across every album your club has shared. Only you see them.",
+  lead: "Add one selfie and Klubbies finds the photos you're in, across every album your event has shared. Only you see them.",
   points: [
     {
       title: "Your choice",
@@ -44,7 +44,7 @@ export const FACE = {
     },
     {
       title: "Only you see your matches",
-      body: "There is no way to search a club's photos for a person. Not for other members, and not for the committee.",
+      body: "There is no way to search a event's photos for a person. Not for other members, and not for the committee.",
     },
     {
       title: "Off whenever you like",
@@ -94,15 +94,15 @@ export const COMMITTEE_FEATURES: Feature[] = [
   {
     icon: "camera",
     title: "A link for the photographer",
-    body: "Send a hired or guest photographer an upload link. They never see the club.",
+    body: "Send a hired or guest photographer an upload link. They never see the event.",
   },
 ];
 
 export const STEPS = [
   {
     title: "Bring your member list",
-    short: "Upload the CSV or Excel file your club already keeps. That list is the door.",
-    body: "Name the club and you get a fixed web address to share. Drop in the membership CSV or Excel file your club already keeps, or type people in by hand. Klubbies finds the header row, lets you map the name and email columns, and shows exactly who will be added before anything happens.",
+    short: "Upload the CSV or Excel file your event already keeps. That list is the door.",
+    body: "Name the event and you get a fixed web address to share. Drop in the membership CSV or Excel file your event already keeps, or type people in by hand. Klubbies finds the header row, lets you map the name and email columns, and shows exactly who will be added before anything happens.",
   },
   {
     title: "Drop the whole night in",
@@ -111,7 +111,7 @@ export const STEPS = [
   },
   {
     title: "Members sign in, nobody else",
-    short: "Members use the email the club already has. Nobody else gets past the door.",
+    short: "Members use the email the event already has. Nobody else gets past the door.",
     body: "A member types their name and email. If the email is on the list, we send a code to that address. No password to forget, and no link that works for whoever it gets forwarded to. Members can set a password later if they sign in often.",
   },
 ] as const;
@@ -119,19 +119,19 @@ export const STEPS = [
 export const FAQS = [
   {
     q: "Who can see our photos?",
-    a: "Only people on your member list, signed in with their own email. Albums aren't public, aren't indexed by search engines, and there's no link you can forward to someone outside the club.",
+    a: "Only people on your member list, signed in with their own email. Albums aren't public, aren't indexed by search engines, and there's no link you can forward to someone outside the event.",
   },
   {
     q: "How does Photos of you work?",
-    a: "Face recognition is on for every club unless the committee switches it off, and every member is told. Then each member decides: add a selfie and we show you the photos you appear in. Only you see your matches, and you can turn it off whenever you like.",
+    a: "Face recognition is on for every event unless the committee switches it off, and every member is told. Then each member decides: add a selfie and we show you the photos you appear in. Only you see your matches, and you can turn it off whenever you like.",
   },
   {
-    q: "What happens when someone leaves the club?",
+    q: "What happens when someone leaves the event?",
     a: "Take them off the list and their access winds down over 30 days, with reminders so they can save what they want to keep.",
   },
   {
     q: "Do we have to retype our member list?",
-    a: "No. Upload the CSV or Excel file your club already keeps and map the columns once.",
+    a: "No. Upload the CSV or Excel file your event already keeps and map the columns once.",
   },
   {
     q: "Can members add their own photos?",

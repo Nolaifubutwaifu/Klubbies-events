@@ -17,7 +17,7 @@ export function EmailLayout({ preview, children }: { preview: string; children: 
           <Hr style={{ borderColor: "#eaddd7", margin: 0 }} />
           <Section style={{ padding: "16px 28px" }}>
             <Text style={{ fontSize: 14, color: "#776b70", margin: 0, lineHeight: 1.5 }}>
-              Klubbies keeps club photos private to the people on the member list. If you weren&apos;t expecting
+              Klubbies keeps event photos private to the people on the member list. If you weren&apos;t expecting
               this email you can ignore it.
             </Text>
           </Section>

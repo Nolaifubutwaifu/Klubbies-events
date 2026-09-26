@@ -38,14 +38,14 @@ export function MoreMenu({
     if (!open) return;
     const first = root.current?.querySelector<HTMLElement>("[role=menu] a, [role=menu] button");
     first?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") {
         setOpen(false);
         button.current?.focus();
       }
     };
-    const onPointer = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    const onPointer = (ev: PointerEvent) => {
+      if (!root.current?.contains(ev.target as Node)) setOpen(false);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPointer);
@@ -83,9 +83,9 @@ export function MoreMenu({
           id={id}
           role="menu"
           className={`kb-menu top-[calc(100%+8px)] ${align === "end" ? "right-0" : "left-0"}`}
-          onClick={(event) => {
+          onClick={(ev) => {
             // Choosing anything closes the menu. A form's submit still fires.
-            if ((event.target as HTMLElement).closest("a, button")) setOpen(false);
+            if ((ev.target as HTMLElement).closest("a, button")) setOpen(false);
           }}
         >
           {children}

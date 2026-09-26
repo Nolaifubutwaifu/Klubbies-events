@@ -14,7 +14,7 @@ export type Database = {
       access_events: {
         Row: {
           action: string;
-          club_id: string | null;
+          event_id: string | null;
           created_at: string;
           id: number;
           ip_hash: string | null;
@@ -26,7 +26,7 @@ export type Database = {
         };
         Insert: {
           action: string;
-          club_id?: string | null;
+          event_id?: string | null;
           created_at?: string;
           id?: never;
           ip_hash?: string | null;
@@ -38,7 +38,7 @@ export type Database = {
         };
         Update: {
           action?: string;
-          club_id?: string | null;
+          event_id?: string | null;
           created_at?: string;
           id?: never;
           ip_hash?: string | null;
@@ -50,10 +50,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "access_events_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "access_events_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -76,7 +76,7 @@ export type Database = {
         Row: {
           album_id: string;
           byte_total: number;
-          club_id: string;
+          event_id: string;
           created_at: string;
           created_by: string | null;
           expires_at: string;
@@ -92,7 +92,7 @@ export type Database = {
         Insert: {
           album_id: string;
           byte_total?: number;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           created_by?: string | null;
           expires_at: string;
@@ -108,7 +108,7 @@ export type Database = {
         Update: {
           album_id?: string;
           byte_total?: number;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           created_by?: string | null;
           expires_at?: string;
@@ -130,10 +130,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "album_guest_links_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "album_guest_links_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -155,14 +155,14 @@ export type Database = {
       albums: {
         Row: {
           allow_download: boolean;
-          club_id: string;
+          event_id: string;
           contributor_scope: string;
           cover_media_id: string | null;
           cover_path: string | null;
           created_at: string;
           created_by: string | null;
           description: string | null;
-          event_date: string | null;
+          album_date: string | null;
           event_type: string | null;
           id: string;
           publish_at: string | null;
@@ -175,14 +175,14 @@ export type Database = {
         };
         Insert: {
           allow_download?: boolean;
-          club_id: string;
+          event_id: string;
           contributor_scope?: string;
           cover_media_id?: string | null;
           cover_path?: string | null;
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
-          event_date?: string | null;
+          album_date?: string | null;
           event_type?: string | null;
           id?: string;
           publish_at?: string | null;
@@ -195,14 +195,14 @@ export type Database = {
         };
         Update: {
           allow_download?: boolean;
-          club_id?: string;
+          event_id?: string;
           contributor_scope?: string;
           cover_media_id?: string | null;
           cover_path?: string | null;
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
-          event_date?: string | null;
+          album_date?: string | null;
           event_type?: string | null;
           id?: string;
           publish_at?: string | null;
@@ -215,10 +215,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "albums_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "albums_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -264,12 +264,12 @@ export type Database = {
         };
         Relationships: [];
       };
-      club_face_settings: {
+      event_face_settings: {
         Row: {
           backfill_completed_at: string | null;
           backfill_queued_at: string | null;
           backfill_status: string;
-          club_id: string;
+          event_id: string;
           collection_id: string | null;
           created_at: string;
           enabled: boolean;
@@ -282,7 +282,7 @@ export type Database = {
           backfill_completed_at?: string | null;
           backfill_queued_at?: string | null;
           backfill_status?: string;
-          club_id: string;
+          event_id: string;
           collection_id?: string | null;
           created_at?: string;
           enabled?: boolean;
@@ -295,7 +295,7 @@ export type Database = {
           backfill_completed_at?: string | null;
           backfill_queued_at?: string | null;
           backfill_status?: string;
-          club_id?: string;
+          event_id?: string;
           collection_id?: string | null;
           created_at?: string;
           enabled?: boolean;
@@ -306,14 +306,14 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "club_face_settings_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "event_face_settings_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: true;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "club_face_settings_notice_accepted_by_fkey";
+            foreignKeyName: "event_face_settings_notice_accepted_by_fkey";
             columns: ["notice_accepted_by"];
             isOneToOne: false;
             referencedRelation: "users";
@@ -321,45 +321,45 @@ export type Database = {
           },
         ];
       };
-      club_handle_redirects: {
+      event_handle_redirects: {
         Row: {
-          club_id: string;
+          event_id: string;
           created_at: string;
           old_handle: string;
           updated_at: string;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           created_at?: string;
           old_handle: string;
           updated_at?: string;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           old_handle?: string;
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "club_handle_redirects_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "event_handle_redirects_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
       };
-      club_roles: {
+      event_roles: {
         Row: {
-          club_id: string;
+          event_id: string;
           created_at: string;
           id: string;
           is_builtin: boolean;
           is_default: boolean;
           key: string;
           manage_albums: boolean;
-          manage_club: boolean;
+          manage_event: boolean;
           manage_members: boolean;
           name: string;
           post_feed: boolean;
@@ -368,14 +368,14 @@ export type Database = {
           upload: boolean;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           created_at?: string;
           id?: string;
           is_builtin?: boolean;
           is_default?: boolean;
           key: string;
           manage_albums?: boolean;
-          manage_club?: boolean;
+          manage_event?: boolean;
           manage_members?: boolean;
           name: string;
           post_feed?: boolean;
@@ -384,14 +384,14 @@ export type Database = {
           upload?: boolean;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           id?: string;
           is_builtin?: boolean;
           is_default?: boolean;
           key?: string;
           manage_albums?: boolean;
-          manage_club?: boolean;
+          manage_event?: boolean;
           manage_members?: boolean;
           name?: string;
           post_feed?: boolean;
@@ -401,15 +401,15 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "club_roles_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "event_roles_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
       };
-      clubs: {
+      events: {
         Row: {
           accent_colour: string | null;
           allow_removal_requests: boolean;
@@ -475,7 +475,7 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "clubs_created_by_fkey";
+            foreignKeyName: "events_created_by_fkey";
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "users";
@@ -486,7 +486,7 @@ export type Database = {
       face_jobs: {
         Row: {
           attempts: number;
-          club_id: string;
+          event_id: string;
           created_at: string;
           id: number;
           kind: string;
@@ -499,7 +499,7 @@ export type Database = {
         };
         Insert: {
           attempts?: number;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           id?: never;
           kind: string;
@@ -512,7 +512,7 @@ export type Database = {
         };
         Update: {
           attempts?: number;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           id?: never;
           kind?: string;
@@ -525,10 +525,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "face_jobs_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "face_jobs_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -550,7 +550,7 @@ export type Database = {
       face_matches: {
         Row: {
           bounding_box: Json | null;
-          club_id: string;
+          event_id: string;
           created_at: string;
           decided_at: string | null;
           id: string;
@@ -563,7 +563,7 @@ export type Database = {
         };
         Insert: {
           bounding_box?: Json | null;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           decided_at?: string | null;
           id?: string;
@@ -576,7 +576,7 @@ export type Database = {
         };
         Update: {
           bounding_box?: Json | null;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           decided_at?: string | null;
           id?: string;
@@ -589,10 +589,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "face_matches_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "face_matches_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -644,21 +644,21 @@ export type Database = {
       };
       face_rejections: {
         Row: {
-          club_id: string;
+          event_id: string;
           created_at: string;
           id: string;
           media_id: string;
           profile_id: string;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           created_at?: string;
           id?: string;
           media_id: string;
           profile_id: string;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           id?: string;
           media_id?: string;
@@ -666,10 +666,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "face_rejections_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "face_rejections_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -690,29 +690,29 @@ export type Database = {
       };
       favourites: {
         Row: {
-          club_id: string;
+          event_id: string;
           created_at: string;
           media_id: string;
           user_id: string;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           created_at?: string;
           media_id: string;
           user_id: string;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           media_id?: string;
           user_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "favourites_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "favourites_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -737,7 +737,7 @@ export type Database = {
           byte_size: number | null;
           captured_at: string | null;
           content_hash: string | null;
-          club_id: string;
+          event_id: string;
           created_at: string;
           display_path: string | null;
           duration_seconds: number | null;
@@ -762,7 +762,7 @@ export type Database = {
           byte_size?: number | null;
           captured_at?: string | null;
           content_hash?: string | null;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           display_path?: string | null;
           duration_seconds?: number | null;
@@ -787,7 +787,7 @@ export type Database = {
           byte_size?: number | null;
           captured_at?: string | null;
           content_hash?: string | null;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           display_path?: string | null;
           duration_seconds?: number | null;
@@ -816,10 +816,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "media_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "media_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -842,7 +842,7 @@ export type Database = {
         Row: {
           bounding_box: Json;
           brightness: number | null;
-          club_id: string;
+          event_id: string;
           collection_id: string;
           confidence: number | null;
           created_at: string;
@@ -855,7 +855,7 @@ export type Database = {
         Insert: {
           bounding_box: Json;
           brightness?: number | null;
-          club_id: string;
+          event_id: string;
           collection_id: string;
           confidence?: number | null;
           created_at?: string;
@@ -868,7 +868,7 @@ export type Database = {
         Update: {
           bounding_box?: Json;
           brightness?: number | null;
-          club_id?: string;
+          event_id?: string;
           collection_id?: string;
           confidence?: number | null;
           created_at?: string;
@@ -880,10 +880,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "media_faces_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "media_faces_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -898,7 +898,7 @@ export type Database = {
       media_removal_requests: {
         Row: {
           auto_delete_at: string;
-          club_id: string;
+          event_id: string;
           id: string;
           media_id: string;
           requested_at: string;
@@ -909,7 +909,7 @@ export type Database = {
         };
         Insert: {
           auto_delete_at?: string;
-          club_id: string;
+          event_id: string;
           id?: string;
           media_id: string;
           requested_at?: string;
@@ -920,7 +920,7 @@ export type Database = {
         };
         Update: {
           auto_delete_at?: string;
-          club_id?: string;
+          event_id?: string;
           id?: string;
           media_id?: string;
           requested_at?: string;
@@ -931,10 +931,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "media_removal_requests_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "media_removal_requests_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -962,7 +962,7 @@ export type Database = {
       };
       member_face_profiles: {
         Row: {
-          club_id: string;
+          event_id: string;
           consent_version: string;
           consented_at: string;
           created_at: string;
@@ -976,7 +976,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           consent_version: string;
           consented_at?: string;
           created_at?: string;
@@ -990,7 +990,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           consent_version?: string;
           consented_at?: string;
           created_at?: string;
@@ -1005,10 +1005,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "member_face_profiles_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "member_face_profiles_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -1029,7 +1029,7 @@ export type Database = {
       };
       member_face_references: {
         Row: {
-          club_id: string;
+          event_id: string;
           collection_id: string;
           created_at: string;
           id: string;
@@ -1041,7 +1041,7 @@ export type Database = {
           source: string;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           collection_id: string;
           created_at?: string;
           id?: string;
@@ -1053,7 +1053,7 @@ export type Database = {
           source: string;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           collection_id?: string;
           created_at?: string;
           id?: string;
@@ -1066,10 +1066,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "member_face_references_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "member_face_references_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -1099,7 +1099,7 @@ export type Database = {
         Row: {
           accepted_at: string | null;
           claimed_name: string | null;
-          club_id: string;
+          event_id: string;
           created_at: string;
           declined_at: string | null;
           face_notice_ack_at: string | null;
@@ -1123,7 +1123,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null;
           claimed_name?: string | null;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           declined_at?: string | null;
           face_notice_ack_at?: string | null;
@@ -1147,7 +1147,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null;
           claimed_name?: string | null;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           declined_at?: string | null;
           face_notice_ack_at?: string | null;
@@ -1170,17 +1170,17 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "memberships_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "memberships_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
             foreignKeyName: "memberships_role_id_fkey";
             columns: ["role_id"];
             isOneToOne: false;
-            referencedRelation: "club_roles";
+            referencedRelation: "event_roles";
             referencedColumns: ["id"];
           },
           {
@@ -1226,7 +1226,7 @@ export type Database = {
         Row: {
           author_membership_id: string | null;
           body: string;
-          club_id: string;
+          event_id: string;
           created_at: string;
           id: string;
           post_id: string;
@@ -1235,7 +1235,7 @@ export type Database = {
         Insert: {
           author_membership_id?: string | null;
           body: string;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           id?: string;
           post_id: string;
@@ -1244,7 +1244,7 @@ export type Database = {
         Update: {
           author_membership_id?: string | null;
           body?: string;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           id?: string;
           post_id?: string;
@@ -1259,10 +1259,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "post_comments_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "post_comments_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -1276,7 +1276,7 @@ export type Database = {
       };
       post_reactions: {
         Row: {
-          club_id: string;
+          event_id: string;
           created_at: string;
           emoji: string;
           membership_id: string;
@@ -1284,7 +1284,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          club_id: string;
+          event_id: string;
           created_at?: string;
           emoji: string;
           membership_id: string;
@@ -1292,7 +1292,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           emoji?: string;
           membership_id?: string;
@@ -1301,10 +1301,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "post_reactions_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "post_reactions_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -1328,7 +1328,7 @@ export type Database = {
           album_id: string | null;
           author_membership_id: string | null;
           body: string;
-          club_id: string;
+          event_id: string;
           created_at: string;
           id: string;
           pinned: boolean;
@@ -1338,7 +1338,7 @@ export type Database = {
           album_id?: string | null;
           author_membership_id?: string | null;
           body: string;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           id?: string;
           pinned?: boolean;
@@ -1348,7 +1348,7 @@ export type Database = {
           album_id?: string | null;
           author_membership_id?: string | null;
           body?: string;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           id?: string;
           pinned?: boolean;
@@ -1370,10 +1370,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "posts_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "posts_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
@@ -1381,7 +1381,7 @@ export type Database = {
       roster_imports: {
         Row: {
           added_count: number | null;
-          club_id: string;
+          event_id: string;
           created_at: string;
           error_count: number | null;
           filename: string | null;
@@ -1397,7 +1397,7 @@ export type Database = {
         };
         Insert: {
           added_count?: number | null;
-          club_id: string;
+          event_id: string;
           created_at?: string;
           error_count?: number | null;
           filename?: string | null;
@@ -1413,7 +1413,7 @@ export type Database = {
         };
         Update: {
           added_count?: number | null;
-          club_id?: string;
+          event_id?: string;
           created_at?: string;
           error_count?: number | null;
           filename?: string | null;
@@ -1429,10 +1429,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "roster_imports_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "roster_imports_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
           {
@@ -1446,7 +1446,7 @@ export type Database = {
       };
       stripe_events: {
         Row: {
-          club_id: string | null;
+          event_id: string | null;
           created_at: string;
           id: string;
           payload: Json;
@@ -1455,7 +1455,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          club_id?: string | null;
+          event_id?: string | null;
           created_at?: string;
           id: string;
           payload: Json;
@@ -1464,7 +1464,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          club_id?: string | null;
+          event_id?: string | null;
           created_at?: string;
           id?: string;
           payload?: Json;
@@ -1474,10 +1474,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "stripe_events_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "stripe_events_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
@@ -1529,7 +1529,7 @@ export type Database = {
       album_engagement: {
         Row: {
           album_id: string | null;
-          club_id: string | null;
+          event_id: string | null;
           download_count: number | null;
           member_count: number | null;
           view_count: number | null;
@@ -1543,10 +1543,10 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "media_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "media_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
@@ -1568,18 +1568,18 @@ export type Database = {
           },
         ];
       };
-      club_storage_usage: {
+      event_storage_usage: {
         Row: {
-          club_id: string | null;
+          event_id: string | null;
           item_count: number | null;
           total_bytes: number | null;
         };
         Relationships: [
           {
-            foreignKeyName: "media_club_id_fkey";
-            columns: ["club_id"];
+            foreignKeyName: "media_event_id_fkey";
+            columns: ["event_id"];
             isOneToOne: false;
-            referencedRelation: "clubs";
+            referencedRelation: "events";
             referencedColumns: ["id"];
           },
         ];
@@ -1590,7 +1590,7 @@ export type Database = {
         Args: { batch_size: number };
         Returns: {
           attempts: number;
-          club_id: string;
+          event_id: string;
           created_at: string;
           id: number;
           kind: string;
@@ -1608,7 +1608,7 @@ export type Database = {
           isSetofReturn: true;
         };
       };
-      create_club: {
+      create_event: {
         Args: {
           p_description: string;
           p_handle_base: string;
@@ -1638,13 +1638,13 @@ export type Database = {
         };
         SetofOptions: {
           from: "*";
-          to: "clubs";
+          to: "events";
           isOneToOne: true;
           isSetofReturn: false;
         };
       };
-      seed_club_roles: { Args: { p_club_id: string }; Returns: undefined };
-      touch_club_visit: { Args: { p_club_id: string }; Returns: undefined };
+      seed_event_roles: { Args: { p_event_id: string }; Returns: undefined };
+      touch_event_visit: { Args: { p_event_id: string }; Returns: undefined };
     };
     Enums: {
       [_ in never]: never;
@@ -1665,8 +1665,8 @@ export type Tables<T extends keyof (PublicSchema["Tables"] & PublicSchema["Views
 export type TablesInsert<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Insert"];
 export type TablesUpdate<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Update"];
 
-export type Club = Tables<"clubs">;
-export type ClubRole = Tables<"club_roles">;
+export type EventRecord = Tables<"events">;
+export type EventRole = Tables<"event_roles">;
 export type Post = Tables<"posts">;
 export type Membership = Tables<"memberships">;
 export type Album = Tables<"albums">;
@@ -1675,10 +1675,10 @@ export type GuestLink = Tables<"album_guest_links">;
 export type RemovalRequest = Tables<"media_removal_requests">;
 
 export type MembershipStatus = "pending" | "active" | "grace" | "revoked";
-export type MembershipRole = "club_admin" | "club_member";
+export type MembershipRole = "event_admin" | "event_member";
 export type MediaKind = "photo" | "video";
 export type EventType = "formal" | "sport" | "social" | "camp" | "night_out" | "other";
-export type ClubFaceSettings = Tables<"club_face_settings">;
+export type EventFaceSettings = Tables<"event_face_settings">;
 export type MediaFace = Tables<"media_faces">;
 export type MemberFaceProfile = Tables<"member_face_profiles">;
 export type FaceMatch = Tables<"face_matches">;

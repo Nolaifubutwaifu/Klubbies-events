@@ -15,7 +15,7 @@ describe("billing status", () => {
     expect(statusFromSubscription(stripeStatus)).toBe(expected);
   });
 
-  it("only lets paid, retrying or comped clubs add members and upload", () => {
+  it("only lets paid, retrying or comped events add members and upload", () => {
     expect(["active", "past_due", "comped"].every(canWrite)).toBe(true);
     expect(["unpaid", "canceled"].some(canWrite)).toBe(false);
   });

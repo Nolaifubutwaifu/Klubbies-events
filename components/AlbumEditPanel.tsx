@@ -15,9 +15,9 @@ import { createClient } from "@/lib/supabase/client";
 
 type Album = {
   id: string;
-  clubId: string;
+  eventId: string;
   title: string;
-  eventDate: string | null;
+  albumDate: string | null;
   eventType: string | null;
   description: string | null;
   allowDownload: boolean;
@@ -93,8 +93,8 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
     setCoverBusy(true);
     setCoverError("");
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const path = `clubs/${album.clubId}/covers/${album.id}-${Date.now()}.${ext}`;
-    const { error } = await createClient().storage.from("club_media").upload(path, file, { upsert: true, contentType: file.type });
+    const path = `events/${album.eventId}/covers/${album.id}-${Date.now()}.${ext}`;
+    const { error } = await createClient().storage.from("event_media").upload(path, file, { upsert: true, contentType: file.type });
     if (error) {
       setCoverBusy(false);
       return setCoverError("Upload failed. Try again.");
@@ -117,7 +117,7 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
             </label>
             <label className="field">
               Date
-              <input className="input" name="eventDate" type="date" defaultValue={album.eventDate ?? ""} />
+              <input className="input" name="albumDate" type="date" defaultValue={album.albumDate ?? ""} />
             </label>
             <label className="field">
               Event type

@@ -2,8 +2,8 @@
 --
 -- claim_face_jobs ordered strictly by id, so the enrol job created when
 -- someone hands over their selfie sat behind every index job queued before
--- it. Turning the feature on for a 110 photo club and enrolling immediately
--- put the enrolment 95 photos deep; on a club with thousands it would be days
+-- it. Turning the feature on for a 110 photo event and enrolling immediately
+-- put the enrolment 95 photos deep; on a event with thousands it would be days
 -- before the member saw anything, having been told "this takes a minute".
 --
 -- Enrolment now jumps the queue. It is one Rekognition call and it is the

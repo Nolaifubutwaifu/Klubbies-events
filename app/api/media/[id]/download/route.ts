@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
 import { signDownload } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -12,14 +12,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const supabase = await createClient();
   const { data: media } = await supabase
     .from("media")
-    .select("id, club_id, storage_path, original_filename, albums(allow_download)")
+    .select("id, event_id, storage_path, original_filename, albums(allow_download)")
     .eq("id", id)
     .maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const club = await getClubContextById(media.club_id);
-  if (!club) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!club.isAdmin && media.albums?.allow_download === false) {
+  const event = await getEventContextById(media.event_id);
+  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!event.isAdmin && media.albums?.allow_download === false) {
     return NextResponse.json({ error: "Downloads are turned off for this album" }, { status: 403 });
   }
 
@@ -28,6 +28,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const url = await signDownload(supabase, media.storage_path, filename);
   if (!url) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await logAccess(club, media.id, "download");
+  await logAccess(event, media.id, "download");
   return NextResponse.redirect(url, { status: 303 });
 }

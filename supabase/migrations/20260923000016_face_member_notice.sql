@@ -1,4 +1,4 @@
--- Every member of a club with face recognition on has a faceprint made of
+-- Every member of a event with face recognition on has a faceprint made of
 -- their face, enrolled or not. Telling them that is a separate obligation
 -- from asking them to enrol, and it was only being met by a dismissible
 -- banner nobody had to read.
@@ -16,7 +16,7 @@ alter table public.memberships
   add column face_notice_version text;
 
 comment on column public.memberships.face_notice_ack_at is
-  'When this member acknowledged that faces in the club''s photos are analysed. Not consent: enrolment is where consent is given.';
+  'When this member acknowledged that faces in the event''s photos are analysed. Not consent: enrolment is where consent is given.';
 
 -- A member may record their own acknowledgement, and nothing else about their
 -- membership. The existing memberships_update policy is admin-only, so this

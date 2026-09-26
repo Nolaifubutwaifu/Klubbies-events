@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClubMark, clubInitials as initials } from "@/components/ClubMark";
-import type { MyClub } from "@/lib/auth/session";
+import { EventMark, eventInitials as initials } from "@/components/EventMark";
+import type { MyEvent } from "@/lib/auth/session";
 
 /**
- * The member app on a wide screen: every club you're in down the left, so
+ * The member app on a wide screen: every event you're in down the left, so
  * switching is one click and you can always see where you are. The phone gets
  * the tab bar instead.
  */
 export function MemberSidebar({
   handle,
-  clubs,
+  events,
   savedCount,
   newCount,
   facesCount,
@@ -21,25 +21,25 @@ export function MemberSidebar({
   person,
 }: {
   handle: string;
-  clubs: MyClub[];
+  events: MyEvent[];
   savedCount: number;
   newCount: number;
-  /** Signed URLs for club logos, by club id. A club without one falls back
-      to its initials, which is what every club used to get. */
+  /** Signed URLs for event logos, by event id. A event without one falls back
+      to its initials, which is what every event used to get. */
   logoUrls: Record<string, string>;
   /** Shows the way into the committee screens. The header carries this on a
       phone, and the header is hidden at lg — so without it a manager on a
       wide screen has no route to their own admin area at all. */
   canManage: boolean;
-  /** Null when this club has face recognition off, so the row is hidden. */
+  /** Null when this event has face recognition off, so the row is hidden. */
   facesCount: number | null;
   person: { name: string; role: string; avatarUrl: string | null };
 }) {
   const pathname = usePathname();
-  const base = `/c/${handle}`;
+  const base = `/e/${handle}`;
   // The lightbox owns the whole window: a cream rail beside a near-black photo
   // is the one place this layout fights the content.
-  const inLightbox = /^\/c\/[^/]+\/a\/[^/]+\/[^/]+/.test(pathname);
+  const inLightbox = /^\/e\/[^/]+\/a\/[^/]+\/[^/]+/.test(pathname);
 
   const rows = [
     ...(facesCount === null
@@ -53,7 +53,7 @@ export function MemberSidebar({
           },
         ]),
     { href: `${base}/saved`, label: "Saved", badge: savedCount, active: pathname.startsWith(`${base}/saved`) },
-    { href: `${base}/feed`, label: "Club feed", badge: 0, active: pathname.startsWith(`${base}/feed`) },
+    { href: `${base}/feed`, label: "Event feed", badge: 0, active: pathname.startsWith(`${base}/feed`) },
     { href: "/account", label: "Your profile", badge: 0, active: pathname.startsWith("/account") },
   ];
 
@@ -62,29 +62,29 @@ export function MemberSidebar({
   return (
     <aside className="hidden w-[236px] flex-none lg:sticky lg:top-5 lg:block lg:self-start">
       <div className="soft-card flex flex-col gap-1 p-3">
-        <Link href="/clubs" className="soft-wordmark px-2 pb-3 pt-1 text-[20px] text-ink no-underline">
+        <Link href="/events" className="soft-wordmark px-2 pb-3 pt-1 text-[20px] text-ink no-underline">
           klubbies
         </Link>
 
         <span className="px-2 pb-1 text-[14px] font-extrabold tracking-[0.1em] text-[color:var(--ink-55)]">
-          YOUR CLUBS
+          YOUR EVENTS
         </span>
-        {clubs.map((club) => {
-          const here = club.handle === handle;
+        {events.map((event) => {
+          const here = event.handle === handle;
           return (
             <Link
-              key={club.clubId}
-              href={`/c/${club.handle}`}
-              aria-label={here && newCount > 0 ? `${club.name}, ${newCount} new since your last visit` : club.name}
-              aria-current={here && pathname === `/c/${club.handle}` ? "page" : undefined}
+              key={event.eventId}
+              href={`/e/${event.handle}`}
+              aria-label={here && newCount > 0 ? `${event.name}, ${newCount} new since your last visit` : event.name}
+              aria-current={here && pathname === `/e/${event.handle}` ? "page" : undefined}
               className="flex min-h-[44px] items-center gap-2.5 rounded-full px-2.5 text-[14px] font-bold no-underline transition-colors"
               style={{
                 background: here ? "color-mix(in srgb, var(--color-accent) 12%, transparent)" : "transparent",
                 color: here ? "var(--color-accent-700)" : "var(--color-text)",
               }}
             >
-              <ClubMark name={club.name} logoUrl={logoUrls[club.clubId]} accentColour={club.accentColour} />
-              <span className="min-w-0 flex-1 truncate">{club.name}</span>
+              <EventMark name={event.name} logoUrl={logoUrls[event.eventId]} accentColour={event.accentColour} />
+              <span className="min-w-0 flex-1 truncate">{event.name}</span>
               {here && newCount > 0 ? (
                 <span className="flex-none rounded-full bg-accent px-2 py-0.5 text-[14px] font-extrabold text-white">
                   {newCount}

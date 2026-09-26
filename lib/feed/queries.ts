@@ -1,5 +1,5 @@
 import "server-only";
-import type { ClubContext } from "@/lib/auth/session";
+import type { EventContext } from "@/lib/auth/session";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 import { personName } from "@/lib/auth/display-name";
@@ -26,15 +26,15 @@ function initials(name: string): string {
   return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export async function listFeed(supabase: UserClient, ctx: ClubContext, limit = 30): Promise<FeedPost[]> {
+export async function listFeed(supabase: UserClient, ctx: EventContext, limit = 30): Promise<FeedPost[]> {
   const { data: posts, error } = await supabase
     .from("posts")
     .select(
       // post_reactions also joins posts to memberships, so the relationship has to
       // be named or PostgREST refuses the embed (PGRST201).
-      "id, body, pinned, created_at, album_id, author_membership_id, memberships!posts_author_membership_id_fkey(roster_name, claimed_name, user_id, club_roles(name), users!memberships_user_id_fkey(display_name)), albums(id, title, cover_media_id, cover_path)",
+      "id, body, pinned, created_at, album_id, author_membership_id, memberships!posts_author_membership_id_fkey(roster_name, claimed_name, user_id, event_roles(name), users!memberships_user_id_fkey(display_name)), albums(id, title, cover_media_id, cover_path)",
     )
-    .eq("club_id", ctx.club.id)
+    .eq("event_id", ctx.event.id)
     .order("pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -87,10 +87,10 @@ export async function listFeed(supabase: UserClient, ctx: ClubContext, limit = 3
       createdAt: post.created_at,
       pinned: post.pinned,
       authorName,
-      authorRole: author?.club_roles?.name ?? null,
+      authorRole: author?.event_roles?.name ?? null,
       authorInitials: initials(authorName),
       isMine: mine,
-      canDelete: mine || ctx.perms.manage_club,
+      canDelete: mine || ctx.perms.manage_event,
       album: post.albums
         ? {
             id: post.albums.id,

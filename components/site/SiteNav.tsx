@@ -27,21 +27,21 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
     document.body.style.overflow = "hidden";
     sheet.current?.querySelector<HTMLElement>("a, button")?.focus();
 
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") {
         setOpen(false);
         return;
       }
       // Keep Tab inside the sheet while it is open.
-      if (event.key !== "Tab" || !sheet.current) return;
+      if (ev.key !== "Tab" || !sheet.current) return;
       const items = Array.from(sheet.current.querySelectorAll<HTMLElement>("a, button"));
       const first = items[0];
       const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
+      if (ev.shiftKey && document.activeElement === first) {
+        ev.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
+      } else if (!ev.shiftKey && document.activeElement === last) {
+        ev.preventDefault();
         first.focus();
       }
     };
@@ -80,7 +80,7 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
               Log in
             </Link>
             <Link href="/start" className="btn btn-primary !min-h-[44px] !px-5 !text-[15px]">
-              Start your club
+              Start your event
             </Link>
           </span>
         </nav>
@@ -139,12 +139,12 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
           </nav>
           <div className="kb-wrap mt-auto flex flex-col gap-3 pb-[max(24px,env(safe-area-inset-bottom))]">
             <Link href="/start" className="btn btn-primary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
-              Start your club
+              Start your event
             </Link>
             <Link href="/signin" className="btn btn-secondary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
               Log in
             </Link>
-            <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">A$20 a month per club. Cancel any time.</p>
+            <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">A$20 a month per event. Cancel any time.</p>
           </div>
         </div>
       ) : null}

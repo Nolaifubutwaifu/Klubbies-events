@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: CODE_REJECTED }, { status: 400 });
   }
 
-  const result = await verifyCode(email, parsed.data.code, parsed.data.club);
+  const result = await verifyCode(email, parsed.data.code, parsed.data.event);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   cookieStore.delete(SIGNIN_COOKIE);

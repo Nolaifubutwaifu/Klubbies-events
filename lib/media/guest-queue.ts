@@ -53,7 +53,7 @@ export const EMPTY_GUEST_SNAPSHOT: readonly GuestJobView[] = [];
 
 function friendlyError(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return "This file is larger than the club's plan allows.";
+  if (/413|too large|maximum allowed size/i.test(text)) return "This file is larger than the event's plan allows.";
   if (/403|expired|not valid/i.test(text)) return "The link stopped working. Ask the committee for a new one.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
@@ -142,9 +142,9 @@ export class GuestUploadQueue {
       request.open("PUT", url);
       request.setRequestHeader("content-type", contentType);
       request.setRequestHeader("x-upsert", "true");
-      request.upload.onprogress = (event) => {
-        if (!event.lengthComputable) return;
-        this.patch(job, { progress: base + (event.loaded / event.total) * weight });
+      request.upload.onprogress = (ev) => {
+        if (!ev.lengthComputable) return;
+        this.patch(job, { progress: base + (ev.loaded / ev.total) * weight });
       };
       request.onload = () =>
         request.status >= 200 && request.status < 300

@@ -60,7 +60,7 @@ function StatusChip({ album }: { album: StackedAlbum }) {
 }
 
 /**
- * The committee's control panel for one club's albums: order, state, and when
+ * The committee's control panel for one event's albums: order, state, and when
  * a draft goes live.
  *
  * Reordering is drag and drop from the grip. Native HTML5 drag isn't reachable
@@ -92,12 +92,12 @@ function Figures({ stats }: { stats: AlbumStats }) {
 }
 
 export function AlbumManager({
-  clubId,
+  eventId,
   handle,
   albums,
   stats = {},
 }: {
-  clubId: string;
+  eventId: string;
   handle: string;
   albums: StackedAlbum[];
   stats?: Record<string, AlbumStats>;
@@ -122,7 +122,7 @@ export function AlbumManager({
   const save = (ids: string[]) => {
     setLocalOrder(ids);
     startTransition(async () => {
-      const res = await setAlbumOrderAction(clubId, ids);
+      const res = await setAlbumOrderAction(eventId, ids);
       setMessage(res.error ?? res.message ?? "");
       if (res.ok) {
         // Server props now carry the saved order, so stop overriding them.
@@ -242,7 +242,7 @@ export function AlbumManager({
 
               <span className="min-w-[180px] flex-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <Link href={`/c/${handle}/a/${album.id}`} className="soft-display text-[17px] text-ink no-underline">
+                  <Link href={`/e/${handle}/a/${album.id}`} className="soft-display text-[17px] text-ink no-underline">
                     {album.title}
                   </Link>
                   {eventTypeLabel(album.eventType) ? (
@@ -287,7 +287,7 @@ export function AlbumManager({
                   </button>
                 ) : null}
                 <MoreMenu iconOnly label={`More for ${album.title}`}>
-                  <MoreLink href={`/c/${handle}/a/${album.id}`}>Open album</MoreLink>
+                  <MoreLink href={`/e/${handle}/a/${album.id}`}>Open album</MoreLink>
                   {album.status === "draft" ? (
                     <MoreButton
                       disabled={pending}

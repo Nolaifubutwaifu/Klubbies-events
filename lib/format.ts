@@ -13,7 +13,7 @@ const timeFmt = new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-d
 
 function toDate(value: string | Date): Date {
   if (value instanceof Date) return value;
-  // Plain dates (event_date) are calendar days, not instants.
+  // Plain dates (album_date) are calendar days, not instants.
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00+10:00`) : new Date(value);
 }
 

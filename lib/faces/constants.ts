@@ -2,7 +2,7 @@
 //
 // Tuned 2026-09-23 against 274 real photos and 335 human-confirmed face names
 // (six people photographed inside about a year of each other, which is the
-// distribution a club produces). Method and raw numbers are in docs/decisions.md.
+// distribution a event produces). Method and raw numbers are in docs/decisions.md.
 //
 // The finding that mattered: the similarity threshold is almost irrelevant,
 // and the minimum face size does nearly all the work. Recall was flat from 82
@@ -110,7 +110,7 @@ export const PURGE_BATCH_SIZE = 1000;
  * agreed to which text and re-prompt when it matters.
  */
 export const CONSENT_VERSION = "2026-09-23";
-export const CLUB_NOTICE_VERSION = "2026-09-23";
+export const EVENT_NOTICE_VERSION = "2026-09-23";
 /** Bumped with MEMBER_NOTICE; a change re-asks every member to acknowledge. */
 export const MEMBER_NOTICE_VERSION = "2026-09-23";
 

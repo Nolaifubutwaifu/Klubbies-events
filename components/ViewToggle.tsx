@@ -14,7 +14,7 @@ export function ViewToggle({ area, handle }: { area: "member" | "admin"; handle:
   const query = params.toString();
   const here = `${pathname}${query ? `?${query}` : ""}`;
   // Admin-only pages have no member equivalent, so leaving them lands on the feed.
-  const target = next === "member" && pathname.startsWith("/admin/") ? `/c/${handle}` : here;
+  const target = next === "member" && pathname.startsWith("/admin/") ? `/e/${handle}` : here;
 
   return (
     <button

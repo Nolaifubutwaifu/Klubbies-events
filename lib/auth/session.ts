@@ -1,7 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import type { Club, ClubRole, Membership } from "@/lib/db/types";
+import type { EventRecord, EventRole, Membership } from "@/lib/db/types";
 import { facesConfigured } from "@/lib/faces/client";
 import { NO_PERMS, permsFromRole, type Perms } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,10 +27,10 @@ export const getProfile = cache(async () => {
   return data;
 });
 
-export type ClubContext = {
-  club: Club;
+export type EventContext = {
+  event: EventRecord;
   membership: Membership | null;
-  role: ClubRole | null;
+  role: EventRole | null;
   perms: Perms;
   isAdmin: boolean;
   userId: string;
@@ -41,55 +41,55 @@ function membershipIsLive(m: Pick<Membership, "status" | "grace_ends_at">): bool
   return m.status === "grace" && m.grace_ends_at !== null && new Date(m.grace_ends_at) > new Date();
 }
 
-export const getClubContext = cache(async (handle: string): Promise<ClubContext | null> => {
-  const user = await requireUser(`/c/${handle}`);
+export const getEventContext = cache(async (handle: string): Promise<EventContext | null> => {
+  const user = await requireUser(`/e/${handle}`);
   const supabase = await createClient();
   const normalised = handle.toLowerCase();
 
-  const { data: club } = await supabase.from("clubs").select("*").eq("handle", normalised).maybeSingle();
-  if (!club) {
+  const { data: event } = await supabase.from("events").select("*").eq("handle", normalised).maybeSingle();
+  if (!event) {
     const { data: redirectRow } = await createAdminClient()
-      .from("club_handle_redirects")
-      .select("clubs(handle)")
+      .from("event_handle_redirects")
+      .select("events(handle)")
       .eq("old_handle", normalised)
       .maybeSingle();
-    if (redirectRow?.clubs?.handle) redirect(`/c/${redirectRow.clubs.handle}`);
+    if (redirectRow?.events?.handle) redirect(`/e/${redirectRow.events.handle}`);
     return null;
   }
 
-  return resolveContext(club, user.id);
+  return resolveContext(event, user.id);
 });
 
-async function resolveContext(club: Club, userId: string): Promise<ClubContext | null> {
+async function resolveContext(event: EventRecord, userId: string): Promise<EventContext | null> {
   const supabase = await createClient();
   const [{ data: membership }, { data: profile }] = await Promise.all([
-    supabase.from("memberships").select("*, club_roles(*)").eq("club_id", club.id).eq("user_id", userId).maybeSingle(),
+    supabase.from("memberships").select("*, event_roles(*)").eq("event_id", event.id).eq("user_id", userId).maybeSingle(),
     supabase.from("users").select("is_super_admin").eq("id", userId).maybeSingle(),
   ]);
 
   const live = membership && membershipIsLive(membership) ? membership : null;
-  const role = (membership?.club_roles as ClubRole | null) ?? null;
+  const role = (membership?.event_roles as EventRole | null) ?? null;
   const superAdmin = Boolean(profile?.is_super_admin);
-  const perms = superAdmin ? permsFromRole({ ...role, manage_club: true } as ClubRole) : live ? permsFromRole(role) : { ...NO_PERMS };
+  const perms = superAdmin ? permsFromRole({ ...role, manage_event: true } as EventRole) : live ? permsFromRole(role) : { ...NO_PERMS };
 
   if (!live && !superAdmin) return null;
 
-  return { club, membership: live, role, perms, isAdmin: perms.manage_club, userId };
+  return { event, membership: live, role, perms, isAdmin: perms.manage_event, userId };
 }
 
 /** For route handlers: never redirects, returns null when unauthorised. */
-export async function getClubContextById(clubId: string): Promise<ClubContext | null> {
+export async function getEventContextById(eventId: string): Promise<EventContext | null> {
   const user = await getSessionUser();
   if (!user) return null;
   const supabase = await createClient();
-  const { data: club } = await supabase.from("clubs").select("*").eq("id", clubId).maybeSingle();
-  if (!club) return null;
-  return resolveContext(club, user.id);
+  const { data: event } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
+  if (!event) return null;
+  return resolveContext(event, user.id);
 }
 
-export type MyClub = {
+export type MyEvent = {
   membershipId: string;
-  clubId: string;
+  eventId: string;
   handle: string;
   name: string;
   organisation: string | null;
@@ -101,7 +101,7 @@ export type MyClub = {
   status: string;
   graceEndsAt: string | null;
   accepted: boolean;
-  /** This club analyses faces in its photos, so joining it means yours too. */
+  /** This event analyses faces in its photos, so joining it means yours too. */
   facesEnabled: boolean;
 };
 
@@ -112,35 +112,35 @@ function initialsOf(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function clubInitials(name: string): string {
+export function eventInitials(name: string): string {
   return initialsOf(name);
 }
 
-/** Clubs the member has accepted, plus invitations still waiting. */
-export const listMyClubs = cache(async (): Promise<{ clubs: MyClub[]; invites: MyClub[] }> => {
+/** Events the member has accepted, plus invitations still waiting. */
+export const listMyEvents = cache(async (): Promise<{ events: MyEvent[]; invites: MyEvent[] }> => {
   const user = await requireUser();
   const supabase = await createClient();
   const { data } = await supabase
     .from("memberships")
     .select(
-      "id, role, status, grace_ends_at, created_at, invited_at, accepted_at, declined_at, club_roles(name, manage_club), clubs!inner(id, name, handle, organisation, status, logo_path, accent_colour, club_face_settings(enabled))",
+      "id, role, status, grace_ends_at, created_at, invited_at, accepted_at, declined_at, event_roles(name, manage_event), events!inner(id, name, handle, organisation, status, logo_path, accent_colour, event_face_settings(enabled))",
     )
     .eq("user_id", user.id)
     .in("status", ["active", "grace"])
     .order("created_at", { ascending: true });
 
   const rows = (data ?? [])
-    .filter((m) => m.clubs.status === "active" && membershipIsLive(m))
+    .filter((m) => m.events.status === "active" && membershipIsLive(m))
     .map((m) => ({
       membershipId: m.id,
-      clubId: m.clubs.id,
-      handle: m.clubs.handle,
-      name: m.clubs.name,
-      organisation: m.clubs.organisation,
-      logoPath: m.clubs.logo_path,
-      accentColour: m.clubs.accent_colour,
-      roleName: m.club_roles?.name ?? (m.role === "club_admin" ? "Admin" : "Member"),
-      isAdmin: Boolean(m.club_roles?.manage_club) || m.role === "club_admin",
+      eventId: m.events.id,
+      handle: m.events.handle,
+      name: m.events.name,
+      organisation: m.events.organisation,
+      logoPath: m.events.logo_path,
+      accentColour: m.events.accent_colour,
+      roleName: m.event_roles?.name ?? (m.role === "event_admin" ? "Admin" : "Member"),
+      isAdmin: Boolean(m.event_roles?.manage_event) || m.role === "event_admin",
       since: m.invited_at ?? m.created_at,
       status: m.status,
       graceEndsAt: m.grace_ends_at,
@@ -148,13 +148,13 @@ export const listMyClubs = cache(async (): Promise<{ clubs: MyClub[]; invites: M
       facesEnabled:
         facesConfigured() &&
         Boolean(
-          (Array.isArray(m.clubs.club_face_settings) ? m.clubs.club_face_settings[0] : m.clubs.club_face_settings)
+          (Array.isArray(m.events.event_face_settings) ? m.events.event_face_settings[0] : m.events.event_face_settings)
             ?.enabled,
         ),
     }));
 
   return {
-    clubs: rows.filter((m) => m.accepted),
+    events: rows.filter((m) => m.accepted),
     invites: rows.filter((m) => !m.accepted),
   };
 });

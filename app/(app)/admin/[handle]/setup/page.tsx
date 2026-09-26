@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
-import { clubAddress } from "@/lib/env";
+import { eventAddress } from "@/lib/env";
 import { listStackedAlbums } from "@/lib/media/album-list";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Set up your club" };
+export const metadata: Metadata = { title: "Set up your event" };
 
 type Step = {
   key: string;
@@ -50,21 +50,21 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
     supabase
       .from("memberships")
       .select("id", { count: "exact", head: true })
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .in("status", ["pending", "active", "grace"]),
-    listStackedAlbums(supabase, ctx.club.id, { includeDrafts: true, limit: 6 }),
+    listStackedAlbums(supabase, ctx.event.id, { includeDrafts: true, limit: 6 }),
   ]);
 
   const tiles = albums.flatMap((album) => album.tiles).slice(0, 6);
-  const logoUrl = ctx.club.logo_path
-    ? ((await signPaths(supabase, [ctx.club.logo_path], SIGNED_URL_TTL.display)).get(ctx.club.logo_path) ?? null)
+  const logoUrl = ctx.event.logo_path
+    ? ((await signPaths(supabase, [ctx.event.logo_path], SIGNED_URL_TTL.display)).get(ctx.event.logo_path) ?? null)
     : null;
 
   const steps: Step[] = [
     {
       key: "name",
-      title: "Name your club",
-      hint: ctx.club.name,
+      title: "Name your event",
+      hint: ctx.event.name,
       done: true,
       href: `/admin/${handle}/settings`,
       cta: "Change it",
@@ -72,7 +72,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
     {
       key: "handle",
       title: "Pick a handle",
-      hint: clubAddress(ctx.club.handle),
+      hint: eventAddress(ctx.event.handle),
       done: true,
       href: `/admin/${handle}/settings`,
       cta: "Open settings",
@@ -81,7 +81,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
       key: "look",
       title: "Logo and colour",
       hint: logoUrl ? "Set — every highlight follows your colour" : "A square mark and one colour, and the app is yours",
-      done: Boolean(logoUrl && ctx.club.accent_colour),
+      done: Boolean(logoUrl && ctx.event.accent_colour),
       href: `/admin/${handle}/settings`,
       cta: logoUrl ? "Change it" : "Add a logo",
     },
@@ -115,7 +115,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
       <aside className="soft-card flex flex-col gap-4 p-5 lg:sticky lg:top-5 lg:self-start">
         <div>
           <span className="soft-chip">Setting up</span>
-          <h1 className="soft-display mt-3 text-[clamp(24px,3vw,30px)]">Set up {ctx.club.name}</h1>
+          <h1 className="soft-display mt-3 text-[clamp(24px,3vw,30px)]">Set up {ctx.event.name}</h1>
           <p className="mt-2 text-[14px] text-[color:var(--ink-70)]">
             Five minutes, once. Then every event is a drag and drop.
           </p>
@@ -153,10 +153,10 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
           ))}
         </ol>
 
-        {canWrite(ctx.club.billing_status) ? null : (
+        {canWrite(ctx.event.billing_status) ? null : (
           <div className="rounded-[var(--soft-r-sm)] bg-[color:var(--tone-support)] p-4 text-[color:var(--tone-support-ink)]">
             <span className="block text-[14px] font-bold">Nothing is charged yet</span>
-            <p className="m-0 mt-1 text-[14px]">A$20 a month starts when you activate the club, which unlocks adding members and uploading.</p>
+            <p className="m-0 mt-1 text-[14px]">A$20 a month starts when you activate the event, which unlocks adding members and uploading.</p>
             <Link href={`/admin/${handle}/billing`} className="mt-2 inline-block text-[14px] font-bold">
               See the plan
             </Link>
@@ -207,11 +207,11 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
                 {logoUrl ? (
                   <img src={logoUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  ctx.club.name.slice(0, 2).toUpperCase()
+                  ctx.event.name.slice(0, 2).toUpperCase()
                 )}
               </span>
               <span>
-                <span className="block text-[14px] font-bold">{ctx.club.name}</span>
+                <span className="block text-[14px] font-bold">{ctx.event.name}</span>
                 <span className="block text-[14px] text-[color:var(--ink-55)]">Your albums</span>
               </span>
             </div>

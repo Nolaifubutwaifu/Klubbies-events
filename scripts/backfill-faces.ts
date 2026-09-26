@@ -1,13 +1,13 @@
 /**
- * First face-recognition pass over a club's back catalogue.
+ * First face-recognition pass over a event's back catalogue.
  *
- *   pnpm tsx --env-file=.env.local scripts/backfill-faces.ts --club demo_umfc --concurrency 8
+ *   pnpm tsx --env-file=.env.local scripts/backfill-faces.ts --event demo_umfc --concurrency 8
  *
  * Do the arithmetic before trusting the cron with this. One photo costs a
  * download, a sharp transcode, an IndexFaces and a couple of SearchFaces —
  * roughly 1.5 to 3 seconds serially. A 300-second Vercel function at a
  * concurrency of 8 clears somewhere around 800 to 1,500 photos, which is fine
- * for a club with 2,000 and hopeless for one with 50,000 on a once-daily
+ * for a event with 2,000 and hopeless for one with 50,000 on a once-daily
  * Hobby cron. A local script has no timeout, and the jobs table makes it
  * resumable if it dies halfway.
  *
@@ -35,7 +35,7 @@ const prefix = process.env.REKOGNITION_COLLECTION_PREFIX ?? "klubbies-dev";
 if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local");
 if (!accessKeyId || !secretAccessKey) throw new Error("Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local");
 
-const BUCKET = "club_media";
+const BUCKET = "event_media";
 
 // Mirrors lib/faces/constants.ts. Kept as literals rather than imported so
 // this script never pulls "server-only" modules into a plain tsx process.
@@ -75,7 +75,7 @@ let indexedFaces = 0;
 let createdMatches = 0;
 let throttled = false;
 
-async function processOne(clubId: string, collectionId: string, mediaId: string): Promise<void> {
+async function processOne(eventId: string, collectionId: string, mediaId: string): Promise<void> {
   const { data: media } = await db
     .from("media")
     .select("id, storage_path, display_path, kind, status")
@@ -122,7 +122,7 @@ async function processOne(clubId: string, collectionId: string, mediaId: string)
     .from("media_faces")
     .insert(
       kept.map((record) => ({
-        club_id: clubId,
+        event_id: eventId,
         media_id: mediaId,
         collection_id: collectionId,
         rekognition_face_id: record.Face!.FaceId!,
@@ -138,7 +138,7 @@ async function processOne(clubId: string, collectionId: string, mediaId: string)
   const { data: profiles } = await db
     .from("member_face_profiles")
     .select("id, membership_id")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("status", "ready")
     .is("revoked_at", null);
   if (!profiles?.length) return;
@@ -171,7 +171,7 @@ async function processOne(clubId: string, collectionId: string, mediaId: string)
   }
 
   const rows = [...best.entries()].map(([profileId, value]) => ({
-    club_id: clubId,
+    event_id: eventId,
     media_id: mediaId,
     media_face_id: value.mediaFaceId,
     profile_id: profileId,
@@ -186,24 +186,24 @@ async function processOne(clubId: string, collectionId: string, mediaId: string)
 }
 
 async function main() {
-  const handle = arg("club");
+  const handle = arg("event");
   const concurrency = Number(arg("concurrency") ?? 8);
-  if (!handle) throw new Error("Pass --club <handle>");
+  if (!handle) throw new Error("Pass --event <handle>");
 
-  const { data: club } = await db.from("clubs").select("id, name, handle").eq("handle", handle).maybeSingle();
-  if (!club) throw new Error(`No club with handle ${handle}`);
+  const { data: event } = await db.from("events").select("id, name, handle").eq("handle", handle).maybeSingle();
+  if (!event) throw new Error(`No event with handle ${handle}`);
 
-  const collectionId = `${prefix}-club-${club.id}`;
+  const collectionId = `${prefix}-event-${event.id}`;
   const { count: photoCount } = await db
     .from("media")
     .select("id", { count: "exact", head: true })
-    .eq("club_id", club.id)
+    .eq("event_id", event.id)
     .eq("status", "ready")
     .eq("kind", "photo");
 
   const total = photoCount ?? 0;
   const estimate = (total * USD_PER_IMAGE).toFixed(2);
-  console.log(`${club.name} (@${club.handle})`);
+  console.log(`${event.name} (@${event.handle})`);
   console.log(`  collection   ${collectionId}`);
   console.log(`  photos       ${total.toLocaleString("en-AU")}`);
   console.log(`  est. cost    about US$${estimate} to index once, plus a few cents a month to store`);
@@ -222,8 +222,8 @@ async function main() {
   }
 
   await db
-    .from("club_face_settings")
-    .upsert({ club_id: club.id, collection_id: collectionId, backfill_status: "running" }, { onConflict: "club_id" });
+    .from("event_face_settings")
+    .upsert({ event_id: event.id, collection_id: collectionId, backfill_status: "running" }, { onConflict: "event_id" });
 
   // Queue the library before draining it. Turning the feature on in the admin
   // panel does this too, but running the script first has to work on its own —
@@ -233,7 +233,7 @@ async function main() {
   const { data: photos } = await db
     .from("media")
     .select("id")
-    .eq("club_id", club.id)
+    .eq("event_id", event.id)
     .eq("status", "ready")
     .eq("kind", "photo")
     .order("created_at", { ascending: false });
@@ -245,7 +245,7 @@ async function main() {
   const { data: liveJobs } = await db
     .from("face_jobs")
     .select("media_id")
-    .eq("club_id", club.id)
+    .eq("event_id", event.id)
     .eq("kind", "index_media")
     .in("status", ["pending", "running"]);
   const alreadyQueued = new Set((liveJobs ?? []).map((row) => row.media_id));
@@ -254,7 +254,7 @@ async function main() {
   let newlyQueued = 0;
   for (let i = 0; i < todo.length; i += 500) {
     const chunk = todo.slice(i, i + 500).map((id) => ({
-      club_id: club.id,
+      event_id: event.id,
       media_id: id,
       kind: "index_media" as const,
     }));
@@ -290,7 +290,7 @@ async function main() {
             continue;
           }
           try {
-            await processOne(club.id, collectionId, job.media_id);
+            await processOne(event.id, collectionId, job.media_id);
             await db.from("face_jobs").update({ status: "done", last_error: null }).eq("id", job.id);
           } catch (jobError) {
             const name = (jobError as { name?: string }).name ?? "";
@@ -324,12 +324,12 @@ async function main() {
   }
 
   await db
-    .from("club_face_settings")
+    .from("event_face_settings")
     .update({
       backfill_status: throttled ? "running" : "done",
       backfill_completed_at: throttled ? null : new Date().toISOString(),
     })
-    .eq("club_id", club.id);
+    .eq("event_id", event.id);
 
   console.log(`\nDone. ${processed.toLocaleString("en-AU")} photos, ${indexedFaces} faces indexed, ${createdMatches} matches created, ${failures} failures.`);
 }

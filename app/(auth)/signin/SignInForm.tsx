@@ -9,7 +9,7 @@ type Mode = "code" | "password";
  * One form, two ways in: a code by email (the default) or a password for
  * members who set one. Deliberately one secondary link and nothing else.
  */
-export function SignInForm({ flow, club }: { flow: "member" | "create"; club?: string }) {
+export function SignInForm({ flow, event }: { flow: "member" | "create"; event?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("code");
   const [pending, setPending] = useState(false);
@@ -29,7 +29,7 @@ export function SignInForm({ flow, club }: { flow: "member" | "create"; club?: s
     }
     const params = new URLSearchParams();
     if (flow === "create") params.set("flow", "create");
-    if (club) params.set("club", club);
+    if (event) params.set("event", event);
     const query = params.toString();
     router.push(query ? `/signin/code?${query}` : "/signin/code");
   }
@@ -38,7 +38,7 @@ export function SignInForm({ flow, club }: { flow: "member" | "create"; club?: s
     const res = await fetch("/api/auth/password_signin", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: form.get("email"), password: form.get("password"), club }),
+      body: JSON.stringify({ email: form.get("email"), password: form.get("password"), event }),
     });
     const body: { error?: string; redirectTo?: string } = await res.json().catch(() => ({}));
     if (!res.ok || !body.redirectTo) {
@@ -50,9 +50,9 @@ export function SignInForm({ flow, club }: { flow: "member" | "create"; club?: s
     router.refresh();
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  async function onSubmit(ev: FormEvent<HTMLFormElement>) {
+    ev.preventDefault();
+    const form = new FormData(ev.currentTarget);
     setPending(true);
     setError("");
     try {
@@ -83,7 +83,7 @@ export function SignInForm({ flow, club }: { flow: "member" | "create"; club?: s
           </label>
           <input id="fullName" className="input" name="fullName" autoComplete="name" required maxLength={200} aria-describedby="fullName-help" />
           <span id="fullName-help" className="kb-help">
-            {flow === "create" ? "Shown to your members as the club's admin." : "As it appears on your club's list."}
+            {flow === "create" ? "Shown to your members as the event's admin." : "As it appears on your event's list."}
           </span>
         </div>
       ) : null}

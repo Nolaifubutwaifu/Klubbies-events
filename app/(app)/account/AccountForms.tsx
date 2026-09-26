@@ -32,7 +32,7 @@ export function ProfileForm({
         Email
         <input className="input" value={email} disabled />
         <span className="text-[14px] font-normal leading-normal text-ink-70">
-          This is the address your clubs have on file. Ask a club admin to change it.
+          This is the address your events have on file. Ask a event admin to change it.
         </span>
       </label>
       <label className="field">
@@ -43,7 +43,7 @@ export function ProfileForm({
           rows={3}
           maxLength={500}
           defaultValue={bio ?? ""}
-          placeholder="Course, year, what you do in the club"
+          placeholder="Course, year, what you do in the event"
         />
       </label>
       <FormMessage state={state} />
@@ -69,7 +69,7 @@ export function AvatarUploader({ userId, avatarUrl }: { userId: string; avatarUr
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `avatars/${userId}/avatar-${Date.now()}.${ext}`;
     const { error: uploadError } = await createClient()
-      .storage.from("club_media")
+      .storage.from("event_media")
       .upload(path, file, { upsert: true, contentType: file.type });
     if (uploadError) {
       setBusy(false);
@@ -99,7 +99,7 @@ export function AvatarUploader({ userId, avatarUrl }: { userId: string; avatarUr
           {busy ? "Uploading…" : avatarUrl ? "Change photo" : "Add a photo"}
         </button>
         <span className="text-[14px] leading-normal text-ink-70">
-          Your photo and display name are visible to other members of clubs you&apos;re in.
+          Your photo and display name are visible to other members of events you&apos;re in.
         </span>
         {error ? <span className="notice">{error}</span> : null}
         <input
@@ -160,9 +160,9 @@ export function NotificationToggles({
   const [pending, startTransition] = useTransition();
 
   const items: [keyof typeof prefs, string][] = [
-    ["notify_new_album", "A club shares a new album"],
-    ["notify_feed_post", "The committee posts to the club feed"],
-    ["notify_access_ending", "My access to a club is ending"],
+    ["notify_new_album", "A event shares a new album"],
+    ["notify_feed_post", "The committee posts to the event feed"],
+    ["notify_access_ending", "My access to a event is ending"],
   ];
 
   return (

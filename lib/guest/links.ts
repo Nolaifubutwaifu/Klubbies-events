@@ -22,11 +22,11 @@ export async function hashToken(token: string): Promise<string> {
 
 export type GuestSession = {
   linkId: string;
-  clubId: string;
+  eventId: string;
   albumId: string;
   label: string;
-  clubName: string;
-  clubAccent: string | null;
+  eventName: string;
+  eventAccent: string | null;
   albumTitle: string;
   albumDate: string | null;
   expiresAt: string;
@@ -47,31 +47,31 @@ export async function resolveGuestLink(
   const admin = createAdminClient();
   const { data: link } = await admin
     .from("album_guest_links")
-    .select("id, club_id, album_id, label, expires_at, revoked_at, file_count")
+    .select("id, event_id, album_id, label, expires_at, revoked_at, file_count")
     .eq("token_hash", await hashToken(token))
     .maybeSingle();
   if (!link) return { state: "unknown", session: null };
   if (link.revoked_at) return { state: "revoked", session: null };
   if (new Date(link.expires_at).getTime() <= Date.now()) return { state: "expired", session: null };
 
-  const [{ data: club }, { data: album }] = await Promise.all([
-    admin.from("clubs").select("name, accent_colour, billing_status").eq("id", link.club_id).maybeSingle(),
-    admin.from("albums").select("title, event_date").eq("id", link.album_id).maybeSingle(),
+  const [{ data: event }, { data: album }] = await Promise.all([
+    admin.from("events").select("name, accent_colour, billing_status").eq("id", link.event_id).maybeSingle(),
+    admin.from("albums").select("title, album_date").eq("id", link.album_id).maybeSingle(),
   ]);
-  if (!club || !album) return { state: "unknown", session: null };
-  if (!["active", "past_due", "comped"].includes(club.billing_status)) return { state: "unpaid", session: null };
+  if (!event || !album) return { state: "unknown", session: null };
+  if (!["active", "past_due", "comped"].includes(event.billing_status)) return { state: "unpaid", session: null };
 
   return {
     state: "ok",
     session: {
       linkId: link.id,
-      clubId: link.club_id,
+      eventId: link.event_id,
       albumId: link.album_id,
       label: link.label,
-      clubName: club.name,
-      clubAccent: club.accent_colour,
+      eventName: event.name,
+      eventAccent: event.accent_colour,
       albumTitle: album.title,
-      albumDate: album.event_date,
+      albumDate: album.album_date,
       expiresAt: link.expires_at,
       fileCount: link.file_count,
     },

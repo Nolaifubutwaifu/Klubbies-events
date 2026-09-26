@@ -7,7 +7,7 @@ describe("generateHandleBase", () => {
   });
 
   it("strips accents and transliterates", () => {
-    expect(generateHandleBase("Rowing Club Lüneburg")).toBe("rowing_club_luneburg");
+    expect(generateHandleBase("Rowing Event Lüneburg")).toBe("rowing_event_luneburg");
     expect(generateHandleBase("Straße Æsir Øresund")).toBe("strasse_aesir_oresund");
   });
 
@@ -16,7 +16,7 @@ describe("generateHandleBase", () => {
   });
 
   it("truncates to 40 characters at a word boundary", () => {
-    const handle = generateHandleBase("The University of Queensland Underwater Hockey and Snorkelling Club");
+    const handle = generateHandleBase("The University of Queensland Underwater Hockey and Snorkelling Event");
     expect(handle.length).toBeLessThanOrEqual(40);
     expect(handle).toBe("the_university_of_queensland_underwater");
   });
@@ -26,7 +26,7 @@ describe("generateHandleBase", () => {
   });
 
   it("falls back when nothing usable remains", () => {
-    expect(generateHandleBase("!!!")).toBe("club");
-    expect(generateHandleBase("東京")).toBe("club");
+    expect(generateHandleBase("!!!")).toBe("event");
+    expect(generateHandleBase("東京")).toBe("event");
   });
 });

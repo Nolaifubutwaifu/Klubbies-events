@@ -17,13 +17,13 @@ export type StackedAlbum = {
   allowDownload: boolean;
   openToMembers: boolean;
   coverUrl: string | null;
-  /** The cover at display size (2000px). Only signed for the album the club
+  /** The cover at display size (2000px). Only signed for the album the event
       home leads with, where the cover runs nearly the width of the page and
       the 400px thumbnail looked pixelated. */
   heroUrl: string | null;
   tiles: { id: string; url: string | null; kind: string }[];
   moreCount: number;
-  /** Published since the viewer last opened this club. */
+  /** Published since the viewer last opened this event. */
   isNew: boolean;
   /** Set when a draft is queued to publish itself. */
   publishAt: string | null;
@@ -37,7 +37,7 @@ export type StackedAlbum = {
  */
 export async function listStackedAlbums(
   supabase: UserClient,
-  clubId: string,
+  eventId: string,
   opts: { includeDrafts?: boolean; limit?: number; since?: string | null } = {},
 ): Promise<StackedAlbum[]> {
   const limit = opts.limit ?? 60;
@@ -46,12 +46,12 @@ export async function listStackedAlbums(
   let query = supabase
     .from("albums")
     .select(
-      "id, title, description, event_date, event_type, status, created_at, published_at, publish_at, sort_order, allow_download, contributor_scope, cover_media_id, cover_path",
+      "id, title, description, album_date, event_type, status, created_at, published_at, publish_at, sort_order, allow_download, contributor_scope, cover_media_id, cover_path",
     )
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     // An explicit order wins; everything still at 0 falls back to event date.
     .order("sort_order", { ascending: false })
-    .order("event_date", { ascending: false, nullsFirst: false })
+    .order("album_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (!opts.includeDrafts) query = query.eq("status", "published");
@@ -123,7 +123,7 @@ export async function listStackedAlbums(
       id: album.id,
       title: album.title,
       description: album.description,
-      date: album.event_date ?? album.published_at ?? album.created_at,
+      date: album.album_date ?? album.published_at ?? album.created_at,
       eventType: album.event_type,
       status: album.status,
       photoCount: count?.photo_count ?? 0,

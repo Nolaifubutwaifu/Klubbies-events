@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { setClubLogoAction } from "../../actions";
+import { setEventLogoAction } from "../../actions";
 
 const TYPES: Record<string, string> = { "image/png": "png", "image/svg+xml": "svg", "image/jpeg": "jpg", "image/webp": "webp" };
 
-export function LogoUploader({ clubId, logoUrl }: { clubId: string; logoUrl: string | null }) {
+export function LogoUploader({ eventId, logoUrl }: { eventId: string; logoUrl: string | null }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -22,13 +22,13 @@ export function LogoUploader({ clubId, logoUrl }: { clubId: string; logoUrl: str
     setError("");
     // A new name per upload: a replaced logo must never be served from a
     // cached URL for the old one. The server clears the previous file.
-    const path = `clubs/${clubId}/logo/logo-${Date.now()}.${ext}`;
-    const { error: uploadError } = await createClient().storage.from("club_media").upload(path, file, { upsert: true, contentType: file.type });
+    const path = `events/${eventId}/logo/logo-${Date.now()}.${ext}`;
+    const { error: uploadError } = await createClient().storage.from("event_media").upload(path, file, { upsert: true, contentType: file.type });
     if (uploadError) {
       setBusy(false);
       return setError("Upload failed. Try again.");
     }
-    const res = await setClubLogoAction(clubId, path);
+    const res = await setEventLogoAction(eventId, path);
     setBusy(false);
     if (res.error) return setError(res.error);
     router.refresh();
@@ -44,7 +44,7 @@ export function LogoUploader({ clubId, logoUrl }: { clubId: string; logoUrl: str
     >
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-        <img src={logoUrl} alt="Club logo" className="max-h-[60%] max-w-[60%] object-contain" />
+        <img src={logoUrl} alt="Event logo" className="max-h-[60%] max-w-[60%] object-contain" />
       ) : null}
       <span className="soft-display text-[15px] text-ink-70">{busy ? "Uploading…" : logoUrl ? "Replace logo" : "Drop your logo"}</span>
       <span className="text-[14px] text-[color:var(--ink-70)]">PNG or SVG, at least 400px</span>

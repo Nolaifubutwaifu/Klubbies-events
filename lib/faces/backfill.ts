@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Enabling the feature queues the club's whole library, newest first, so
+// Enabling the feature queues the event's whole library, newest first, so
 // recent events light up before old ones.
 //
 // This is deliberately not a Rekognition call. It only writes rows; the drain
@@ -24,14 +24,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 async function queueMediaJobs(
   admin: ReturnType<typeof createAdminClient>,
-  clubId: string,
+  eventId: string,
   mediaIds: string[],
   kind: "index_media" | "rematch_media" = "index_media",
 ): Promise<number> {
   const { data: live } = await admin
     .from("face_jobs")
     .select("media_id")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("kind", kind)
     .in("status", ["pending", "running"]);
   const alreadyQueued = new Set((live ?? []).map((row) => row.media_id));
@@ -39,7 +39,7 @@ async function queueMediaJobs(
 
   let queued = 0;
   for (let i = 0; i < todo.length; i += 500) {
-    const chunk = todo.slice(i, i + 500).map((id) => ({ club_id: clubId, media_id: id, kind }));
+    const chunk = todo.slice(i, i + 500).map((id) => ({ event_id: eventId, media_id: id, kind }));
     const { error } = await admin.from("face_jobs").insert(chunk);
     if (!error) {
       queued += chunk.length;
@@ -57,7 +57,7 @@ async function queueMediaJobs(
 
 export type BackfillQueueResult = { queued: number };
 
-export async function queueClubBackfill(clubId: string): Promise<BackfillQueueResult> {
+export async function queueEventBackfill(eventId: string): Promise<BackfillQueueResult> {
   const admin = createAdminClient();
 
   // Supabase JS has no insert-select, so the ids come back first. Chunked,
@@ -65,7 +65,7 @@ export async function queueClubBackfill(clubId: string): Promise<BackfillQueueRe
   const { data: photos, error } = await admin
     .from("media")
     .select("id")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("status", "ready")
     .eq("kind", "photo")
     .order("created_at", { ascending: false });
@@ -73,39 +73,39 @@ export async function queueClubBackfill(clubId: string): Promise<BackfillQueueRe
 
   const queued = await queueMediaJobs(
     admin,
-    clubId,
+    eventId,
     (photos ?? []).map((photo) => photo.id),
   );
 
   await admin
-    .from("club_face_settings")
+    .from("event_face_settings")
     .update({
       backfill_status: "queued",
       backfill_queued_at: new Date().toISOString(),
       backfill_completed_at: null,
     })
-    .eq("club_id", clubId);
+    .eq("event_id", eventId);
 
   return { queued };
 }
 
 export type BackfillProgress = { total: number; remaining: number; status: string };
 
-export async function backfillProgress(clubId: string): Promise<BackfillProgress> {
+export async function backfillProgress(eventId: string): Promise<BackfillProgress> {
   const admin = createAdminClient();
   const [{ count: total }, { count: remaining }, { data: settings }] = await Promise.all([
     admin
       .from("media")
       .select("id", { count: "exact", head: true })
-      .eq("club_id", clubId)
+      .eq("event_id", eventId)
       .eq("status", "ready")
       .eq("kind", "photo"),
     admin
       .from("face_jobs")
       .select("id", { count: "exact", head: true })
-      .eq("club_id", clubId)
+      .eq("event_id", eventId)
       .in("status", ["pending", "running"]),
-    admin.from("club_face_settings").select("backfill_status").eq("club_id", clubId).maybeSingle(),
+    admin.from("event_face_settings").select("backfill_status").eq("event_id", eventId).maybeSingle(),
   ]);
   return { total: total ?? 0, remaining: remaining ?? 0, status: settings?.backfill_status ?? "idle" };
 }

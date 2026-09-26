@@ -1,15 +1,15 @@
 import { Text } from "@react-email/components";
 import { EmailLayout, emailStyles } from "./Layout";
 
-export type SignInCodeProps = { code: string; name: string; clubName: string | null };
+export type SignInCodeProps = { code: string; name: string; eventName: string | null };
 
-export default function SignInCode({ code, name, clubName }: SignInCodeProps) {
+export default function SignInCode({ code, name, eventName }: SignInCodeProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
     <EmailLayout preview={`Your Klubbies code is ${code}`}>
-      <Text style={emailStyles.kicker}>{clubName ?? "Klubbies"}</Text>
+      <Text style={emailStyles.kicker}>{eventName ?? "Klubbies"}</Text>
       <Text style={emailStyles.heading}>Your sign-in code</Text>
-      <Text style={emailStyles.body}>Hi {firstName}, enter this code to open your club&apos;s photos.</Text>
+      <Text style={emailStyles.body}>Hi {firstName}, enter this code to open your event&apos;s photos.</Text>
       <Text
         style={{
           fontSize: 40,

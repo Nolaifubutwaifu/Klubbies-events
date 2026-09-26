@@ -49,14 +49,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   }
 
   let id = existing?.id ?? crypto.randomUUID();
-  let storagePath = existing?.storagePath ?? `${mediaFolder(session.clubId, session.albumId, id)}/original.${ext}`;
+  let storagePath = existing?.storagePath ?? `${mediaFolder(session.eventId, session.albumId, id)}/original.${ext}`;
 
   if (existing) {
     await admin.from("media").update({ status: "processing" }).eq("id", existing.id);
   } else {
     const { error } = await admin.from("media").insert({
       id,
-      club_id: session.clubId,
+      event_id: session.eventId,
       album_id: session.albumId,
       kind,
       storage_path: storagePath,

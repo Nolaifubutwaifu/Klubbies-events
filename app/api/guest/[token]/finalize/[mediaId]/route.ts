@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { clubFacesEnabled } from "@/lib/faces/collections";
+import { eventFacesEnabled } from "@/lib/faces/collections";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { recordGuestUpload, resolveGuestLink } from "@/lib/guest/links";
 import { derivativePaths, listFolder } from "@/lib/storage";
@@ -28,7 +28,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   // The link may only finish files it started: the guest_link_id is the check.
   const { data: media } = await admin
     .from("media")
-    .select("id, club_id, storage_path, byte_size, guest_link_id")
+    .select("id, event_id, storage_path, byte_size, guest_link_id")
     .eq("id", mediaId)
     .eq("guest_link_id", session.linkId)
     .maybeSingle();
@@ -66,13 +66,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
 
   await recordGuestUpload(session.linkId, byteSize);
 
-  // Face recognition, when the club has turned it on. Wrapped so it can never
+  // Face recognition, when the event has turned it on. Wrapped so it can never
   // fail the upload: a missing face job is a nuisance, a failed upload is not.
   // The drain is kicked here rather than left to the hourly cron, or "Photos of
   // you" would lag by up to an hour and read as broken.
   try {
-    if (await clubFacesEnabled(media.club_id)) {
-      await enqueueMediaJob(media.club_id, mediaId);
+    if (await eventFacesEnabled(media.event_id)) {
+      await enqueueMediaJob(media.event_id, mediaId);
       kickFaceJobs();
     }
   } catch (faceError) {

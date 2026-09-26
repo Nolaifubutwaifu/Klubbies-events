@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Email settings" };
 
 const LABELS: Record<NotifyKind, string> = {
   notify_new_album: "emails about new albums",
-  notify_feed_post: "emails about club feed posts",
+  notify_feed_post: "emails about event feed posts",
   notify_access_ending: "emails about your access ending",
 };
 

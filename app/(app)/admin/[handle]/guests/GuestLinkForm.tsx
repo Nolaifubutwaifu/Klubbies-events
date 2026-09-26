@@ -6,7 +6,7 @@ import { createGuestLinkAction, type GuestLinkState } from "@/app/(app)/admin/gu
 
 const CAN = [
   { yes: true, text: "Upload photos and videos into that one album" },
-  { yes: false, text: "See any album, member or anything else on the club" },
+  { yes: false, text: "See any album, member or anything else on the event" },
   { yes: false, text: "Delete or download what's already there" },
 ];
 
@@ -19,15 +19,15 @@ function Tick({ yes }: { yes: boolean }) {
 }
 
 export function GuestLinkForm({
-  clubId,
+  eventId,
   albums,
   defaultExpiry,
 }: {
-  clubId: string;
+  eventId: string;
   albums: { id: string; title: string; status: string }[];
   defaultExpiry: string;
 }) {
-  const [state, action] = useActionState<GuestLinkState, FormData>(createGuestLinkAction.bind(null, clubId), {});
+  const [state, action] = useActionState<GuestLinkState, FormData>(createGuestLinkAction.bind(null, eventId), {});
   const [copied, setCopied] = useState(false);
 
   return (

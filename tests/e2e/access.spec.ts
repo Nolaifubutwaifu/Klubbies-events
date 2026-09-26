@@ -20,47 +20,47 @@ test("non-member is refused", async ({ page, context, request }) => {
 
   // Even with a verified session, someone on no roster sees nothing.
   await signIn(context, request, world.outsiderEmail, "Nobody");
-  const res = await page.goto(`/c/${world.clubA.handle}`);
+  const res = await page.goto(`/e/${world.eventA.handle}`);
   expect(res?.status()).toBe(404);
-  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.clubA.mediaId] } });
+  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId] } });
   expect((await signed.json()).urls).toEqual({});
 });
 
-test("member sees only their club", async ({ page, context, request }) => {
+test("member sees only their event", async ({ page, context, request }) => {
   const { redirectTo } = await signIn(context, request, world.memberEmail, "Mara Lindqvist");
-  expect(redirectTo).toBe(`/c/${world.clubA.handle}`);
+  expect(redirectTo).toBe(`/e/${world.eventA.handle}`);
 
   await page.goto(redirectTo);
   await expect(page.getByRole("heading", { level: 1, name: `E2E a ${world.runId}` })).toBeVisible();
   await expect(page.getByText("Album a")).toBeVisible();
 
-  const other = await page.goto(`/c/${world.clubB.handle}`);
+  const other = await page.goto(`/e/${world.eventB.handle}`);
   expect(other?.status()).toBe(404);
 
-  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.clubA.mediaId, world.clubB.mediaId] } });
+  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId, world.eventB.mediaId] } });
   const { urls } = await signed.json();
-  expect(Object.keys(urls)).toEqual([world.clubA.mediaId]);
+  expect(Object.keys(urls)).toEqual([world.eventA.mediaId]);
 });
 
 test("revoked member loses access", async ({ page, context, request }) => {
   await signIn(context, request, world.memberEmail, "Mara Lindqvist");
-  await page.goto(`/c/${world.clubA.handle}`);
+  await page.goto(`/e/${world.eventA.handle}`);
   await expect(page.getByText("Album a")).toBeVisible();
 
-  await admin().from("memberships").update({ status: "revoked" }).eq("club_id", world.clubA.id).eq("roster_email", world.memberEmail);
+  await admin().from("memberships").update({ status: "revoked" }).eq("event_id", world.eventA.id).eq("roster_email", world.memberEmail);
 
-  const res = await page.goto(`/c/${world.clubA.handle}`);
+  const res = await page.goto(`/e/${world.eventA.handle}`);
   expect(res?.status()).toBe(404);
-  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.clubA.mediaId] } });
+  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId] } });
   expect((await signed.json()).urls).toEqual({});
 
-  await admin().from("memberships").update({ status: "active" }).eq("club_id", world.clubA.id).eq("roster_email", world.memberEmail);
+  await admin().from("memberships").update({ status: "active" }).eq("event_id", world.eventA.id).eq("roster_email", world.memberEmail);
 });
 
 test("signed URL expires", async ({ context, request }) => {
   await signIn(context, request, world.memberEmail, "Mara Lindqvist");
-  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.clubA.mediaId], variant: "thumb" } });
-  const url: string = (await signed.json()).urls[world.clubA.mediaId];
+  const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId], variant: "thumb" } });
+  const url: string = (await signed.json()).urls[world.eventA.mediaId];
   expect(url).toBeTruthy();
 
   expect((await request.get(url)).status()).toBe(200);

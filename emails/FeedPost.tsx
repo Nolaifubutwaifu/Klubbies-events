@@ -3,18 +3,18 @@ import { EmailLayout, emailStyles } from "./Layout";
 
 export type FeedPostProps = {
   name: string;
-  clubName: string;
+  eventName: string;
   author: string;
   body: string;
   feedUrl: string;
   unsubscribeUrl: string;
 };
 
-export default function FeedPost({ name, clubName, author, body, feedUrl, unsubscribeUrl }: FeedPostProps) {
+export default function FeedPost({ name, eventName, author, body, feedUrl, unsubscribeUrl }: FeedPostProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
-    <EmailLayout preview={`${author} posted in ${clubName}`}>
-      <Text style={emailStyles.kicker}>{clubName}</Text>
+    <EmailLayout preview={`${author} posted in ${eventName}`}>
+      <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>{author} posted an update</Text>
       <Text style={emailStyles.body}>Hi {firstName},</Text>
       <Text
@@ -29,10 +29,10 @@ export default function FeedPost({ name, clubName, author, body, feedUrl, unsubs
         {body}
       </Text>
       <Link href={feedUrl} style={emailStyles.button}>
-        Open the club feed
+        Open the event feed
       </Link>
       <Text style={{ ...emailStyles.body, fontSize: 14, marginTop: 24 }}>
-        Don&apos;t want these? <Link href={unsubscribeUrl}>Turn off club feed emails</Link>.
+        Don&apos;t want these? <Link href={unsubscribeUrl}>Turn off event feed emails</Link>.
       </Text>
     </EmailLayout>
   );

@@ -3,7 +3,7 @@ import type { APIRequestContext, BrowserContext } from "@playwright/test";
 import type { Database } from "../../lib/db/types";
 
 // Test fixtures talk to the real Supabase project with the service role and
-// create uniquely named clubs so runs never collide with real data.
+// create uniquely named events so runs never collide with real data.
 
 export function admin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,31 +20,31 @@ const TINY_JPEG = Buffer.from(
 
 export type World = {
   runId: string;
-  clubA: { id: string; handle: string; albumId: string; mediaId: string };
-  clubB: { id: string; handle: string; albumId: string; mediaId: string };
+  eventA: { id: string; handle: string; albumId: string; mediaId: string };
+  eventB: { id: string; handle: string; albumId: string; mediaId: string };
   memberEmail: string;
   outsiderEmail: string;
 };
 
-async function makeClub(runId: string, label: string) {
+async function makeEvent(runId: string, label: string) {
   const db = admin();
   const handle = `e2e_${runId}_${label}`;
-  const { data: club, error } = await db.from("clubs").insert({ handle, name: `E2E ${label} ${runId}` }).select("id").single();
-  if (error || !club) throw error;
+  const { data: event, error } = await db.from("events").insert({ handle, name: `E2E ${label} ${runId}` }).select("id").single();
+  if (error || !event) throw error;
   const { data: album } = await db
     .from("albums")
-    .insert({ club_id: club.id, title: `Album ${label}`, status: "published", published_at: new Date().toISOString() })
+    .insert({ event_id: event.id, title: `Album ${label}`, status: "published", published_at: new Date().toISOString() })
     .select("id")
     .single();
   const mediaId = crypto.randomUUID();
-  const folder = `clubs/${club.id}/albums/${album!.id}/${mediaId}`;
+  const folder = `events/${event.id}/albums/${album!.id}/${mediaId}`;
   for (const name of ["original.jpg", "thumb.webp", "display.webp"]) {
-    const { error: uploadError } = await db.storage.from("club_media").upload(`${folder}/${name}`, TINY_JPEG, { contentType: "image/jpeg", upsert: true });
+    const { error: uploadError } = await db.storage.from("event_media").upload(`${folder}/${name}`, TINY_JPEG, { contentType: "image/jpeg", upsert: true });
     if (uploadError) throw uploadError;
   }
   await db.from("media").insert({
     id: mediaId,
-    club_id: club.id,
+    event_id: event.id,
     album_id: album!.id,
     kind: "photo",
     storage_path: `${folder}/original.jpg`,
@@ -57,24 +57,24 @@ async function makeClub(runId: string, label: string) {
     original_filename: `${label}.jpg`,
     status: "ready",
   });
-  return { id: club.id, handle, albumId: album!.id, mediaId };
+  return { id: event.id, handle, albumId: album!.id, mediaId };
 }
 
 export async function createWorld(): Promise<World> {
   const runId = Math.random().toString(36).slice(2, 8);
-  const [clubA, clubB] = await Promise.all([makeClub(runId, "a"), makeClub(runId, "b")]);
+  const [eventA, eventB] = await Promise.all([makeEvent(runId, "a"), makeEvent(runId, "b")]);
   const memberEmail = `member.${runId}@e2e.klubbies.test`;
   const outsiderEmail = `outsider.${runId}@e2e.klubbies.test`;
-  await admin().from("memberships").insert({ club_id: clubA.id, roster_email: memberEmail, roster_name: "Mara Lindqvist" });
-  return { runId, clubA, clubB, memberEmail, outsiderEmail };
+  await admin().from("memberships").insert({ event_id: eventA.id, roster_email: memberEmail, roster_name: "Mara Lindqvist" });
+  return { runId, eventA, eventB, memberEmail, outsiderEmail };
 }
 
 export async function destroyWorld(world: World) {
   const db = admin();
-  for (const club of [world.clubA, world.clubB]) {
-    const folder = `clubs/${club.id}/albums/${club.albumId}/${club.mediaId}`;
-    await db.storage.from("club_media").remove([`${folder}/original.jpg`, `${folder}/thumb.webp`, `${folder}/display.webp`]);
-    await db.from("clubs").delete().eq("id", club.id);
+  for (const event of [world.eventA, world.eventB]) {
+    const folder = `events/${event.id}/albums/${event.albumId}/${event.mediaId}`;
+    await db.storage.from("event_media").remove([`${folder}/original.jpg`, `${folder}/thumb.webp`, `${folder}/display.webp`]);
+    await db.from("events").delete().eq("id", event.id);
   }
   const { data } = await db.auth.admin.listUsers({ perPage: 1000 });
   for (const user of data?.users ?? []) {

@@ -3,7 +3,7 @@
 -- The uniqueness that existed was (media_face_id, profile_id), which stops the
 -- same face matching the same member twice but allows two rows for one member
 -- in one photo if two faces in it both match them. The product rule has always
--- been one row per member per photo — matchClubMedia keeps only the best face
+-- been one row per member per photo — matchEventMedia keeps only the best face
 -- — but it was enforced in application code, and queries were written trusting
 -- it. matchForMedia used maybeSingle(), which quietly returns nothing at all
 -- when a second row appears, so the "Not me" button would vanish exactly when

@@ -68,13 +68,13 @@ describe("client configuration", () => {
     expect(faceClient()).not.toBeNull();
   });
 
-  it("namespaces collections per club, and per environment", async () => {
+  it("namespaces collections per event, and per environment", async () => {
     process.env.AWS_ACCESS_KEY_ID = "AKIAEXAMPLE";
     process.env.AWS_SECRET_ACCESS_KEY = "secret";
     process.env.REKOGNITION_COLLECTION_PREFIX = "klubbies-test";
     const { collectionIdFor } = await import("@/lib/faces/client");
     expect(collectionIdFor("8f3c1111-2222-3333-4444-555566667777")).toBe(
-      "klubbies-test-club-8f3c1111-2222-3333-4444-555566667777",
+      "klubbies-test-event-8f3c1111-2222-3333-4444-555566667777",
     );
   });
 });

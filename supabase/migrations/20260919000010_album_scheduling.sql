@@ -10,7 +10,7 @@ alter table public.albums add column publish_at timestamptz;
 alter table public.albums add column sort_order integer not null default 0;
 
 -- "Hidden" is a third state, not a flag: the members' select policy only
--- admits status = 'published', so a hidden album disappears from the club
+-- admits status = 'published', so a hidden album disappears from the event
 -- without touching a single file.
 alter table public.albums drop constraint albums_status_check;
 alter table public.albums add constraint albums_status_check
@@ -20,4 +20,4 @@ alter table public.albums add constraint albums_status_check
 create index albums_publish_due_idx on public.albums (publish_at)
   where status = 'draft' and publish_at is not null;
 
-create index albums_sort_idx on public.albums (club_id, sort_order desc, event_date desc);
+create index albums_sort_idx on public.albums (event_id, sort_order desc, album_date desc);

@@ -1,6 +1,6 @@
 // A fingerprint of the original file, taken in the browser before upload, so
 // the ticket route can tell "this album already has it" and skip a second
-// copy. The first real club had 29 of its first 60 photos twice.
+// copy. The first real event had 29 of its first 60 photos twice.
 
 /** Hash every byte up to this size; past it, a sample. */
 const FULL_HASH_LIMIT = 96 * 1024 * 1024;

@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import type { Json } from "@/lib/db/types";
 import { buildRosterPlan, type ExistingMember } from "@/lib/roster/normalise";
@@ -27,15 +27,15 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: importRow } = await supabase
     .from("roster_imports")
-    .select("id, club_id, status, report")
+    .select("id, event_id, status, report")
     .eq("id", importId)
     .maybeSingle();
   if (!importRow) return NextResponse.json({ error: "Import not found" }, { status: 404 });
   if (importRow.status !== "preview") return NextResponse.json({ error: "This import was already applied" }, { status: 409 });
 
-  const ctx = await getClubContextById(importRow.club_id);
+  const ctx = await getEventContextById(importRow.event_id);
   if (!ctx?.isAdmin) return NextResponse.json({ error: "Import not found" }, { status: 404 });
-  if (!canWrite(ctx.club.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
+  if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const report = previewReportSchema.safeParse(importRow.report);
   if (!report.success) return NextResponse.json({ error: "Import data is unreadable. Upload the file again." }, { status: 422 });
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("memberships")
       .select("id, roster_email, roster_name, status")
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .order("id")
       .range(from, from + 999);
     if (error) return NextResponse.json({ error: "Could not read the current roster" }, { status: 500 });
@@ -83,16 +83,16 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   for (let i = 0; i < plan.toAdd.length; i += 500) {
     const chunk = plan.toAdd.slice(i, i + 500).map((row) => ({
-      club_id: ctx.club.id,
+      event_id: ctx.event.id,
       roster_email: row.email,
       roster_name: row.name,
       status: "pending",
-      role: "club_member",
+      role: "event_member",
       invited_at: now,
     }));
     const { error } = await supabase
       .from("memberships")
-      .upsert(chunk, { onConflict: "club_id,roster_email", ignoreDuplicates: true });
+      .upsert(chunk, { onConflict: "event_id,roster_email", ignoreDuplicates: true });
     if (error) return NextResponse.json({ error: "Import stopped part way. Nothing after row " + (i + 1) + " was added." }, { status: 500 });
   }
 
@@ -103,21 +103,21 @@ export async function POST(request: Request) {
     await supabase
       .from("memberships")
       .update({ ...reset, status: "active" })
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .in("roster_email", emails)
       .not("user_id", "is", null);
     await supabase
       .from("memberships")
       .update({ ...reset, status: "pending" })
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .in("roster_email", emails)
       .is("user_id", null);
   }
 
   await supabase
-    .from("clubs")
+    .from("events")
     .update({ roster_mapping: toSavedMapping(report.data.columns, mapping) as unknown as Json })
-    .eq("id", ctx.club.id);
+    .eq("id", ctx.event.id);
 
   await supabase
     .from("roster_imports")
@@ -132,6 +132,6 @@ export async function POST(request: Request) {
     })
     .eq("id", importRow.id);
 
-  revalidatePath(`/admin/${ctx.club.handle}/members`);
+  revalidatePath(`/admin/${ctx.event.handle}/members`);
   return NextResponse.json({ ...summary, dryRun: false });
 }

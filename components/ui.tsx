@@ -14,7 +14,7 @@ export function Kicker({ children, className = "" }: { children: ReactNode; clas
 }
 
 /**
- * Page heading for the committee screens. The kicker is the club name, so it
+ * Page heading for the committee screens. The kicker is the event name, so it
  * reads as a chip rather than the old all-caps label.
  */
 export function PageTitle({
@@ -63,7 +63,7 @@ export function StatusTag({ status, role, graceEndsAt }: { status: string; role?
     return <span className="soft-chip">Leaving{ends ? ` · ${ends}` : ""}</span>;
   }
   if (status === "revoked") return <span className="soft-chip soft-chip-muted">Removed</span>;
-  if (role === "club_admin") return <span className="soft-chip">Admin</span>;
+  if (role === "event_admin") return <span className="soft-chip">Admin</span>;
   if (status === "active") return <span className="soft-chip soft-chip-muted">Active</span>;
   return <span className="soft-chip soft-chip-muted">Never logged in</span>;
 }

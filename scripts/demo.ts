@@ -1,10 +1,10 @@
 /**
- * Builds the club the design file is drawn around — UniMelb FC, @umfc — so the
+ * Builds the event the design file is drawn around — UniMelb FC, @umfc — so the
  * screens can be looked at with real content in them.
  *
  *   DEMO_ADMIN_EMAIL=you@example.com pnpm tsx --env-file=.env.local scripts/demo.ts
  *
- * Re-running removes the previous demo club first, so it is safe to repeat.
+ * Re-running removes the previous demo event first, so it is safe to repeat.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,7 +18,7 @@ const adminEmail = (process.env.DEMO_ADMIN_EMAIL ?? "mahi.demo@klubbies.test").t
 if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local");
 
 const db = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-const BUCKET = "club_media";
+const BUCKET = "event_media";
 const HANDLE = "demo_umfc";
 const PHOTOS = path.join(process.cwd(), "design/source-photos");
 
@@ -43,9 +43,9 @@ const MEMBERS = [
 ] as const;
 
 async function main() {
-  const { data: existing } = await db.from("clubs").select("id").eq("handle", HANDLE).maybeSingle();
+  const { data: existing } = await db.from("events").select("id").eq("handle", HANDLE).maybeSingle();
   if (existing) {
-    const { data: old } = await db.from("media").select("storage_path").eq("club_id", existing.id);
+    const { data: old } = await db.from("media").select("storage_path").eq("event_id", existing.id);
     for (const row of old ?? []) {
       const folder = row.storage_path.slice(0, row.storage_path.lastIndexOf("/"));
       await db.storage.from(BUCKET).remove([
@@ -54,12 +54,12 @@ async function main() {
         `${folder}/display.webp`,
       ]);
     }
-    await db.from("clubs").delete().eq("id", existing.id);
-    console.log("removed the previous demo club");
+    await db.from("events").delete().eq("id", existing.id);
+    console.log("removed the previous demo event");
   }
 
-  const { data: club, error } = await db
-    .from("clubs")
+  const { data: event, error } = await db
+    .from("events")
     .insert({
       handle: HANDLE,
       name: "UniMelb FC",
@@ -70,12 +70,12 @@ async function main() {
     })
     .select("id")
     .single();
-  if (error || !club) throw error;
-  await db.rpc("seed_club_roles", { p_club_id: club.id });
+  if (error || !event) throw error;
+  await db.rpc("seed_event_roles", { p_event_id: event.id });
 
-  const { data: roles } = await db.from("club_roles").select("id, key, manage_club").eq("club_id", club.id);
-  const adminRole = roles?.find((r) => r.manage_club);
-  const memberRole = roles?.find((r) => !r.manage_club && r.key === "member") ?? roles?.find((r) => !r.manage_club);
+  const { data: roles } = await db.from("event_roles").select("id, key, manage_event").eq("event_id", event.id);
+  const adminRole = roles?.find((r) => r.manage_event);
+  const memberRole = roles?.find((r) => !r.manage_event && r.key === "member") ?? roles?.find((r) => !r.manage_event);
 
   const files = (await readdir(PHOTOS)).filter((f) => /\.(jpe?g|png)$/i.test(f)).sort();
   let photoIndex = 0;
@@ -85,11 +85,11 @@ async function main() {
     const isAdmin = i === 0;
     const { data: user } = await db.auth.admin.createUser({ email, email_confirm: true });
     await db.from("memberships").insert({
-      club_id: club.id,
+      event_id: event.id,
       roster_name: name,
       roster_email: email,
       claimed_name: i < 6 ? name : null,
-      role: isAdmin ? "club_admin" : "club_member",
+      role: isAdmin ? "event_admin" : "event_member",
       role_id: (isAdmin ? adminRole?.id : memberRole?.id) ?? null,
       status: i < 6 ? "active" : "pending",
       user_id: user?.user?.id ?? null,
@@ -102,9 +102,9 @@ async function main() {
     const { data: row } = await db
       .from("albums")
       .insert({
-        club_id: club.id,
+        event_id: event.id,
         title: album.title,
-        event_date: album.date,
+        album_date: album.date,
         event_type: album.type,
         status: album.status,
         published_at: album.status === "published" ? new Date(`${album.date}T10:00:00+10:00`).toISOString() : null,
@@ -118,7 +118,7 @@ async function main() {
     for (let n = 0; n < album.count; n++) {
       const source = await readFile(path.join(PHOTOS, next()));
       const mediaId = crypto.randomUUID();
-      const folder = `clubs/${club.id}/albums/${row.id}/${mediaId}`;
+      const folder = `events/${event.id}/albums/${row.id}/${mediaId}`;
       const original = await sharp(source).jpeg({ quality: 82 }).toBuffer();
       const thumb = await sharp(source).resize(600, 600, { fit: "cover" }).webp({ quality: 74 }).toBuffer();
       const display = await sharp(source).resize(1800, 1800, { fit: "inside" }).webp({ quality: 80 }).toBuffer();
@@ -138,7 +138,7 @@ async function main() {
 
       await db.from("media").insert({
         id: mediaId,
-        club_id: club.id,
+        event_id: event.id,
         album_id: row.id,
         kind: "photo",
         storage_path: `${folder}/original.jpg`,
@@ -156,7 +156,7 @@ async function main() {
     console.log(`${album.title}: ${album.count} photos`);
   }
 
-  console.log(`\nDemo club ready at /c/${HANDLE} and /admin/${HANDLE}`);
+  console.log(`\nDemo event ready at /e/${HANDLE} and /admin/${HANDLE}`);
   console.log(`Admin signs in as ${adminEmail}`);
 }
 

@@ -16,9 +16,9 @@ export async function POST(request: Request) {
   if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
 
   const body = await request.text();
-  let event: Stripe.Event;
+  let stripeEvent: Stripe.Event;
   try {
-    event = stripe().webhooks.constructEvent(body, signature, secret);
+    stripeEvent = stripe().webhooks.constructEvent(body, signature, secret);
   } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
@@ -26,19 +26,19 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { error: insertError } = await admin
     .from("stripe_events")
-    .insert({ id: event.id, type: event.type, payload: event as unknown as Json });
+    .insert({ id: stripeEvent.id, type: stripeEvent.type, payload: stripeEvent as unknown as Json });
   if (insertError) {
     if (insertError.code === "23505") return NextResponse.json({ received: true, duplicate: true });
-    return NextResponse.json({ error: "Could not record event" }, { status: 500 });
+    return NextResponse.json({ error: "Could not record stripeEvent" }, { status: 500 });
   }
 
   try {
-    const clubId = await handleStripeEvent(event);
-    await admin.from("stripe_events").update({ processed_at: new Date().toISOString(), club_id: clubId }).eq("id", event.id);
+    const eventId = await handleStripeEvent(stripeEvent);
+    await admin.from("stripe_events").update({ processed_at: new Date().toISOString(), event_id: eventId }).eq("id", stripeEvent.id);
   } catch (error) {
-    console.error("stripe webhook failed", event.id, error);
+    console.error("stripe webhook failed", stripeEvent.id, error);
     // Let Stripe retry: forget the event so the retry is processed.
-    await admin.from("stripe_events").delete().eq("id", event.id);
+    await admin.from("stripe_events").delete().eq("id", stripeEvent.id);
     return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { ACCEPTED_TYPES, resolveMimeType } from "@/lib/media/constants";
 import { contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
@@ -26,12 +26,12 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data: album } = await supabase.from("albums").select("id, club_id").eq("id", albumId).maybeSingle();
+  const { data: album } = await supabase.from("albums").select("id, event_id").eq("id", albumId).maybeSingle();
   if (!album) return NextResponse.json({ error: "Album not found" }, { status: 404 });
 
-  const ctx = await getClubContextById(album.club_id);
+  const ctx = await getEventContextById(album.event_id);
   if (!ctx?.isAdmin) return NextResponse.json({ error: "Album not found" }, { status: 404 });
-  if (!canWrite(ctx.club.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
+  if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
   const answer = (existing: ExistingUpload) => {
@@ -57,12 +57,12 @@ export async function POST(request: Request) {
   }
 
   const id = crypto.randomUUID();
-  const folder = mediaFolder(album.club_id, album.id, id);
+  const folder = mediaFolder(album.event_id, album.id, id);
   const storagePath = `${folder}/original.${ext}`;
 
   const { error } = await supabase.from("media").insert({
     id,
-    club_id: album.club_id,
+    event_id: album.event_id,
     album_id: album.id,
     kind,
     storage_path: storagePath,

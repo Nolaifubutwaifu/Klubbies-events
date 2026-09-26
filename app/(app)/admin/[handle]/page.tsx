@@ -26,10 +26,10 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
   const { handle } = await props.params;
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
-  const clubId = ctx.club.id;
+  const eventId = ctx.event.id;
 
   const count = (status?: string) => {
-    let q = supabase.from("memberships").select("id", { count: "exact", head: true }).eq("club_id", clubId);
+    let q = supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId);
     q = status ? q.eq("status", status) : q.in("status", ["pending", "active", "grace"]);
     return q;
   };
@@ -55,44 +55,44 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
       count("active"),
       count("pending"),
       count("grace"),
-      supabase.from("albums").select("id", { count: "exact", head: true }).eq("club_id", clubId),
-      supabase.from("albums").select("id", { count: "exact", head: true }).eq("club_id", clubId).eq("status", "published"),
-      supabase.from("club_storage_usage").select("*").eq("club_id", clubId).maybeSingle(),
+      supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId),
+      supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "published"),
+      supabase.from("event_storage_usage").select("*").eq("event_id", eventId).maybeSingle(),
       supabase
         .from("memberships")
         .select("id, roster_name, claimed_name, roster_email")
-        .eq("club_id", clubId)
+        .eq("event_id", eventId)
         .eq("name_mismatch", true)
         .in("status", ["active", "grace"])
         .limit(5),
       supabase
         .from("access_events")
         .select("id, action, occurred_at, memberships(roster_name, claimed_name, users!memberships_user_id_fkey(display_name)), media(original_filename)")
-        .eq("club_id", clubId)
+        .eq("event_id", eventId)
         .order("occurred_at", { ascending: false })
         .limit(6),
-      listStackedAlbums(supabase, clubId, { includeDrafts: true, limit: 4 }),
+      listStackedAlbums(supabase, eventId, { includeDrafts: true, limit: 4 }),
       supabase
         .from("access_events")
         .select("id", { count: "exact", head: true })
-        .eq("club_id", clubId)
+        .eq("event_id", eventId)
         .eq("action", "view")
         .gte("occurred_at", sevenDaysAgo()),
       supabase
         .from("media_removal_requests")
         .select("id", { count: "exact", head: true })
-        .eq("club_id", clubId)
+        .eq("event_id", eventId)
         .eq("status", "open"),
-      supabase.from("album_engagement").select("*").eq("club_id", clubId),
+      supabase.from("album_engagement").select("*").eq("event_id", eventId),
       // What members can actually open, the same rule as album_media_counts.
-      // club_storage_usage counts every row, finished or not, which is how
+      // event_storage_usage counts every row, finished or not, which is how
       // this page said 114 while the album said 110.
-      supabase.from("media").select("id", { count: "exact", head: true }).eq("club_id", clubId).eq("status", "ready"),
+      supabase.from("media").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "ready"),
       // Uploads that stopped. Given an hour, so one still going isn't flagged.
       supabase
         .from("media")
         .select("id, album_id, albums!media_album_id_fkey(title)", { count: "exact" })
-        .eq("club_id", clubId)
+        .eq("event_id", eventId)
         .neq("status", "ready")
         .lt("created_at", stuckCutoff())
         .order("created_at", { ascending: true })
@@ -138,7 +138,7 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
           key: "unfinished",
           title: `${plural(stuckCount, "upload")} didn't finish`,
           body: `In ${stuckAlbums.map(([, title]) => title).join(", ")}. Members can't see them. Upload them again or remove them; they clear themselves after ${EXPIRE_AFTER_DAYS} days.`,
-          href: stuckAlbums[0] ? `/c/${handle}/a/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
+          href: stuckAlbums[0] ? `/e/${handle}/a/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
           cta: "Fix",
           urgent: true,
         }
@@ -157,7 +157,7 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
       ? {
           key: "drafts",
           title: `${drafts} album${drafts === 1 ? "" : "s"} still in draft`,
-          body: "Nobody in the club can see a draft yet.",
+          body: "Nobody in the event can see a draft yet.",
           href: `/admin/${handle}/albums`,
           cta: "Publish",
           urgent: true,
@@ -168,7 +168,7 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
           key: "pending",
           title: `${plural(pending.count ?? 0, "member")} ${(pending.count ?? 0) === 1 ? "has" : "have"} never signed in`,
           // No guess about who they are: "mostly first years" read oddly for
-          // a club with one pending member.
+          // a event with one pending member.
           body: "On the member list, but they haven't opened Klubbies yet.",
           href: `/admin/${handle}/members`,
           cta: "Open members",
@@ -180,7 +180,7 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <PageTitle kicker={ctx.club.name} title={today}>
+        <PageTitle kicker={ctx.event.name} title={today}>
           {tasks.length
             ? `${plural(tasks.length, "thing")} ${tasks.length === 1 ? "needs" : "need"} you. Everything else is running itself.`
             : "Nothing needs you. Everything is running itself."}
@@ -190,7 +190,7 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
-            <MoreLink href={`/c/${handle}`}>See it as a member</MoreLink>
+            <MoreLink href={`/e/${handle}`}>See it as a member</MoreLink>
             <MoreLink href={`/admin/${handle}/guests`}>Make a guest upload link</MoreLink>
             <MoreLink href={`/admin/${handle}/activity`}>Full activity log</MoreLink>
           </MoreMenu>
@@ -292,7 +292,7 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
                 {stacked.map((album) => {
                   const row = views.get(album.id);
                   return (
-                    <Link key={album.id} href={`/c/${handle}/a/${album.id}`} className="flex flex-col gap-2 text-ink no-underline">
+                    <Link key={album.id} href={`/e/${handle}/a/${album.id}`} className="flex flex-col gap-2 text-ink no-underline">
                       <span className="soft-tile relative block aspect-[4/3]">
                         {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" /> : null}
                         {album.status !== "published" ? (

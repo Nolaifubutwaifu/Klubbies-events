@@ -2,16 +2,16 @@
 
 import { useEffect, useState, useTransition } from "react";
 import {
-  disableClubFacesAction,
-  enableClubFacesAction,
+  disableEventFacesAction,
+  enableEventFacesAction,
   faceProgressAction,
   runFaceJobsAction,
 } from "@/app/(app)/face-actions";
-import { CLUB_NOTICE } from "@/lib/faces/copy";
+import { EVENT_NOTICE } from "@/lib/faces/copy";
 
 type Props = {
-  clubId: string;
-  clubName: string;
+  eventId: string;
+  eventName: string;
   configured: boolean;
   enabled: boolean;
   enrolledCount: number;
@@ -20,10 +20,10 @@ type Props = {
 
 /**
  * Not a switch. Turning this on creates a faceprint for everyone in the
- * club's photos, including people who never opted in, so the committee reads
+ * event's photos, including people who never opted in, so the committee reads
  * what that means and ticks a box before anything happens.
  */
-export function FaceRecognition({ clubId, clubName, configured, enabled, enrolledCount, backfill }: Props) {
+export function FaceRecognition({ eventId, eventName, configured, enabled, enrolledCount, backfill }: Props) {
   const [accepted, setAccepted] = useState(false);
   const [confirmingOff, setConfirmingOff] = useState(false);
   const [message, setMessage] = useState("");
@@ -41,7 +41,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
     if (!enabled) return;
     let cancelled = false;
     const tick = async () => {
-      const next = await faceProgressAction(clubId);
+      const next = await faceProgressAction(eventId);
       if (cancelled || next.error) return;
       setLive({ total: next.total, remaining: next.remaining, status: next.status });
       setFaces(next.faces);
@@ -53,7 +53,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [clubId, enabled, working]);
+  }, [eventId, enabled, working]);
 
   if (!configured) {
     return (
@@ -76,7 +76,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
         </div>
         <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
           {enrolledCount === 0
-            ? "No members have enrolled yet. They see the invitation on the club page."
+            ? "No members have enrolled yet. They see the invitation on the event page."
             : `${enrolledCount.toLocaleString("en-AU")} ${enrolledCount === 1 ? "member has" : "members have"} enrolled. Each of them sees only their own photos.`}
         </p>
 
@@ -125,7 +125,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const res = await runFaceJobsAction(clubId);
+                  const res = await runFaceJobsAction(eventId);
                   setMessage(res.error ?? res.message ?? "");
                 })
               }
@@ -141,7 +141,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    const res = await disableClubFacesAction(clubId);
+                    const res = await disableEventFacesAction(eventId);
                     setMessage(res.error ?? res.message ?? "");
                     setConfirmingOff(false);
                   })
@@ -161,7 +161,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
         </div>
         {confirmingOff ? (
           <p className="kb-error m-0">
-            This deletes every faceprint for {clubName}, every enrolment selfie and every match. Your photos are not
+            This deletes every faceprint for {eventName}, every enrolment selfie and every match. Your photos are not
             touched. There is no undo.
           </p>
         ) : null}
@@ -172,10 +172,10 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
 
   return (
     <div className="soft-card flex flex-col gap-3 p-5">
-      <span className="text-[15px] font-bold">{CLUB_NOTICE.title(clubName)}</span>
-      <p className="m-0 text-[14px] text-[color:var(--ink-70)]">{CLUB_NOTICE.lead}</p>
+      <span className="text-[15px] font-bold">{EVENT_NOTICE.title(eventName)}</span>
+      <p className="m-0 text-[14px] text-[color:var(--ink-70)]">{EVENT_NOTICE.lead}</p>
       <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-normal text-[color:var(--ink-70)]">
-        {CLUB_NOTICE.points.map((point) => (
+        {EVENT_NOTICE.points.map((point) => (
           <li key={point}>{point}</li>
         ))}
       </ul>
@@ -183,10 +183,10 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
         <input
           type="checkbox"
           checked={accepted}
-          onChange={(event) => setAccepted(event.target.checked)}
+          onChange={(ev) => setAccepted(ev.target.checked)}
           className="mt-0.5"
         />
-        <span>{CLUB_NOTICE.tickbox(clubName)}</span>
+        <span>{EVENT_NOTICE.tickbox(eventName)}</span>
       </label>
       <button
         type="button"
@@ -194,7 +194,7 @@ export function FaceRecognition({ clubId, clubName, configured, enabled, enrolle
         disabled={!accepted || pending}
         onClick={() =>
           startTransition(async () => {
-            const res = await enableClubFacesAction(clubId, accepted);
+            const res = await enableEventFacesAction(eventId, accepted);
             setMessage(res.error ?? res.message ?? "");
           })
         }

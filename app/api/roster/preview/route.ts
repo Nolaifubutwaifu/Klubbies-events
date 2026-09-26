@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import type { Json } from "@/lib/db/types";
 import {
@@ -18,12 +18,12 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
-  const clubId = z.uuid().safeParse(form?.get("clubId"));
-  if (!form || !clubId.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  const eventId = z.uuid().safeParse(form?.get("eventId"));
+  if (!form || !eventId.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const ctx = await getClubContextById(clubId.data);
+  const ctx = await getEventContextById(eventId.data);
   if (!ctx?.isAdmin) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canWrite(ctx.club.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
+  if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const file = form.get("file");
   const text = form.get("text");
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Rosters are limited to ${MAX_ROSTER_ROWS.toLocaleString()} rows per import` }, { status: 413 });
   }
 
-  const saved = savedMappingSchema.safeParse(ctx.club.roster_mapping);
+  const saved = savedMappingSchema.safeParse(ctx.event.roster_mapping);
   const fromSaved = saved.success ? applySavedMapping(sheet.columns, saved.data) : null;
   const mapping = fromSaved ?? guessMapping(sheet);
 
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("roster_imports")
     .insert({
-      club_id: ctx.club.id,
+      event_id: ctx.event.id,
       filename,
       status: "preview",
       row_count: sheet.dataRows.length,

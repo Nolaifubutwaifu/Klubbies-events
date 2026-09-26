@@ -7,16 +7,16 @@ import type { ReactNode } from "react";
 /**
  * Most members open Klubbies on a phone at 11pm. Four destinations, thumb
  * height, always there — the design's tab bar, hidden once there's room for
- * the header nav instead. A fifth, Photos of you, joins them in a club where
+ * the header nav instead. A fifth, Photos of you, joins them in a event where
  * the feature is on for this member: the rail was its only way in, and the
  * rail doesn't exist on a phone.
  */
 export function MemberTabBar({ handle, photosOfYou = false }: { handle: string; photosOfYou?: boolean }) {
   const pathname = usePathname();
-  const base = `/c/${handle}`;
+  const base = `/e/${handle}`;
   // The lightbox is full-bleed and carries its own actions; a tab bar over the
   // photo would be two rows of buttons arguing with each other.
-  const inLightbox = new RegExp(`^/c/[^/]+/a/[^/]+/[^/]+`).test(pathname);
+  const inLightbox = new RegExp(`^/e/[^/]+/a/[^/]+/[^/]+`).test(pathname);
 
   const tabs: { href: string; label: string; icon: ReactNode; filled?: boolean; match: (p: string) => boolean }[] = [
     {
@@ -43,7 +43,7 @@ export function MemberTabBar({ handle, photosOfYou = false }: { handle: string; 
       : []),
     {
       href: `${base}/feed`,
-      label: "Club feed",
+      label: "Event feed",
       match: (p) => p.startsWith(`${base}/feed`),
       icon: (
         <>

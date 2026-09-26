@@ -19,7 +19,7 @@ describe("emails", () => {
     expect(normaliseEmail("mailto:<a@b.co>")).toBe("a@b.co");
   });
 
-  it.each(["mara@uni.edu", "j.weber+club@students.uq.edu.au", "o'neil@example.com"])("accepts %s", (e) => {
+  it.each(["mara@uni.edu", "j.weber+event@students.uq.edu.au", "o'neil@example.com"])("accepts %s", (e) => {
     expect(isValidEmail(e)).toBe(true);
   });
 

@@ -3,10 +3,10 @@ import Link from "next/link";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
-import { clubAddress } from "@/lib/env";
+import { eventAddress } from "@/lib/env";
 import { backfillProgress } from "@/lib/faces/backfill";
 import { facesConfigured } from "@/lib/faces/client";
-import { clubFaceState } from "@/lib/faces/collections";
+import { eventFaceState } from "@/lib/faces/collections";
 import { formatLongDate } from "@/lib/format";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -20,48 +20,48 @@ export const metadata: Metadata = { title: "Billing & settings" };
 export default async function SettingsPage(props: PageProps<"/admin/[handle]/settings">) {
   const { handle } = await props.params;
   const ctx = await requireAdminContext(handle);
-  const { club } = ctx;
+  const { event } = ctx;
   const supabase = await createClient();
-  const logoUrl = club.logo_path ? ((await signPaths(supabase, [club.logo_path], SIGNED_URL_TTL.display)).get(club.logo_path) ?? null) : null;
+  const logoUrl = event.logo_path ? ((await signPaths(supabase, [event.logo_path], SIGNED_URL_TTL.display)).get(event.logo_path) ?? null) : null;
 
   const [faceState, faceBackfill, { count: enrolledCount }] = await Promise.all([
-    clubFaceState(club.id),
-    backfillProgress(club.id),
-    supabase.from("member_face_profiles").select("id", { count: "exact", head: true }).eq("club_id", club.id),
+    eventFaceState(event.id),
+    backfillProgress(event.id),
+    supabase.from("member_face_profiles").select("id", { count: "exact", head: true }).eq("event_id", event.id),
   ]);
 
-  const status = club.billing_status as BillingStatus;
+  const status = event.billing_status as BillingStatus;
   const active = canWrite(status);
 
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
-      <PageTitle kicker={club.name} title="Billing &amp; settings">
+      <PageTitle kicker={event.name} title="Billing &amp; settings">
         One plan, one card, and the handful of switches that matter.
       </PageTitle>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div className="flex flex-col gap-7">
           <section className="flex flex-col gap-4">
-            <h2 className="soft-display text-[19px]">Club details</h2>
+            <h2 className="soft-display text-[19px]">Event details</h2>
             <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
               <SettingsForm
-                clubId={club.id}
-                name={club.name}
-                organisation={club.organisation}
-                description={club.description}
-                accentColour={club.accent_colour}
+                eventId={event.id}
+                name={event.name}
+                organisation={event.organisation}
+                description={event.description}
+                accentColour={event.accent_colour}
               />
               <div className="flex flex-col gap-4">
-                <span className="text-[14px] font-semibold">Club mark</span>
+                <span className="text-[14px] font-semibold">Event mark</span>
                 <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
-                  Shown next to the club name in the header, and on the club switcher.
+                  Shown next to the event name in the header, and on the event switcher.
                 </span>
-                <LogoUploader clubId={club.id} logoUrl={logoUrl} />
+                <LogoUploader eventId={event.id} logoUrl={logoUrl} />
                 <div className="soft-card bg-surface p-4">
-                  <div className="label-caps">Club address</div>
+                  <div className="label-caps">Event address</div>
                   {/* Breaks after a slash, never inside "uq_vb". */}
                   <div className="mt-2 break-words soft-display text-[18px]">
-                    {clubAddress(club.handle)
+                    {eventAddress(event.handle)
                       .split("/")
                       .map((part, i, all) => (
                         <span key={i}>
@@ -85,10 +85,10 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
           <section className="flex flex-col gap-3">
             <h2 className="soft-display text-[19px]">Privacy</h2>
             <PrivacySwitches
-              clubId={club.id}
+              eventId={event.id}
               initial={{
-                allow_removal_requests: club.allow_removal_requests,
-                grace_period_enabled: club.grace_period_enabled,
+                allow_removal_requests: event.allow_removal_requests,
+                grace_period_enabled: event.grace_period_enabled,
               }}
             />
             <p className="m-0 max-w-[60ch] text-[14px] text-[color:var(--ink-70)]">
@@ -100,8 +100,8 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
           <section className="flex flex-col gap-3">
             <h2 className="soft-display text-[19px]">Find yourself in photos</h2>
             <FaceRecognition
-              clubId={club.id}
-              clubName={club.name}
+              eventId={event.id}
+              eventName={event.name}
               configured={facesConfigured()}
               enabled={Boolean(faceState?.enabled)}
               enrolledCount={enrolledCount ?? 0}
@@ -121,11 +121,11 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
             </span>
             <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
               {active
-                ? `${club.paid_at ? `Paid ${formatLongDate(club.paid_at)}. ` : ""}Unlimited members, albums and storage.`
+                ? `${event.paid_at ? `Paid ${formatLongDate(event.paid_at)}. ` : ""}Unlimited members, albums and storage.`
                 : "Nothing is charged until you activate. Activating unlocks adding members and uploading."}
             </p>
             <Link href={`/admin/${handle}/billing`} className={`btn self-start ${active ? "btn-secondary" : "btn-primary"}`}>
-              {active ? "Card and receipts" : "Activate the club"}
+              {active ? "Card and receipts" : "Activate the event"}
             </Link>
           </section>
 

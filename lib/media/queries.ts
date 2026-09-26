@@ -8,7 +8,7 @@ export const MEDIA_PAGE_SIZE = 60;
 
 export type AlbumCard = Pick<
   Album,
-  "id" | "title" | "description" | "event_date" | "status" | "created_at" | "allow_download" | "published_at"
+  "id" | "title" | "description" | "album_date" | "status" | "created_at" | "allow_download" | "published_at"
 > & {
   photoCount: number;
   videoCount: number;
@@ -25,15 +25,15 @@ function escapeLike(value: string): string {
 
 export async function listAlbums(
   supabase: UserClient,
-  clubId: string,
+  eventId: string,
   opts: { q?: string; kind?: "photo" | "video"; includeDrafts?: boolean; page?: number },
 ): Promise<{ albums: AlbumCard[]; hasMore: boolean }> {
   const page = Math.max(0, opts.page ?? 0);
   let query = supabase
     .from("albums")
-    .select("id, title, description, event_date, status, created_at, published_at, allow_download, cover_media_id")
-    .eq("club_id", clubId)
-    .order("event_date", { ascending: false, nullsFirst: false })
+    .select("id, title, description, album_date, status, created_at, published_at, allow_download, cover_media_id")
+    .eq("event_id", eventId)
+    .order("album_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(page * ALBUM_PAGE_SIZE, (page + 1) * ALBUM_PAGE_SIZE); // one extra row to detect more
 
@@ -77,7 +77,7 @@ export async function listAlbums(
       id: a.id,
       title: a.title,
       description: a.description,
-      event_date: a.event_date,
+      album_date: a.album_date,
       status: a.status,
       created_at: a.created_at,
       published_at: a.published_at,

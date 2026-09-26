@@ -3,6 +3,6 @@ import { Home } from "@/components/site/Home";
 import { getSessionUser } from "@/lib/auth/session";
 
 export default async function LandingPage() {
-  if (await getSessionUser()) redirect("/clubs");
+  if (await getSessionUser()) redirect("/events");
   return <Home />;
 }

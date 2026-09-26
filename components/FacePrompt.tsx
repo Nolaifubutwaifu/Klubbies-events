@@ -9,7 +9,7 @@ import { useState, useSyncExternalStore } from "react";
  * the one thing a biometric feature must not do is ambush someone with a
  * decision before they have looked around.
  *
- * Dismissal is per club and lives in localStorage — losing it on a new device
+ * Dismissal is per event and lives in localStorage — losing it on a new device
  * costs one more banner, which is cheaper than a row in the database.
  */
 function readDismissed(key: string): boolean {
@@ -21,8 +21,8 @@ function readDismissed(key: string): boolean {
   }
 }
 
-export function FacePrompt({ clubId, href, count }: { clubId: string; href: string; count: number }) {
-  const key = `kb_face_prompt_${clubId}`;
+export function FacePrompt({ eventId, href, count }: { eventId: string; href: string; count: number }) {
+  const key = `kb_face_prompt_${eventId}`;
   // localStorage is an external store, and reading it during render would
   // mismatch the server, so it is read after hydration. The banner is hidden
   // on the server pass, which is also what we want: no flash of a prompt the
@@ -42,7 +42,7 @@ export function FacePrompt({ clubId, href, count }: { clubId: string; href: stri
         <FaceIcon size={20} />
       </span>
       <span className="min-w-0 flex-1">
-        <strong className="block font-bold">Find yourself in this club&rsquo;s photos</strong>
+        <strong className="block font-bold">Find yourself in this event&rsquo;s photos</strong>
         <span className="text-[15px] text-[color:var(--kb-ink-2)]">
           {count > 0
             ? `${count.toLocaleString("en-AU")} already waiting. Only you can see them.`

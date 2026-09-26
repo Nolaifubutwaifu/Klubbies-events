@@ -3,14 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { acceptInviteAction, declineInviteAction } from "@/app/(app)/actions";
-import type { MyClub } from "@/lib/auth/session";
+import type { MyEvent } from "@/lib/auth/session";
 import { MEMBER_NOTICE } from "@/lib/faces/copy";
 import { formatLongDate } from "@/lib/format";
 
-export function InviteCard({ invite }: { invite: MyClub }) {
+export function InviteCard({ invite }: { invite: MyEvent }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  // Joining a club that analyses faces means yours is analysed too, enrolled
+  // Joining a event that analyses faces means yours is analysed too, enrolled
   // or not. That is said here, before the join, rather than discovered later:
   // this is the last moment the answer can still be "no thanks".
   const [understood, setUnderstood] = useState(false);
@@ -34,7 +34,7 @@ export function InviteCard({ invite }: { invite: MyClub }) {
             <input
               type="checkbox"
               checked={understood}
-              onChange={(event) => setUnderstood(event.target.checked)}
+              onChange={(ev) => setUnderstood(ev.target.checked)}
               className="mt-0.5"
             />
             <span>{MEMBER_NOTICE.tickbox}</span>
@@ -50,7 +50,7 @@ export function InviteCard({ invite }: { invite: MyClub }) {
             startTransition(async () => {
               const res = await acceptInviteAction(invite.membershipId, needsNotice);
               if (res.ok) {
-                router.push(`/c/${invite.handle}`);
+                router.push(`/e/${invite.handle}`);
                 router.refresh();
               }
             })

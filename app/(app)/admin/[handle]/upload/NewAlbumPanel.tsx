@@ -18,8 +18,8 @@ function nextSaturdayMorning(): { value: string; label: string } {
   };
 }
 
-export function NewAlbumPanel({ clubId }: { clubId: string }) {
-  const [state, action] = useActionState<ActionState, FormData>(createAlbumAction.bind(null, clubId), {});
+export function NewAlbumPanel({ eventId }: { eventId: string }) {
+  const [state, action] = useActionState<ActionState, FormData>(createAlbumAction.bind(null, eventId), {});
   const saturday = nextSaturdayMorning();
   const [when, setWhen] = useState<"now" | "later">("later");
   const [publishAt, setPublishAt] = useState(saturday.value);
@@ -37,7 +37,7 @@ export function NewAlbumPanel({ clubId }: { clubId: string }) {
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
         <label className="field">
           Date
-          <input className="input" name="eventDate" type="date" defaultValue={today} />
+          <input className="input" name="albumDate" type="date" defaultValue={today} />
         </label>
         <label className="field">
           Type

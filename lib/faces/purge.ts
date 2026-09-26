@@ -91,10 +91,10 @@ export async function drainFacePurgeQueue(limit = PURGE_BATCH_SIZE * 4): Promise
 }
 
 /**
- * Turning the feature off for a club. One call removes every faceprint the
- * club ever had, which is why the notice can promise exactly that.
+ * Turning the feature off for a event. One call removes every faceprint the
+ * event ever had, which is why the notice can promise exactly that.
  */
-export async function deleteClubCollection(collectionId: string): Promise<void> {
+export async function deleteEventCollection(collectionId: string): Promise<void> {
   const client = faceClient();
   if (!client) return;
   try {

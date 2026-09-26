@@ -4,7 +4,7 @@ export type Anniversary<T> = { album: T; years: number };
 type Datedish = { date: string; photoCount: number; videoCount: number };
 
 /** Parses an event date, treating a bare YYYY-MM-DD as local midday. */
-function eventDate(value: string): Date {
+function albumDate(value: string): Date {
   return new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00+10:00` : value);
 }
 
@@ -19,7 +19,7 @@ export function findAnniversary<T extends Datedish>(albums: T[], today = new Dat
 
   for (const album of albums) {
     if (album.photoCount + album.videoCount === 0) continue;
-    const then = eventDate(album.date);
+    const then = albumDate(album.date);
     const years = today.getFullYear() - then.getFullYear();
     if (years < 1) continue;
     // The same calendar day this year, then how far that is from today.

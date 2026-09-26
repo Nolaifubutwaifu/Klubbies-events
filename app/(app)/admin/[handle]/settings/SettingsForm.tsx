@@ -2,30 +2,30 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
-import { ACCENT_SWATCHES, clubToneStyle } from "@/lib/theme";
-import { updateClubAction, type ActionState } from "../../actions";
+import { ACCENT_SWATCHES, eventToneStyle } from "@/lib/theme";
+import { updateEventAction, type ActionState } from "../../actions";
 
 export function SettingsForm({
-  clubId,
+  eventId,
   name,
   organisation,
   description,
   accentColour,
 }: {
-  clubId: string;
+  eventId: string;
   name: string;
   organisation: string | null;
   description: string | null;
   accentColour: string | null;
 }) {
-  const [state, action] = useActionState<ActionState, FormData>(updateClubAction.bind(null, clubId), {});
+  const [state, action] = useActionState<ActionState, FormData>(updateEventAction.bind(null, eventId), {});
   const [accent, setAccent] = useState(accentColour ?? "");
-  const preview = clubToneStyle(accent);
+  const preview = eventToneStyle(accent);
 
   return (
     <form action={action} className="flex flex-col gap-4">
       <label className="field">
-        Club name
+        Event name
         <input className="input" name="name" defaultValue={name} required maxLength={120} />
       </label>
       <label className="field">
@@ -38,10 +38,10 @@ export function SettingsForm({
       </label>
 
       <div className="flex flex-col gap-3">
-        <span className="text-[14px] font-semibold">Club tone</span>
+        <span className="text-[14px] font-semibold">Event tone</span>
         <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
-          Avatars, badges and the quiet labels across this club take this colour. Buttons and headlines keep the
-          Klubbies red, so your club still looks like Klubbies.
+          Avatars, badges and the quiet labels across this event take this colour. Buttons and headlines keep the
+          Klubbies red, so your event still looks like Klubbies.
         </span>
         <input type="hidden" name="accentColour" value={accent} />
         <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +97,7 @@ export function SettingsForm({
           ) : null}
         </div>
         {/* The preview shows what actually changes (the avatar and the quiet
-            label) beside what stays the same in every club (the button). */}
+            label) beside what stays the same in every event (the button). */}
         <div className="flex flex-wrap items-center gap-3 soft-card p-3" style={preview} aria-hidden>
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--tone-support)] text-[14px] font-bold text-[color:var(--tone-support-ink)]">
             MP

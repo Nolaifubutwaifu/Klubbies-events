@@ -1,5 +1,5 @@
 import "server-only";
-import type { ClubContext } from "./session";
+import type { EventContext } from "./session";
 import { getProfile } from "./session";
 
 type NameParts = {
@@ -12,8 +12,8 @@ type NameParts = {
 /**
  * What to call a person, the same rule on every screen. The name they set on
  * their profile wins, because the profile page promises "this is what others
- * see". Then the name they signed in under, then the one on the club's list.
- * Screens used to disagree, so one person showed as "max" in one club's rail
+ * see". Then the name they signed in under, then the one on the event's list.
+ * Screens used to disagree, so one person showed as "max" in one event's rail
  * and "Maxi" in the next.
  */
 export function personName({ displayName, claimedName, rosterName, email }: NameParts): string {
@@ -23,7 +23,7 @@ export function personName({ displayName, claimedName, rosterName, email }: Name
   return "";
 }
 
-export async function displayNameFor(ctx: ClubContext): Promise<string> {
+export async function displayNameFor(ctx: EventContext): Promise<string> {
   const profile = await getProfile();
   return personName({
     displayName: profile?.display_name,

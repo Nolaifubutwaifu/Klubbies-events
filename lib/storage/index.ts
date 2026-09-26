@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Narrow storage interface (masterfile §8.1). Swapping Supabase Storage for S3
 // or R2 should only touch this module.
 
-export const BUCKET = "club_media";
+export const BUCKET = "event_media";
 
 export const SIGNED_URL_TTL = {
   thumb: 10 * 60,
@@ -23,16 +23,16 @@ function ttl(seconds: number): number {
   return serverEnv().SIGNED_URL_TTL_OVERRIDE_SECONDS ?? seconds;
 }
 
-export function mediaFolder(clubId: string, albumId: string, mediaId: string): string {
-  return `clubs/${clubId}/albums/${albumId}/${mediaId}`;
+export function mediaFolder(eventId: string, albumId: string, mediaId: string): string {
+  return `events/${eventId}/albums/${albumId}/${mediaId}`;
 }
 
 export function derivativePaths(folder: string) {
   return { thumb: `${folder}/thumb.webp`, display: `${folder}/display.webp`, poster: `${folder}/poster.jpg` };
 }
 
-export function logoPath(clubId: string, ext: string): string {
-  return `clubs/${clubId}/logo/logo.${ext}`;
+export function logoPath(eventId: string, ext: string): string {
+  return `events/${eventId}/logo/logo.${ext}`;
 }
 
 /** Size of the small logo rendition: 96px, for 32 to 48px badges at 2x. */
@@ -41,7 +41,7 @@ export const LOGO_MARK_SIZE = 96;
 /**
  * The small rendition that sits beside a logo: logo-1727.png → mark-1727.webp.
  * Every badge in the app is 24 to 48px, and they were loading the original
- * upload — one club's was 3936px wide — on every page.
+ * upload — one event's was 3936px wide — on every page.
  */
 export function logoMarkPath(logoPath: string): string {
   const slash = logoPath.lastIndexOf("/");
@@ -126,7 +126,7 @@ export async function signPaths(client: Client, paths: string[], seconds: number
 }
 
 /**
- * Signed URLs for club logos as badges, keyed by the logo path: the small
+ * Signed URLs for event logos as badges, keyed by the logo path: the small
  * mark where one exists, else the original. Logos uploaded before marks
  * existed have none until they're replaced or backfilled, and the fallback
  * keeps them showing.

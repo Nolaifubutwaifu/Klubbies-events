@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
-import { clubFacesEnabled } from "@/lib/faces/collections";
+import { getEventContextById } from "@/lib/auth/session";
+import { eventFacesEnabled } from "@/lib/faces/collections";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { derivativePaths, listFolder } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -24,8 +24,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   const supabase = await createClient();
   const { data: media } = await supabase.from("media").select("*").eq("id", id).maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const club = await getClubContextById(media.club_id);
-  if (!club?.isAdmin) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const event = await getEventContextById(media.event_id);
+  if (!event?.isAdmin) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (parsed.data.failed) {
     await supabase.from("media").update({ status: "failed" }).eq("id", id);
@@ -57,13 +57,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
     .eq("id", id);
   if (error) return NextResponse.json({ error: "Could not finish the upload" }, { status: 500 });
 
-  // Face recognition, when the club has turned it on. Wrapped so it can never
+  // Face recognition, when the event has turned it on. Wrapped so it can never
   // fail the upload: a missing face job is a nuisance, a failed upload is not.
   // The drain is kicked here rather than left to the hourly cron, or "Photos of
   // you" would lag by up to an hour and read as broken.
   try {
-    if (await clubFacesEnabled(media.club_id)) {
-      await enqueueMediaJob(media.club_id, id);
+    if (await eventFacesEnabled(media.event_id)) {
+      await enqueueMediaJob(media.event_id, id);
       kickFaceJobs();
     }
   } catch (faceError) {

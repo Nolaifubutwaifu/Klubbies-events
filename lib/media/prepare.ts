@@ -101,10 +101,10 @@ export async function preparePhoto(file: File, mimeType: string): Promise<Prepar
   }
 }
 
-function waitFor(el: HTMLVideoElement, event: string, timeoutMs: number): Promise<void> {
+function waitFor(el: HTMLVideoElement, ev: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = window.setTimeout(() => reject(new Error(`timeout waiting for ${event}`)), timeoutMs);
-    el.addEventListener(event, () => (window.clearTimeout(timer), resolve()), { once: true });
+    el.addEventListener(ev, () => (window.clearTimeout(timer), resolve()), { once: true });
     el.addEventListener("error", () => (window.clearTimeout(timer), reject(new Error("video decode failed"))), { once: true });
   });
 }

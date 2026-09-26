@@ -30,7 +30,7 @@ export function sendSignInCode(to: string, props: SignInCodeProps) {
 }
 
 export function sendGraceNotice(to: string, props: GraceNoticeProps) {
-  return send(to, `Your access to ${props.clubName} ends on ${props.endsOn}`, <GraceNotice {...props} />);
+  return send(to, `Your access to ${props.eventName} ends on ${props.endsOn}`, <GraceNotice {...props} />);
 }
 
 export type BatchMessage = {
@@ -42,7 +42,7 @@ export type BatchMessage = {
 };
 
 /**
- * Club-wide notifications. Each message is rendered on its own because the
+ * Event-wide notifications. Each message is rendered on its own because the
  * unsubscribe link is per person, then sent in batches of 100.
  */
 export async function sendBatch(messages: BatchMessage[]): Promise<void> {

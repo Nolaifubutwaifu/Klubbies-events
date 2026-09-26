@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { drainFacePurgeQueue } from "@/lib/faces/purge";
 import { removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -17,17 +17,17 @@ export async function requestRemovalAction(mediaId: string): Promise<ActionState
   if (!z.uuid().safeParse(mediaId).success) return { error: "Not found" };
 
   const supabase = await createClient();
-  const { data: media } = await supabase.from("media").select("id, club_id, album_id").eq("id", mediaId).maybeSingle();
+  const { data: media } = await supabase.from("media").select("id, event_id, album_id").eq("id", mediaId).maybeSingle();
   if (!media) return { error: "Not found" };
 
-  const ctx = await getClubContextById(media.club_id);
+  const ctx = await getEventContextById(media.event_id);
   if (!ctx?.membership) return { error: "Not authorised" };
-  if (!ctx.club.allow_removal_requests) {
-    return { error: "This club asks you to contact the committee directly." };
+  if (!ctx.event.allow_removal_requests) {
+    return { error: "This event asks you to contact the committee directly." };
   }
 
   const { error } = await supabase.from("media_removal_requests").insert({
-    club_id: media.club_id,
+    event_id: media.event_id,
     media_id: media.id,
     requested_by: ctx.userId,
   });
@@ -38,7 +38,7 @@ export async function requestRemovalAction(mediaId: string): Promise<ActionState
   // service role — after the checks above, never before them.
   await createAdminClient().from("media").update({ hidden_at: new Date().toISOString() }).eq("id", media.id);
 
-  revalidatePath(`/c/${ctx.club.handle}`, "layout");
+  revalidatePath(`/e/${ctx.event.handle}`, "layout");
   return { ok: true, message: "Hidden. Your media officer confirms it from here." };
 }
 
@@ -47,11 +47,11 @@ async function loadRequest(requestId: string) {
   const supabase = await createClient();
   const { data: request } = await supabase
     .from("media_removal_requests")
-    .select("id, club_id, media_id, status")
+    .select("id, event_id, media_id, status")
     .eq("id", requestId)
     .maybeSingle();
   if (!request) return null;
-  const ctx = await getClubContextById(request.club_id);
+  const ctx = await getEventContextById(request.event_id);
   if (!ctx?.perms.manage_albums) return null;
   return { request, ctx, supabase };
 }
@@ -69,8 +69,8 @@ export async function restorePhotoAction(requestId: string): Promise<ActionState
     .eq("id", request.id);
   await supabase.from("media").update({ hidden_at: null }).eq("id", request.media_id);
 
-  revalidatePath(`/admin/${ctx.club.handle}`, "layout");
-  revalidatePath(`/c/${ctx.club.handle}`, "layout");
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+  revalidatePath(`/e/${ctx.event.handle}`, "layout");
   return { ok: true, message: "Back in the album. We've let them know." };
 }
 
@@ -107,7 +107,7 @@ export async function confirmRemovalAction(requestId: string): Promise<ActionSta
     await drainFacePurgeQueue().catch((purgeError) => console.error("face purge after removal", purgeError));
   }
 
-  revalidatePath(`/admin/${ctx.club.handle}`, "layout");
-  revalidatePath(`/c/${ctx.club.handle}`, "layout");
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+  revalidatePath(`/e/${ctx.event.handle}`, "layout");
   return { ok: true, message: "Deleted. The original is gone." };
 }

@@ -22,7 +22,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
   let query = supabase
     .from("access_events")
     .select("id, action, occurred_at, user_agent, memberships(roster_name, roster_email, claimed_name, users!memberships_user_id_fkey(display_name)), media(id, album_id, original_filename)")
-    .eq("club_id", ctx.club.id)
+    .eq("event_id", ctx.event.id)
     .order("occurred_at", { ascending: false })
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   if (action) query = query.eq("action", action);
@@ -40,18 +40,18 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
 
   return (
     <main className="flex max-w-[1040px] flex-col gap-6 px-6 py-8">
-      <PageTitle kicker={ctx.club.name} title="Activity">
+      <PageTitle kicker={ctx.event.name} title="Activity">
         Every view and download, newest first. Members are told this log exists.
       </PageTitle>
       <div className="flex flex-col gap-2 soft-card p-4 text-[14px] leading-normal text-ink-70">
         <span className="soft-display text-[16px]">What this is for</span>
         <p className="m-0 max-w-[70ch]">
-          If a photo from your club turns up somewhere it shouldn&apos;t, this is how you find out who opened or
+          If a photo from your event turns up somewhere it shouldn&apos;t, this is how you find out who opened or
           downloaded it, and when. It&apos;s also the quickest way to see whether an album actually reached people
           after you published it, and which members have never opened anything.
         </p>
         <p className="m-0 max-w-[70ch] text-[color:var(--ink-70)]">
-          Only people who can run the club see this page. The privacy policy tells members the log exists.
+          Only people who can run the event see this page. The privacy policy tells members the log exists.
         </p>
       </div>
       <div className="flex flex-wrap gap-1">
@@ -99,7 +99,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
                   </td>
                   <td>
                     {e.media?.album_id ? (
-                      <Link href={`/c/${handle}/a/${e.media.album_id}/${e.media.id}`}>{e.media.original_filename ?? "Open"}</Link>
+                      <Link href={`/e/${handle}/a/${e.media.album_id}/${e.media.id}`}>{e.media.original_filename ?? "Open"}</Link>
                     ) : (
                       <span className="text-[color:var(--ink-55)]">Deleted item</span>
                     )}

@@ -47,16 +47,16 @@ function clearsFloors(record: FaceRecord): boolean {
  * deletion, so nothing leaks — and face_rejections survives, because it is
  * keyed on (profile, media) rather than on the face row.
  */
-export async function indexMedia(clubId: string, mediaId: string): Promise<IndexResult> {
+export async function indexMedia(eventId: string, mediaId: string): Promise<IndexResult> {
   const client = faceClient();
   if (!client) return { faces: 0, skipped: "aws not configured" };
 
   const admin = createAdminClient();
-  const collectionId = collectionIdFor(clubId);
+  const collectionId = collectionIdFor(eventId);
 
   const { data: media } = await admin
     .from("media")
-    .select("id, club_id, kind, status, storage_path, display_path")
+    .select("id, event_id, kind, status, storage_path, display_path")
     .eq("id", mediaId)
     .maybeSingle();
   if (!media) return { faces: 0, skipped: "media gone" };
@@ -100,7 +100,7 @@ export async function indexMedia(clubId: string, mediaId: string): Promise<Index
   if (kept.length === 0) return { faces: 0 };
 
   const rows = kept.map((record) => ({
-    club_id: clubId,
+    event_id: eventId,
     media_id: mediaId,
     collection_id: collectionId,
     rekognition_face_id: record.Face!.FaceId!,
@@ -122,11 +122,11 @@ export async function indexMedia(clubId: string, mediaId: string): Promise<Index
  * hands every photo in the batch to the matcher regardless of how it got
  * there, so this only has to confirm the faces still exist.
  */
-export async function rematchMedia(clubId: string, mediaId: string): Promise<IndexResult> {
+export async function rematchMedia(eventId: string, mediaId: string): Promise<IndexResult> {
   const { count } = await createAdminClient()
     .from("media_faces")
     .select("id", { count: "exact", head: true })
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("media_id", mediaId);
   return { faces: count ?? 0 };
 }

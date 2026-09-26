@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export type AuthClub = { name: string; handle: string; logoUrl: string | null; organisation: string | null };
+export type AuthEvent = { name: string; handle: string; logoUrl: string | null; organisation: string | null };
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -10,34 +10,34 @@ function initials(name: string): string {
   return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function ClubBadge({ club, size = 44 }: { club: AuthClub; size?: number }) {
+function EventBadge({ event, size = 44 }: { event: AuthEvent; size?: number }) {
   return (
     <span
       className="relative flex flex-none items-center justify-center overflow-hidden rounded-[14px] bg-white text-[15px] font-bold text-[color:var(--kb-ink)]"
       style={{ width: size, height: size }}
     >
-      {club.logoUrl ? (
+      {event.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-        <img src={club.logoUrl} alt="" className="h-full w-full object-cover" />
+        <img src={event.logoUrl} alt="" className="h-full w-full object-cover" />
       ) : (
-        initials(club.name)
+        initials(event.name)
       )}
     </span>
   );
 }
 
 /**
- * Log in, Start your club and the code step. A photo panel and the form side
+ * Log in, Start your event and the code step. A photo panel and the form side
  * by side from 1024px; on a phone, a short rounded photo that fades into the
  * page above the form.
  *
- * The photo is always a Klubbies marketing photo, never the club's own: the
+ * The photo is always a Klubbies marketing photo, never the event's own: the
  * page is public, and the product promises nobody off the list sees a single
- * thumbnail. The club is named and shown by its logo instead.
+ * thumbnail. The event is named and shown by its logo instead.
  */
 export function AuthShell({
   children,
-  club = null,
+  event = null,
   topLink,
   footerLinks = [
     { href: "/privacy", label: "Privacy" },
@@ -47,11 +47,11 @@ export function AuthShell({
   photo = "/marketing/night-ball.jpg",
 }: {
   children: ReactNode;
-  club?: AuthClub | null;
-  /** The one route out, top right: "Running a club? Start your club". */
+  event?: AuthEvent | null;
+  /** The one route out, top right: "Running a event? Start your event". */
   topLink?: ReactNode;
   footerLinks?: { href: string; label: string }[];
-  /** Replaces the photo panel on desktop (Start your club uses a preview). */
+  /** Replaces the photo panel on desktop (Start your event uses a preview). */
   panel?: ReactNode;
   photo?: string;
 }) {
@@ -64,12 +64,12 @@ export function AuthShell({
             <Image src={photo} alt="" fill priority sizes="50vw" className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[rgb(43_34_40/0.85)] via-[rgb(43_34_40/0.15)] to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-12 text-white">
-              {club ? (
+              {event ? (
                 <div className="flex items-center gap-4">
-                  <ClubBadge club={club} size={56} />
+                  <EventBadge event={event} size={56} />
                   <span>
-                    <span className="block font-[family-name:var(--kb-font-display)] text-[28px] font-semibold leading-tight">{club.name}</span>
-                    <span className="block text-[16px] text-white/85">{club.organisation ?? "Members only albums"}</span>
+                    <span className="block font-[family-name:var(--kb-font-display)] text-[28px] font-semibold leading-tight">{event.name}</span>
+                    <span className="block text-[16px] text-white/85">{event.organisation ?? "Members only albums"}</span>
                   </span>
                 </div>
               ) : (
@@ -97,10 +97,10 @@ export function AuthShell({
             <div className="relative mb-7 h-[150px] overflow-hidden rounded-[var(--kb-r-card)] lg:hidden">
               <Image src={photo} alt="" fill priority sizes="100vw" className="object-cover" />
               <div className="absolute inset-0 bg-gradient-to-b from-[rgb(43_34_40/0.1)] via-[rgb(43_34_40/0.35)] to-[color:var(--kb-cream)]" />
-              {club ? (
+              {event ? (
                 <div className="absolute bottom-3 left-4 flex items-center gap-3">
-                  <ClubBadge club={club} size={40} />
-                  <span className="font-[family-name:var(--kb-font-display)] text-[20px] font-semibold text-[color:var(--kb-ink)]">{club.name}</span>
+                  <EventBadge event={event} size={40} />
+                  <span className="font-[family-name:var(--kb-font-display)] text-[20px] font-semibold text-[color:var(--kb-ink)]">{event.name}</span>
                 </div>
               ) : null}
             </div>
@@ -143,9 +143,9 @@ export function AuthNote({ children }: { children: ReactNode }) {
   );
 }
 
-/** Onboarding steps for a new club, shared by Start and Create your club. */
+/** Onboarding steps for a new event, shared by Start and Create your event. */
 export function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
-  const steps = ["You", "Your club", "Activate"];
+  const steps = ["You", "Your event", "Activate"];
   return (
     <ol className="m-0 mb-6 flex list-none gap-2 p-0" aria-label="Setup steps">
       {steps.map((label, i) => {

@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 /** Supabase mints eight digits for this project, so there are eight boxes. */
 const LENGTH = 8;
 
-export function CodeForm({ restartHref, club }: { restartHref: string; club?: string }) {
+export function CodeForm({ restartHref, event }: { restartHref: string; event?: string }) {
   const router = useRouter();
   const [digits, setDigits] = useState<string[]>(() => Array(LENGTH).fill(""));
   const [pending, setPending] = useState(false);
@@ -22,7 +22,7 @@ export function CodeForm({ restartHref, club }: { restartHref: string; club?: st
       const res = await fetch("/api/auth/verify_code", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code: value, club }),
+        body: JSON.stringify({ code: value, event }),
       });
       const body: { error?: string; redirectTo?: string } = await res.json().catch(() => ({}));
       if (!res.ok || !body.redirectTo) {
@@ -59,9 +59,9 @@ export function CodeForm({ restartHref, club }: { restartHref: string; club?: st
     if (joined.length === LENGTH) void submit(joined);
   }
 
-  function onKeyDown(index: number, event: React.KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Backspace") {
-      event.preventDefault();
+  function onKeyDown(index: number, ev: React.KeyboardEvent<HTMLInputElement>) {
+    if (ev.key === "Backspace") {
+      ev.preventDefault();
       const next = [...digits];
       if (next[index]) next[index] = "";
       else if (index > 0) {
@@ -71,14 +71,14 @@ export function CodeForm({ restartHref, club }: { restartHref: string; club?: st
       setDigits(next);
       return;
     }
-    if (event.key === "ArrowLeft" && index > 0) boxes.current[index - 1]?.focus();
-    if (event.key === "ArrowRight" && index < LENGTH - 1) boxes.current[index + 1]?.focus();
+    if (ev.key === "ArrowLeft" && index > 0) boxes.current[index - 1]?.focus();
+    if (ev.key === "ArrowRight" && index < LENGTH - 1) boxes.current[index + 1]?.focus();
   }
 
   return (
     <form
-      onSubmit={(event) => {
-        event.preventDefault();
+      onSubmit={(ev) => {
+        ev.preventDefault();
         if (code.length === LENGTH) void submit(code);
       }}
       className="flex flex-col gap-5"
@@ -93,9 +93,9 @@ export function CodeForm({ restartHref, club }: { restartHref: string; club?: st
             }}
             id={`code-${index}`}
             value={digit}
-            onChange={(event) => write(index, event.target.value)}
-            onKeyDown={(event) => onKeyDown(index, event)}
-            onFocus={(event) => event.target.select()}
+            onChange={(ev) => write(index, ev.target.value)}
+            onKeyDown={(ev) => onKeyDown(index, ev)}
+            onFocus={(ev) => ev.target.select()}
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
             aria-label={`Digit ${index + 1} of ${LENGTH}`}

@@ -1,13 +1,13 @@
 export type BillingStatus = "unpaid" | "active" | "past_due" | "canceled" | "comped";
 
-export const ACTIVATE_MESSAGE = "Activate your club to add members and upload. Go to Billing to finish setting up.";
+export const ACTIVATE_MESSAGE = "Activate your event to add members and upload. Go to Billing to finish setting up.";
 
 /** Paid, still retrying a failed renewal, or comped by a super admin. */
 export function canWrite(status: string): boolean {
   return status === "active" || status === "past_due" || status === "comped";
 }
 
-/** Maps a Stripe subscription status onto the club's billing status. */
+/** Maps a Stripe subscription status onto the event's billing status. */
 export function statusFromSubscription(stripeStatus: string): Exclude<BillingStatus, "comped"> {
   switch (stripeStatus) {
     case "active":

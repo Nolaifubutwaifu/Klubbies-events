@@ -10,14 +10,14 @@ import { SEARCH_MAX_FACES, SEARCH_THRESHOLD, bandFor } from "./constants";
  * it decides the bill.
  *
  * Searching per face costs one call per face in the batch. Searching per
- * reference costs one call per enrolled reference face in the club. Both
+ * reference costs one call per enrolled reference face in the event. Both
  * return the same pairs, because similarity is symmetric — so the only
  * question is which side is smaller.
  *
  *   one photo off an upload:   3 faces vs 120 references  -> search per face
  *   a nightly drain of 500:    1,100 faces vs 120 refs    -> search per reference
  *
- * The second case is the one that would otherwise dominate a real club's
+ * The second case is the one that would otherwise dominate a real event's
  * costs: on the demo library a photo averaged 2.2 kept faces, so per-face
  * matching made every photo cost about 3.2 Rekognition calls rather than 1.
  */
@@ -27,7 +27,7 @@ type Candidate = { profileId: string; mediaFaceId: string; mediaId: string; simi
 
 export type MatchResult = { searches: number; direction: "per-face" | "per-reference" | "none"; written: number };
 
-export async function matchClubMedia(clubId: string, mediaIds: string[]): Promise<MatchResult> {
+export async function matchEventMedia(eventId: string, mediaIds: string[]): Promise<MatchResult> {
   const client = faceClient();
   if (!client || mediaIds.length === 0) return { searches: 0, direction: "none", written: 0 };
   const admin = createAdminClient();
@@ -35,19 +35,19 @@ export async function matchClubMedia(clubId: string, mediaIds: string[]): Promis
   const { data: profiles } = await admin
     .from("member_face_profiles")
     .select("id, membership_id")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("status", "ready")
     .is("revoked_at", null);
   if (!profiles?.length) return { searches: 0, direction: "none", written: 0 };
   const profileByMembership = new Map(profiles.map((p) => [p.membership_id, p.id]));
 
-  // Every reference face in the club: the enrolment selfies, which carry a
+  // Every reference face in the event: the enrolment selfies, which carry a
   // `ref:` ExternalImageId, plus the media faces members have confirmed,
   // which kept their original `media:` id and are known only by this table.
   const { data: references } = await admin
     .from("member_face_references")
     .select("profile_id, rekognition_face_id, collection_id")
-    .eq("club_id", clubId);
+    .eq("event_id", eventId);
   if (!references?.length) return { searches: 0, direction: "none", written: 0 };
   const profileByFaceId = new Map(references.map((r) => [r.rekognition_face_id, r.profile_id]));
   const collectionId = references[0].collection_id;
@@ -57,7 +57,7 @@ export async function matchClubMedia(clubId: string, mediaIds: string[]): Promis
     const { data } = await admin
       .from("media_faces")
       .select("id, media_id, rekognition_face_id, bounding_box")
-      .eq("club_id", clubId)
+      .eq("event_id", eventId)
       .in("media_id", mediaIds.slice(i, i + 200));
     faces.push(...(data ?? []));
   }
@@ -66,7 +66,7 @@ export async function matchClubMedia(clubId: string, mediaIds: string[]): Promis
   const { data: rejections } = await admin
     .from("face_rejections")
     .select("profile_id, media_id")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .in("media_id", mediaIds.slice(0, 500));
   const rejected = new Set((rejections ?? []).map((r) => `${r.profile_id}:${r.media_id}`));
 
@@ -102,7 +102,7 @@ export async function matchClubMedia(clubId: string, mediaIds: string[]): Promis
       }
     }
   } else {
-    // The batch is bigger than the club's reference set, so ask the other way
+    // The batch is bigger than the event's reference set, so ask the other way
     // round. A search from a reference returns the whole collection, so hits
     // outside this batch are dropped — they were matched when their own batch
     // ran, and the insert is `ignoreDuplicates` anyway.
@@ -146,7 +146,7 @@ export async function matchClubMedia(clubId: string, mediaIds: string[]): Promis
     .map((c) => ({ c, band: bandFor(c.similarity) }))
     .filter((r) => r.band !== null)
     .map(({ c, band }) => ({
-      club_id: clubId,
+      event_id: eventId,
       media_id: c.mediaId,
       media_face_id: c.mediaFaceId,
       profile_id: c.profileId,

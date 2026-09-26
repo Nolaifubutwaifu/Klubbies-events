@@ -1,5 +1,5 @@
-// Per-club tone. Klubbies' ember is fixed brand — it carries headline
-// emphasis, tags, eyebrows and the tier-2 button in every club. What a club
+// Per-event tone. Klubbies' ember is fixed brand — it carries headline
+// emphasis, tags, eyebrows and the tier-2 button in every event. What a event
 // picks is its *quiet* layer: the tier-3 button, the accessory labels and the
 // supporting surfaces. Settings stores one hex value and these three tokens
 // are mixed from it.
@@ -47,19 +47,19 @@ export function isValidAccent(hex: string | null | undefined): boolean {
 }
 
 /**
- * Builds the supporting tones for a club. Returns undefined when the club has
+ * Builds the supporting tones for a event. Returns undefined when the event has
  * not picked one, so those pages fall back to the neutral sand in the
- * stylesheet. The club's colour never touches --color-accent: the red is
- * Klubbies' own and stays the same in every club.
+ * stylesheet. The event's colour never touches --color-accent: the red is
+ * Klubbies' own and stays the same in every event.
  *
- * Each token mixes the club's hue into sand, line or ink, so a club's colour
+ * Each token mixes the event's hue into sand, line or ink, so a event's colour
  * shows in avatars and quiet surfaces while ember stays the only accent.
  */
-export function clubToneStyle(hex: string | null | undefined): Record<string, string> | undefined {
+export function eventToneStyle(hex: string | null | undefined): Record<string, string> | undefined {
   if (!hex) return undefined;
   const rgb = parse(hex);
   if (!rgb) return undefined;
-  // Mixed into sand and ink rather than lilac: the club's hue tints the quiet
+  // Mixed into sand and ink rather than lilac: the event's hue tints the quiet
   // layer without adding a new colour family beside ember.
   const sand: [number, number, number] = [248, 238, 233];
   const line: [number, number, number] = [234, 221, 215];

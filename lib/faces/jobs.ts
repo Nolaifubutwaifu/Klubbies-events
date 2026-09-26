@@ -4,11 +4,11 @@ import type { FaceJob, FaceJobKind } from "@/lib/db/types";
 import { removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { facesConfigured, isThrottling } from "./client";
-import { ensureClubCollection } from "./collections";
+import { ensureEventCollection } from "./collections";
 import { DRAIN_BUDGET_MS, JOB_BATCH_SIZE, JOB_CONCURRENCY, MAX_JOB_ATTEMPTS, UPLOAD_KICK_BUDGET_MS } from "./constants";
 import { enrolProfile } from "./enrol";
 import { indexMedia, rematchMedia } from "./index-media";
-import { matchClubMedia } from "./match";
+import { matchEventMedia } from "./match";
 import { drainFacePurgeQueue } from "./purge";
 
 export type DrainResult = { claimed: number; done: number; failed: number; purged: number; searches: number };
@@ -50,21 +50,21 @@ export async function runFaceJobs(options: { budgetMs?: number; batchSize?: numb
     if (jobs.length === 0) break;
     claimedTotal += jobs.length;
 
-    // A club switched on by the rollout migration has no collection yet: the
-    // database can't create one. Make sure each club in the batch has one
+    // A event switched on by the rollout migration has no collection yet: the
+    // database can't create one. Make sure each event in the batch has one
     // before any of its photos is indexed. CreateCollection is idempotent, so
-    // this is one cheap call per club per pass.
-    for (const clubId of new Set(jobs.map((job) => job.club_id))) {
-      if (ensured.has(clubId)) continue;
+    // this is one cheap call per event per pass.
+    for (const eventId of new Set(jobs.map((job) => job.event_id))) {
+      if (ensured.has(eventId)) continue;
       try {
-        await ensureCollectionRecorded(admin, clubId);
-        ensured.add(clubId);
+        await ensureCollectionRecorded(admin, eventId);
+        ensured.add(eventId);
       } catch (error) {
-        console.error("could not ensure face collection", clubId, error);
+        console.error("could not ensure face collection", eventId, error);
       }
     }
 
-    // Photos this batch touched, per club, so matching runs once over the
+    // Photos this batch touched, per event, so matching runs once over the
     // batch rather than once per face.
     const touched = new Map<string, Set<string>>();
 
@@ -77,18 +77,18 @@ export async function runFaceJobs(options: { budgetMs?: number; batchSize?: numb
         if (ok) {
           done += 1;
           if (job.media_id) {
-            const set = touched.get(job.club_id) ?? new Set<string>();
+            const set = touched.get(job.event_id) ?? new Set<string>();
             set.add(job.media_id);
-            touched.set(job.club_id, set);
+            touched.set(job.event_id, set);
           }
         } else failed += 1;
       }
     });
     await Promise.all(workers);
 
-    for (const [clubId, mediaIds] of touched) {
+    for (const [eventId, mediaIds] of touched) {
       try {
-        const result = await matchClubMedia(clubId, [...mediaIds]);
+        const result = await matchEventMedia(eventId, [...mediaIds]);
         searches += result.searches;
         if (result.searches) {
           console.log(`face: matched ${mediaIds.size} photo(s) ${result.direction}, ${result.searches} search(es), ${result.written} match(es)`);
@@ -96,7 +96,7 @@ export async function runFaceJobs(options: { budgetMs?: number; batchSize?: numb
       } catch (error) {
         // A failed match leaves the faces indexed, so the next pass retries it
         // without paying to index them again.
-        console.error("face matching failed", clubId, error);
+        console.error("face matching failed", eventId, error);
       }
     }
   }
@@ -108,22 +108,22 @@ export async function runFaceJobs(options: { budgetMs?: number; batchSize?: numb
   return { claimed: claimedTotal, done, failed, purged: purge.deleted, searches };
 }
 
-/** Creates the club's collection if it is missing and records its id. */
-async function ensureCollectionRecorded(admin: ReturnType<typeof createAdminClient>, clubId: string): Promise<void> {
-  const collectionId = await ensureClubCollection(clubId);
+/** Creates the event's collection if it is missing and records its id. */
+async function ensureCollectionRecorded(admin: ReturnType<typeof createAdminClient>, eventId: string): Promise<void> {
+  const collectionId = await ensureEventCollection(eventId);
   if (!collectionId) return;
   await admin
-    .from("club_face_settings")
+    .from("event_face_settings")
     .update({ collection_id: collectionId })
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .is("collection_id", null);
 }
 
 async function runOne(job: FaceJob): Promise<boolean> {
   const admin = createAdminClient();
   try {
-    if (job.kind === "index_media" && job.media_id) await indexMedia(job.club_id, job.media_id);
-    else if (job.kind === "rematch_media" && job.media_id) await rematchMedia(job.club_id, job.media_id);
+    if (job.kind === "index_media" && job.media_id) await indexMedia(job.event_id, job.media_id);
+    else if (job.kind === "rematch_media" && job.media_id) await rematchMedia(job.event_id, job.media_id);
     else if (job.kind === "enrol_profile" && job.profile_id) await enrolProfile(job.profile_id);
     await admin.from("face_jobs").update({ status: "done", last_error: null }).eq("id", job.id);
     return true;
@@ -185,32 +185,32 @@ async function revokeOrphanedProfiles(): Promise<void> {
 }
 
 /**
- * A club's backfill is done when it has no live jobs left — and stops being
+ * A event's backfill is done when it has no live jobs left — and stops being
  * done the moment it has some again.
  *
- * This used to look only at clubs already marked queued or running, so a club
+ * This used to look only at events already marked queued or running, so a event
  * marked done could never be re-opened: a job reclaimed after a timeout, or a
  * rematch queued later, left the panel claiming the library was finished while
- * photos sat unprocessed. Every enabled club is checked now, in both
+ * photos sat unprocessed. Every enabled event is checked now, in both
  * directions.
  */
 async function settleBackfills(): Promise<void> {
   const admin = createAdminClient();
-  const { data: running } = await admin.from("club_face_settings").select("club_id").eq("enabled", true);
+  const { data: running } = await admin.from("event_face_settings").select("event_id").eq("enabled", true);
   for (const row of running ?? []) {
     const { count } = await admin
       .from("face_jobs")
       .select("id", { count: "exact", head: true })
-      .eq("club_id", row.club_id)
+      .eq("event_id", row.event_id)
       .in("status", ["pending", "running"]);
     await admin
-      .from("club_face_settings")
+      .from("event_face_settings")
       .update(
         count && count > 0
           ? { backfill_status: "running" }
           : { backfill_status: "done", backfill_completed_at: new Date().toISOString() },
       )
-      .eq("club_id", row.club_id);
+      .eq("event_id", row.event_id);
   }
 }
 
@@ -219,19 +219,19 @@ async function settleBackfills(): Promise<void> {
  * to enqueue must never fail the upload: a missing face job is a nuisance, a
  * failed upload is not.
  */
-export async function enqueueMediaJob(clubId: string, mediaId: string, kind: FaceJobKind = "index_media"): Promise<void> {
+export async function enqueueMediaJob(eventId: string, mediaId: string, kind: FaceJobKind = "index_media"): Promise<void> {
   const admin = createAdminClient();
-  const { error } = await admin.from("face_jobs").insert({ club_id: clubId, media_id: mediaId, kind });
+  const { error } = await admin.from("face_jobs").insert({ event_id: eventId, media_id: mediaId, kind });
   // 23505 is the partial unique index: already queued, which is the outcome
   // we wanted anyway.
   if (error && error.code !== "23505") throw error;
 }
 
-export async function enqueueEnrolJob(clubId: string, profileId: string): Promise<void> {
+export async function enqueueEnrolJob(eventId: string, profileId: string): Promise<void> {
   const admin = createAdminClient();
   const { error } = await admin
     .from("face_jobs")
-    .insert({ club_id: clubId, profile_id: profileId, kind: "enrol_profile" });
+    .insert({ event_id: eventId, profile_id: profileId, kind: "enrol_profile" });
   if (error && error.code !== "23505") throw error;
 }
 
@@ -262,14 +262,14 @@ export function kickFaceJobs(): void {
 
 export type FaceQueueStats = { pending: number; running: number; failed: number };
 
-export async function faceQueueStats(clubId: string): Promise<FaceQueueStats> {
+export async function faceQueueStats(eventId: string): Promise<FaceQueueStats> {
   const admin = createAdminClient();
   const counts = await Promise.all(
     (["pending", "running", "failed"] as const).map((status) =>
       admin
         .from("face_jobs")
         .select("id", { count: "exact", head: true })
-        .eq("club_id", clubId)
+        .eq("event_id", eventId)
         .eq("status", status),
     ),
   );

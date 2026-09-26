@@ -7,7 +7,7 @@ export type UnfinishedSweepResult = { expired: number };
 
 /**
  * Clears uploads that never finished. They are invisible to members, counted
- * nowhere a member looks, and until now lived for ever: the first real club
+ * nowhere a member looks, and until now lived for ever: the first real event
  * had four sitting in an album for two days while the dashboard said nothing
  * needed doing. The dashboard now lists them after an hour; this removes the
  * ones nobody fixed within two weeks, stored objects and all.

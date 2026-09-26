@@ -12,8 +12,8 @@ export const metadata: Metadata = { title: "How Klubbies works" };
 
 const MORE_STEPS = [
   {
-    title: "Everyone sees their club, nobody else does",
-    body: "Albums are private to the people on that club's member list. Every photo is served through a link that expires within minutes, so nothing escapes into a group chat. Members can download originals when you allow it.",
+    title: "Everyone sees their event, nobody else does",
+    body: "Albums are private to the people on that event's member list. Every photo is served through a link that expires within minutes, so nothing escapes into a group chat. Members can download originals when you allow it.",
   },
   {
     title: "Members find the photos they're in",
@@ -35,7 +35,7 @@ const FAQS = [
   },
   {
     q: "Is face recognition on by default?",
-    a: "Yes, for the club, and the committee can switch it off in Settings. Every member is told it's on. Only members who add their own selfie are ever matched, and each of them sees only their own photos.",
+    a: "Yes, for the event, and the committee can switch it off in Settings. Every member is told it's on. Only members who add their own selfie are ever matched, and each of them sees only their own photos.",
   },
   { q: "Can members add their own photos?", a: "Yes, per album. Set who can add photos to Any member, or leave it on Committee only." },
   { q: "Where is our data stored?", a: "In Sydney, Australia." },
@@ -277,7 +277,7 @@ export default function HowItWorksPage() {
             <h2 className="kb-h2 mx-auto max-w-[18ch] text-white">Ready when your next event is.</h2>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href="/start" className="btn btn-primary btn-lg">
-                Start your club
+                Start your event
               </Link>
               <Link href="/signin" className="btn btn-on-dark btn-lg">
                 Log in

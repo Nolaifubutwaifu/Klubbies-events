@@ -9,12 +9,12 @@ export default function NotFound() {
         <span className="kicker">Not here</span>
         <h1 className="display text-[40px]">This page isn&apos;t available.</h1>
         <p className="text-[15px] text-ink-70">
-          It may not exist, or it belongs to a club your account isn&apos;t on. If you think you should have access, ask
+          It may not exist, or it belongs to a event your account isn&apos;t on. If you think you should have access, ask
           your committee to check the member list.
         </p>
         <div className="flex gap-3 pt-2">
-          <Link href="/clubs" className="btn btn-primary">
-            My clubs
+          <Link href="/events" className="btn btn-primary">
+            My events
           </Link>
           <Link href="/" className="btn btn-secondary">
             Home

@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 const schema = z.object({
   email: z.string().trim().max(254),
   password: z.string().min(1).max(200),
-  club: z.string().regex(/^[a-z0-9_]{1,48}$/i).optional(),
+  event: z.string().regex(/^[a-z0-9_]{1,48}$/i).optional(),
 });
 
 const GENERIC = "That email and password don't match. Try a code instead.";
@@ -26,21 +26,21 @@ export async function POST(request: Request) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
   if (error || !data.user) return NextResponse.json({ error: GENERIC }, { status: 400 });
 
-  // Where to land: a single club goes straight in, otherwise the club list.
+  // Where to land: a single event goes straight in, otherwise the event list.
   const { data: memberships } = await createAdminClient()
     .from("memberships")
-    .select("accepted_at, clubs!inner(handle, status)")
+    .select("accepted_at, events!inner(handle, status)")
     .eq("user_id", data.user.id)
     .in("status", ["active", "grace"])
-    .eq("clubs.status", "active");
+    .eq("events.status", "active");
 
   const accepted = (memberships ?? []).filter((m) => m.accepted_at !== null);
-  const wanted = parsed.data.club?.toLowerCase();
+  const wanted = parsed.data.event?.toLowerCase();
   const redirectTo =
-    wanted && accepted.some((m) => m.clubs.handle === wanted)
-      ? `/c/${wanted}`
+    wanted && accepted.some((m) => m.events.handle === wanted)
+      ? `/e/${wanted}`
       : accepted.length === 1
-        ? `/c/${accepted[0].clubs.handle}`
-        : "/clubs";
+        ? `/e/${accepted[0].events.handle}`
+        : "/events";
   return NextResponse.json({ ok: true, redirectTo });
 }

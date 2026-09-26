@@ -12,7 +12,7 @@ export const CODE_TTL_MS = 10 * 60 * 1000;
 export const MAX_VERIFY_ATTEMPTS = 5;
 
 export const NEUTRAL_MESSAGE =
-  "If that address is on a club member list, we've sent it a sign-in code. It expires in 10 minutes.";
+  "If that address is on a event member list, we've sent it a sign-in code. It expires in 10 minutes.";
 export const CODE_REJECTED = "That code didn't match. Check the latest email or send a new code.";
 
 export const requestCodeSchema = z.object({
@@ -24,8 +24,8 @@ export const requestCodeSchema = z.object({
 export const verifyCodeSchema = z.object({
   // Supabase issues 6 to 10 digit codes depending on the project setting.
   code: z.string().trim().regex(/^\d{6,10}$/, "Enter the code from the email"),
-  /** The club the member arrived for, so they land back in it. */
-  club: z.string().regex(/^[a-z0-9_]{1,48}$/i).optional(),
+  /** The event the member arrived for, so they land back in it. */
+  event: z.string().regex(/^[a-z0-9_]{1,48}$/i).optional(),
 });
 
 export type RequestCodeInput = z.infer<typeof requestCodeSchema>;
@@ -38,10 +38,10 @@ async function findEligibleMemberships(email: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("memberships")
-    .select("id, club_id, roster_name, claimed_name, status, first_seen_at, grace_ends_at, clubs!inner(name, handle, status)")
+    .select("id, event_id, roster_name, claimed_name, status, first_seen_at, grace_ends_at, events!inner(name, handle, status)")
     .eq("roster_email", email)
     .in("status", ["pending", "active", "grace"])
-    .eq("clubs.status", "active");
+    .eq("events.status", "active");
   if (error) throw error;
   return (data ?? []).filter((m) => m.status !== "grace" || (m.grace_ends_at !== null && m.grace_ends_at > nowIso()));
 }
@@ -71,11 +71,11 @@ export async function processCodeRequest(input: RequestCodeInput, ip: string): P
   ]);
   if (emailLimited || ipLimited) return;
 
-  let clubName: string | null = null;
+  let eventName: string | null = null;
   if (input.flow === "member") {
     const memberships = await findEligibleMemberships(email);
     if (memberships.length === 0) return;
-    clubName = memberships.length === 1 ? memberships[0].clubs.name : null;
+    eventName = memberships.length === 1 ? memberships[0].events.name : null;
   }
 
   const code = await issueOtp(email);
@@ -90,12 +90,12 @@ export async function processCodeRequest(input: RequestCodeInput, ip: string): P
     });
   if (error) throw error;
 
-  await sendSignInCode(email, { code, name: input.fullName, clubName });
+  await sendSignInCode(email, { code, name: input.fullName, eventName });
 }
 
 export type VerifyResult = { ok: true; redirectTo: string } | { ok: false; error: string };
 
-export async function verifyCode(rawEmail: string, code: string, clubHandle?: string): Promise<VerifyResult> {
+export async function verifyCode(rawEmail: string, code: string, eventHandle?: string): Promise<VerifyResult> {
   const email = normaliseEmail(rawEmail);
   const admin = createAdminClient();
 
@@ -137,11 +137,11 @@ export async function verifyCode(rawEmail: string, code: string, clubHandle?: st
   }
 
   if (pending.flow === "create") return { ok: true, redirectTo: "/admin/new" };
-  // A member who came in through a club's own link goes back to that club,
+  // A member who came in through a event's own link goes back to that event,
   // but only if they are actually on its list.
-  const wanted = clubHandle?.toLowerCase();
-  if (wanted && memberships.some((m) => m.clubs.handle === wanted)) return { ok: true, redirectTo: `/c/${wanted}` };
-  if (pending.flow === "signup") return { ok: true, redirectTo: memberships.length === 1 ? `/c/${memberships[0].clubs.handle}` : "/clubs" };
-  if (memberships.length === 1) return { ok: true, redirectTo: `/c/${memberships[0].clubs.handle}` };
-  return { ok: true, redirectTo: "/clubs" };
+  const wanted = eventHandle?.toLowerCase();
+  if (wanted && memberships.some((m) => m.events.handle === wanted)) return { ok: true, redirectTo: `/e/${wanted}` };
+  if (pending.flow === "signup") return { ok: true, redirectTo: memberships.length === 1 ? `/e/${memberships[0].events.handle}` : "/events" };
+  if (memberships.length === 1) return { ok: true, redirectTo: `/e/${memberships[0].events.handle}` };
+  return { ok: true, redirectTo: "/events" };
 }

@@ -5,15 +5,15 @@ import { acknowledgeFaceNoticeAction } from "@/app/(app)/face-actions";
 import { MEMBER_NOTICE } from "@/lib/faces/copy";
 
 /**
- * Shown to every member of a club that has face recognition on, until they
- * acknowledge it once. Not a modal and not a blocker — they can read the club
+ * Shown to every member of a event that has face recognition on, until they
+ * acknowledge it once. Not a modal and not a blocker — they can read the event
  * around it — but it does not go away on its own, because "we told them" has
  * to mean something more than a banner they scrolled past.
  *
  * This is disclosure, not consent. Consent is enrolment, and enrolment stays
  * optional: a member can acknowledge this and never enrol, and most will.
  */
-export function FaceNotice({ clubId, meHref }: { clubId: string; meHref: string }) {
+export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: string }) {
   const [acked, setAcked] = useState(false);
   const [pending, startTransition] = useTransition();
   if (acked) return null;
@@ -40,7 +40,7 @@ export function FaceNotice({ clubId, meHref }: { clubId: string; meHref: string 
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
-            const res = await acknowledgeFaceNoticeAction(clubId);
+            const res = await acknowledgeFaceNoticeAction(eventId);
             if (!res.error) setAcked(true);
           })
         }

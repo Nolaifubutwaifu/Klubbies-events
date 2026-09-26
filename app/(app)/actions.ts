@@ -24,7 +24,7 @@ export async function setAreaAction(area: "member" | "admin", path: string): Pro
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  const safePath = path.startsWith("/") ? path : "/clubs";
+  const safePath = path.startsWith("/") ? path : "/events";
   revalidatePath(safePath, "layout");
   redirect(safePath);
 }
@@ -48,12 +48,12 @@ export async function acceptInviteAction(membershipId: string, acknowledgedFaceN
     })
     .eq("id", membershipId)
     .eq("user_id", user.id)
-    .select("clubs(handle, name)")
+    .select("events(handle, name)")
     .maybeSingle();
   if (error || !data) return { error: "Could not accept that invitation" };
 
   revalidatePath("/", "layout");
-  return { ok: true, message: `You're in ${data.clubs?.name ?? "the club"}` };
+  return { ok: true, message: `You're in ${data.events?.name ?? "the event"}` };
 }
 
 export async function declineInviteAction(membershipId: string): Promise<Result> {
@@ -67,5 +67,5 @@ export async function declineInviteAction(membershipId: string): Promise<Result>
     .eq("user_id", user.id);
   if (error) return { error: "Could not decline that invitation" };
   revalidatePath("/", "layout");
-  return { ok: true, message: "We've let the club know" };
+  return { ok: true, message: "We've let the event know" };
 }

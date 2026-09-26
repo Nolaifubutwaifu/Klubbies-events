@@ -19,7 +19,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: { default: "Klubbies", template: "%s · Klubbies" },
-  description: "Your club's photos, for your club only.",
+  description: "Your event's photos, for your event only.",
   applicationName: "Klubbies",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },

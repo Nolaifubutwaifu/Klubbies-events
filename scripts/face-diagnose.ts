@@ -1,10 +1,10 @@
 /**
- * Why did a club's photos keep no faces? Indexes a sample into a throwaway
+ * Why did a event's photos keep no faces? Indexes a sample into a throwaway
  * collection with Rekognition's HIGH filter, prints every face it kept and
  * every face it refused (with AWS's reason), at two resolutions, then deletes
  * the collection. Costs about US$0.002 per photo.
  *
- *   pnpm tsx --env-file=.env.local scripts/face-diagnose.ts --club uqbvc --limit 12
+ *   pnpm tsx --env-file=.env.local scripts/face-diagnose.ts --event uqbvc --limit 12
  */
 import {
   CreateCollectionCommand,
@@ -19,9 +19,9 @@ const arg = (name: string) => {
   const at = process.argv.indexOf(`--${name}`);
   return at >= 0 ? process.argv[at + 1] : undefined;
 };
-const handle = arg("club");
+const handle = arg("event");
 const limit = Number(arg("limit") ?? 10);
-if (!handle) throw new Error("--club <handle> is required");
+if (!handle) throw new Error("--event <handle> is required");
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false },
@@ -43,11 +43,11 @@ async function jpeg(bytes: ArrayBuffer, edge: number): Promise<{ buf: Buffer; w:
 }
 
 async function main() {
-  const { data: club } = await supabase.from("clubs").select("id").eq("handle", handle!).single();
+  const { data: event } = await supabase.from("events").select("id").eq("handle", handle!).single();
   const { data: media } = await supabase
     .from("media")
     .select("id, storage_path, display_path, width, height")
-    .eq("club_id", club!.id)
+    .eq("event_id", event!.id)
     .eq("kind", "photo")
     .eq("status", "ready")
     .limit(limit);
@@ -59,7 +59,7 @@ async function main() {
         ["display@2000", m.display_path ?? m.storage_path, 2000],
         ["original@4096", m.storage_path, 4096],
       ] as const) {
-        const { data: blob, error } = await supabase.storage.from("club_media").download(path);
+        const { data: blob, error } = await supabase.storage.from("event_media").download(path);
         if (error || !blob) {
           console.log(m.id, label, "download failed", error?.message);
           continue;

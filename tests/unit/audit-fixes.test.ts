@@ -56,8 +56,8 @@ describe("face crop square", () => {
 
 describe("logo mark path", () => {
   it("sits beside the logo, versioned the same way", () => {
-    expect(logoMarkPath("clubs/abc/logo/logo-1727.png")).toBe("clubs/abc/logo/mark-1727.webp");
-    expect(logoMarkPath("clubs/abc/logo/logo.svg")).toBe("clubs/abc/logo/mark.webp");
+    expect(logoMarkPath("events/abc/logo/logo-1727.png")).toBe("events/abc/logo/mark-1727.webp");
+    expect(logoMarkPath("events/abc/logo/logo.svg")).toBe("events/abc/logo/mark.webp");
   });
 });
 

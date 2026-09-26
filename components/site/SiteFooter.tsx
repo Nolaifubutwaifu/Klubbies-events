@@ -7,7 +7,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/how-it-works", label: "How it works" },
       { href: "/#pricing", label: "Pricing" },
       { href: "/signin", label: "Log in" },
-      { href: "/start", label: "Start your club" },
+      { href: "/start", label: "Start your event" },
     ],
   },
   {
@@ -30,7 +30,7 @@ export function SiteFooter() {
       <div className="kb-wrap grid grid-cols-2 gap-x-6 gap-y-10 py-14 sm:grid-cols-4">
         <div className="col-span-2 sm:col-span-1">
           <span className="soft-wordmark text-[24px]">klubbies</span>
-          <p className="mt-2 max-w-[26ch] text-[15px] text-[color:var(--kb-ink-2)]">Your club&rsquo;s photos, for your club only.</p>
+          <p className="mt-2 max-w-[26ch] text-[15px] text-[color:var(--kb-ink-2)]">Your event&rsquo;s photos, for your event only.</p>
         </div>
         {COLUMNS.map((column) => (
           <div key={column.title}>
@@ -50,7 +50,7 @@ export function SiteFooter() {
           <h2 className="font-[family-name:var(--kb-font-body)] text-[14px] font-bold tracking-normal text-[color:var(--kb-ink)]">Contact</h2>
           <ul className="m-0 mt-2 flex list-none flex-col p-0 text-[15px] text-[color:var(--kb-ink-2)]">
             <li className="flex min-h-[44px] items-center">{SUPPORT_EMAIL}</li>
-            <li>Club data stored in Sydney, Australia</li>
+            <li>Event data stored in Sydney, Australia</li>
           </ul>
         </div>
       </div>

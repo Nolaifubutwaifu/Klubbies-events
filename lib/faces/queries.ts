@@ -38,22 +38,22 @@ export type FaceState = {
 };
 
 /**
- * Where this member stands: has the club turned it on, have they enrolled,
+ * Where this member stands: has the event turned it on, have they enrolled,
  * and is the library still being worked through. Three separate answers
  * because the three empty states they drive are not the same.
  */
-export async function faceStateFor(supabase: UserClient, clubId: string, userId: string): Promise<FaceState> {
+export async function faceStateFor(supabase: UserClient, eventId: string, userId: string): Promise<FaceState> {
   const [{ data: settings }, { data: profile }] = await Promise.all([
-    supabase.from("club_face_settings").select("enabled, backfill_status").eq("club_id", clubId).maybeSingle(),
+    supabase.from("event_face_settings").select("enabled, backfill_status").eq("event_id", eventId).maybeSingle(),
     supabase
       .from("member_face_profiles")
       .select("id, status, failure_reason, consented_at")
-      .eq("club_id", clubId)
+      .eq("event_id", eventId)
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
   return {
-    // A club row can say "on" while this deployment has no AWS credentials —
+    // A event row can say "on" while this deployment has no AWS credentials —
     // the database is shared between local and production, and production may
     // not have the keys yet. Without them nothing can index, match or delete,
     // so the honest answer to a member is that the feature is not here. The
@@ -95,7 +95,7 @@ export type PhotosOfYouGroup = {
  */
 export async function listPhotosOfYou(
   supabase: UserClient,
-  clubId: string,
+  eventId: string,
   page = 0,
 ): Promise<{ groups: PhotosOfYouGroup[]; total: number; hasMore: boolean }> {
   const { data, error } = await supabase
@@ -104,9 +104,9 @@ export async function listPhotosOfYou(
     // albums.cover_media_id points back at media, so a bare `albums` embed is
     // ambiguous and PostgREST refuses it.
     .select(
-      "id, media_id, similarity, media!inner(id, album_id, sort_at, thumb_path, poster_path, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title, event_date))",
+      "id, media_id, similarity, media!inner(id, album_id, sort_at, thumb_path, poster_path, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title, album_date))",
     )
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("state", "confirmed")
     .order("sort_at", { ascending: false, referencedTable: "media" })
     .range(page * PHOTOS_OF_YOU_PAGE_SIZE, (page + 1) * PHOTOS_OF_YOU_PAGE_SIZE);
@@ -139,8 +139,8 @@ export async function listPhotosOfYou(
     const path = row.media.thumb_path ?? row.media.poster_path;
     const group = groups.get(albumId) ?? {
       albumId,
-      albumTitle: row.media.albums?.title ?? "This club",
-      albumDate: row.media.albums?.event_date ?? null,
+      albumTitle: row.media.albums?.title ?? "This event",
+      albumDate: row.media.albums?.album_date ?? null,
       items: [],
     };
     group.items.push({
@@ -177,14 +177,14 @@ export type Suggestion = {
  */
 export async function listFaceSuggestions(
   supabase: UserClient,
-  clubId: string,
+  eventId: string,
 ): Promise<{ items: Suggestion[]; total: number }> {
   const { data, error } = await supabase
     .from("face_matches")
     .select(
       "id, media_id, similarity, media!inner(id, album_id, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title))",
     )
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("state", "suggested")
     .order("similarity", { ascending: false })
     .limit(SUGGESTION_LIMIT);
@@ -195,7 +195,7 @@ export async function listFaceSuggestions(
   const { count: total } = await supabase
     .from("face_matches")
     .select("id", { count: "exact", head: true })
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("state", "suggested");
 
   const byKey = new Map<string, Suggestion>();
@@ -211,7 +211,7 @@ export async function listFaceSuggestions(
       matchIds: [row.id],
       mediaId: row.media_id,
       albumId: row.media.album_id,
-      albumTitle: row.media.albums?.title ?? "This club",
+      albumTitle: row.media.albums?.title ?? "This event",
     });
   }
   const items = [...byKey.values()];
@@ -227,7 +227,7 @@ export async function listFaceSuggestions(
  */
 export async function countPhotosOfYouByAlbum(
   supabase: UserClient,
-  clubId: string,
+  eventId: string,
   albumIds: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
@@ -235,7 +235,7 @@ export async function countPhotosOfYouByAlbum(
   const { data } = await supabase
     .from("face_matches")
     .select("media_id, media!inner(id, album_id, content_hash, original_filename, byte_size)")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("state", "confirmed")
     .in("media.album_id", albumIds);
   const seen = new Set<string>();
@@ -296,11 +296,11 @@ export async function matchForMedia(
 }
 
 /** Distinct pictures, not match rows, so the badge agrees with the page. */
-export async function countPhotosOfYou(supabase: UserClient, clubId: string): Promise<number> {
+export async function countPhotosOfYou(supabase: UserClient, eventId: string): Promise<number> {
   const { data, count } = await supabase
     .from("face_matches")
     .select("media!inner(id, content_hash, original_filename, byte_size)", { count: "exact" })
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("state", "confirmed")
     .limit(1000);
   const rows = data ?? [];

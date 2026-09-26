@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { appUrl } from "@/lib/env";
 import { hashToken, newGuestToken } from "@/lib/guest/links";
@@ -18,10 +18,10 @@ const schema = z.object({
   expiresOn: z.iso.date("Give the link an end date"),
 });
 
-export async function createGuestLinkAction(clubId: string, _prev: GuestLinkState, form: FormData): Promise<GuestLinkState> {
-  const ctx = await getClubContextById(clubId);
+export async function createGuestLinkAction(eventId: string, _prev: GuestLinkState, form: FormData): Promise<GuestLinkState> {
+  const ctx = await getEventContextById(eventId);
   if (!ctx?.perms.manage_albums) return { error: "Not authorised" };
-  if (!canWrite(ctx.club.billing_status)) return { error: ACTIVATE_MESSAGE };
+  if (!canWrite(ctx.event.billing_status)) return { error: ACTIVATE_MESSAGE };
 
   const parsed = schema.safeParse({
     label: String(form.get("label") ?? "").trim(),
@@ -40,13 +40,13 @@ export async function createGuestLinkAction(clubId: string, _prev: GuestLinkStat
     .from("albums")
     .select("id")
     .eq("id", parsed.data.albumId)
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .maybeSingle();
-  if (!album) return { error: "That album isn't in this club" };
+  if (!album) return { error: "That album isn't in this event" };
 
   const token = newGuestToken();
   const { error } = await supabase.from("album_guest_links").insert({
-    club_id: clubId,
+    event_id: eventId,
     album_id: album.id,
     label: parsed.data.label,
     token_hash: await hashToken(token),
@@ -55,15 +55,15 @@ export async function createGuestLinkAction(clubId: string, _prev: GuestLinkStat
   });
   if (error) return { error: "Could not make the link" };
 
-  revalidatePath(`/admin/${ctx.club.handle}/guests`);
+  revalidatePath(`/admin/${ctx.event.handle}/guests`);
   return { ok: true, url: `${appUrl()}/g/${token}` };
 }
 
 export async function revokeGuestLinkAction(linkId: string): Promise<ActionState> {
   const supabase = await createClient();
-  const { data: link } = await supabase.from("album_guest_links").select("id, club_id").eq("id", linkId).maybeSingle();
+  const { data: link } = await supabase.from("album_guest_links").select("id, event_id").eq("id", linkId).maybeSingle();
   if (!link) return { error: "Link not found" };
-  const ctx = await getClubContextById(link.club_id);
+  const ctx = await getEventContextById(link.event_id);
   if (!ctx?.perms.manage_albums) return { error: "Not authorised" };
 
   const { error } = await supabase
@@ -72,6 +72,6 @@ export async function revokeGuestLinkAction(linkId: string): Promise<ActionState
     .eq("id", linkId);
   if (error) return { error: "Could not turn the link off" };
 
-  revalidatePath(`/admin/${ctx.club.handle}/guests`);
+  revalidatePath(`/admin/${ctx.event.handle}/guests`);
   return { ok: true, message: "Link revoked. It stops working straight away." };
 }

@@ -10,7 +10,7 @@ export type ColumnMapping = {
   lastName: number | null;
 };
 
-/** Header labels remembered per club so the next import maps itself. */
+/** Header labels remembered per event so the next import maps itself. */
 export type SavedMapping = {
   email: string;
   fullName: string | null;

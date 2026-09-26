@@ -82,7 +82,7 @@
   --font-heading: var(--kb-font-display);
   --font-body: var(--kb-font-body);
 
-  /* The club's quiet layer (lib/theme.ts regenerates these per club). The
+  /* The event's quiet layer (lib/theme.ts regenerates these per event). The
      default is sand, not lilac. */
   --tone-base: var(--kb-cream);
   --tone-support: var(--kb-sand);
@@ -685,7 +685,7 @@
     text-transform: none;
     white-space: nowrap;
   }
-  /* The quiet chip carries the club's tone (sand and ink by default). */
+  /* The quiet chip carries the event's tone (sand and ink by default). */
   .soft-chip-muted,
   .tag-neutral,
   .tag-outline {

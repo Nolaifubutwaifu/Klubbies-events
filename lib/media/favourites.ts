@@ -17,12 +17,12 @@ export type SavedGroup = {
   items: SavedItem[];
 };
 
-/** The caller's favourites in one club, newest first, grouped by album. */
-export async function listFavourites(supabase: UserClient, clubId: string, userId: string): Promise<SavedGroup[]> {
+/** The caller's favourites in one event, newest first, grouped by album. */
+export async function listFavourites(supabase: UserClient, eventId: string, userId: string): Promise<SavedGroup[]> {
   const { data: rows, error } = await supabase
     .from("favourites")
     .select("media_id, created_at, media(id, kind, album_id, thumb_path, poster_path, duration_seconds, status)")
-    .eq("club_id", clubId)
+    .eq("event_id", eventId)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(300);
@@ -35,7 +35,7 @@ export async function listFavourites(supabase: UserClient, clubId: string, userI
 
   const albumIds = [...new Set(media.map((m) => m.album_id).filter((id): id is string => Boolean(id)))];
   const { data: albums } = albumIds.length
-    ? await supabase.from("albums").select("id, title, event_date").in("id", albumIds)
+    ? await supabase.from("albums").select("id, title, album_date").in("id", albumIds)
     : { data: [] };
   const albumById = new Map((albums ?? []).map((a) => [a.id, a]));
 
@@ -54,7 +54,7 @@ export async function listFavourites(supabase: UserClient, clubId: string, userI
     if (!album) continue; // RLS hid it, or it was deleted
     const group =
       groups.get(item.album_id) ??
-      { albumId: item.album_id, albumTitle: album.title, albumDate: album.event_date, items: [] };
+      { albumId: item.album_id, albumTitle: album.title, albumDate: album.album_date, items: [] };
     const path = item.thumb_path ?? item.poster_path;
     group.items.push({
       id: item.id,

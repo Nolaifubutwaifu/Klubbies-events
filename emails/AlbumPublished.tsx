@@ -3,18 +3,18 @@ import { EmailLayout, emailStyles } from "./Layout";
 
 export type AlbumPublishedProps = {
   name: string;
-  clubName: string;
+  eventName: string;
   albumTitle: string;
   albumMeta: string;
   albumUrl: string;
   unsubscribeUrl: string;
 };
 
-export default function AlbumPublished({ name, clubName, albumTitle, albumMeta, albumUrl, unsubscribeUrl }: AlbumPublishedProps) {
+export default function AlbumPublished({ name, eventName, albumTitle, albumMeta, albumUrl, unsubscribeUrl }: AlbumPublishedProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
     <EmailLayout preview={`${albumTitle} is up on Klubbies`}>
-      <Text style={emailStyles.kicker}>{clubName}</Text>
+      <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>{albumTitle}</Text>
       <Text style={emailStyles.body}>
         Hi {firstName}, the committee has shared a new album{albumMeta ? ` — ${albumMeta}` : ""}. Only people on the

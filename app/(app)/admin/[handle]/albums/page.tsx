@@ -18,8 +18,8 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
   const supabase = await createClient();
 
   const [albums, { data: engagement }] = await Promise.all([
-    listStackedAlbums(supabase, ctx.club.id, { includeDrafts: true }),
-    supabase.from("album_engagement").select("*").eq("club_id", ctx.club.id),
+    listStackedAlbums(supabase, ctx.event.id, { includeDrafts: true }),
+    supabase.from("album_engagement").select("*").eq("event_id", ctx.event.id),
   ]);
 
   const stats: Record<string, AlbumStats> = {};
@@ -48,7 +48,7 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
   return (
     <main className="flex flex-col gap-6 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <PageTitle kicker={ctx.club.name} title="Albums">
+        <PageTitle kicker={ctx.event.name} title="Albums">
           {albums.length ? `${summary}. Drag to reorder what members see first.` : "Nothing here yet."}
         </PageTitle>
         <div className="flex items-center gap-2">
@@ -56,16 +56,16 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
-            <MoreLink href={`/c/${handle}`}>See it as a member</MoreLink>
+            <MoreLink href={`/e/${handle}`}>See it as a member</MoreLink>
             <MoreLink href={`/admin/${handle}/guests`}>Make a guest upload link</MoreLink>
           </MoreMenu>
         </div>
       </div>
 
-      {canWrite(ctx.club.billing_status) ? null : <BillingGate handle={handle} action="create albums" />}
+      {canWrite(ctx.event.billing_status) ? null : <BillingGate handle={handle} action="create albums" />}
 
       {albums.length ? (
-        <AlbumManager clubId={ctx.club.id} handle={handle} albums={albums} stats={stats} />
+        <AlbumManager eventId={ctx.event.id} handle={handle} albums={albums} stats={stats} />
       ) : (
         <EmptyState
           title="No albums yet."

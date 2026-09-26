@@ -29,15 +29,15 @@ const appearance: Appearance = {
   },
 };
 
-function Inner({ clubId, doneHref }: { clubId: string; doneHref: string }) {
+function Inner({ eventId, doneHref }: { eventId: string; doneHref: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(ev: FormEvent<HTMLFormElement>) {
+    ev.preventDefault();
     if (!stripe || !elements) return;
     setBusy(true);
     setError("");
@@ -56,7 +56,7 @@ function Inner({ clubId, doneHref }: { clubId: string; doneHref: string }) {
     const res = await fetch("/api/stripe/card", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ clubId, setupIntentId: setupIntent.id }),
+      body: JSON.stringify({ eventId, setupIntentId: setupIntent.id }),
     });
     if (!res.ok) {
       const body: { error?: string } = await res.json().catch(() => ({}));
@@ -87,7 +87,7 @@ function Inner({ clubId, doneHref }: { clubId: string; doneHref: string }) {
   );
 }
 
-export function CardForm({ clubId, doneHref }: { clubId: string; doneHref: string }) {
+export function CardForm({ eventId, doneHref }: { eventId: string; doneHref: string }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -97,7 +97,7 @@ export function CardForm({ clubId, doneHref }: { clubId: string; doneHref: strin
       const res = await fetch("/api/stripe/card", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ clubId }),
+        body: JSON.stringify({ eventId }),
       });
       const body: { clientSecret?: string; error?: string } = await res.json().catch(() => ({}));
       if (cancelled) return;
@@ -107,7 +107,7 @@ export function CardForm({ clubId, doneHref }: { clubId: string; doneHref: strin
     return () => {
       cancelled = true;
     };
-  }, [clubId]);
+  }, [eventId]);
 
   if (!stripePromise) return <div className="notice">Card updates need NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.</div>;
   if (error) return <div className="notice">{error}</div>;
@@ -115,7 +115,7 @@ export function CardForm({ clubId, doneHref }: { clubId: string; doneHref: strin
 
   return (
     <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-      <Inner clubId={clubId} doneHref={doneHref} />
+      <Inner eventId={eventId} doneHref={doneHref} />
     </Elements>
   );
 }

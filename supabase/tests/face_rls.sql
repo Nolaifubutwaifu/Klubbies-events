@@ -16,10 +16,10 @@ begin;
 
 do $$
 declare
-  v_club uuid := gen_random_uuid();
+  v_event uuid := gen_random_uuid();
   v_a uuid := gen_random_uuid();
   v_b uuid := gen_random_uuid();
-  v_out uuid := gen_random_uuid();   -- signed in, not in this club
+  v_out uuid := gen_random_uuid();   -- signed in, not in this event
   v_mem_a uuid;
   v_mem_b uuid;
   v_media uuid := gen_random_uuid();
@@ -40,48 +40,48 @@ begin
     (v_out, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-out@test.invalid', '', now(), now());
   -- public.users is filled by the on_auth_user_created trigger.
 
-  insert into public.clubs (id, handle, name, billing_status)
-  values (v_club, 'rls_face_test', 'RLS Face Test', 'comped');
+  insert into public.events (id, handle, name, billing_status)
+  values (v_event, 'rls_face_test', 'RLS Face Test', 'comped');
 
-  insert into public.memberships (club_id, user_id, roster_email, roster_name, role, status)
-  values (v_club, v_a, 'rls-a@test.invalid', 'Member A', 'club_member', 'active')
+  insert into public.memberships (event_id, user_id, roster_email, roster_name, role, status)
+  values (v_event, v_a, 'rls-a@test.invalid', 'Member A', 'event_member', 'active')
   returning id into v_mem_a;
-  insert into public.memberships (club_id, user_id, roster_email, roster_name, role, status)
-  values (v_club, v_b, 'rls-b@test.invalid', 'Member B', 'club_member', 'active')
+  insert into public.memberships (event_id, user_id, roster_email, roster_name, role, status)
+  values (v_event, v_b, 'rls-b@test.invalid', 'Member B', 'event_member', 'active')
   returning id into v_mem_b;
 
-  insert into public.albums (id, club_id, title, status, visibility)
-  values (v_album, v_club, 'Test album', 'published', 'members');
-  insert into public.media (id, club_id, album_id, kind, storage_path, status)
-  values (v_media, v_club, v_album, 'photo', 'clubs/x/albums/y/z/original.jpg', 'ready');
+  insert into public.albums (id, event_id, title, status, visibility)
+  values (v_album, v_event, 'Test album', 'published', 'members');
+  insert into public.media (id, event_id, album_id, kind, storage_path, status)
+  values (v_media, v_event, v_album, 'photo', 'events/x/albums/y/z/original.jpg', 'ready');
 
-  insert into public.club_face_settings (club_id, enabled, collection_id)
-  values (v_club, true, 'klubbies-test-club-x');
+  insert into public.event_face_settings (event_id, enabled, collection_id)
+  values (v_event, true, 'klubbies-test-event-x');
 
-  insert into public.media_faces (club_id, media_id, collection_id, rekognition_face_id, bounding_box)
-  values (v_club, v_media, 'klubbies-test-club-x', 'face-1', '{"Left":0.1,"Top":0.1,"Width":0.2,"Height":0.2}')
+  insert into public.media_faces (event_id, media_id, collection_id, rekognition_face_id, bounding_box)
+  values (v_event, v_media, 'klubbies-test-event-x', 'face-1', '{"Left":0.1,"Top":0.1,"Width":0.2,"Height":0.2}')
   returning id into v_face;
 
-  insert into public.member_face_profiles (club_id, membership_id, user_id, status, consent_version, selfie_path)
-  values (v_club, v_mem_a, v_a, 'ready', 'test', 'faces/' || v_mem_a || '/selfie.jpg')
+  insert into public.member_face_profiles (event_id, membership_id, user_id, status, consent_version, selfie_path)
+  values (v_event, v_mem_a, v_a, 'ready', 'test', 'faces/' || v_mem_a || '/selfie.jpg')
   returning id into v_profile_a;
-  insert into public.member_face_profiles (club_id, membership_id, user_id, status, consent_version, selfie_path)
-  values (v_club, v_mem_b, v_b, 'ready', 'test', 'faces/' || v_mem_b || '/selfie.jpg')
+  insert into public.member_face_profiles (event_id, membership_id, user_id, status, consent_version, selfie_path)
+  values (v_event, v_mem_b, v_b, 'ready', 'test', 'faces/' || v_mem_b || '/selfie.jpg')
   returning id into v_profile_b;
 
-  insert into public.member_face_references (club_id, profile_id, collection_id, rekognition_face_id, source)
-  values (v_club, v_profile_a, 'klubbies-test-club-x', 'ref-a', 'selfie');
+  insert into public.member_face_references (event_id, profile_id, collection_id, rekognition_face_id, source)
+  values (v_event, v_profile_a, 'klubbies-test-event-x', 'ref-a', 'selfie');
 
-  insert into public.face_matches (club_id, media_id, media_face_id, profile_id, similarity, state, bounding_box)
-  values (v_club, v_media, v_face, v_profile_a, 97.5, 'confirmed', '{"Left":0.1,"Top":0.1,"Width":0.2,"Height":0.2}')
+  insert into public.face_matches (event_id, media_id, media_face_id, profile_id, similarity, state, bounding_box)
+  values (v_event, v_media, v_face, v_profile_a, 97.5, 'confirmed', '{"Left":0.1,"Top":0.1,"Width":0.2,"Height":0.2}')
   returning id into v_match_a;
 
-  insert into public.face_jobs (club_id, media_id, kind) values (v_club, v_media, 'index_media');
-  insert into public.face_purge_queue (collection_id, rekognition_face_id) values ('klubbies-test-club-x', 'dead-1');
+  insert into public.face_jobs (event_id, media_id, kind) values (v_event, v_media, 'index_media');
+  insert into public.face_purge_queue (collection_id, rekognition_face_id) values ('klubbies-test-event-x', 'dead-1');
 
   -- A's selfie as a storage object, so the storage policy can be exercised.
   insert into storage.objects (bucket_id, name, owner)
-  values ('club_media', 'faces/' || v_mem_a || '/selfie.jpg', v_a);
+  values ('event_media', 'faces/' || v_mem_a || '/selfie.jpg', v_a);
 
   -- ---------------------------------------------------------------------
   -- As member A: sees their own match, and nothing structural
@@ -145,7 +145,7 @@ begin
   update public.face_matches set state = 'confirmed', decided_at = now() where id = v_match_a;
 
   -- ---------------------------------------------------------------------
-  -- As member B: same club, sees none of A's
+  -- As member B: same event, sees none of A's
   -- ---------------------------------------------------------------------
   perform set_config('request.jwt.claims', json_build_object('sub', v_b, 'role', 'authenticated')::text, true);
 
@@ -171,7 +171,7 @@ begin
 
   -- Step 9: B cannot fetch A's selfie.
   select count(*) into n from storage.objects
-  where bucket_id = 'club_media' and name = 'faces/' || v_mem_a || '/selfie.jpg';
+  where bucket_id = 'event_media' and name = 'faces/' || v_mem_a || '/selfie.jpg';
   if n <> 0 then raise exception 'B must not be able to read A''s selfie, saw %', n; end if;
 
   -- ---------------------------------------------------------------------
@@ -180,8 +180,8 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_out, 'role', 'authenticated')::text, true);
   select count(*) into n from public.face_matches;
   if n <> 0 then raise exception 'a non-member must see no matches, saw %', n; end if;
-  select count(*) into n from public.club_face_settings;
-  if n <> 0 then raise exception 'a non-member must not see the club switch, saw %', n; end if;
+  select count(*) into n from public.event_face_settings;
+  if n <> 0 then raise exception 'a non-member must not see the event switch, saw %', n; end if;
 
   -- ---------------------------------------------------------------------
   -- A revoked membership stops seeing matches, the way the rest of the app

@@ -16,19 +16,19 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
   const { handle } = await props.params;
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
-  const recent = await listStackedAlbums(supabase, ctx.club.id, { includeDrafts: true, limit: 6 });
-  const writable = canWrite(ctx.club.billing_status);
+  const recent = await listStackedAlbums(supabase, ctx.event.id, { includeDrafts: true, limit: 6 });
+  const writable = canWrite(ctx.event.billing_status);
 
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
-      <PageTitle kicker={ctx.club.name} title="New album">
+      <PageTitle kicker={ctx.event.name} title="New album">
         Drop the whole night in. Name it, say when it goes live, then upload — it keeps going in the background.
       </PageTitle>
 
       {writable ? null : <BillingGate handle={handle} action="upload photos" />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        {writable ? <NewAlbumPanel clubId={ctx.club.id} /> : <div />}
+        {writable ? <NewAlbumPanel eventId={ctx.event.id} /> : <div />}
 
         <div className="flex flex-col gap-5">
           <section className="soft-card flex flex-col gap-3 p-5">
@@ -38,7 +38,7 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
                 {recent.map((album) => (
                   <li key={album.id}>
                     <Link
-                      href={`/c/${handle}/a/${album.id}?add=1`}
+                      href={`/e/${handle}/a/${album.id}?add=1`}
                       className="flex items-center gap-3 rounded-[16px] p-2 text-ink no-underline transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent)_8%,transparent)]"
                     >
                       <span className="h-11 w-11 flex-none overflow-hidden rounded-[12px] bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]">

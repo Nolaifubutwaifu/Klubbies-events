@@ -1,6 +1,6 @@
 -- The same file, once per album.
 --
--- The first real club's library had 29 of its first 60 photos twice: the
+-- The first real event's library had 29 of its first 60 photos twice: the
 -- same DSC files uploaded a second time after a batch that had already gone
 -- through. That inflated the photo count, the zip, storage and every face
 -- match ("6 photos of you" was 3 photos twice).

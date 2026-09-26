@@ -29,13 +29,13 @@ export function appUrl(): string {
 }
 
 /**
- * "klubbies.example/c/uq_vb": the club's shareable address as people see it.
+ * "klubbies.example/e/uq_vb": the event's shareable address as people see it.
  * Everything that shows the address calls this, so the rail, the setup
  * checklist and Settings can't drift apart again (the rail once hardcoded a
  * domain the app wasn't served from).
  */
-export function clubAddress(handle: string): string {
-  return `${appUrl().replace(/^https?:\/\//, "")}/c/${handle}`;
+export function eventAddress(handle: string): string {
+  return `${appUrl().replace(/^https?:\/\//, "")}/e/${handle}`;
 }
 
 let cached: ServerEnv | undefined;

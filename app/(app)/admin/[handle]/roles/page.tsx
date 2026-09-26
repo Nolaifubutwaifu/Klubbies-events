@@ -16,13 +16,13 @@ export default async function RolesPage(props: PageProps<"/admin/[handle]/roles"
   const supabase = await createClient();
 
   const [{ data: roles }, { data: counts }, { data: people }] = await Promise.all([
-    supabase.from("club_roles").select("*").eq("club_id", ctx.club.id).order("sort_order").order("created_at"),
-    supabase.from("memberships").select("role_id, status").eq("club_id", ctx.club.id).neq("status", "revoked"),
-    // Only people who have actually signed in can be handed a club.
+    supabase.from("event_roles").select("*").eq("event_id", ctx.event.id).order("sort_order").order("created_at"),
+    supabase.from("memberships").select("role_id, status").eq("event_id", ctx.event.id).neq("status", "revoked"),
+    // Only people who have actually signed in can be handed a event.
     supabase
       .from("memberships")
       .select("id, roster_name, claimed_name, role, user_id, status, users!memberships_user_id_fkey(display_name)")
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .eq("status", "active")
       .not("user_id", "is", null)
       .order("roster_name"),
@@ -39,13 +39,13 @@ export default async function RolesPage(props: PageProps<"/admin/[handle]/roles"
     .map((m) => ({
       membershipId: m.id,
       name: personName({ displayName: m.users?.display_name, claimedName: m.claimed_name, rosterName: m.roster_name }),
-      isAdmin: m.role === "club_admin",
+      isAdmin: m.role === "event_admin",
     }));
   const owner = (people ?? []).find((m) => m.user_id === ctx.userId);
 
-  // Seasons come out of the albums themselves: the club's history is whatever
+  // Seasons come out of the albums themselves: the event's history is whatever
   // it has published, grouped by the year it happened in.
-  const albums = await listStackedAlbums(supabase, ctx.club.id, { includeDrafts: true, limit: 200 });
+  const albums = await listStackedAlbums(supabase, ctx.event.id, { includeDrafts: true, limit: 200 });
   const thisYear = new Date().getFullYear();
   const byYear = new Map<number, Season>();
   for (const album of albums) {
@@ -61,19 +61,19 @@ export default async function RolesPage(props: PageProps<"/admin/[handle]/roles"
 
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
-      <PageTitle kicker={ctx.club.name} title="Handover">
-        Your club&rsquo;s history doesn&rsquo;t graduate with your media officer. Move ownership, change roles, keep
+      <PageTitle kicker={ctx.event.name} title="Handover">
+        Your event&rsquo;s history doesn&rsquo;t graduate with your media officer. Move ownership, change roles, keep
         every past season.
       </PageTitle>
       <RoleEditor
-        clubId={ctx.club.id}
+        eventId={ctx.event.id}
         roles={(roles ?? []).map((role) => ({ ...role, memberCount: memberCount.get(role.id) ?? 0 }))}
       />
       <PastSeasons seasons={seasons} />
-      {ctx.perms.manage_club ? (
+      {ctx.perms.manage_event ? (
         <Handover
-          clubId={ctx.club.id}
-          clubName={ctx.club.name}
+          eventId={ctx.event.id}
+          eventName={ctx.event.name}
           ownerName={
             owner
               ? personName({ displayName: owner.users?.display_name, claimedName: owner.claimed_name, rosterName: owner.roster_name })

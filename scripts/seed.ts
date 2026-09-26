@@ -1,11 +1,11 @@
 /**
- * Seeds two clubs, three members and a dozen sample photos so the UI can be
+ * Seeds two events, three members and a dozen sample photos so the UI can be
  * developed without manual setup. Safe to re-run: it removes the previous
- * seed clubs first.
+ * seed events first.
  *
  *   SEED_ADMIN_EMAIL=you@example.com pnpm seed
  *
- * SEED_ADMIN_EMAIL becomes the admin of both clubs so you can sign in with a
+ * SEED_ADMIN_EMAIL becomes the admin of both events so you can sign in with a
  * real inbox. The three members use example.com addresses.
  */
 import { createClient } from "@supabase/supabase-js";
@@ -19,9 +19,9 @@ if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SER
 if (!adminEmail) throw new Error("Set SEED_ADMIN_EMAIL to the address you will sign in with");
 
 const db = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-const BUCKET = "club_media";
+const BUCKET = "event_media";
 
-const CLUBS = [
+const EVENTS = [
   {
     handle: "seed_uq_volleyball",
     name: "UQ Volleyball",
@@ -33,16 +33,16 @@ const CLUBS = [
   },
   {
     handle: "seed_qut_rowing",
-    name: "QUT Rowing Club",
+    name: "QUT Rowing Event",
     organisation: "Queensland University of Technology",
     albums: [{ title: "Regatta Weekend", date: "2026-08-23", photos: 4 }],
   },
 ];
 
 const MEMBERS = [
-  { name: "Mara Lindqvist", email: "mara@example.com", clubs: ["seed_uq_volleyball"] },
-  { name: "Jonas Weber", email: "jonas@example.com", clubs: ["seed_qut_rowing"] },
-  { name: "Priya Raman", email: "priya@example.com", clubs: ["seed_uq_volleyball", "seed_qut_rowing"] },
+  { name: "Mara Lindqvist", email: "mara@example.com", events: ["seed_uq_volleyball"] },
+  { name: "Jonas Weber", email: "jonas@example.com", events: ["seed_qut_rowing"] },
+  { name: "Priya Raman", email: "priya@example.com", events: ["seed_uq_volleyball", "seed_qut_rowing"] },
 ];
 
 const PALETTE = ["#ec3013", "#2d2b2b", "#e15b47", "#605d5d", "#ae1800", "#9b9797"];
@@ -74,13 +74,13 @@ async function sampleImage(label: string, index: number) {
   return { original, thumb, display, width, height };
 }
 
-async function removeSeedClub(handle: string) {
-  const { data: club } = await db.from("clubs").select("id").eq("handle", handle).maybeSingle();
-  if (!club) return;
-  const { data: media } = await db.from("media").select("storage_path, thumb_path, display_path").eq("club_id", club.id);
+async function removeSeedEvent(handle: string) {
+  const { data: event } = await db.from("events").select("id").eq("handle", handle).maybeSingle();
+  if (!event) return;
+  const { data: media } = await db.from("media").select("storage_path, thumb_path, display_path").eq("event_id", event.id);
   const paths = (media ?? []).flatMap((m) => [m.storage_path, m.thumb_path, m.display_path]).filter((p): p is string => Boolean(p));
   if (paths.length) await db.storage.from(BUCKET).remove(paths);
-  await db.from("clubs").delete().eq("id", club.id);
+  await db.from("events").delete().eq("id", event.id);
 }
 
 async function main() {
@@ -88,24 +88,24 @@ async function main() {
   await db.from("users").update({ display_name: "Seed Admin" }).eq("id", adminId);
 
   let photoNumber = 0;
-  const clubIds = new Map<string, string>();
+  const eventIds = new Map<string, string>();
 
-  for (const spec of CLUBS) {
-    await removeSeedClub(spec.handle);
-    const { data: club, error } = await db
-      .from("clubs")
+  for (const spec of EVENTS) {
+    await removeSeedEvent(spec.handle);
+    const { data: event, error } = await db
+      .from("events")
       .insert({ handle: spec.handle, name: spec.name, organisation: spec.organisation, created_by: adminId, billing_status: "comped" })
       .select("id")
       .single();
-    if (error || !club) throw error;
-    clubIds.set(spec.handle, club.id);
+    if (error || !event) throw error;
+    eventIds.set(spec.handle, event.id);
 
     await db.from("memberships").insert({
-      club_id: club.id,
+      event_id: event.id,
       user_id: adminId,
       roster_email: adminEmail!,
       roster_name: "Seed Admin",
-      role: "club_admin",
+      role: "event_admin",
       status: "active",
       first_seen_at: new Date().toISOString(),
     });
@@ -114,9 +114,9 @@ async function main() {
       const { data: album } = await db
         .from("albums")
         .insert({
-          club_id: club.id,
+          event_id: event.id,
           title: albumSpec.title,
-          event_date: albumSpec.date,
+          album_date: albumSpec.date,
           status: "published",
           published_at: new Date().toISOString(),
           created_by: adminId,
@@ -128,7 +128,7 @@ async function main() {
       for (let i = 0; i < albumSpec.photos; i++) {
         photoNumber++;
         const id = crypto.randomUUID();
-        const folder = `clubs/${club.id}/albums/${album.id}/${id}`;
+        const folder = `events/${event.id}/albums/${album.id}/${id}`;
         const image = await sampleImage(`${albumSpec.title} ${i + 1}`, photoNumber);
         await Promise.all([
           db.storage.from(BUCKET).upload(`${folder}/original.jpg`, image.original, { contentType: "image/jpeg", upsert: true }),
@@ -137,7 +137,7 @@ async function main() {
         ]);
         const { error: mediaError } = await db.from("media").insert({
           id,
-          club_id: club.id,
+          event_id: event.id,
           album_id: album.id,
           kind: "photo",
           storage_path: `${folder}/original.jpg`,
@@ -158,9 +158,9 @@ async function main() {
   }
 
   for (const member of MEMBERS) {
-    for (const handle of member.clubs) {
+    for (const handle of member.events) {
       await db.from("memberships").insert({
-        club_id: clubIds.get(handle)!,
+        event_id: eventIds.get(handle)!,
         roster_email: member.email,
         roster_name: member.name,
         status: "pending",
@@ -169,8 +169,8 @@ async function main() {
     }
   }
 
-  console.log(`Seeded ${CLUBS.length} clubs, ${MEMBERS.length} members and ${photoNumber} photos.`);
-  console.log(`Sign in as ${adminEmail} at /signin, then open /c/${CLUBS[0].handle}.`);
+  console.log(`Seeded ${EVENTS.length} events, ${MEMBERS.length} members and ${photoNumber} photos.`);
+  console.log(`Sign in as ${adminEmail} at /signin, then open /e/${EVENTS[0].handle}.`);
 }
 
 main().catch((error) => {

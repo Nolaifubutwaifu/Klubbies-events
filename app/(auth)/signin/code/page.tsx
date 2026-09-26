@@ -11,9 +11,9 @@ export const metadata: Metadata = { title: "Enter your code" };
 export default async function CodePage(props: PageProps<"/signin/code">) {
   const params = await props.searchParams;
   const isCreate = params.flow === "create";
-  const club = typeof params.club === "string" && /^[a-z0-9_]{1,48}$/i.test(params.club) ? params.club : undefined;
+  const event = typeof params.event === "string" && /^[a-z0-9_]{1,48}$/i.test(params.event) ? params.event : undefined;
   const email = (await cookies()).get(SIGNIN_COOKIE)?.value;
-  const restartHref = isCreate ? "/start" : club ? `/signin?club=${club}` : "/signin";
+  const restartHref = isCreate ? "/start" : event ? `/signin?event=${event}` : "/signin";
   if (!email) redirect(restartHref);
 
   return (
@@ -33,13 +33,13 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
       </p>
 
       <div className="mt-7">
-        <CodeForm restartHref={restartHref} club={club} />
+        <CodeForm restartHref={restartHref} event={event} />
       </div>
 
       <AuthNote>
         {isCreate
           ? "Nothing arrived? Check junk, then send it again."
-          : "Nothing arrived? Use the email your club has on its list. If that's what you used, ask your committee to add you."}
+          : "Nothing arrived? Use the email your event has on its list. If that's what you used, ask your committee to add you."}
       </AuthNote>
     </AuthShell>
   );

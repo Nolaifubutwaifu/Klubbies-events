@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setClubPrivacyAction } from "@/app/(app)/admin/actions";
+import { setEventPrivacyAction } from "@/app/(app)/admin/actions";
 
 type Prefs = { allow_removal_requests: boolean; grace_period_enabled: boolean };
 
@@ -19,7 +19,7 @@ const ROWS: { key: keyof Prefs; label: string; hint: string }[] = [
 ];
 
 /** Saves on each toggle — nobody wants a Save button under two switches. */
-export function PrivacySwitches({ clubId, initial }: { clubId: string; initial: Prefs }) {
+export function PrivacySwitches({ eventId, initial }: { eventId: string; initial: Prefs }) {
   const [prefs, setPrefs] = useState(initial);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
@@ -45,7 +45,7 @@ export function PrivacySwitches({ clubId, initial }: { clubId: string; initial: 
               const next = { ...prefs, [row.key]: e.target.checked };
               setPrefs(next);
               startTransition(async () => {
-                const res = await setClubPrivacyAction(clubId, next);
+                const res = await setEventPrivacyAction(eventId, next);
                 setMessage(res.error ?? "Saved");
               });
             }}

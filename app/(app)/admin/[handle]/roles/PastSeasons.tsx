@@ -10,8 +10,8 @@ export type Season = {
 };
 
 /**
- * A club's history doesn't graduate with its media officer. Every past year is
- * still here, still the club's, and this is where a new committee sees that.
+ * A event's history doesn't graduate with its media officer. Every past year is
+ * still here, still the event's, and this is where a new committee sees that.
  */
 export function PastSeasons({ seasons }: { seasons: Season[] }) {
   if (!seasons.length) return null;
@@ -21,7 +21,7 @@ export function PastSeasons({ seasons }: { seasons: Season[] }) {
       <div>
         <h2 className="soft-display text-[19px]">Past seasons</h2>
         <p className="m-0 mt-1 text-[14px] text-[color:var(--ink-70)]">
-          Archived, not deleted. Every album a past committee made still belongs to the club.
+          Archived, not deleted. Every album a past committee made still belongs to the event.
         </p>
       </div>
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>

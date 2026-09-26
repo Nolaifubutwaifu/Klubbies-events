@@ -36,15 +36,15 @@ export default async function GuestLinksPage(props: PageProps<"/admin/[handle]/g
     supabase
       .from("album_guest_links")
       .select("id, label, album_id, expires_at, revoked_at, created_at, first_used_at, last_used_at, file_count, byte_total")
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .order("created_at", { ascending: false })
       .limit(40),
     supabase
       .from("albums")
       .select("id, title, status")
-      .eq("club_id", ctx.club.id)
+      .eq("event_id", ctx.event.id)
       .neq("status", "hidden")
-      .order("event_date", { ascending: false, nullsFirst: false })
+      .order("album_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(40),
   ]);
@@ -54,15 +54,15 @@ export default async function GuestLinksPage(props: PageProps<"/admin/[handle]/g
 
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
-      <PageTitle kicker={ctx.club.name} title="Guest links">
+      <PageTitle kicker={ctx.event.name} title="Guest links">
         For the photographer you hired, or the one mate with the good camera. They can upload into one album and see
         nothing else.
       </PageTitle>
 
-      {!canWrite(ctx.club.billing_status) ? <BillingGate handle={handle} action="hand out guest links" /> : null}
+      {!canWrite(ctx.event.billing_status) ? <BillingGate handle={handle} action="hand out guest links" /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <GuestLinkForm clubId={ctx.club.id} albums={albums ?? []} defaultExpiry={defaultExpiry} />
+        <GuestLinkForm eventId={ctx.event.id} albums={albums ?? []} defaultExpiry={defaultExpiry} />
 
         <div className="flex flex-col gap-6">
           <section className="soft-card flex flex-col gap-4 p-5">
@@ -99,7 +99,7 @@ export default async function GuestLinksPage(props: PageProps<"/admin/[handle]/g
               </ul>
             ) : (
               <EmptyState title="No guest links yet." art={<PhotoStackArt size={104} />}>
-                Make one when you hire a photographer. They upload into a single album and never see the club.
+                Make one when you hire a photographer. They upload into a single album and never see the event.
               </EmptyState>
             )}
           </section>
@@ -111,7 +111,7 @@ export default async function GuestLinksPage(props: PageProps<"/admin/[handle]/g
               Everything they add shows as &ldquo;added by guest&rdquo; in your album.
             </p>
             <div className="mt-4 rounded-[var(--soft-r-sm)] bg-[color:var(--color-surface)] p-4 text-[color:var(--color-text)]">
-              <span className="block text-[14px] font-bold text-[color:var(--ink-70)]">Upload for {ctx.club.name}</span>
+              <span className="block text-[14px] font-bold text-[color:var(--ink-70)]">Upload for {ctx.event.name}</span>
               <span className="soft-display mt-1 block text-[18px]">
                 {albums?.[0]?.title ?? "Your album"}
               </span>

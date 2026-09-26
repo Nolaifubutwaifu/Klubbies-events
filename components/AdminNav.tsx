@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { ClubMark } from "@/components/ClubMark";
+import { EventMark } from "@/components/EventMark";
 
 export type AdminNavCounts = {
   albums: number;
@@ -73,13 +73,13 @@ function Icon({ name }: { name: string }) {
 }
 
 /**
- * The committee's spine. A rail on desktop — the design puts the whole club in
+ * The committee's spine. A rail on desktop — the design puts the whole event in
  * one glance — and a scrolling row of the same links on a phone.
  */
 export function AdminNav({
   handle,
-  clubName,
-  clubAddress,
+  eventName,
+  eventAddress,
   accentColour,
   logoUrl,
   counts,
@@ -87,10 +87,10 @@ export function AdminNav({
   person,
 }: {
   handle: string;
-  clubName: string;
+  eventName: string;
   /** The shareable address without its scheme, from APP_URL — the same
       value Settings shows, so admins never copy two different links. */
-  clubAddress: string;
+  eventAddress: string;
   accentColour: string | null;
   logoUrl: string | null;
   counts: AdminNavCounts;
@@ -117,10 +117,10 @@ export function AdminNav({
     <nav aria-label="Committee" className="lg:sticky lg:top-5 lg:self-start">
       <div className="soft-card flex flex-col gap-1 p-3 lg:w-[248px]">
         <div className="hidden items-center gap-2.5 px-1.5 pb-3 lg:flex">
-          <ClubMark name={clubName} logoUrl={logoUrl} accentColour={accentColour} size={36} />
+          <EventMark name={eventName} logoUrl={logoUrl} accentColour={accentColour} size={36} />
           <span className="min-w-0">
-            <span className="soft-display block truncate text-[15px]">{clubName}</span>
-            <span className="block truncate text-[14px] text-[color:var(--ink-55)]">{clubAddress}</span>
+            <span className="soft-display block truncate text-[15px]">{eventName}</span>
+            <span className="block truncate text-[14px] text-[color:var(--ink-55)]">{eventAddress}</span>
           </span>
         </div>
 

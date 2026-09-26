@@ -16,21 +16,21 @@ export default function TermsPage() {
           title: "Who we are",
           body: (
             <p>
-              Klubbies is a private photo and video sharing service for clubs, operated from Queensland, Australia. By
-              creating a club, signing in, or paying for Klubbies you agree to these terms. To contact us, <ContactLine />.
+              Klubbies is a private photo and video sharing service for events, operated from Queensland, Australia. By
+              creating a event, signing in, or paying for Klubbies you agree to these terms. To contact us, <ContactLine />.
             </p>
           ),
         },
         {
-          title: "Clubs, admins and members",
+          title: "Events, admins and members",
           body: (
             <>
               <p>
-                A club admin creates a club, manages its member list and uploads media. Admins are responsible for keeping
+                A event admin creates a event, manages its member list and uploads media. Admins are responsible for keeping
                 the member list accurate and for removing people who should no longer have access.
               </p>
               <p>
-                Members sign in with the email address on their club&apos;s list and a one-time code. Don&apos;t share codes
+                Members sign in with the email address on their event&apos;s list and a one-time code. Don&apos;t share codes
                 or let other people use your access.
               </p>
             </>
@@ -41,12 +41,12 @@ export default function TermsPage() {
           body: (
             <>
               <p>
-                Clubs keep ownership of everything they upload. You give us permission to store, copy (for previews),
+                Events keep ownership of everything they upload. You give us permission to store, copy (for previews),
                 and show that content to the people on your member list, only so we can run the service.
               </p>
               <p>
-                By uploading, the admin confirms the club has the right to share the content with its members, and that
-                people who appear in it would reasonably expect it to be shared with the club. Remove content promptly
+                By uploading, the admin confirms the event has the right to share the content with its members, and that
+                people who appear in it would reasonably expect it to be shared with the event. Remove content promptly
                 if someone asks you to.
               </p>
             </>
@@ -57,8 +57,8 @@ export default function TermsPage() {
           body: (
             <p>
               Don&apos;t upload anything unlawful, sexually explicit, or intended to harass, and don&apos;t use Klubbies to
-              share content with people outside your club, to probe other clubs&apos; data, or to overload the service. We
-              may suspend a club that breaks these rules.
+              share content with people outside your event, to probe other events&apos; data, or to overload the service. We
+              may suspend a event that breaks these rules.
             </p>
           ),
         },
@@ -66,7 +66,7 @@ export default function TermsPage() {
           title: "Access logging",
           body: (
             <p>
-              We record when members view and download items, and club admins can see that log. The{" "}
+              We record when members view and download items, and event admins can see that log. The{" "}
               <Link href="/privacy">privacy policy</Link> explains what is stored.
             </p>
           ),
@@ -75,7 +75,7 @@ export default function TermsPage() {
           title: "Payment",
           body: (
             <p>
-              Clubs pay a subscription through Stripe before they can add members or upload. Prices include GST where
+              Events pay a subscription through Stripe before they can add members or upload. Prices include GST where
               applicable. Cancellation and refunds are covered in the <Link href="/refunds">refund and cancellation policy</Link>.
             </p>
           ),
@@ -90,7 +90,7 @@ export default function TermsPage() {
               </p>
               <p>
                 Nothing in these terms excludes rights you have under the Australian Consumer Law. To the extent the law
-                allows, our total liability to a club is limited to the fees it paid us in the 12 months before the claim.
+                allows, our total liability to a event is limited to the fees it paid us in the 12 months before the claim.
               </p>
             </>
           ),
@@ -99,7 +99,7 @@ export default function TermsPage() {
           title: "Ending the service",
           body: (
             <p>
-              A club can cancel at any time. If a club is cancelled or suspended, we&apos;ll give the admin at least 30
+              A event can cancel at any time. If a event is cancelled or suspended, we&apos;ll give the admin at least 30
               days&apos; notice by email before deleting its media, so they can download what they want to keep.
             </p>
           ),
@@ -108,7 +108,7 @@ export default function TermsPage() {
           title: "Changes and governing law",
           body: (
             <p>
-              We&apos;ll email club admins before making material changes to these terms. These terms are governed by the
+              We&apos;ll email event admins before making material changes to these terms. These terms are governed by the
               laws of Queensland, Australia.
             </p>
           ),

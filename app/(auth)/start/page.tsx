@@ -8,7 +8,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { PRICE } from "@/lib/copy/site";
 import { SignInForm } from "../signin/SignInForm";
 
-export const metadata: Metadata = { title: "Start your club" };
+export const metadata: Metadata = { title: "Start your event" };
 
 /** The desktop panel: what members will get, not a marketing photo. */
 function Preview() {
@@ -58,7 +58,7 @@ export default async function StartPage() {
       photo="/marketing/hero-4.jpg"
       topLink={
         <>
-          <span className="hidden sm:inline">Already in a club? </span>
+          <span className="hidden sm:inline">Already in a event? </span>
           <Link href="/signin" className="font-bold">
             Log in
           </Link>
@@ -71,9 +71,9 @@ export default async function StartPage() {
       ]}
     >
       <StepIndicator current={1} />
-      <AuthHeading>Start your club</AuthHeading>
+      <AuthHeading>Start your event</AuthHeading>
       <p className="kb-lead mt-3 !text-[17px]">
-        Five minutes, once. Confirm your email and you&rsquo;re the club&rsquo;s admin. Next you&rsquo;ll name the club.
+        Five minutes, once. Confirm your email and you&rsquo;re the event&rsquo;s admin. Next you&rsquo;ll name the event.
       </p>
 
       <div className="mt-7">

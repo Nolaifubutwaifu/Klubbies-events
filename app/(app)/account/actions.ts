@@ -75,7 +75,7 @@ export async function setPasswordAction(_prev: AccountResult, form: FormData): P
 
 /**
  * Turns on the new-album email from wherever a member is standing — the empty
- * club screen asks for exactly this and nothing else, so it shouldn't send
+ * event screen asks for exactly this and nothing else, so it shouldn't send
  * them to their profile to find one switch.
  */
 export async function notifyOnNewAlbumsAction(): Promise<AccountResult> {

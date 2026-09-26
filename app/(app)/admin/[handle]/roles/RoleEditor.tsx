@@ -35,10 +35,10 @@ function PermissionFields({ role }: { role?: Role }) {
   );
 }
 
-function RoleCard({ clubId, role }: { clubId: string; role: Role }) {
+function RoleCard({ eventId, role }: { eventId: string; role: Role }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [state, action] = useActionState<ActionState, FormData>(updateRoleAction.bind(null, clubId, role.id), {});
+  const [state, action] = useActionState<ActionState, FormData>(updateRoleAction.bind(null, eventId, role.id), {});
   const [pending, startTransition] = useTransition();
 
   return (
@@ -62,7 +62,7 @@ function RoleCard({ clubId, role }: { clubId: string; role: Role }) {
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await deleteRoleAction(clubId, role.id);
+                  await deleteRoleAction(eventId, role.id);
                   router.refresh();
                 })
               }
@@ -107,14 +107,14 @@ function RoleCard({ clubId, role }: { clubId: string; role: Role }) {
   );
 }
 
-export function RoleEditor({ clubId, roles }: { clubId: string; roles: Role[] }) {
+export function RoleEditor({ eventId, roles }: { eventId: string; roles: Role[] }) {
   const [adding, setAdding] = useState(false);
-  const [state, action] = useActionState<ActionState, FormData>(createRoleAction.bind(null, clubId), {});
+  const [state, action] = useActionState<ActionState, FormData>(createRoleAction.bind(null, eventId), {});
 
   return (
     <div className="flex flex-col gap-4">
       {roles.map((role) => (
-        <RoleCard key={role.id} clubId={clubId} role={role} />
+        <RoleCard key={role.id} eventId={eventId} role={role} />
       ))}
 
       {adding ? (

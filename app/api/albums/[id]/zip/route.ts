@@ -2,7 +2,7 @@ import { Readable } from "node:stream";
 import { ZipArchive } from "archiver";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClubContextById } from "@/lib/auth/session";
+import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -28,12 +28,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
     .slice(0, PART_SIZE);
 
   const supabase = await createClient();
-  const { data: album } = await supabase.from("albums").select("id, club_id, title, allow_download").eq("id", id).maybeSingle();
+  const { data: album } = await supabase.from("albums").select("id, event_id, title, allow_download").eq("id", id).maybeSingle();
   if (!album) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const club = await getClubContextById(album.club_id);
-  if (!club) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!album.allow_download && !club.perms.manage_albums) {
+  const event = await getEventContextById(album.event_id);
+  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!album.allow_download && !event.perms.manage_albums) {
     return NextResponse.json({ error: "Downloads are turned off for this album" }, { status: 403 });
   }
 
@@ -89,7 +89,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
     },
   });
 
-  await logAccess(club, null, "zip");
+  await logAccess(event, null, "zip");
 
   const safeTitle = album.title.replace(/[^a-zA-Z0-9 _-]/g, "").trim() || "album";
   const filename = only.length

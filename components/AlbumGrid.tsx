@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { favouriteManyAction, loadAlbumPageAction } from "@/app/(app)/c/[handle]/actions";
+import { favouriteManyAction, loadAlbumPageAction } from "@/app/(app)/e/[handle]/actions";
 import { ProcessingTiles } from "@/components/ProcessingBanner";
 import { deleteMediaAction, setAlbumCoverAction } from "@/app/(app)/admin/actions";
 import { Dialog } from "@/components/Dialog";

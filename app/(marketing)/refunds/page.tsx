@@ -15,7 +15,7 @@ export default function RefundsPage() {
           title: "How billing works",
           body: (
             <p>
-              A Klubbies club is a monthly subscription, charged in advance through Stripe on the same day each month.
+              A Klubbies event is a monthly subscription, charged in advance through Stripe on the same day each month.
               The price is shown before you pay and on every receipt.
             </p>
           ),
@@ -25,13 +25,13 @@ export default function RefundsPage() {
           body: (
             <>
               <p>
-                Club admins can cancel at any time from <strong>Admin → Billing → Manage billing and invoices</strong>.
+                Event admins can cancel at any time from <strong>Admin → Billing → Manage billing and invoices</strong>.
                 The subscription stays active until the end of the month you&apos;ve already paid for, and you won&apos;t
                 be charged again.
               </p>
               <p>
-                After that, the club can&apos;t add members or upload, but members can still open existing albums. We give
-                at least 30 days&apos; notice before deleting a cancelled club&apos;s media.
+                After that, the event can&apos;t add members or upload, but members can still open existing albums. We give
+                at least 30 days&apos; notice before deleting a cancelled event&apos;s media.
               </p>
             </>
           ),
@@ -55,8 +55,8 @@ export default function RefundsPage() {
           title: "Failed payments",
           body: (
             <p>
-              If a renewal fails, Stripe retries the card over the following days and the club keeps working in the
-              meantime. Update your card from the billing page. If payment still fails, the club is paused as if it had
+              If a renewal fails, Stripe retries the card over the following days and the event keeps working in the
+              meantime. Update your card from the billing page. If payment still fails, the event is paused as if it had
               been cancelled.
             </p>
           ),

@@ -4,18 +4,18 @@ import { BUCKET, removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectionIdFor, faceClient, referenceExternalId } from "./client";
 import { MAX_REFERENCES_PER_PROFILE, QUALITY_FILTER } from "./constants";
-import { matchClubMedia } from "./match";
+import { matchEventMedia } from "./match";
 
 export type EnrolResult = { matches: number; failed?: string };
 
-/** The selfie lives outside clubs/, so no club committee can reach it. */
+/** The selfie lives outside events/, so no event committee can reach it. */
 export function selfiePath(membershipId: string): string {
   return `faces/${membershipId}/selfie.jpg`;
 }
 
 /**
  * Turns an enrolment selfie into the member's first reference face, then
- * sweeps the club's back catalogue for them. For a member in a few hundred
+ * sweeps the event's back catalogue for them. For a member in a few hundred
  * photos this is one search and the whole history appears at once.
  */
 export async function enrolProfile(profileId: string): Promise<EnrolResult> {
@@ -25,13 +25,13 @@ export async function enrolProfile(profileId: string): Promise<EnrolResult> {
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("member_face_profiles")
-    .select("id, club_id, membership_id, selfie_path, revoked_at")
+    .select("id, event_id, membership_id, selfie_path, revoked_at")
     .eq("id", profileId)
     .maybeSingle();
   if (!profile || profile.revoked_at) return { matches: 0, failed: "profile gone" };
   if (!profile.selfie_path) return await failProfile(profileId, "No selfie was uploaded.");
 
-  const collectionId = collectionIdFor(profile.club_id);
+  const collectionId = collectionIdFor(profile.event_id);
   const { data: blob, error } = await admin.storage.from(BUCKET).download(profile.selfie_path);
   if (error || !blob) return await failProfile(profileId, "We could not read your selfie. Try uploading it again.");
 
@@ -57,7 +57,7 @@ export async function enrolProfile(profileId: string): Promise<EnrolResult> {
   }
 
   const { error: refError } = await admin.from("member_face_references").insert({
-    club_id: profile.club_id,
+    event_id: profile.event_id,
     profile_id: profile.id,
     collection_id: collectionId,
     rekognition_face_id: record.Face.FaceId,
@@ -71,7 +71,7 @@ export async function enrolProfile(profileId: string): Promise<EnrolResult> {
     .update({ status: "ready", failure_reason: null })
     .eq("id", profile.id);
 
-  const matches = await sweepBackCatalogue(profile.club_id, profile.id);
+  const matches = await sweepBackCatalogue(profile.event_id, profile.id);
   return { matches };
 }
 
@@ -84,21 +84,21 @@ async function failProfile(profileId: string, reason: string): Promise<EnrolResu
 }
 
 /**
- * Sweeps the club's back catalogue for a member who has just enrolled.
+ * Sweeps the event's back catalogue for a member who has just enrolled.
  *
  * This is the per-reference direction of lib/faces/match.ts with the batch set
- * to "every photo in the club", which for one new member is exactly one
+ * to "every photo in the event", which for one new member is exactly one
  * search. For a member in a few hundred photos the whole history appears at
  * once, for the price of a single call.
  */
-async function sweepBackCatalogue(clubId: string, profileId: string): Promise<number> {
+async function sweepBackCatalogue(eventId: string, profileId: string): Promise<number> {
   const admin = createAdminClient();
   const ids: string[] = [];
   for (let from = 0; ; from += 1000) {
     const { data } = await admin
       .from("media_faces")
       .select("media_id")
-      .eq("club_id", clubId)
+      .eq("event_id", eventId)
       .range(from, from + 999);
     if (!data?.length) break;
     for (const row of data) ids.push(row.media_id);
@@ -106,7 +106,7 @@ async function sweepBackCatalogue(clubId: string, profileId: string): Promise<nu
   }
   const mediaIds = [...new Set(ids)];
   if (mediaIds.length === 0) return 0;
-  const result = await matchClubMedia(clubId, mediaIds);
+  const result = await matchEventMedia(eventId, mediaIds);
   void profileId; // matching covers every enrolled member, this one included
   return result.written;
 }
@@ -121,13 +121,13 @@ export async function promoteMatchToReference(profileId: string, mediaFaceId: st
   const admin = createAdminClient();
   const { data: face } = await admin
     .from("media_faces")
-    .select("id, club_id, media_id, collection_id, rekognition_face_id, sharpness")
+    .select("id, event_id, media_id, collection_id, rekognition_face_id, sharpness")
     .eq("id", mediaFaceId)
     .maybeSingle();
   if (!face) return;
 
   const { error } = await admin.from("member_face_references").insert({
-    club_id: face.club_id,
+    event_id: face.event_id,
     profile_id: profileId,
     collection_id: face.collection_id,
     rekognition_face_id: face.rekognition_face_id,

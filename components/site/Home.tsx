@@ -23,12 +23,12 @@ import { COMMITTEE_FEATURES, FACE, FAQS, MEMBER_FEATURES, PRICE, PRIVACY_PROMISE
 // from the canvas made way for it.
 
 const PHOTOS = {
-  crowd: { src: "/marketing/hero-1.jpg", alt: "Members with their arms up in a packed room at a club night" },
-  friends: { src: "/marketing/hero-2.jpg", alt: "Two friends laughing with drinks at a club event" },
+  crowd: { src: "/marketing/hero-1.jpg", alt: "Members with their arms up in a packed room at a event night" },
+  friends: { src: "/marketing/hero-2.jpg", alt: "Two friends laughing with drinks at a event event" },
   dancefloor: { src: "/marketing/hero-3.jpg", alt: "Members dancing under green lights" },
   team: { src: "/marketing/hero-4.jpg", alt: "A sports team posing together on the field after a game" },
   ball: { src: "/marketing/night-ball.jpg", alt: "Members celebrating under confetti at the end of season party" },
-  hall: { src: "/marketing/night-bigone.jpg", alt: "The whole club dancing in a decorated hall" },
+  hall: { src: "/marketing/night-bigone.jpg", alt: "The whole event dancing in a decorated hall" },
   floor: { src: "/marketing/night-dancefloor.jpg", alt: "Members dancing close together on a busy dance floor" },
   final: { src: "/marketing/night-grandfinal.jpg", alt: "A player in black striking the ball during the grand final" },
 } as const;
@@ -119,17 +119,17 @@ function Hero() {
     <section className="kb-section !pt-14 sm:!pt-20">
       <div className="kb-wrap grid items-center gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div>
-          <span className="soft-chip soft-chip-muted">Private photo albums for clubs</span>
+          <span className="soft-chip soft-chip-muted">Private photo albums for events</span>
           <h1 className="kb-h1 mt-5 max-w-[14ch]">
             Every photo from <span className="kb-accent">Friday</span>, waiting on <span className="kb-accent">Saturday</span>.
           </h1>
           <p className="kb-lead mt-6 max-w-[46ch]">
-            One private album for your club&rsquo;s nights out. Only people on your member list get in, and every member can
+            One private album for your event&rsquo;s nights out. Only people on your member list get in, and every member can
             find the photos they&rsquo;re in.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/start" className="btn btn-primary btn-lg w-full sm:w-auto">
-              Start your club
+              Start your event
             </Link>
             <Link href="/signin" className="btn btn-secondary btn-lg w-full sm:w-auto">
               I&rsquo;m a member, log in
@@ -172,7 +172,7 @@ function Problem() {
         />
         <div className="mt-12 grid items-start gap-6 lg:grid-cols-2">
           <div className="kb-card p-6 sm:p-8">
-            <span className="soft-chip soft-chip-muted">Before: the club group chat</span>
+            <span className="soft-chip soft-chip-muted">Before: the event group chat</span>
             <ul className="m-0 mt-5 flex list-none flex-col gap-3 p-0">
               {chat.map((line, i) => (
                 <li key={line.text} className={`flex-col items-start gap-1 ${i === 2 ? "hidden sm:flex" : "flex"}`}>
@@ -182,7 +182,7 @@ function Problem() {
               ))}
             </ul>
             <div className="mt-6 hidden flex-wrap gap-2 sm:flex">
-              {["Link escapes the club", "Compressed to mush", "Gone when the media officer graduates"].map((chip) => (
+              {["Link escapes the event", "Compressed to mush", "Gone when the media officer graduates"].map((chip) => (
                 <span key={chip} className="soft-chip soft-chip-muted">
                   {chip}
                 </span>
@@ -345,7 +345,7 @@ function TwoSides() {
               <FeatureList items={COMMITTEE_FEATURES} />
             </div>
             <div className="mt-8 hidden rounded-[20px] bg-[color:var(--kb-sand)] p-5 sm:block">
-              <span className="kb-h3 block !text-[19px]">Your club&rsquo;s history doesn&rsquo;t graduate</span>
+              <span className="kb-h3 block !text-[19px]">Your event&rsquo;s history doesn&rsquo;t graduate</span>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <span className="flex items-center gap-2 rounded-[14px] bg-white px-3 py-2 text-[14px]">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--kb-ember-tint)] text-[14px] font-bold text-[color:var(--kb-ember-deep)]" aria-hidden>
@@ -370,7 +370,7 @@ function TwoSides() {
                 </span>
               </div>
               <p className="kb-body mt-4 !text-[15px]">
-                Hand the club to next year&rsquo;s committee in one step. The albums stay with the club, not in a
+                Hand the event to next year&rsquo;s committee in one step. The albums stay with the event, not in a
                 graduate&rsquo;s personal Drive.
               </p>
             </div>
@@ -397,7 +397,7 @@ const REVIEWS = [
   },
   {
     name: "Janci",
-    role: "President, BBE Club WU",
+    role: "President, BBE Event WU",
     avatar: "/marketing/avatar-janci.jpg",
     quote: "We take a lot of pictures during trips and distributing them has always been a pain. With Klubbies that's history.",
   },
@@ -460,7 +460,7 @@ function Privacy() {
           </Link>
         </div>
         <div className="hidden rounded-[var(--kb-r-panel)] bg-white p-6 text-[color:var(--kb-ink)] sm:block sm:p-8">
-          <span className="block text-[14px] text-[color:var(--kb-ink-3)]">klubbies.app/c/umfc</span>
+          <span className="block text-[14px] text-[color:var(--kb-ink-3)]">klubbies.app/e/umfc</span>
           <span className="mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--kb-sand)]">
             <LockIcon size={22} />
           </span>
@@ -483,7 +483,7 @@ function PricingAndFaq() {
           <span className="soft-chip">One plan, that&rsquo;s it</span>
           <p className="mt-5 font-[family-name:var(--kb-font-display)] text-[56px] font-bold leading-none">
             {PRICE.amount}
-            <span className="ml-2 text-[19px] font-semibold text-[color:var(--kb-ink-2)]">a month, per club</span>
+            <span className="ml-2 text-[19px] font-semibold text-[color:var(--kb-ink-2)]">a month, per event</span>
           </p>
           <p className="kb-body mt-3">Not per member. Not per gigabyte.</p>
           <ul className="m-0 mt-6 flex list-none flex-col gap-3 p-0">
@@ -495,7 +495,7 @@ function PricingAndFaq() {
             ))}
           </ul>
           <Link href="/start" className="btn btn-primary mt-6 w-full">
-            Start your club
+            Start your event
           </Link>
           <p className="kb-caption mt-4 text-center">{PRICE.note}</p>
         </div>
@@ -524,11 +524,11 @@ function FinalCta() {
       <div className="kb-wrap relative kb-section text-center">
         <h2 className="kb-h2 mx-auto max-w-[18ch] text-white">Your next event is this weekend.</h2>
         <p className="kb-lead mx-auto mt-4 max-w-[44ch] !text-white/90">
-          Set the club up tonight and the photos have somewhere to land on Saturday morning.
+          Set the event up tonight and the photos have somewhere to land on Saturday morning.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href="/start" className="btn btn-primary btn-lg">
-            Start your club
+            Start your event
           </Link>
           <Link href="/signin" className="btn btn-on-dark btn-lg">
             I&rsquo;m a member, log in

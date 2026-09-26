@@ -3,7 +3,7 @@ import { RekognitionClient } from "@aws-sdk/client-rekognition";
 import { serverEnv } from "@/lib/env";
 
 // Absence of AWS credentials is a configuration state, not an error: a dev
-// machine without them boots, the worker no-ops, and no club can turn the
+// machine without them boots, the worker no-ops, and no event can turn the
 // feature on. Everything downstream checks for null rather than catching.
 
 let cached: RekognitionClient | null | undefined;
@@ -31,15 +31,15 @@ export function facesConfigured(): boolean {
 }
 
 /**
- * Collection id for a club. Both this and ExternalImageId accept letters,
+ * Collection id for a event. Both this and ExternalImageId accept letters,
  * digits, underscore, hyphen, period and colon, so a raw UUID is safe to
  * interpolate.
  */
-export function collectionIdFor(clubId: string): string {
-  return `${serverEnv().REKOGNITION_COLLECTION_PREFIX}-club-${clubId}`;
+export function collectionIdFor(eventId: string): string {
+  return `${serverEnv().REKOGNITION_COLLECTION_PREFIX}-event-${eventId}`;
 }
 
-/** `media:{mediaId}` — a face found in a club photo. */
+/** `media:{mediaId}` — a face found in a event photo. */
 export function mediaExternalId(mediaId: string): string {
   return `media:${mediaId}`;
 }

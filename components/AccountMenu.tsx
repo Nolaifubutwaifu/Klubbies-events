@@ -15,7 +15,7 @@ function initials(name: string): string {
 }
 
 /**
- * You, in the corner of every app screen: profile, clubs and signing out
+ * You, in the corner of every app screen: profile, events and signing out
  * live here, so no screen spends a button on them.
  */
 export function AccountMenu({ name, avatarUrl = null }: { name: string; avatarUrl?: string | null }) {
@@ -34,8 +34,8 @@ export function AccountMenu({ name, avatarUrl = null }: { name: string; avatarUr
     >
       <span className="block px-3.5 pb-1 pt-2 text-[14px] font-bold text-[color:var(--kb-ink-2)]">{name}</span>
       <MoreLink href="/account">Your profile</MoreLink>
-      <MoreLink href="/clubs">Your clubs</MoreLink>
-      <MoreLink href="/admin/new">Start another club</MoreLink>
+      <MoreLink href="/events">Your events</MoreLink>
+      <MoreLink href="/admin/new">Start another event</MoreLink>
       <MoreSeparator />
       <form action="/api/auth/signout" method="post">
         <button type="submit" role="menuitem" className="kb-menu-item">

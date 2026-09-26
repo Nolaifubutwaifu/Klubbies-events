@@ -17,7 +17,7 @@ export async function runScheduledPublishJob(now = new Date()): Promise<Schedule
 
   const { data: due } = await admin
     .from("albums")
-    .select("id, club_id, published_at")
+    .select("id, event_id, published_at")
     .eq("status", "draft")
     .not("publish_at", "is", null)
     .lte("publish_at", now.toISOString())
@@ -59,7 +59,7 @@ export async function runScheduledPublishJob(now = new Date()): Promise<Schedule
     published += 1;
     if (firstPublish) {
       try {
-        await notifyNewAlbum(album.club_id, album.id, null);
+        await notifyNewAlbum(album.event_id, album.id, null);
       } catch (notifyError) {
         console.error("scheduled album notification failed", album.id, notifyError);
       }

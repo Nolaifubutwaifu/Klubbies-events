@@ -4,8 +4,8 @@ import { useActionState, useEffect, useRef } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import { addMemberAction, type ActionState } from "../../actions";
 
-export function AddMemberForm({ clubId }: { clubId: string }) {
-  const [state, action] = useActionState<ActionState, FormData>(addMemberAction.bind(null, clubId), {});
+export function AddMemberForm({ eventId }: { eventId: string }) {
+  const [state, action] = useActionState<ActionState, FormData>(addMemberAction.bind(null, eventId), {});
   const form = useRef<HTMLFormElement>(null);
 
   useEffect(() => {

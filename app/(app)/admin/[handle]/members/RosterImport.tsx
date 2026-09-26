@@ -11,7 +11,7 @@ import type { CommitResponse, PreviewResponse } from "@/lib/roster/schemas";
 type Mapping = NonNullable<PreviewResponse["mapping"]>;
 const NONE = -1;
 
-export function RosterImport({ clubId }: { clubId: string }) {
+export function RosterImport({ eventId }: { eventId: string }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -32,7 +32,7 @@ export function RosterImport({ clubId }: { clubId: string }) {
     setError("");
     setSummary(null);
     setDone(null);
-    body.set("clubId", clubId);
+    body.set("eventId", eventId);
     const res = await fetch("/api/roster/preview", { method: "POST", body });
     const json: PreviewResponse & { error?: string } = await res.json().catch(() => ({ error: "Upload failed" }));
     setBusy(false);
@@ -83,7 +83,7 @@ export function RosterImport({ clubId }: { clubId: string }) {
     if (dryRun) setSummary(json);
     else {
       if (removeMissing && json.missing?.length) {
-        const removal = await removeMembersAction(clubId, json.missing.map((m) => m.id));
+        const removal = await removeMembersAction(eventId, json.missing.map((m) => m.id));
         setRemovedCount(removal.ok ? json.missing.length : 0);
       }
       setDone(json);

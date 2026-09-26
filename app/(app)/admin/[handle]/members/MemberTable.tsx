@@ -52,16 +52,16 @@ function shortDate(value: string): string {
 }
 
 export function MemberTable({
-  clubId,
+  eventId,
   currentUserId,
   members,
   roles,
   canManageRoles,
 }: {
-  clubId: string;
+  eventId: string;
   currentUserId: string;
   members: MemberRow[];
-  roles: { id: string; name: string; manage_club: boolean }[];
+  roles: { id: string; name: string; manage_event: boolean }[];
   canManageRoles: boolean;
 }) {
   const router = useRouter();
@@ -168,7 +168,7 @@ export function MemberTable({
                 disabled={!roleTarget || pending}
                 onClick={() =>
                   run(
-                    () => setMemberRoleAction(clubId, [...selected], roleTarget),
+                    () => setMemberRoleAction(eventId, [...selected], roleTarget),
                     () => {
                       setSelected(new Set());
                       setRoleTarget("");
@@ -240,7 +240,7 @@ export function MemberTable({
                       value={member.roleId ?? ""}
                       disabled={pending}
                       aria-label={`Role for ${member.name}`}
-                      onChange={(e) => run(() => setMemberRoleAction(clubId, [member.id], e.target.value))}
+                      onChange={(e) => run(() => setMemberRoleAction(eventId, [member.id], e.target.value))}
                     >
                       {roles.map((role) => (
                         <option key={role.id} value={role.id}>
@@ -267,12 +267,12 @@ export function MemberTable({
                       >
                         End access now
                       </button>
-                      <button type="button" className="btn btn-ghost text-[14px]" disabled={pending} onClick={() => run(() => restoreMemberAction(clubId, member.id))}>
+                      <button type="button" className="btn btn-ghost text-[14px]" disabled={pending} onClick={() => run(() => restoreMemberAction(eventId, member.id))}>
                         Restore
                       </button>
                     </>
                   ) : member.status === "revoked" ? (
-                    <button type="button" className="btn btn-ghost text-[14px]" disabled={pending} onClick={() => run(() => restoreMemberAction(clubId, member.id))}>
+                    <button type="button" className="btn btn-ghost text-[14px]" disabled={pending} onClick={() => run(() => restoreMemberAction(eventId, member.id))}>
                       Restore
                     </button>
                   ) : null}
@@ -309,7 +309,7 @@ export function MemberTable({
             disabled={pending}
             onClick={() =>
               run(
-                () => removeMembersAction(clubId, [...selected]),
+                () => removeMembersAction(eventId, [...selected]),
                 () => {
                   setSelected(new Set());
                   setConfirmRemove(false);
@@ -338,7 +338,7 @@ export function MemberTable({
             type="button"
             className="btn btn-danger"
             disabled={pending || !endTarget || typedName.trim().toLowerCase() !== endTarget.name.trim().toLowerCase()}
-            onClick={() => endTarget && run(() => endGraceAction(clubId, endTarget.id, typedName), () => setEndTarget(null))}
+            onClick={() => endTarget && run(() => endGraceAction(eventId, endTarget.id, typedName), () => setEndTarget(null))}
           >
             End access
           </button>

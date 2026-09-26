@@ -1,394 +1,177 @@
-# Klubbies Masterfile
+# Klubbies Events: masterfile
 
-Project brief and build guide for Claude Code. Treat this file as the source of truth for scope, naming and architecture. When something here conflicts with an ad hoc instruction in a chat, ask before diverging.
+The source of truth for what Klubbies Events is, how every page looks, and what was kept, dropped or added from Klubbies. Decisions made while building are in `docs/decisions.md`. The Klubbies history this started from is in `docs/klubbies-masterfile.md` and `docs/klubbies-decisions.md`.
 
-## 1. What we are building
+## 1. The product in one paragraph
 
-Klubbies is a private media sharing platform for university clubs and, later, any membership based organisation.
+Klubbies Events is the one-time version of Klubbies, for corporate events, conferences, launches and meetups. The organiser creates an event, hands upload links to the designated photographers, and shares one link or QR code with attendees. Attendees verify their email, take a selfie if they want, and get every photo they appear in, ready to download. Nothing is public. The organiser sees who joined and what was downloaded, and handles removal requests.
 
-A club admin creates a club, uploads a member list, and uploads photos and videos from club events. Members sign in and see only the media belonging to clubs they are a member of. Nobody else can see anything.
+Klubbies is a club's archive that lives for years with a changing committee. An event is one day, one team and hundreds of people who never met the organiser. That difference drives every change below.
 
-The problem it replaces: sharing an unlisted Google Drive folder link, which is ugly, leaks easily, gives no control over who actually opens it, and looks unprofessional.
+## 2. Who uses it
 
-The feel we want: a private social feed for the club, not a file server.
-
-## 2. Design source of truth
-
-The visual design already exists as a Claude Design file named `Klubbies.dc.html`.
-
-Before writing any UI, place that file at `design/Klubbies.dc.html` in the repo and read it. Extract from it:
-
-* the colour palette, and write it into `tailwind.config.ts` as named tokens
-* the type scale and font families
-* spacing rhythm, corner radius, shadow and border treatments
-* component shapes: buttons, cards, nav, media grid, modals, empty states
-
-Do not invent a new visual language. If a screen is missing from the design file, build it from the existing tokens and components and flag it in the pull request description.
-
-## 3. Product principles
-
-* Access is the product. Every media item must be unreachable without a verified session that carries membership.
-* Feels social, not administrative. Members land on a feed of events, not a file tree.
-* Admin work is boring and fast. Roster import and bulk upload must survive messy real world spreadsheets.
-* Mobile first. Most members will open this on a phone at 11pm after an event.
-* Ship v1 narrow. Face recognition is exciting and it is explicitly out of scope for v1.
-
-### Non goals for v1
-
-* No public profiles, no follower graph, no direct messages.
-* No comments or likes in v1. Reactions land in v1.1 if members ask for them.
-* No payments or subscriptions.
-* No native mobile app. Progressive web app behaviour only.
-* No face recognition.
-
-## 4. Roles
-
-| Role | Scope | Can do |
+| Person | Account | What they need |
 | --- | --- | --- |
-| `super_admin` | Platform | Manage all clubs, used by Max only |
-| `club_admin` | One club | Create and edit the club, manage roster, upload and delete media, create albums, see access logs |
-| `club_member` | One club | View and download media for their club, search, filter by album |
-
-A single user account can hold different roles in different clubs. Roles live on the membership record, never on the user record.
-
-## 5. Core journeys
-
-### 5.1 Club admin creates a club
-1. Signs in.
-2. Creates a club: name, university, short description, logo, accent colour.
-3. Gets a club handle, for example `klubbies.app/c/uq-volleyball`.
-4. Imports a roster or adds members by hand.
-5. Creates an album, for example "Gala Dinner 2026", and uploads media into it.
-6. Optionally announces the album, which emails every member on the roster with a link.
-
-### 5.2 Member gets access
-1. Member opens the club link or the home page.
-2. Enters full name and email address. This is the form the design shows and it stays.
-3. Backend checks the email against the roster of every club.
-   * If found, it emails a six digit code to that address.
-   * If not found, the response is a neutral message: if that address is on a club roster, a code has been sent. Never reveal whether an email exists.
-4. Member enters the code and gets a session.
-5. On first successful sign in, the supplied full name is stored on the membership record and compared loosely to the roster name for the admin's benefit. A name mismatch never blocks access, it only raises a flag in the admin view.
-6. Member lands on the feed for their club. If they belong to several clubs, they land on a club switcher.
-
-Important: the emailed code is what actually authenticates. The name field alone is not a credential, because a name and an email address are both guessable. Keep the design's two field form, add the code step behind it.
-
-### 5.3 Member finds media
-* Browses albums in reverse chronological order.
-* Opens an album into a masonry grid of photos and video thumbnails.
-* Taps an item for a full screen viewer with swipe navigation, download button and item metadata.
-* Downloads a single item, or the whole album as a zip, if the album allows it.
-
-### 5.4 Member leaves the club
-Admin removes them from the roster. The membership moves to `grace` rather than straight to `revoked`, and `grace_ends_at` is set to 30 days from now.
-
-During the grace window:
-
-* The member can still sign in and can still view and download everything they had access to before.
-* A persistent banner tells them the exact date their access ends and offers a download of the whole archive.
-* An email goes out on day one, day seven and day twenty nine.
-* They cannot see anything uploaded after the removal date. Filter media by `captured_at` and by upload time against the grace start.
-
-When the window closes, a scheduled job flips the status to `revoked`. Sessions for that membership fail on the next request and any signed URLs they still hold expire within the standard window.
-
-A club admin can end the grace window immediately if someone was removed for cause. That action requires typing the member's name to confirm.
-
-## 6. Tech stack
-
-Fixed choices. Do not substitute without asking.
-
-* Next.js with the App Router, TypeScript, React Server Components where sensible
-* Tailwind CSS, tokens generated from the design file
-* Supabase: Postgres, Storage, Auth (email one time password), Edge Functions
-* Row Level Security on every table. No table ships without policies.
-* Vercel for hosting
-* Resend for transactional email, with React Email templates
-* Zod for every input boundary
-* Vitest plus Playwright for tests
-* pnpm
-
-### Repository layout
-
-```
-app/                Next.js routes
-  (marketing)/      public landing, pricing later
-  (auth)/           sign in, code entry
-  (app)/            authenticated shell
-    c/[handle]/     club feed, albums, viewer
-    admin/          club admin area
-components/
-lib/
-  auth/
-  storage/
-  roster/
-  db/
-supabase/
-  migrations/
-  functions/
-design/Klubbies.dc.html
-```
-
-## 7. Data model
-
-Postgres, UUID primary keys, `created_at` and `updated_at` on every table.
-
-```sql
-users (
-  id uuid primary key,          -- mirrors auth.users.id
-  email citext unique not null,
-  display_name text,
-  avatar_url text,
-  is_super_admin boolean default false
-)
-
-clubs (
-  id uuid primary key,
-  handle citext unique not null,     -- url slug, generated from name, see 7.1
-  name text not null,
-  organisation text,                 -- university or parent body
-  description text,
-  logo_path text,
-  accent_colour text,
-  created_by uuid references users(id),
-  status text default 'active'       -- active | archived
-)
-
-memberships (
-  id uuid primary key,
-  club_id uuid references clubs(id) on delete cascade,
-  user_id uuid references users(id),  -- null until first sign in
-  roster_email citext not null,
-  roster_name text not null,
-  claimed_name text,                  -- what they typed at sign in
-  role text not null default 'club_member',
-  status text not null default 'pending', -- pending | active | grace | revoked
-  invited_at timestamptz,
-  first_seen_at timestamptz,
-  grace_started_at timestamptz,
-  grace_ends_at timestamptz,
-  unique (club_id, roster_email)
-)
-
-albums (
-  id uuid primary key,
-  club_id uuid references clubs(id) on delete cascade,
-  title text not null,
-  description text,
-  event_date date,
-  cover_media_id uuid,
-  visibility text default 'members',  -- members | admins
-  allow_download boolean default true,
-  status text default 'published'     -- draft | published
-)
-
-media (
-  id uuid primary key,
-  club_id uuid references clubs(id) on delete cascade,
-  album_id uuid references albums(id) on delete set null,
-  kind text not null,                 -- photo | video
-  storage_path text not null,
-  thumb_path text,
-  poster_path text,                   -- video poster frame
-  width int, height int,
-  duration_seconds numeric,
-  byte_size bigint,
-  mime_type text,
-  original_filename text,
-  captured_at timestamptz,            -- from EXIF when present
-  uploaded_by uuid references users(id),
-  status text default 'processing'    -- processing | ready | failed
-)
-
-access_events (
-  id bigint generated always as identity primary key,
-  club_id uuid,
-  membership_id uuid,
-  media_id uuid,
-  action text,                        -- view | download | zip
-  ip_hash text,
-  user_agent text,
-  occurred_at timestamptz default now()
-)
-
-roster_imports (
-  id uuid primary key,
-  club_id uuid,
-  filename text,
-  row_count int,
-  matched_count int,
-  added_count int,
-  error_count int,
-  report jsonb,
-  imported_by uuid,
-  imported_at timestamptz default now()
-)
-```
-
-### 7.1 Club handle generation
-
-The admin never types a handle. It is derived from the club name at creation time:
-
-1. Lowercase, strip accents, replace anything that is not a letter or digit with a single underscore, trim leading and trailing underscores.
-2. Truncate to 40 characters at a word boundary.
-3. If taken, append `_2`, then `_3`, and so on.
-4. Show the resulting URL on the creation screen so the admin sees what they are getting.
-
-Handles are immutable once media exists, because links are shared in group chats and must not rot. Changing a handle is a super admin action that leaves a permanent redirect behind.
-
-### Row Level Security rules
-
-* `clubs`: readable if the requester has an active membership in that club, or is super admin.
-* `memberships`: a member reads only their own row. A club admin reads all rows for their club.
-* `albums` and `media`: readable only through a membership in status `active` or `grace` in the owning club, and for albums with visibility `admins` only by club admins. For a membership in `grace`, the policy additionally requires the item to have been uploaded before `grace_started_at`.
-* Writes on `albums`, `media`, `memberships` require `club_admin` for that club.
-* `access_events` is insert only from the server. No client reads.
-
-Write a Postgres helper function `is_club_member(club_id uuid)` and `is_club_admin(club_id uuid)` and use them in every policy so the logic lives in one place.
-
-## 8. Storage and media access
-
-* One private Supabase Storage bucket named `club_media`. Public access is off, permanently.
-* Path convention: `clubs/{club_id}/albums/{album_id}/{media_id}/original.{ext}` with siblings `thumb.webp` and `poster.jpg`.
-* The browser never receives a raw storage path. Every image and video is served through a short lived signed URL issued by a server route that first checks membership.
-* Signed URL lifetime: 10 minutes for thumbnails and grid images, 60 minutes for a video stream, 5 minutes for a download link.
-* Batch signing: the feed route signs a page of items in one call so the grid does not fire one request per tile.
-* Zip download runs in a background job, writes the zip into a temporary path and emails a signed link when it is ready. Large albums are split into numbered parts of roughly 2 GB each rather than being refused.
-
-### 8.1 Storage volume
-
-Clubs upload as many full quality files as they like. There is no per club cap, no forced downscaling and no silent compression in v1. The original file is always kept byte for byte, because a member downloading a headshot must get the same file the photographer produced.
-
-Design consequences:
-
-* Every layer must treat storage as unbounded and growing. No operation may load a whole album into memory, and no query may return an unpaginated media list.
-* Derivatives are cheap and disposable: a `thumb.webp` at roughly 400 pixels on the long edge for grids, and a `display.webp` at roughly 2000 pixels for the viewer. Only a deliberate download touches the original. This is what keeps the bandwidth bill sane while the originals sit untouched.
-* Record `byte_size` on every item and maintain a running total per club in a `club_storage_usage` view so cost per club is visible from day one, even though nothing is enforced.
-* Keep the storage layer behind `lib/storage` with a narrow interface. If Supabase Storage becomes expensive at scale, swapping the backing store for S3 or Cloudflare R2 should touch one module, not the whole application.
-* Set a lifecycle rule that moves originals older than twelve months to infrequent access storage once the platform is on a provider that offers it. Retrieval is slower, which is acceptable for a photo from two years ago.
-
-## 9. Upload and processing pipeline
-
-1. Admin drops files into the upload area. Accept jpg, jpeg, png, heic, webp, mp4, mov.
-2. Client requests an upload ticket per file, then uploads straight to Supabase Storage. The Next.js server never proxies file bytes.
-3. Client extracts image dimensions and generates a thumbnail before upload where possible, to keep the free tier cheap.
-4. A Supabase Edge Function or a small worker finishes the job: reads EXIF for `captured_at`, converts heic to webp, extracts a video poster frame, writes `thumb_path` and `poster_path`, then flips `media.status` to `ready`.
-5. Video in v1 is plain progressive mp4 playback. Transcoding and adaptive streaming are deferred. Warn the admin if a single video exceeds 500 MB.
-6. Uploads are resumable. A failed file shows a retry button and never blocks the rest of the batch.
-
-## 10. Roster import
-
-This is the feature most likely to frustrate admins, so build it carefully.
-
-* Accept `.csv`, `.xlsx` and manual entry of one member per line.
-* Parse with SheetJS. Do not assume the header row is row one. Scan the first 10 rows for a row that looks like headers.
-* Column mapping screen: show the detected columns and let the admin map them to `full_name` and `email`. Remember the mapping per club for next time.
-* Normalise emails: trim, lowercase. Reject anything that fails a strict email check and list it in the error report.
-* Deduplicate on email within the file and against the existing roster.
-* Show a preview before commit: X new members, Y already present, Z rows with problems, with the problem rows listed and downloadable.
-* Import is additive by default. Removing members is a separate explicit action with a confirmation that names how many people lose access.
-* Store the outcome in `roster_imports` so the admin can see the history.
-
-## 11. Route map
-
-Pages:
-
-```
-/                         landing
-/signin                   name and email form
-/signin/code              code entry
-/clubs                    club switcher for multi club members
-/c/[handle]               club feed, albums newest first
-/c/[handle]/a/[albumId]   album grid
-/c/[handle]/a/[albumId]/[mediaId]  full screen viewer
-/admin/[handle]           admin dashboard
-/admin/[handle]/members   roster
-/admin/[handle]/albums    albums and uploads
-/admin/[handle]/settings  club settings
-/admin/[handle]/activity  access log
-```
-
-API and server actions:
-
-```
-POST /api/auth/request_code      body: fullName, email
-POST /api/auth/verify_code       body: email, code
-POST /api/media/sign             body: mediaIds[]  returns signed urls
-POST /api/media/upload_ticket    body: albumId, filename, mimeType, byteSize
-POST /api/albums/[id]/zip        queues a zip job
-POST /api/roster/preview         multipart file, returns parsed preview
-POST /api/roster/commit          body: importId, mapping
-```
-
-Every route validates input with Zod and re checks authorisation server side. Never trust a club id supplied by the client without verifying membership.
-
-## 12. Security requirements
-
-* Rate limit `request_code` to 5 attempts per email per hour and 20 per IP per hour.
-* Codes are six digits, valid for 10 minutes, single use, hashed at rest, with a maximum of 5 verification attempts.
-* Sessions last 30 days with rolling refresh. Members can sign out of all devices.
-* Do not leak roster membership through error messages, timing or status codes.
-* Log every media view and download into `access_events`. Admins can see who opened what. Tell members this in the privacy notice, because it is a surveillance surface and they should know.
-* Watermarking is not in v1, but keep `media` extensible for it.
-
-## 13. Privacy and legal notes
-
-Max is in Queensland, so the Australian Privacy Act applies once the business grows past the small business threshold, and clubs may be bound by their university policies regardless.
-
-* Publish a plain English privacy policy before the first real club onboards.
-* Members must be able to request deletion of media they appear in. Build a simple report and takedown flow in v1.1: a member flags an item, the club admin sees the flag and can hide or delete it.
-* Face recognition creates biometric information, which is sensitive information under Australian law and needs express, informed, opt in consent from each person, not just from the club. Design phase 3 around consent from the start.
-* Store nothing outside the chosen region. Pin Supabase to the Sydney region.
-
-## 14. Phases
-
-**v1, the thing that must exist**
-Club creation, roster import, member sign in with code, albums, photo and video upload, private feed, viewer, download, access log, admin basics.
-
-**v1.1**
-Reactions, comments toggled per club, report and takedown, zip download, album announcement emails, member self service name correction, club branding.
-
-**Later, unscheduled**
-Committee only albums. The `albums.visibility` column exists in v1 and the policies already honour it, so every album simply ships as `members` and no interface exposes the choice. Building this later is a screen and a toggle, not a migration.
-
-**v2**
-Multiple admins per club, invite links with expiry, storage quotas and a paid tier, tags and search, Google and Microsoft sign in for university accounts.
-
-Joint events also land here: one album owned by two or more clubs, visible to the union of both rosters, with a single upload surface and either club able to add media. The v1 schema already anticipates it, since `albums.club_id` can later be joined by an `album_clubs` table without a destructive migration. Do not build it in v1, but do not hard code the assumption that an album has exactly one club anywhere outside the database column itself.
-
-**v3, face recognition**
-Opt in only. Member uploads a reference selfie, embeddings computed with a face embedding model, stored in pgvector, matched against embeddings extracted from club media at upload time. Members can find themselves; nobody can search for another person by face. Deleting the reference selfie deletes every embedding derived from it. Treat this as a separate design document when we get there.
-
-## 15. Environment variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY      server only, never exposed
-RESEND_API_KEY
-APP_URL
-SIGNED_URL_SECRET
-```
-
-## 16. Working agreement for Claude Code
-
-* Read this file and `design/Klubbies.dc.html` before starting any task.
-* One migration file per schema change, in `supabase/migrations`, never edit a migration that has already run.
-* Every new table ships with its RLS policies in the same migration.
-* TypeScript strict mode on. No `any`.
-* Write a Playwright test for each of these paths before calling a milestone done: non member is refused, member sees only their club, revoked member loses access, signed URL expires.
-* Seed script that creates two clubs, three members and a dozen sample media items so the UI can be developed without manual setup.
-* Keep a running `docs/decisions.md` with any choice made that this file did not cover.
-
-## 17. Decisions already made
-
-These are settled. Do not reopen them without asking Max.
-
-1. **Joint events across clubs**: deferred to v2. Keep the schema open to it as described in section 14.
-2. **Departing members**: 30 day grace window with view and download access to everything uploaded before their removal, then full revocation. Detailed in section 5.4.
-3. **Committee only albums**: not in v1 and not scheduled. The column and policies stay in the schema so it costs nothing to add later, but no interface for it gets built until Max asks.
-4. **Storage**: unlimited in practice. Clubs upload as many full quality files as they want, originals preserved untouched, cost controlled through derivatives rather than through limits on the club. Section 8.1.
-5. **Club handle**: generated from the club name, immutable once media exists. Section 7.1.
-
-## 18. Still open
-
-Nothing blocking. Raise anything new in `docs/decisions.md`.
+| Organiser | Yes | Set up in ten minutes, look professional in front of their client or boss, know the photos reached people |
+| Co-organiser | Yes | Same rights as the organiser (agency staff, client contact) |
+| Photographer | No, a link | Upload from a laptop at the venue or the day after, into the right album, credited |
+| Attendee | Yes, email code | Find *their* photos fast, download at full quality, ask for one to come down |
+
+## 3. Access model
+
+An event is private. Two modes, chosen by the organiser and switchable any time:
+
+1. **Anyone with the event link** (default). Scanning the QR or opening the link, entering a name and email and confirming the emailed code makes you an attendee. The email code is still what authenticates, so every view and download is tied to a real address.
+2. **Guest list only.** Only addresses on the imported list (CSV or XLSX from Eventbrite, Humanitix, Luma, a spreadsheet) get a code. The answer to a code request stays neutral, so the list can't be probed.
+
+**Access window.** Galleries stay open to attendees until `events.access_ends_at` (default: 90 days after the event's last day, organiser can change it or clear it). After that attendees see a "this gallery has closed" screen; organisers keep full access. This replaces Klubbies' 30-day grace period, which only makes sense for a club you leave.
+
+Removing an attendee revokes them immediately. There is no grace window.
+
+## 4. What changed from Klubbies
+
+### Kept, re-labelled
+
+| Klubbies | Events | Notes |
+| --- | --- | --- |
+| Club | Event | Same row, now with dates, venue and access settings |
+| Members, roster import | Attendees, guest list import | Same parser; the import is only needed in guest-list mode |
+| Committee / admin | Organisers | Fixed roles: Organiser, Photographer, Attendee |
+| Guest photographer links | Photographer links | Named per photographer, credited on each photo |
+| Albums | Albums | Keynote, Networking, Awards, Headshots. Dates optional |
+| Photos of you | Your photos | The headline feature, first thing an attendee sees |
+| Saved | Saved | Unchanged |
+| Removal requests | Removal requests | Unchanged: hide first, organiser decides within 7 days |
+| Activity log | Activity | Unchanged |
+| Stripe subscription | One payment per event | Checkout in `payment` mode; the code already supports it |
+| Face recognition (AWS Rekognition) | Same | On by default, notice acknowledged by every attendee, selfie optional |
+| iPhone app shell | Klubbies Events app | Plus a native QR scanner to join an event |
+
+### Dropped
+
+| Feature | Why |
+| --- | --- |
+| Club feed, posts, reactions | Nobody posts notices to a one-day event |
+| Custom roles, handover, past seasons | No committee turnover. Three fixed roles |
+| Invitations with accept/decline | Attendees came to the event; being on the list is enough |
+| 30-day grace period | Replaced by the event-wide access window |
+| "On this day" anniversaries | An event has one date |
+| Album event types (formal, sport, night out) | Club vocabulary |
+| Club switcher dropdown | Replaced by a plain "Your events" page |
+| `/how-it-works`, `/classic` | One marketing page carries it |
+
+### Added
+
+| Feature | What it does |
+| --- | --- |
+| Share kit | Event link, QR code (SVG and PNG), a printable A4 poster, and a ready-to-paste announcement email |
+| Open-link joining | Attendees self-register with an email code when the event is in link mode |
+| Access window | Galleries close on a date; enforced in RLS, not just the UI |
+| Event details | Start and end date, venue, host organisation, shown on every attendee screen |
+| Photographer credit | `media.photographer_name`, set from the upload link or the uploader, shown in the viewer |
+| Download all your photos | One zip of every photo you are matched in |
+| Event branding | The event's colour becomes the accent on its pages, contrast-checked so text stays readable |
+| Native QR join (iPhone) | Scan the poster from inside the app and land on the event's join screen |
+
+## 5. Design language
+
+Klubbies is warm and playful: cream, a rounded display face, ember red, pill buttons. Events is for a room of people in lanyards, so it moves to calm and editorial, and lets the photos do the talking.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| Paper | `#f7f7f5` | Page background |
+| Surface | `#ffffff` | Cards, inputs |
+| Mist | `#efefec` | Alternate sections, info boxes, placeholders |
+| Line | `#e4e4df` | Borders, dividers |
+| Line strong | `#c9c9c2` | Secondary button borders |
+| Input edge | `#8a8a82` | Field borders (3:1 on white) |
+| Ink | `#16181d` | Headings, primary buttons |
+| Ink 2 | `#4a4d55` | Body |
+| Ink 3 | `#6b6e76` | Captions (4.9:1 on white) |
+| Accent (default) | `#2b4acb` | Links, active nav, chips, focus halo. Replaced per event by the event colour, darkened until it clears 4.5:1 on white |
+
+* **Type.** Geist for everything functional (UI, body, numbers). Instrument Serif for display moments only: event names, page titles on the attendee side, the marketing headline. Organiser screens are all Geist.
+* **Shape.** 10px cards, 8px inputs and buttons, 6px photos. No pills except status chips.
+* **Buttons.** Primary is solid ink with white text, one per screen. Secondary is white with a line-strong border. Danger is white with red text. The event colour never fills a big button, so a client's neon brand can't make the product unreadable.
+* **Photos.** Tight 4px grid gaps, no hover zoom on attendee grids (it reads as consumer), a quiet 150ms fade instead. The lightbox stays near-black.
+* **Density.** Organiser screens are denser than Klubbies: tables over cards, 14 to 15px text, a 232px left rail.
+* **Minimums kept from Klubbies:** nothing under 14px, no text set with opacity, 44px touch targets, skeletons not spinners.
+
+## 6. Pages
+
+### Public
+
+**`/` Home (organisers).** Top bar: wordmark "Klubbies Events", Sign in, Create an event. Hero: serif headline "Every photo from your event, in every attendee's hands." One line under it, primary "Create an event", secondary "See how it works". Right side: a phone mock of the attendee "Your photos" screen. Then: three-step how it works (Set up, Shoot, Share), the attendee experience (scan, verify, selfie, download), what organisers get (branding, guest list or open link, photographer links, activity, removals), privacy and consent in plain words, pricing (one price per event), FAQ, closing CTA.
+
+**`/signin`.** One column. Title "Sign in", name and email, Continue. With `?event=<handle>` it becomes the event's join screen: event logo, serif event name, date and venue, host line, then the same two fields and "Get my photos". Link mode says "Use the email you'd like your photos under." Guest-list mode says "Use the email you registered with."
+
+**`/signin/code`.** Eight code boxes, auto-submit, "Nothing arrived?" help with the right advice for the event's mode.
+
+**`/start`.** "Create an event": your name, work email, code, then the event form.
+
+**`/g/[token]` Photographer upload.** Event logo and name, "Uploading as Jane Citizen", album picker (the link's album by default), a large drop zone, a live list of files with progress, and "Uploads keep going while this tab is open." Closed, expired and unpaid states each explain themselves.
+
+**Legal:** `/privacy`, `/terms`, `/refunds` rewritten for events and attendees.
+
+### Attendee
+
+**`/events` Your events.** List of events you can open, newest first: logo, name, date, host, "Organiser" tag where it applies. Empty state explains that an organiser shares a link or QR.
+
+**`/e/[handle]` Event home.** Branded header band: logo, serif event name, date range, venue, "Hosted by …". Directly under it, the Your photos card:
+* not enrolled: "Find the photos you're in" with a selfie button and one line on how it works;
+* enrolled and matched: a strip of your first photos, "23 photos of you", "See all" and "Download all";
+* still looking: a live progress line.
+Then the albums as a grid of cover cards (title, count, date if set). If the event has one album, its photos show inline instead of a single lonely card. The face notice, where needed, sits above everything until acknowledged. Closed events show the closed screen instead.
+
+**`/e/[handle]/a/[albumId]` Album.** Title, count, photographer credits, Download album, Select. Grid with an "All / You" toggle when you have matches.
+
+**`/e/[handle]/a/[albumId]/[mediaId]` Viewer.** Near-black, filmstrip, actions: Save, Download original, Details (time, camera, photographer), Request removal.
+
+**`/e/[handle]/me` Your photos.** Selfie enrolment with consent, then results stacked by album, "Is this you?" suggestions, "Not me", Download all, and delete my face data.
+
+**`/e/[handle]/saved` Saved.** Favourites and downloads.
+
+**`/account` Profile.** Name, avatar, email preferences (new album published), your events, sign out everywhere, delete face data per event.
+
+Navigation: on desktop a slim top bar (event mark and name, Photos, Your photos, Saved, account menu). On phones a four-tab bar: Photos, Your photos, Saved, You.
+
+### Organiser
+
+A left rail on desktop (event mark, name, status chip, then: Overview, Albums, Upload, Photographers, Attendees, Share, Removals (only when open), Activity, Settings, and at the bottom the plan box and your name). A scrolling row of the same links on phones.
+
+**`/admin/new` Create event.** Event name, host organisation, start date, optional end date, venue or city, access mode (two radio cards). Shows the resulting link. Then payment, then the checklist.
+
+**`/admin/[handle]/setup` Checklist.** Details, logo and colour, add a photographer, choose access (and import a list in guest-list mode), create the first album, download the QR. Progress bar, each row links to its screen.
+
+**`/admin/[handle]` Overview.** Status line (Not activated / Ready / Live / Closed on date). Four numbers: photos, attendees joined, attendees who found themselves, downloads. "Needs you" (removal requests, unfinished uploads, no photographer yet). Share card with the QR thumbnail and Copy link. Latest uploads strip. Recent activity.
+
+**`/admin/[handle]/albums`, `/upload`.** Album table (title, photos, views, downloads, status) and the New album screen (name, optional date, downloads on or off, attendees can add photos, publish now or at a time), straight into the drop zone.
+
+**`/admin/[handle]/photographers`.** One row per link: name, album, files and size uploaded, last upload, Copy link, Revoke. "Add photographer" asks for a name, an album and an expiry (default 14 days).
+
+**`/admin/[handle]/attendees`.** Access mode switch at the top. Table: name, email, joined (yes/no, when), photos found, role. Add one, import a list, remove. Co-organisers are made here by changing a row's role.
+
+**`/admin/[handle]/share`.** The event link with Copy, the QR at poster size with PNG and SVG download, "Print poster" (opens `/admin/[handle]/share/poster`, an A4 print page with logo, event name, QR and three steps), and the announcement email text with Copy.
+
+**`/admin/[handle]/removals`, `/activity`.** As in Klubbies.
+
+**`/admin/[handle]/settings`.** Event details (name, host, dates, venue, description), branding (logo, colour with live preview), access (mode, access window date), privacy (face recognition, removal requests), danger zone.
+
+**`/admin/[handle]/billing`.** One payment per event, what it unlocks, status and receipt. Hidden actions inside the iPhone app, as in Klubbies.
+
+## 7. Data model changes (from Klubbies' schema)
+
+Applied as the Klubbies migrations with `club` renamed to `event` (this is a fresh database), plus `20260927000022_events.sql`:
+
+* `events` gains `starts_on date`, `ends_on date`, `venue text`, `access_mode text` (`link` or `guest_list`, default `link`), `access_ends_at timestamptz`.
+* `albums.event_date` is `album_date`; `albums.event_type` is dropped.
+* `media` gains `photographer_name text`.
+* `memberships.accepted_at` defaults to now(): there are no pending invitations.
+* `events.grace_period_enabled` defaults to false and is no longer shown.
+* `posts`, `post_reactions`, `post_comments` are dropped.
+* `private.can_view_event_item` also requires the access window to be open unless the viewer manages albums.
+* New events get three roles: Organiser (everything), Photographer (upload), Attendee (view).
+
+## 8. Stack and infrastructure
+
+Same as Klubbies: Next.js 16, Tailwind 4, Supabase (Sydney), AWS Rekognition, Stripe, Resend, Vercel (`syd1`). Separate Supabase project, separate Vercel project, separate Rekognition prefix (`klubbies-events-*`, which the existing IAM policy `collection/klubbies-*` already covers). Email from the verified `klubbies.app` domain as `Klubbies Events <events@klubbies.app>`.
