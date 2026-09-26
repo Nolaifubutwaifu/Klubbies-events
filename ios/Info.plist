@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Klubbies</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.photography</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Klubbies uses the camera when you take a photo to upload to your club, or a selfie so it can find you in your club's photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Klubbies uses the microphone when you record a video to upload to your club.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Klubbies lets you pick photos and videos from your library to upload to your club.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Klubbies saves your club's photos to your library when you tap Save to Photos.</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>

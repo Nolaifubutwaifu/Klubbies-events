@@ -1,0 +1,52 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "klubbies-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev",
+        "--port",
+        "3000"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "klubbies-dev-3100",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev",
+        "--port",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "klubbies-prod-3100",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "EMAIL_DRY_RUN=1",
+        "APP_URL=http://localhost:3100",
+        "pnpm",
+        "start",
+        "--port",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "klubbies-dev-3200",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "EMAIL_DRY_RUN=1",
+        "APP_URL=http://localhost:3200",
+        "pnpm",
+        "next",
+        "dev",
+        "--port",
+        "3200"
+      ],
+      "port": 3200
+    }
+  ]
+}

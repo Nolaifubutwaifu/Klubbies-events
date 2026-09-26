@@ -1,0 +1,1116 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* ---------------------------------------------------------------------------
+   Klubbies tokens (design audit, 26 Sep 2026)
+   One accent, one ink, one rhythm. Ember is the only brand colour; ink carries
+   everything secondary. Nothing on the site goes below 14px, and no text is
+   set with opacity.
+   --------------------------------------------------------------------------- */
+:root {
+  /* Surfaces */
+  --kb-cream: #fff8f4; /* page background, theme colour */
+  --kb-sand: #f8eee9; /* alternate sections, info boxes */
+  --kb-white: #ffffff; /* cards, inputs */
+  --kb-line: #eaddd7; /* borders, dividers */
+  --kb-line-strong: #cdbdb6; /* secondary button borders */
+  /* Input edges need 3:1 against white to read as a field (WCAG 1.4.11);
+     line-strong is 1.8:1, so fields, checkboxes and radios use this. */
+  --kb-line-input: #968990;
+
+  /* Ink */
+  --kb-ink: #2b2228; /* headings, dark sections */
+  --kb-ink-2: #5f545a; /* body text, 6.9:1 on cream */
+  --kb-ink-3: #776b70; /* captions, 14px minimum; use ink-2 on sand */
+
+  /* Accent */
+  --kb-ember: #cf2e12; /* primary buttons, white text 5.2:1 */
+  --kb-ember-deep: #ae1800; /* accent words, links, hover */
+  --kb-ember-tint: #ffe7df; /* chips, highlights, focus halo */
+  --kb-ember-on-dark: #ffb3a1; /* accent on ink backgrounds */
+
+  /* Type */
+  --kb-font-display: var(--font-fredoka), system-ui, sans-serif;
+  --kb-font-body: var(--font-dm-sans), system-ui, sans-serif;
+
+  /* Radius */
+  --kb-r-pill: 999px;
+  --kb-r-input: 14px;
+  --kb-r-photo: 16px;
+  --kb-r-card: 24px;
+  --kb-r-panel: 28px;
+
+  /* Section rhythm */
+  --kb-section-y: 112px;
+  --kb-gutter: 80px;
+  --kb-content: 1280px;
+
+  /* -------------------------------------------------------------------------
+     Aliases. The app was built on an older token set; these point every old
+     name at the new values so no call site can reach a retired colour.
+     ------------------------------------------------------------------------- */
+  --color-bg: var(--kb-cream);
+  --color-surface: var(--kb-white);
+  --color-text: var(--kb-ink);
+  --color-accent: var(--kb-ember);
+  --color-divider: var(--kb-line);
+  --color-neutral-100: var(--kb-sand);
+  --color-neutral-200: var(--kb-sand);
+  --color-neutral-300: var(--kb-line);
+  --color-neutral-400: var(--kb-line-strong);
+  --color-neutral-500: var(--kb-ink-3);
+  --color-neutral-600: var(--kb-ink-3);
+  --color-neutral-700: var(--kb-ink-2);
+  --color-neutral-800: var(--kb-ink-2);
+  --color-neutral-900: var(--kb-ink);
+  --color-accent-100: var(--kb-ember-tint);
+  --color-accent-200: var(--kb-ember-tint);
+  --color-accent-300: #f7b9a8;
+  --color-accent-400: #e8765c;
+  --color-accent-500: var(--kb-ember);
+  --color-accent-600: var(--kb-ember-deep);
+  --color-accent-700: var(--kb-ember-deep);
+  --color-accent-800: var(--kb-ember-deep);
+  --color-accent-900: #6e1403;
+  /* Salmon is retired: the old second accent now resolves to sand and ink. */
+  --color-accent-2: var(--kb-sand);
+  --color-accent-2-100: var(--kb-sand);
+  --color-accent-2-800: var(--kb-ink);
+  --ink-70: var(--kb-ink-2);
+  --ink-55: var(--kb-ink-3);
+  --ink-35: var(--kb-line-input);
+  --font-heading: var(--kb-font-display);
+  --font-body: var(--kb-font-body);
+
+  /* The club's quiet layer (lib/theme.ts regenerates these per club). The
+     default is sand, not lilac. */
+  --tone-base: var(--kb-cream);
+  --tone-support: var(--kb-sand);
+  --tone-support-deep: var(--kb-line);
+  --tone-support-ink: var(--kb-ink);
+
+  --soft-r-lg: var(--kb-r-panel);
+  --soft-r: var(--kb-r-card);
+  --soft-r-sm: var(--kb-r-photo);
+  --soft-shadow: 0 1px 2px rgb(43 34 40 / 0.04);
+  --soft-shadow-lift: 0 10px 28px -12px rgb(43 34 40 / 0.22);
+  --soft-ease: 180ms cubic-bezier(0.22, 0.68, 0.32, 1);
+  --shadow-lg: 0 18px 44px -14px rgb(43 34 40 / 0.3);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+@media (max-width: 639px) {
+  :root {
+    --kb-section-y: 64px;
+    --kb-gutter: 20px;
+  }
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    background: var(--kb-cream);
+    color: var(--kb-ink);
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--kb-font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--kb-font-display);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--kb-ink);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--kb-ember-deep);
+    text-underline-offset: 4px;
+  }
+
+  /* One focus ring everywhere: 3px ink, 3px off the edge. */
+  :focus {
+    outline: none;
+  }
+  :focus-visible {
+    outline: 3px solid var(--kb-ink);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--kb-ember-tint);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Layout: sections and the content column
+   --------------------------------------------------------------------------- */
+@layer components {
+  .kb-section {
+    padding-block: var(--kb-section-y);
+  }
+  .kb-wrap {
+    width: 100%;
+    max-width: calc(var(--kb-content) + 2 * var(--kb-gutter));
+    margin-inline: auto;
+    padding-inline: var(--kb-gutter);
+  }
+  .kb-sand {
+    background: var(--kb-sand);
+  }
+  .kb-ink-band {
+    background: var(--kb-ink);
+    color: #fff;
+  }
+  .kb-ink-band h1,
+  .kb-ink-band h2,
+  .kb-ink-band h3 {
+    color: #fff;
+  }
+
+  .kb-h1 {
+    font-family: var(--kb-font-display);
+    font-weight: 700;
+    font-size: 68px;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+  }
+  .kb-h2 {
+    font-family: var(--kb-font-display);
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+  .kb-h3 {
+    font-family: var(--kb-font-display);
+    font-weight: 600;
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .kb-lead {
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+  }
+  .kb-body {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+  }
+  .kb-caption {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--kb-ink-3);
+  }
+  @media (max-width: 639px) {
+    .kb-h1 {
+      font-size: 42px;
+    }
+    .kb-h2 {
+      font-size: 32px;
+    }
+    .kb-h3 {
+      font-size: 19px;
+    }
+    .kb-lead {
+      font-size: 17px;
+    }
+  }
+  /* The accent word in a heading. */
+  .kb-accent,
+  .soft-word {
+    color: var(--kb-ember-deep);
+  }
+  .kb-ink-band .kb-accent {
+    color: var(--kb-ember-on-dark);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons
+   Two kinds, nothing else: primary (ember, one per view) and secondary
+   (white with an ink border). Text links cover the rest. The old class names
+   all resolve to one of these two, so every screen draws the same buttons.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .btn,
+  .soft-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 26px;
+    border: 1.5px solid var(--kb-line-strong);
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-white);
+    color: var(--kb-ink);
+    font-family: var(--kb-font-body);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--soft-ease),
+      border-color var(--soft-ease),
+      color var(--soft-ease);
+  }
+  .btn:hover:not(:disabled),
+  .soft-btn:hover:not(:disabled) {
+    border-color: var(--kb-ink);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"],
+  .soft-btn:disabled,
+  .soft-btn[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Primary: the one thing this screen is for. */
+  .btn-primary,
+  .soft-btn-primary {
+    background: var(--kb-ember);
+    border-color: var(--kb-ember);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled),
+  .soft-btn-primary:hover:not(:disabled) {
+    background: var(--kb-ember-deep);
+    border-color: var(--kb-ember-deep);
+  }
+
+  /* Secondary. accent / tonal / ghost are old names for the same button. */
+  .btn-secondary,
+  .btn-ghost,
+  .soft-btn-accent,
+  .soft-btn-tonal {
+    background: var(--kb-white);
+    border-color: var(--kb-line-strong);
+    color: var(--kb-ink);
+  }
+  .btn-secondary[aria-pressed="true"],
+  .btn-ghost[aria-pressed="true"] {
+    background: var(--kb-ink);
+    border-color: var(--kb-ink);
+    color: #fff;
+  }
+  /* Compact secondary, for rows and toolbars inside the app. */
+  .btn-ghost,
+  .soft-btn-tonal {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  /* Destructive: secondary shape, ember-deep ink. */
+  .btn-danger,
+  .soft-btn-danger {
+    background: var(--kb-white);
+    border-color: var(--kb-ember-deep);
+    color: var(--kb-ember-deep);
+  }
+  .btn-danger:hover:not(:disabled),
+  .soft-btn-danger:hover:not(:disabled) {
+    background: var(--kb-ember-tint);
+    border-color: var(--kb-ember-deep);
+  }
+
+  .btn-lg,
+  .soft-btn-lg {
+    min-height: 56px;
+    padding: 0 30px;
+    font-size: 17px;
+  }
+  .btn-sm {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  /* Secondary on an ink band. */
+  .btn-on-dark {
+    background: var(--kb-ink);
+    border-color: #fff;
+    color: #fff;
+  }
+  .btn-on-dark:hover:not(:disabled) {
+    background: #3a2f36;
+    border-color: #fff;
+  }
+
+  /* Text link: for the third action, when there is one. */
+  .kb-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--kb-ember-deep);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+  .kb-link-quiet {
+    color: var(--kb-ink-2);
+  }
+
+  /* Icon-only round button (menus, "more"). Always carries an aria-label. */
+  .kb-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border: 1.5px solid var(--kb-line-strong);
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-white);
+    color: var(--kb-ink);
+    cursor: pointer;
+  }
+  .kb-icon-btn:hover {
+    border-color: var(--kb-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn,
+    .soft-btn {
+      transition: none;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Fields
+   --------------------------------------------------------------------------- */
+@layer components {
+  .kb-label {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--kb-ink);
+  }
+  .kb-help {
+    font-size: 14px;
+    color: var(--kb-ink-3);
+  }
+  .kb-error {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--kb-ember-deep);
+  }
+
+  .input,
+  .soft-input,
+  .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .field select,
+  .field textarea,
+  .theme-soft select,
+  .theme-soft input[type="date"],
+  .theme-soft input[type="datetime-local"],
+  .theme-soft input[type="time"] {
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--kb-line-input);
+    border-radius: var(--kb-r-input);
+    background: var(--kb-white);
+    color: var(--kb-ink);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.3;
+    caret-color: var(--kb-ember);
+    box-shadow: none;
+  }
+  .input::placeholder,
+  .soft-input::placeholder,
+  .field input::placeholder,
+  .field textarea::placeholder {
+    color: var(--kb-ink-3);
+  }
+  .input:focus-visible,
+  .soft-input:focus-visible,
+  .field input:focus-visible,
+  .field select:focus-visible,
+  .field textarea:focus-visible,
+  .theme-soft select:focus-visible {
+    outline: none;
+    border: 2px solid var(--kb-ink);
+    box-shadow: 0 0 0 4px var(--kb-ember-tint);
+  }
+  .input[aria-invalid="true"],
+  .soft-input[aria-invalid="true"] {
+    border: 2px solid var(--kb-ember-deep);
+  }
+  textarea.input,
+  .field textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .theme-soft select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 44px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%232b2228' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 12px;
+  }
+  .theme-soft select:disabled {
+    opacity: 0.5;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--kb-ink);
+  }
+
+  /* Checkboxes and radios keep the native element, drawn in ink. */
+  .theme-soft input[type="checkbox"],
+  .theme-soft input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    border: 1.5px solid var(--kb-line-input);
+    background: var(--kb-white);
+    cursor: pointer;
+  }
+  .theme-soft input[type="checkbox"] {
+    border-radius: 7px;
+  }
+  .theme-soft input[type="radio"] {
+    border-radius: 50%;
+  }
+  .theme-soft input[type="checkbox"]::before {
+    content: "";
+    width: 11px;
+    height: 11px;
+    transform: scale(0);
+    background: #fff;
+    clip-path: polygon(14% 45%, 0 60%, 39% 100%, 100% 22%, 84% 8%, 39% 70%);
+  }
+  .theme-soft input[type="radio"]::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    transform: scale(0);
+    background: #fff;
+  }
+  .theme-soft input[type="checkbox"]:checked,
+  .theme-soft input[type="radio"]:checked {
+    background: var(--kb-ink);
+    border-color: var(--kb-ink);
+  }
+  .theme-soft input[type="checkbox"]:checked::before,
+  .theme-soft input[type="radio"]:checked::before {
+    transform: scale(1);
+  }
+  .theme-soft input[type="checkbox"]:disabled,
+  .theme-soft input[type="radio"]:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .theme-soft label:has(> input[type="checkbox"]),
+  .theme-soft label:has(> input[type="radio"]) {
+    min-height: 44px;
+  }
+
+  .radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  .radio input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  .radio .dot {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border-radius: 50%;
+    border: 1.5px solid var(--kb-line-input);
+  }
+  .radio input:checked + .dot {
+    border-color: var(--kb-ink);
+    background: var(--kb-ink);
+    box-shadow: inset 0 0 0 4px var(--kb-white);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Surfaces: cards, info boxes, chips, tables, dialogs
+   --------------------------------------------------------------------------- */
+@layer components {
+  .soft-card,
+  .kb-card,
+  .panel,
+  .stat,
+  .theme-soft .border-2.border-divider {
+    background: var(--kb-white);
+    border: 1px solid var(--kb-line);
+    border-radius: var(--kb-r-card);
+    box-shadow: none;
+  }
+  a.soft-card,
+  button.soft-card {
+    transition: border-color var(--soft-ease);
+  }
+  a.soft-card:hover,
+  button.soft-card:hover {
+    border-color: var(--kb-line-strong);
+  }
+  .theme-soft .grid.border-2.border-divider,
+  .theme-soft .grid.border-b-2 {
+    background: transparent;
+    border-radius: 0;
+  }
+  .theme-soft .border-b-2,
+  .theme-soft .border-t-2 {
+    border-bottom-width: 1px;
+    border-top-width: 1px;
+  }
+
+  /* Old decorative card variants: one calm card now. */
+  .soft-bordered,
+  .soft-offset {
+    background: var(--kb-white);
+    border: 1px solid var(--kb-line);
+    border-radius: var(--kb-r-card);
+  }
+  .soft-dashed {
+    border: 1.5px dashed var(--kb-line-strong);
+    border-radius: var(--kb-r-card);
+    background: var(--kb-white);
+  }
+  .soft-panel {
+    border-radius: var(--kb-r-panel);
+    background: var(--kb-sand);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-4) 20px;
+  }
+
+  /* Info box: sand, one icon, one sentence. No left border. */
+  .notice,
+  .kb-info {
+    display: flex;
+    gap: 10px;
+    padding: 16px 18px;
+    border: 0;
+    border-radius: var(--kb-r-photo);
+    background: var(--kb-sand);
+    color: var(--kb-ink);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .notice[role="alert"] {
+    background: var(--kb-ember-tint);
+    color: var(--kb-ember-deep);
+    font-weight: 500;
+  }
+
+  .soft-chip,
+  .tag,
+  .chip-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-ember-tint);
+    color: var(--kb-ember-deep);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  /* The quiet chip carries the club's tone (sand and ink by default). */
+  .soft-chip-muted,
+  .tag-neutral,
+  .tag-outline {
+    background: var(--tone-support);
+    color: var(--tone-support-ink);
+  }
+  .kb-chip-ink {
+    background: var(--kb-ink);
+    color: #fff;
+  }
+
+  .kicker,
+  .label-caps {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--kb-ember-deep);
+  }
+
+  .display,
+  .soft-display,
+  .brand,
+  .soft-wordmark {
+    font-family: var(--kb-font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  .display {
+    font-weight: 700;
+    line-height: 1.05;
+  }
+  .brand,
+  .soft-wordmark {
+    color: var(--kb-ink);
+    text-decoration: none;
+  }
+
+  .hr {
+    height: 1px;
+    border: 0;
+    margin: 0;
+    background: var(--kb-line);
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .table th {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--kb-line);
+    text-align: left;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--kb-ink-2);
+  }
+  .table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--kb-line);
+    vertical-align: middle;
+  }
+  .table tbody tr:hover {
+    background: var(--kb-cream);
+  }
+
+  .dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(43 34 40 / 0.55);
+  }
+  .dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(560px, 100%);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    padding: 28px;
+    border: 0;
+    border-radius: var(--kb-r-card);
+    background: var(--kb-white);
+    box-shadow: var(--shadow-lg);
+  }
+  .dialog-title {
+    font-family: var(--kb-font-display);
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+  .dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1.5px dashed var(--kb-line-input);
+    border-radius: var(--kb-r-card);
+    background: var(--kb-white);
+    text-align: center;
+    cursor: pointer;
+  }
+  .dropzone[data-active="true"] {
+    border-color: var(--kb-ember);
+    background: var(--kb-ember-tint);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Photos
+   --------------------------------------------------------------------------- */
+@layer components {
+  .tile-grid {
+    display: grid;
+    gap: 6px;
+  }
+  .tile,
+  .soft-tile {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--kb-r-photo);
+    background: var(--kb-sand);
+  }
+  .tile img,
+  .soft-tile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 300ms cubic-bezier(0.22, 0.68, 0.32, 1);
+  }
+  .tile:hover img,
+  .soft-tile:hover img {
+    transform: scale(1.03);
+  }
+  .theme-soft .tile-grid > * {
+    border-radius: var(--kb-r-photo);
+    overflow: hidden;
+  }
+
+  .overlay-title {
+    position: absolute;
+    inset: auto 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 24px;
+    background: linear-gradient(to top, rgb(43 34 40 / 0.85), rgb(43 34 40 / 0));
+    color: #fff;
+  }
+
+  .masonry {
+    columns: 2 160px;
+    column-gap: 6px;
+  }
+  @media (min-width: 768px) {
+    .masonry {
+      columns: 4 200px;
+    }
+  }
+  .masonry > * {
+    break-inside: avoid;
+    margin-bottom: 6px;
+  }
+
+  /* Loading is a skeleton, never a spinner. */
+  .soft-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--kb-r-photo);
+    background: var(--kb-sand);
+  }
+  .soft-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+    animation: kb-shimmer 1.4s infinite;
+  }
+  @keyframes kb-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* A small live dot for "working on it". */
+  .kb-pulse {
+    width: 9px;
+    height: 9px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--kb-ember);
+    animation: kb-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes kb-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile img,
+    .soft-tile img {
+      transition: none;
+    }
+    .tile:hover img,
+    .soft-tile:hover img {
+      transform: none;
+    }
+    .soft-skeleton::after,
+    .kb-pulse {
+      animation: none;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   FAQ: native details/summary, one component for Home and How it works.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .kb-faq {
+    border-bottom: 1px solid var(--kb-line);
+  }
+  .kb-faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    padding: 16px 0;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--kb-font-display);
+    font-weight: 600;
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--kb-ink);
+  }
+  .kb-faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .kb-faq summary::after {
+    content: "+";
+    flex: none;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--kb-sand);
+    font-family: var(--kb-font-body);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .kb-faq[open] summary::after {
+    content: "\2212";
+  }
+  .kb-faq p {
+    margin: 0;
+    padding: 0 48px 22px 0;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+  }
+
+  /* The older card-style FAQ inside the app, drawn the same way. */
+  .soft-faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    padding: 16px 22px;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--kb-font-display);
+    font-weight: 600;
+    font-size: 19px;
+  }
+  .soft-faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .soft-faq summary::after {
+    content: "+";
+    font-size: 22px;
+  }
+  .soft-faq[open] summary::after {
+    content: "\2212";
+  }
+  .soft-faq p {
+    padding: 0 22px 20px;
+    font-size: 16px;
+    color: var(--kb-ink-2);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Menus: the "More" popover and the phone menu sheet.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .kb-menu {
+    position: absolute;
+    z-index: 40;
+    min-width: 232px;
+    padding: 6px;
+    border: 1px solid var(--kb-line);
+    border-radius: 18px;
+    background: var(--kb-white);
+    box-shadow: var(--shadow-lg);
+  }
+  .kb-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: var(--kb-ink);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .kb-menu-item:hover,
+  .kb-menu-item:focus-visible {
+    background: var(--kb-sand);
+    outline-offset: -3px;
+  }
+  .kb-menu-item[data-danger="true"] {
+    color: var(--kb-ember-deep);
+  }
+  .kb-menu-sep {
+    height: 1px;
+    margin: 6px 8px;
+    background: var(--kb-line);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Theme wrapper. Kept as a class so the app's layouts don't change, but it no
+   longer redefines anything: there is one theme.
+   --------------------------------------------------------------------------- */
+.theme-soft {
+  background: var(--kb-cream);
+  color: var(--kb-ink);
+  font-family: var(--kb-font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.theme-soft h1,
+.theme-soft h2,
+.theme-soft h3 {
+  font-family: var(--kb-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Text on a dark photo band. */
+.soft-on-dark {
+  color: #fff;
+}
+.soft-on-dark .soft-muted {
+  color: rgb(255 255 255 / 0.9);
+}
+.soft-on-dark .soft-faint {
+  color: rgb(255 255 255 / 0.84);
+}
+
+/* The page behind the page, so a phone rubber-banding past the end shows
+   cream rather than a grey band under the footer. */
+html:has(.theme-soft),
+html:has(.theme-soft) body {
+  background: var(--kb-cream);
+}
+
+/* Below sm the member tab bar is fixed to the bottom of the window, so the
+   footer's links need room to clear it, and more again on pages where the
+   floating "+ Album" button sits above the bar. */
+@media (max-width: 639.98px) {
+  .theme-soft:has([data-tabbar]) .app-footer {
+    padding-bottom: calc(76px + max(16px, env(safe-area-inset-bottom)));
+  }
+  .theme-soft:has([data-tabbar]):has([data-fab]) .app-footer {
+    padding-bottom: calc(140px + max(16px, env(safe-area-inset-bottom)));
+  }
+}
+
+/* The viewer's swipe hint: there when you arrive, gone before it gets in the
+   way of the photo. */
+@keyframes soft-hint-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.soft-hint-fade {
+  animation: soft-hint-fade 4s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .soft-hint-fade {
+    animation: none;
+  }
+}
