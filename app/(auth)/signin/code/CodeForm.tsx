@@ -116,7 +116,7 @@ export function CodeForm({ restartHref, event }: { restartHref: string; event?: 
       {/* The boxes submit themselves once they're full; this is for anyone who
           gets there another way. */}
       <button type="submit" className="btn btn-primary w-full" disabled={pending || code.length < LENGTH}>
-        {pending ? "Checking…" : "Log in"}
+        {pending ? "Checking…" : "Continue"}
       </button>
 
       <Link href={restartHref} className="kb-link self-center">

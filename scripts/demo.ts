@@ -164,6 +164,14 @@ async function main() {
     console.log(`${album.title}: ${album.count} photos`);
   }
 
+  // Queue face indexing, as a real upload would. The hourly cron (or
+  // GET /api/cron/hourly with the CRON_SECRET) works through it.
+  const { data: photos } = await db.from("media").select("id").eq("event_id", event.id).eq("kind", "photo");
+  if (photos?.length) {
+    await db.from("face_jobs").insert(photos.map((m) => ({ event_id: event.id, media_id: m.id, kind: "index_media" })));
+    console.log(`queued ${photos.length} photos for face indexing`);
+  }
+
   console.log(`\nDemo event ready at /e/${HANDLE} and /admin/${HANDLE}`);
   console.log(`The organiser signs in as ${adminEmail}`);
 }

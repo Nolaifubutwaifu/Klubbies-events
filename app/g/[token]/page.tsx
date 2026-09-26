@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+import { EventMark } from "@/components/EventMark";
+import { Brand } from "@/components/ui";
 import { formatLongDate } from "@/lib/format";
 import { resolveGuestLink, type GuestLinkState } from "@/lib/guest/links";
+import { signLogoMarks } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { eventToneStyle } from "@/lib/theme";
 import { GuestUploader } from "./GuestUploader";
 
-// A guest link is the only part of Klubbies that works without an account, so
-// it is deliberately small: one album, upload only, nothing else on the page.
+// A photographer's upload link is the only part of the product that works
+// without an account, so it is deliberately small: one album, upload only.
 export const metadata: Metadata = { title: "Upload", robots: { index: false, follow: false } };
 
 const DEAD: Record<Exclude<GuestLinkState, "ok">, { title: string; body: string }> = {
@@ -35,44 +39,55 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
     const copy = DEAD[state as Exclude<GuestLinkState, "ok">] ?? DEAD.unknown;
     return (
       <div className="theme-soft relative flex min-h-dvh flex-col">
-        <main className="relative z-10 mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center gap-4 px-5 py-14">
-          <span className="soft-wordmark text-[22px]">klubbies</span>
-          <h1 className="text-[clamp(28px,6vw,38px)]">{copy.title}</h1>
+        <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center gap-4 px-5 py-14">
+          <Brand />
+          <h1 className="text-[clamp(26px,6vw,34px)]">{copy.title}</h1>
           <p className="m-0 text-[15px] text-[color:var(--ink-70)]">{copy.body}</p>
         </main>
       </div>
     );
   }
 
+  // The link is the credential here, so the logo is signed with the service
+  // role after the link checked out. It is the only image this page shows.
+  const logoUrl = session.eventLogoPath
+    ? ((await signLogoMarks(createAdminClient(), [session.eventLogoPath])).get(session.eventLogoPath) ?? null)
+    : null;
+  const name = session.label.split("—")[0].trim();
+
   return (
     <div className="theme-soft relative flex min-h-dvh flex-col" style={eventToneStyle(session.eventAccent)}>
-      <main className="relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-6 px-5 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="soft-wordmark text-[20px]">klubbies</span>
-          <span className="soft-chip soft-chip-muted">Guest upload · expires {formatLongDate(session.expiresAt)}</span>
+      <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
+        <div className="mx-auto flex min-h-[60px] w-full max-w-[760px] items-center justify-between gap-3 px-5">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <EventMark name={session.eventName} logoUrl={logoUrl} accentColour={session.eventAccent} size={30} />
+            <span className="truncate text-[15px] font-semibold">{session.eventName}</span>
+          </span>
+          <span className="text-[14px] text-[color:var(--kb-ink-3)]">Link expires {formatLongDate(session.expiresAt)}</span>
         </div>
+      </header>
 
+      <main className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-6 px-5 py-10">
         <div>
-          <span className="soft-chip">Upload for {session.eventName}</span>
-          <h1 className="mt-3 text-[clamp(28px,5.5vw,40px)]">{session.albumTitle}</h1>
-          <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">
+          <span className="kb-eyebrow">Uploading as {name}</span>
+          <h1 className="serif mt-2 text-[clamp(36px,6vw,52px)]">{session.albumTitle}</h1>
+          <p className="m-0 mt-2 text-[15px] text-[color:var(--ink-70)]">
             {session.albumDate ? `${formatLongDate(session.albumDate)} · ` : ""}
-            Hi {session.label.split("—")[0].trim()}. Drop the night in and close the tab.
+            Full resolution JPG, HEIC, PNG, MP4 or MOV. Every photo is credited to you.
           </p>
         </div>
 
         <GuestUploader token={token} />
 
-        <div className="rounded-[var(--soft-r)] bg-[color:var(--tone-support)] p-5 text-[color:var(--tone-support-ink)]">
-          <span className="block text-[14px] font-bold">You can&apos;t see the event&apos;s albums from here.</span>
-          <p className="m-0 mt-1 text-[14px]">
-            This link only adds files to {session.albumTitle}. No login, no member list, no other albums. Everything you
-            add shows as &ldquo;added by guest&rdquo; in the committee&apos;s album.
+        <div className="kb-info flex-col">
+          <span className="text-[14px] font-medium">Keep this tab open until the list says done.</span>
+          <p className="m-0 text-[14px]">
+            If the connection drops, open this link again and drop the same files: finished ones are skipped and the rest
+            carry on. This link only adds photos to {session.albumTitle}; it can&apos;t open the gallery.
           </p>
           {session.fileCount > 0 ? (
-            <p className="m-0 mt-2 text-[14px]">
-              {session.fileCount.toLocaleString("en-AU")} file{session.fileCount === 1 ? "" : "s"} already came in on this
-              link.
+            <p className="m-0 text-[14px]">
+              {session.fileCount.toLocaleString("en-AU")} file{session.fileCount === 1 ? "" : "s"} already came in on this link.
             </p>
           ) : null}
         </div>

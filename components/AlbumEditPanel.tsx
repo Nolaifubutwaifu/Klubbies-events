@@ -26,13 +26,13 @@ type Album = {
 };
 
 const AUDIENCE = [
-  { value: "members", label: "All members" },
+  { value: "members", label: "All attendees" },
   { value: "admins", label: "Organisers only" },
 ];
 
 const CONTRIBUTORS = [
   { value: "managers", label: "Organisers and photographers" },
-  { value: "members", label: "Any member" },
+  { value: "members", label: "Any attendee" },
 ];
 
 function Choice({
@@ -177,7 +177,7 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
               <span className="max-w-[46ch] text-[14px] leading-normal text-ink-70">
                 {contributorScope === "members"
                   ? "Every attendee can add their own photos, so the album fills up from everyone's phones."
-                  : "Only people whose role can manage albums or upload may add photos."}
+                  : "Only organisers, photographers with an account, and upload links can add photos."}
               </span>
             </div>
           </div>

@@ -293,3 +293,13 @@ create policy media_select on public.media
       )
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- Organisers edit the new event columns
+-- ---------------------------------------------------------------------------
+
+-- events updates are granted per column (init migration); the RLS update
+-- policy still limits them to people who run the event. allow_removal_requests
+-- was never granted in Klubbies, so its switch there fails silently.
+grant update (starts_on, ends_on, venue, access_mode, access_ends_at, access_notice_sent_at, allow_removal_requests)
+  on public.events to authenticated;

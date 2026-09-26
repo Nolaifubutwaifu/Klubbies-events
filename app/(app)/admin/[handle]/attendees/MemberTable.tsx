@@ -266,7 +266,7 @@ export function MemberTable({
 
       <Dialog open={confirmRemove} onClose={() => setConfirmRemove(false)} title={`Remove ${chosen.length} ${chosen.length === 1 ? "person" : "people"}?`}>
         <p className="text-[15px] leading-normal">
-          They lose access to the event straight away. In link mode they can't rejoin with the same email; you can
+          They lose access to the event straight away. In link mode they can&apos;t rejoin with the same email; you can
           restore them from the Removed filter.
         </p>
         <ul className="max-h-40 overflow-auto text-[14px] text-[color:var(--ink-70)]">

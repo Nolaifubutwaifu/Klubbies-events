@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
 import { SIGNIN_COOKIE } from "@/lib/auth/flow";
+import { authEventPreview } from "@/lib/auth/preview";
 import { CodeForm } from "./CodeForm";
 
 export const metadata: Metadata = { title: "Enter your code" };
@@ -15,9 +16,11 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
   const email = (await cookies()).get(SIGNIN_COOKIE)?.value;
   const restartHref = isCreate ? "/start" : event ? `/signin?event=${event}` : "/signin";
   if (!email) redirect(restartHref);
+  const preview = await authEventPreview(event);
 
   return (
     <AuthShell
+      event={preview}
       topLink={
         <Link href={restartHref} className="font-medium">
           Use a different email

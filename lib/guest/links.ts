@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// A guest photographer has no account. The link they hold is the whole
+// A photographer with an upload link has no account. The link they hold is the whole
 // credential, so it is long, single-purpose, and stored only as a hash: a
 // leaked backup can't be turned back into a working upload link.
 
@@ -27,6 +27,8 @@ export type GuestSession = {
   label: string;
   eventName: string;
   eventAccent: string | null;
+  eventLogoPath: string | null;
+  eventOrganisation: string | null;
   albumTitle: string;
   albumDate: string | null;
   expiresAt: string;
@@ -55,7 +57,7 @@ export async function resolveGuestLink(
   if (new Date(link.expires_at).getTime() <= Date.now()) return { state: "expired", session: null };
 
   const [{ data: event }, { data: album }] = await Promise.all([
-    admin.from("events").select("name, accent_colour, billing_status").eq("id", link.event_id).maybeSingle(),
+    admin.from("events").select("name, accent_colour, billing_status, logo_path, organisation").eq("id", link.event_id).maybeSingle(),
     admin.from("albums").select("title, album_date").eq("id", link.album_id).maybeSingle(),
   ]);
   if (!event || !album) return { state: "unknown", session: null };
@@ -70,6 +72,8 @@ export async function resolveGuestLink(
       label: link.label,
       eventName: event.name,
       eventAccent: event.accent_colour,
+      eventLogoPath: event.logo_path,
+      eventOrganisation: event.organisation,
       albumTitle: album.title,
       albumDate: album.album_date,
       expiresAt: link.expires_at,
@@ -78,7 +82,7 @@ export async function resolveGuestLink(
   };
 }
 
-/** Counts a finished upload against the link, so the committee sees the tally. */
+/** Counts a finished upload against the link, so the organiser sees the tally. */
 export async function recordGuestUpload(linkId: string, bytes: number): Promise<void> {
   const admin = createAdminClient();
   const { data: link } = await admin

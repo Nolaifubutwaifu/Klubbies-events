@@ -1,42 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthHeading, AuthNote, AuthShell, type AuthEvent } from "@/components/AuthShell";
-import { getPublicEvent, getSessionUser } from "@/lib/auth/session";
-import { BUCKET } from "@/lib/storage";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
+import { authEventPreview } from "@/lib/auth/preview";
+import { getSessionUser } from "@/lib/auth/session";
 import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = { title: "Sign in" };
-
-/**
- * The event someone followed a link or QR for: its name, dates, host and
- * logo. No album counts and no photos: this page is public.
- */
-async function eventPreview(handle: string | undefined): Promise<AuthEvent | null> {
-  if (!handle) return null;
-  try {
-    const event = await getPublicEvent(handle);
-    if (!event) return null;
-    const logoUrl = event.logoPath
-      ? ((await createAdminClient().storage.from(BUCKET).createSignedUrl(event.logoPath, 10 * 60)).data?.signedUrl ?? null)
-      : null;
-    return {
-      name: event.name,
-      handle: event.handle,
-      organisation: event.organisation,
-      logoUrl,
-      startsOn: event.startsOn,
-      endsOn: event.endsOn,
-      venue: event.venue,
-      accentColour: event.accentColour,
-      accessMode: event.accessMode,
-    };
-  } catch (error) {
-    console.error("event preview failed", error);
-    return null;
-  }
-}
 
 export default async function SignInPage(props: PageProps<"/signin">) {
   const params = await props.searchParams;
@@ -44,7 +14,7 @@ export default async function SignInPage(props: PageProps<"/signin">) {
   const user = await getSessionUser();
   if (user) redirect(eventHandle ? `/e/${eventHandle}` : "/events");
 
-  const event = await eventPreview(eventHandle);
+  const event = await authEventPreview(eventHandle);
 
   if (event) {
     const open = event.accessMode === "link";

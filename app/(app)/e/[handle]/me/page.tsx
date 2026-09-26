@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PhotoStackArt } from "@/components/soft/illustrations";
 import { Placeholder } from "@/components/ui";
 import { getEventContext } from "@/lib/auth/session";
 import { formatLongDate } from "@/lib/format";
@@ -22,7 +21,7 @@ import { Suggestions } from "./Suggestions";
 export async function generateMetadata(props: PageProps<"/e/[handle]/me">): Promise<Metadata> {
   const { handle } = await props.params;
   const ctx = await getEventContext(handle);
-  return { title: ctx ? `Photos of you · ${ctx.event.name}` : "Photos of you" };
+  return { title: ctx ? `Your photos · ${ctx.event.name}` : "Your photos" };
 }
 
 export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">) {
@@ -37,26 +36,26 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
   if (!state.enabled) {
     return (
       <main className="flex flex-1 flex-col">
-        <div className="flex w-full flex-col gap-5 px-4 pb-16 pt-6 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-5 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
           <div>
-            <span className="soft-chip">{ctx.event.name}</span>
-            <h1 className="mt-3 text-[clamp(30px,4.5vw,44px)]">Photos of you</h1>
+            <span className="kb-eyebrow">{ctx.event.name}</span>
+            <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Your photos</h1>
           </div>
           <div className="soft-card flex max-w-[56ch] flex-col items-start gap-3 p-6">
-            <span className="soft-display text-[19px]">Face recognition is off for {ctx.event.name}</span>
+            <span className="text-[17px] font-semibold">Face search is off for {ctx.event.name}</span>
             <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
               {ctx.isAdmin
                 ? "Turn it on in Settings and every attendee can find the photos they're in. Nobody is findable until they add a selfie."
-                : "This event hasn't turned it on, so there's nothing to search. Every album is still in the event's events."}
+                : "The organiser hasn't turned it on for this event. Every photo is still in the albums."}
             </p>
             <div className="flex flex-wrap gap-2">
               {ctx.isAdmin ? (
-                <Link href={`/admin/${handle}/settings`} className="soft-btn soft-btn-primary no-underline">
+                <Link href={`/admin/${handle}/settings`} className="btn btn-primary no-underline">
                   Open settings
                 </Link>
               ) : null}
-              <Link href={`/e/${handle}`} className="soft-btn soft-btn-tonal no-underline">
-                All events
+              <Link href={`/e/${handle}`} className="btn btn-secondary no-underline">
+                All photos
               </Link>
             </div>
           </div>
@@ -81,14 +80,14 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
   return (
     <main className="flex flex-1 flex-col">
       <section>
-        <div className="flex w-full flex-col gap-7 px-4 pb-16 pt-6 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-7 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="soft-chip">{ctx.event.name}</span>
-              <h1 className="mt-3 text-[clamp(30px,4.5vw,44px)]">Photos of you</h1>
+              <span className="kb-eyebrow">{ctx.event.name}</span>
+              <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Your photos</h1>
               <p className="mt-2 max-w-[52ch] text-[16px] text-[color:var(--kb-ink-2)]">
                 Only you see this page. Nobody can search this event&rsquo;s photos for a person, including the
-                committee.
+                organiser.
               </p>
             </div>
           </div>
@@ -99,7 +98,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
           {/* The selfie was unusable. Say so rather than leaving them waiting. */}
           {state.profile?.status === "failed" ? (
             <div className="soft-card flex max-w-[56ch] flex-col gap-3 p-5">
-              <span className="soft-display text-[18px]">That photo didn&rsquo;t work</span>
+              <span className="text-[17px] font-semibold">That photo didn&rsquo;t work</span>
               <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
                 {state.profile.failure_reason ?? "We could not find a clear face in it."}
               </p>
@@ -109,10 +108,10 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
 
           {state.profile?.status === "pending" ? (
             <div className="soft-card flex max-w-[56ch] flex-col gap-2 p-5">
-              <span className="soft-display text-[19px]">Looking now</span>
+              <span className="text-[17px] font-semibold">Looking now</span>
               <LookingNow eventId={ctx.event.id} />
               {/* Say what it is actually waiting on. "A minute" is a lie when
-                  a event has just switched on and thousands of photos are
+                  an event has just switched on and thousands of photos are
                   still being indexed ahead of the first search. */}
               <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
                 We&rsquo;re comparing your selfie against this event&rsquo;s photos.{" "}
@@ -130,15 +129,20 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
               {total > 0 ? (
                 <section className="flex flex-col gap-6">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="soft-display text-[19px]">
-                      {total.toLocaleString("en-AU")} {total === 1 ? "photo" : "photos"} across{" "}
-                      {groups.length.toLocaleString("en-AU")} {groups.length === 1 ? "event" : "events"}
+                    <h2 className="text-[18px] font-semibold">
+                      {total.toLocaleString("en-AU")} {total === 1 ? "photo" : "photos"} of you in{" "}
+                      {groups.length.toLocaleString("en-AU")} {groups.length === 1 ? "album" : "albums"}
                     </h2>
-                    {stillLooking ? (
-                      <span className="text-[14px] text-[color:var(--ink-55)]">
-                        Still looking through {progress.remaining.toLocaleString("en-AU")} more
-                      </span>
-                    ) : null}
+                    <span className="flex flex-wrap items-center gap-3">
+                      {stillLooking ? (
+                        <span className="text-[14px] text-[color:var(--ink-55)]">
+                          Still looking through {progress.remaining.toLocaleString("en-AU")} more
+                        </span>
+                      ) : null}
+                      <a href={`/api/events/${ctx.event.id}/me/zip`} className="btn btn-primary no-underline" download>
+                        Download all
+                      </a>
+                    </span>
                   </div>
 
                   {/* Stacked by album, because that is how anyone remembers
@@ -148,7 +152,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <Link
                           href={`/e/${handle}/a/${group.albumId}`}
-                          className="soft-display text-[17px] text-ink no-underline"
+                          className="text-[16px] font-semibold text-ink no-underline"
                         >
                           {group.albumTitle}
                         </Link>
@@ -165,7 +169,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                           <Link
                             key={item.matchId}
                             href={`/e/${handle}/a/${group.albumId}/${item.mediaId}`}
-                            className="soft-tile block aspect-square !rounded-[14px] no-underline"
+                            className="soft-tile block aspect-square no-underline"
                             aria-label={`Photo of you from ${group.albumTitle}`}
                           >
                             {item.thumbUrl ? (
@@ -189,10 +193,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
               ) : stillLooking ? (
                 /* Enrolled, backfill still running: silence would read as failure. */
                 <div className="soft-dashed flex max-w-[56ch] flex-col items-start gap-2 p-7">
-                  <span className="text-accent-400">
-                    <PhotoStackArt size={96} />
-                  </span>
-                  <span className="soft-display text-[19px]">Still looking through this event&rsquo;s photos</span>
+                  <span className="text-[17px] font-semibold">Still looking through this event&rsquo;s photos</span>
                   <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
                     {progress.remaining.toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")} to go.
                     Photos appear here as we find them.
@@ -201,7 +202,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
               ) : (
                 /* Enrolled, backfill done, nothing found. Say it plainly. */
                 <div className="soft-dashed flex max-w-[56ch] flex-col items-start gap-2 p-7">
-                  <span className="soft-display text-[19px]">We didn&rsquo;t find you in anything yet</span>
+                  <span className="text-[17px] font-semibold">We didn&rsquo;t find you in anything yet</span>
                   <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
                     That happens: dim rooms, crowds and motion blur all hide faces, and we skip anything we are not
                     reasonably sure about. A brighter selfie facing the camera usually helps.
@@ -210,7 +211,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                 </div>
               )}
 
-              <div className="flex flex-col gap-2 border-t border-[color-mix(in_srgb,var(--color-text)_8%,transparent)] pt-5">
+              <div className="flex flex-col gap-2 border-t border-[color:var(--kb-line)] pt-5">
                 <p className="m-0 max-w-[60ch] text-[14px] leading-normal text-[color:var(--ink-70)]">
                   Face recognition is not reliable. It misses people and it sometimes matches the wrong person. Matches
                   are suggestions, not statements of fact. Tap &ldquo;Not me&rdquo; on anything wrong.

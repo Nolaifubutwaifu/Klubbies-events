@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- short-lived signed URL */
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { EventMark } from "@/components/EventMark";

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
 import { BillingGate } from "@/components/BillingGate";
 import { EmptyState, PageTitle } from "@/components/ui";
-import { PhotoStackArt } from "@/components/soft/illustrations";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
 import { listStackedAlbums } from "@/lib/media/album-list";
@@ -46,7 +45,7 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
     .join(" · ");
 
   return (
-    <main className="flex flex-col gap-6 px-4 py-8 sm:px-6">
+    <main className="flex flex-col gap-6 pb-12 pt-2">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageTitle kicker={ctx.event.name} title="Albums">
           {albums.length ? `${summary}. Drag to reorder what attendees see first.` : "Nothing here yet."}
@@ -69,7 +68,7 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
       ) : (
         <EmptyState
           title="No albums yet."
-          art={<PhotoStackArt size={120} />}
+         
           action={
             <Link href={`/admin/${handle}/upload`} className="btn btn-primary">
               Make the first one

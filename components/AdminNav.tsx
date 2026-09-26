@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { EventMark } from "@/components/EventMark";
 
 export type AdminNavCounts = {
@@ -102,6 +102,15 @@ export function AdminNav({
 }) {
   const pathname = usePathname();
   const base = `/admin/${handle}`;
+  const row = useRef<HTMLDivElement>(null);
+
+  // On a phone the links are one scrolling row; keep the current one in view.
+  useEffect(() => {
+    const current = row.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (current && row.current && row.current.scrollWidth > row.current.clientWidth) {
+      row.current.scrollTo({ left: current.offsetLeft - 16, behavior: "instant" });
+    }
+  }, [pathname]);
 
   const links = [
     { href: base, label: "Overview", icon: "overview", exact: true, badge: 0 },
@@ -140,7 +149,7 @@ export function AdminNav({
           </span>
         </div>
 
-        <div className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
+        <div ref={row} className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
           {links.map((link) => {
             const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
             return (

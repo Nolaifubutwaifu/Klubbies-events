@@ -170,7 +170,7 @@ export const listMyEvents = cache(async (): Promise<MyEvent[]> => {
       sortKey: m.events.starts_on ?? m.events.created_at,
     }))
     .sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1))
-    .map(({ sortKey: _sortKey, ...event }) => event);
+    .map(({ sortKey, ...event }) => (void sortKey, event));
 });
 
 export type PublicEvent = {

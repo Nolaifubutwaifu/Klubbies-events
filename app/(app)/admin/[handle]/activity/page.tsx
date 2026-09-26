@@ -39,7 +39,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
   };
 
   return (
-    <main className="flex max-w-[1040px] flex-col gap-6 px-6 py-8">
+    <main className="flex max-w-[1040px] flex-col gap-6 pb-12 pt-2">
       <PageTitle kicker={ctx.event.name} title="Activity">
         Every view and download, newest first. Attendees are told this log exists.
       </PageTitle>

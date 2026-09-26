@@ -1,9 +1,12 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URL */
 
+/** "Brisbane Product Summit 2026" is BP: words, not years or numbers. */
 export function eventInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const all = name.trim().split(/\s+/).filter(Boolean);
+  const words = all.filter((w) => /^\p{L}/u.test(w));
+  const parts = words.length ? words : all;
   if (!parts.length) return "??";
-  return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 /**

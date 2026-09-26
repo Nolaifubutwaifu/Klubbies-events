@@ -36,7 +36,7 @@ export function Enrol({ eventId }: { eventId: string }) {
 
   return (
     <div className="soft-card flex max-w-[56ch] flex-col gap-3 p-5">
-      <span className="soft-display text-[22px]">{MEMBER_CONSENT.title}</span>
+      <span className="text-[20px] font-semibold">{MEMBER_CONSENT.title}</span>
       <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.lead}</p>
       <p className="m-0 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.what}</p>
       <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">
@@ -46,7 +46,7 @@ export function Enrol({ eventId }: { eventId: string }) {
       </ul>
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="flex h-[76px] w-[76px] flex-none items-center justify-center overflow-hidden rounded-full bg-[color:var(--tone-support)] text-[14px] font-bold text-[color:var(--tone-support-ink)]">
+        <span className="flex h-[76px] w-[76px] flex-none items-center justify-center overflow-hidden rounded-full border border-[color:var(--kb-line)] bg-[color:var(--kb-sand)] text-[14px] font-medium text-[color:var(--kb-ink-3)]">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element -- local object URL
             <img src={preview} alt="Your selfie" className="h-full w-full object-cover" />
@@ -73,7 +73,7 @@ export function Enrol({ eventId }: { eventId: string }) {
             setMessage("");
           }}
         />
-        <button type="button" className="btn btn-ghost" onClick={() => input.current?.click()}>
+        <button type="button" className="btn btn-secondary" onClick={() => input.current?.click()}>
           {selfie ? "Use a different photo" : "Take or choose a selfie"}
         </button>
       </div>

@@ -30,7 +30,7 @@ export async function FaceRow({ events }: { events: MyEvent[] }) {
 
   return (
     <>
-      <h2 className="mt-2 text-[16px] font-semibold">Face recognition</h2>
+      <h2 className="mt-2 text-[16px] font-semibold">Face search</h2>
       <div className="soft-card flex flex-col">
         {rows.map((event, index) => {
           const status = statusByEvent.get(event.eventId);

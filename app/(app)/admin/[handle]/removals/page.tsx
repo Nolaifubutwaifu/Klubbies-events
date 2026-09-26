@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState, PageTitle } from "@/components/ui";
-import { ConfettiArt } from "@/components/soft/illustrations";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { formatDateTime } from "@/lib/format";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
@@ -62,14 +61,14 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
   const settled = rows.filter((r) => r.status !== "open");
 
   return (
-    <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
+    <main className="flex flex-col gap-6 pb-12 pt-2">
       <PageTitle kicker={ctx.event.name} title="Removal requests">
         An attendee asked for a photo to come down. It is already hidden from attendees. You decide whether the original
         goes too.
       </PageTitle>
 
       {open.length === 0 ? (
-        <EmptyState title="Nothing waiting on you." art={<ConfettiArt />}>
+        <EmptyState title="Nothing waiting on you.">
           When someone asks for a photo to come down it lands here, hidden from the event until you answer.
         </EmptyState>
       ) : (

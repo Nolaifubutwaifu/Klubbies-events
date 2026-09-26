@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- short-lived signed URL */
 import type { ReactNode } from "react";
 import { EventMark } from "@/components/EventMark";
 import { formatEventDates } from "@/lib/format";

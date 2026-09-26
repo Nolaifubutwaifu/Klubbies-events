@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PhotoStackArt } from "@/components/soft/illustrations";
 import { getEventContext } from "@/lib/auth/session";
 import { listFavourites } from "@/lib/media/favourites";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
@@ -62,34 +61,26 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
   }));
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col">
       <section>
-        <div className="w-full px-4 pb-16 pt-6 sm:px-6">
+        <div className="w-full px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="soft-chip">{ctx.event.name}</span>
-              <h1 className="mt-3 text-[clamp(30px,4.5vw,44px)]">Saved</h1>
-              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">
-                The good ones, kept in one place.
-              </p>
+              <span className="kb-eyebrow">{ctx.event.name}</span>
+              <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Saved</h1>
+              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">Your favourites and downloads from this event.</p>
             </div>
           </div>
 
           {total === 0 && downloads.length === 0 ? (
-            <div className="soft-card mt-8 flex flex-col items-start gap-3 p-8">
-              <span className="text-accent-400">
-                <PhotoStackArt size={120} />
-              </span>
-              <h2 className="text-[24px]">No favourites yet.</h2>
+            <div className="soft-dashed mt-8 flex max-w-[640px] flex-col items-start gap-3 p-7">
+              <h2 className="text-[18px] font-semibold">No favourites yet</h2>
               <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
                 Open any photo and hit Favourite. It turns up here at full quality, ready to download.
               </p>
-              <Link href={`/e/${handle}`} className="soft-btn soft-btn-primary no-underline">
+              <Link href={`/e/${handle}`} className="btn btn-primary no-underline">
                 Browse the albums
               </Link>
-              <p className="m-0 text-[14px] text-[color:var(--ink-55)]">
-                Statistically, you&rsquo;re in some of them.
-              </p>
             </div>
           ) : (
             <SavedTabs handle={handle} groups={groups} downloads={downloads} />

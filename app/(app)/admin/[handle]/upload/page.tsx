@@ -20,7 +20,7 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
   const writable = canWrite(ctx.event.billing_status);
 
   return (
-    <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
+    <main className="flex flex-col gap-6 pb-12 pt-2">
       <PageTitle kicker={ctx.event.name} title="New album">
         One album per part of the event works best: keynote, breakout sessions, drinks, headshots. Name it, choose when
         attendees see it, then upload. It keeps going in the background.

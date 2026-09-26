@@ -191,7 +191,7 @@ export default async function AlbumPage(props: Props) {
   const videoCount = counts?.video_count ?? 0;
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col">
       {/* Sticky album header: the title and the download stay reachable while
           you scroll a thousand photos. */}
       <div className="sticky top-0 z-20 border-b border-[color:var(--kb-line)] bg-[rgb(247_247_245/0.94)] backdrop-blur-md">
