@@ -49,7 +49,6 @@ export async function setAvatarAction(path: string | null): Promise<AccountResul
 
 export async function setNotificationsAction(prefs: {
   notify_new_album: boolean;
-  notify_feed_post: boolean;
   notify_access_ending: boolean;
 }): Promise<AccountResult> {
   const user = await requireUser();
@@ -73,16 +72,12 @@ export async function setPasswordAction(_prev: AccountResult, form: FormData): P
   return { ok: true, message: "Password set. You can now sign in with it." };
 }
 
-/**
- * Turns on the new-album email from wherever a member is standing — the empty
- * event screen asks for exactly this and nothing else, so it shouldn't send
- * them to their profile to find one switch.
- */
+/** Turns on the new-album email from wherever an attendee is standing. */
 export async function notifyOnNewAlbumsAction(): Promise<AccountResult> {
   const user = await requireUser();
   const supabase = await createClient();
   const { error } = await supabase.from("users").update({ notify_new_album: true }).eq("id", user.id);
   if (error) return { error: "Could not turn that on. Try again." };
   revalidatePath("/account");
-  return { ok: true, message: "We'll email you when the next album is shared." };
+  return { ok: true, message: "We'll email you when new photos are published." };
 }

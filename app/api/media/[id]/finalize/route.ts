@@ -24,8 +24,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   const supabase = await createClient();
   const { data: media } = await supabase.from("media").select("*").eq("id", id).maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // The uploader finishes their own file; organisers can finish anyone's.
   const event = await getEventContextById(media.event_id);
-  if (!event?.isAdmin) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!event || (!event.perms.manage_albums && media.uploaded_by !== event.userId)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   if (parsed.data.failed) {
     await supabase.from("media").update({ status: "failed" }).eq("id", id);

@@ -19,9 +19,9 @@ export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: strin
   if (acked) return null;
 
   return (
-    <section aria-label="Face recognition notice" className="kb-info mx-4 mb-4 flex-col gap-3 sm:mx-6 sm:flex-row sm:items-center">
+    <section aria-label="Face recognition notice" className="soft-card flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <span className="block text-[16px] font-bold">{MEMBER_NOTICE.title}</span>
+        <span className="block text-[16px] font-semibold">{MEMBER_NOTICE.title}</span>
         <details className="mt-1">
           <summary className="kb-link !min-h-[36px] cursor-pointer list-none">What this means</summary>
           <ul className="m-0 mt-1 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">
@@ -36,7 +36,7 @@ export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: strin
       </div>
       <button
         type="button"
-        className="btn btn-secondary btn-sm !whitespace-normal !text-left"
+        className="btn btn-primary !whitespace-normal !text-left"
         disabled={pending}
         onClick={() =>
           startTransition(async () => {

@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getEventContextById, getProfile } from "@/lib/auth/session";
-import { createCheckoutSession, createPortalSession } from "@/lib/billing/stripe";
+import { createCheckoutSession, createPortalSession, stripeConfigured } from "@/lib/billing/stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 async function billingContext(eventId: string) {
   const ctx = await getEventContextById(eventId);
@@ -33,4 +35,17 @@ export async function openBillingPortalAction(eventId: string): Promise<void> {
     redirect(`/admin/${ctx.event.handle}/billing?error=portal`);
   }
   redirect(url);
+}
+
+/**
+ * Local development has no Stripe keys, which would leave every event locked.
+ * Outside production, with Stripe unconfigured, an organiser can mark their
+ * own event complimentary. Never available in production.
+ */
+export async function devActivateAction(eventId: string): Promise<void> {
+  const ctx = await billingContext(eventId);
+  if (process.env.NODE_ENV === "production" || stripeConfigured()) redirect(`/admin/${ctx.event.handle}/billing`);
+  await createAdminClient().from("events").update({ billing_status: "comped" }).eq("id", ctx.event.id);
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+  redirect(`/admin/${ctx.event.handle}/setup`);
 }

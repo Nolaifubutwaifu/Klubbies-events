@@ -3,59 +3,39 @@
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import { createAlbumAction, type ActionState } from "@/app/(app)/admin/actions";
-import { EVENT_TYPES } from "@/lib/media/event-types";
 
-/** Saturday morning: late enough that nobody is woken, early enough to matter. */
-function nextSaturdayMorning(): { value: string; label: string } {
+/** Tomorrow at 9am: the usual "photos are ready" moment after an event. */
+function tomorrowMorning(): string {
   const when = new Date();
-  when.setHours(10, 0, 0, 0);
-  const daysAhead = (6 - when.getDay() + 7) % 7 || 7;
-  when.setDate(when.getDate() + daysAhead);
+  when.setDate(when.getDate() + 1);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return {
-    value: `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T10:00`,
-    label: `${when.toLocaleDateString("en-AU", { weekday: "long" })} 10:00am`,
-  };
+  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T09:00`;
 }
 
-export function NewAlbumPanel({ eventId }: { eventId: string }) {
+export function NewAlbumPanel({ eventId, defaultDate }: { eventId: string; defaultDate: string | null }) {
   const [state, action] = useActionState<ActionState, FormData>(createAlbumAction.bind(null, eventId), {});
-  const saturday = nextSaturdayMorning();
-  const [when, setWhen] = useState<"now" | "later">("later");
-  const [publishAt, setPublishAt] = useState(saturday.value);
-  const today = new Date().toISOString().slice(0, 10);
+  const [when, setWhen] = useState<"now" | "later">("now");
+  const [publishAt, setPublishAt] = useState(tomorrowMorning);
 
   return (
     <form action={action} className="soft-card flex flex-col gap-5 p-5 sm:p-6">
-      <h2 className="soft-display text-[20px]">Album details</h2>
+      <h2 className="text-[18px] font-semibold">Album details</h2>
 
-      <label className="field">
-        Event name
-        <input className="input" name="title" placeholder="Semester 2 Ball" required maxLength={160} autoFocus />
-      </label>
-
-      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         <label className="field">
-          Date
-          <input className="input" name="albumDate" type="date" defaultValue={today} />
+          Album name
+          <input className="input" name="title" placeholder="Keynote, Networking drinks, Headshots" required maxLength={160} autoFocus />
         </label>
         <label className="field">
-          Type
-          <select className="input" name="eventType" defaultValue="">
-            <option value="">No label</option>
-            {EVENT_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+          Date (optional)
+          <input className="input" name="albumDate" type="date" defaultValue={defaultDate ?? ""} />
         </label>
       </div>
 
       <div className="flex flex-col gap-2.5">
         <label className="flex items-center gap-3 text-[14px]">
           <input type="checkbox" name="allowDownload" defaultChecked />
-          Members can download the originals
+          Attendees can download the originals
         </label>
         <label className="flex items-center gap-3 text-[14px]">
           <input
@@ -63,12 +43,12 @@ export function NewAlbumPanel({ eventId }: { eventId: string }) {
             name="contributorScope"
             value="members"
           />
-          Let members add their own photos to this album
+          Attendees can add their own photos to this album
         </label>
       </div>
 
-      <fieldset className="m-0 flex flex-col gap-2.5 rounded-[var(--soft-r-sm)] bg-[color:var(--tone-support)] p-4 text-[color:var(--tone-support-ink)]">
-        <legend className="px-1 text-[14px] font-bold">When should it go live?</legend>
+      <fieldset className="m-0 flex flex-col gap-2.5 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-4">
+        <legend className="px-1 text-[14px] font-medium">When should attendees see it?</legend>
         <label className="flex items-center gap-3 text-[14px]">
           <input
             type="radio"
@@ -76,7 +56,7 @@ export function NewAlbumPanel({ eventId }: { eventId: string }) {
             checked={when === "now"}
             onChange={() => setWhen("now")}
           />
-          When I publish it, the second the upload finishes
+          When I publish it, straight after the upload
         </label>
         <label className="flex flex-wrap items-center gap-3 text-[14px]">
           <input
@@ -98,7 +78,10 @@ export function NewAlbumPanel({ eventId }: { eventId: string }) {
           />
         </label>
         <input type="hidden" name="publishAt" value={when === "later" ? publishAt : ""} />
-        <p className="m-0 text-[14px]">Nobody wants a notification at 3am. Nobody wants to wait till Tuesday either.</p>
+        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
+          Scheduling lets the photographers finish and you check the selection first. It goes live on the hour after
+          this time, and attendees who asked are emailed.
+        </p>
       </fieldset>
 
       <FormMessage state={state} />
@@ -106,8 +89,8 @@ export function NewAlbumPanel({ eventId }: { eventId: string }) {
         {when === "later" ? "Schedule and start uploading" : "Create and start uploading"}
       </SubmitButton>
       <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-        The next screen is the drop zone. Uploads keep running while you move around Klubbies, and each file picks up
-        where it left off if the connection drops.
+        The next screen is the drop zone. Uploads keep running while you move around, and each file picks up where it
+        left off if the connection drops.
       </p>
     </form>
   );

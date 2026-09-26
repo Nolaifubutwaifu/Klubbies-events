@@ -85,7 +85,7 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
   });
   if (error || !data) return { error: "Could not create the event. Try again." };
 
-  redirect(`/admin/${data.handle}/billing?step=2`);
+  redirect(`/admin/${data.handle}/setup`);
 }
 
 const eventSettingsSchema = z.object({

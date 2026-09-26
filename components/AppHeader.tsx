@@ -1,115 +1,98 @@
 import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
-import { EventSwitcher } from "@/components/EventSwitcher";
-import { ViewToggle } from "@/components/ViewToggle";
-import { currentArea } from "@/lib/area";
+import { EventMark } from "@/components/EventMark";
+import { HeaderNav } from "@/components/HeaderNav";
+import { BrandTile } from "@/components/ui";
 import { displayNameFor } from "@/lib/auth/display-name";
-import { listMyEvents, type EventContext } from "@/lib/auth/session";
+import { getProfile, type EventContext } from "@/lib/auth/session";
 import { canWrite } from "@/lib/billing/status";
-import { formatLongDate } from "@/lib/format";
-import { signLogoMarks } from "@/lib/storage";
+import { formatEventDates } from "@/lib/format";
+import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * One slim bar on every event screen: the event you're in, its sections, and
+ * you. Attendees get Photos, Your photos and Saved; organisers get a way
+ * across to the other side. Phones carry the sections in the tab bar instead.
+ */
 export async function AppHeader({
   ctx,
-  forceAdmin = false,
-  photosOfYou = false,
+  area,
+  facesEnabled = false,
 }: {
   ctx: EventContext;
-  forceAdmin?: boolean;
-  /** Face recognition is on here and this member has enrolled. */
-  photosOfYou?: boolean;
+  area: "attendee" | "organiser";
+  /** Face recognition is on for this event, so "Your photos" exists. */
+  facesEnabled?: boolean;
 }) {
-  const [{ events, invites }, displayName, area] = await Promise.all([
-    listMyEvents(),
-    displayNameFor(ctx),
-    currentArea(),
+  const supabase = await createClient();
+  const [displayName, profile] = await Promise.all([displayNameFor(ctx), getProfile()]);
+  const { event, perms } = ctx;
+
+  const [logos, avatars] = await Promise.all([
+    signLogoMarks(supabase, [event.logo_path]),
+    profile?.avatar_url ? signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display) : Promise.resolve(new Map<string, string>()),
   ]);
-  const { event, membership, perms } = ctx;
-  const adminArea = (forceAdmin || area === "admin") && perms.manage_event;
+  const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
+  const avatarUrl = profile?.avatar_url ? (avatars.get(profile.avatar_url) ?? null) : null;
+  const dates = formatEventDates(event.starts_on, event.ends_on);
 
-  // Every logo the header can show, in one call: the current event's, plus
-  // each event in the switcher list. The dropdown used to fall back to
-  // initials even for events whose logo was already uploaded.
-  const signed = await signLogoMarks(await createClient(), [event.logo_path, ...events.map((c) => c.logoPath)]);
-  const logoUrl = event.logo_path ? (signed.get(event.logo_path) ?? null) : null;
-  const eventLogoUrls: Record<string, string> = {};
-  for (const c of events) {
-    const url = c.logoPath ? signed.get(c.logoPath) : null;
-    if (url) eventLogoUrls[c.eventId] = url;
-  }
-
-  const memberLinks = [
-    { href: `/e/${event.handle}`, label: "Events" },
-    ...(photosOfYou ? [{ href: `/e/${event.handle}/me`, label: "Photos of you" }] : []),
-    { href: `/e/${event.handle}/saved`, label: "Saved" },
-    { href: `/e/${event.handle}/feed`, label: "Event feed" },
-  ];
-
-  // The switcher is the one menu a phone always has, so the two places that
-  // otherwise only live in the desktop rail get a door here too.
-  const shortcuts = [
-    ...(photosOfYou ? [{ href: `/e/${event.handle}/me`, label: "Photos of you" }] : []),
-    ...(perms.manage_event
-      ? [forceAdmin ? { href: `/e/${event.handle}`, label: "Member view" } : { href: `/admin/${event.handle}`, label: "Admin view" }]
-      : []),
-  ];
+  const links =
+    area === "attendee"
+      ? [
+          { href: `/e/${event.handle}`, label: "Photos", exact: true },
+          ...(facesEnabled ? [{ href: `/e/${event.handle}/me`, label: "Your photos" }] : []),
+          { href: `/e/${event.handle}/saved`, label: "Saved" },
+        ]
+      : [];
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[1320px] px-4 pt-3 sm:px-6">
-        {/* One row: the event you're in, and you. Everything else lives in the
-            tab bar, the rail or the account menu. */}
-        <header className="flex items-center gap-2 border-b border-[color:var(--kb-line)] pb-3 sm:gap-3">
-          <Link href="/events" className="soft-wordmark hidden text-[22px] no-underline sm:block">
-            klubbies
+      <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
+        <div className="mx-auto flex min-h-[60px] w-full max-w-[1320px] items-center gap-3 px-4 sm:px-6">
+          <Link href="/events" aria-label="Your events" className="hidden flex-none sm:block">
+            <BrandTile size={26} />
           </Link>
-          <EventSwitcher
-            current={{ name: event.name, handle: event.handle, accentColour: event.accent_colour }}
-            events={events}
-            invites={invites}
-            logoUrl={logoUrl}
-            eventLogoUrls={eventLogoUrls}
-            shortcuts={shortcuts}
-          />
-          <div className="ml-auto flex items-center gap-2">
-            {perms.manage_event ? (
-              <span className="hidden sm:block">
-                <ViewToggle area={adminArea ? "admin" : "member"} handle={event.handle} />
-              </span>
+          <span className="hidden h-6 w-px bg-[color:var(--kb-line)] sm:block" aria-hidden />
+          <Link
+            href={area === "organiser" ? `/admin/${event.handle}` : `/e/${event.handle}`}
+            className="flex min-w-0 items-center gap-2.5 text-ink no-underline"
+          >
+            <EventMark name={event.name} logoUrl={logoUrl} accentColour={event.accent_colour} size={30} />
+            <span className="min-w-0">
+              <span className="block truncate text-[15px] font-semibold leading-tight">{event.name}</span>
+              {dates ? <span className="block truncate text-[14px] leading-tight text-[color:var(--kb-ink-3)]">{dates}</span> : null}
+            </span>
+          </Link>
+
+          {links.length ? <HeaderNav links={links} /> : null}
+
+          <div className="ml-auto flex flex-none items-center gap-2">
+            {perms.manage_albums ? (
+              area === "organiser" ? (
+                <Link href={`/e/${event.handle}`} className="btn btn-sm btn-secondary no-underline">
+                  Attendee view
+                </Link>
+              ) : (
+                <Link href={`/admin/${event.handle}`} className="btn btn-sm btn-secondary no-underline">
+                  <span className="sm:hidden">Organise</span>
+                  <span className="hidden sm:inline">Organiser view</span>
+                </Link>
+              )
             ) : null}
-            <AccountMenu name={displayName} />
+            <AccountMenu name={displayName} avatarUrl={avatarUrl} />
           </div>
-        </header>
-      </div>
-
-      {/* Members get their sections here on a wide screen; on a phone the
-          tab bar at the bottom of the window carries them instead. */}
-      {adminArea ? null : (
-        <nav className="mx-auto hidden w-full max-w-[1320px] flex-wrap gap-2 px-4 pb-2 pt-3 sm:flex sm:px-6">
-          {memberLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="soft-chip soft-chip-muted no-underline">
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      )}
-
-      {adminArea && !canWrite(event.billing_status) ? (
-        <div className="kb-info mx-4 mt-3 flex-wrap items-center justify-between sm:mx-6">
-          <span>This event isn&apos;t active yet. Adding members and uploading unlock after payment.</span>
-          <Link href={`/admin/${event.handle}/billing`} className="btn btn-primary btn-sm">
-            Activate event
-          </Link>
         </div>
-      ) : null}
+      </header>
 
-      {membership?.status === "grace" && membership.grace_ends_at ? (
-        <div className="kb-info mx-4 mt-3 sm:mx-6">
-          <span>
-            <strong>Your access to {event.name} ends on {formatLongDate(membership.grace_ends_at)}.</strong> You can still
-            open and download everything shared before you left the member list.
-          </span>
+      {area === "organiser" && !canWrite(event.billing_status) ? (
+        <div className="mx-auto w-full max-w-[1320px] px-4 pt-3 sm:px-6">
+          <div className="kb-info flex-wrap items-center justify-between">
+            <span>This event isn&apos;t activated yet. Uploading and adding attendees unlock after payment.</span>
+            <Link href={`/admin/${event.handle}/billing`} className="btn btn-primary btn-sm no-underline">
+              Activate event
+            </Link>
+          </div>
         </div>
       ) : null}
     </>

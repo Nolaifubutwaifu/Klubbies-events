@@ -99,7 +99,7 @@ export function AvatarUploader({ userId, avatarUrl }: { userId: string; avatarUr
           {busy ? "Uploading…" : avatarUrl ? "Change photo" : "Add a photo"}
         </button>
         <span className="text-[14px] leading-normal text-ink-70">
-          Your photo and display name are visible to other members of events you&apos;re in.
+          Your photo and name are visible to the organisers of events you&apos;re in.
         </span>
         {error ? <span className="notice">{error}</span> : null}
         <input
@@ -153,16 +153,15 @@ export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
 export function NotificationToggles({
   initial,
 }: {
-  initial: { notify_new_album: boolean; notify_feed_post: boolean; notify_access_ending: boolean };
+  initial: { notify_new_album: boolean; notify_access_ending: boolean };
 }) {
   const [prefs, setPrefs] = useState(initial);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
 
   const items: [keyof typeof prefs, string][] = [
-    ["notify_new_album", "A event shares a new album"],
-    ["notify_feed_post", "The committee posts to the event feed"],
-    ["notify_access_ending", "My access to a event is ending"],
+    ["notify_new_album", "New photos are published at an event I'm in"],
+    ["notify_access_ending", "An event's gallery closes in a week"],
   ];
 
   return (

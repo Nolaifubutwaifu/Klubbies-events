@@ -9,7 +9,7 @@ type Mode = "code" | "password";
  * One form, two ways in: a code by email (the default) or a password for
  * members who set one. Deliberately one secondary link and nothing else.
  */
-export function SignInForm({ flow, event }: { flow: "member" | "create"; event?: string }) {
+export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"; event?: string }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("code");
   const [pending, setPending] = useState(false);
@@ -19,7 +19,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create"; event?:
     const res = await fetch("/api/auth/request_code", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ fullName: form.get("fullName"), email: form.get("email"), flow }),
+      body: JSON.stringify({ fullName: form.get("fullName"), email: form.get("email"), flow, event }),
     });
     if (!res.ok) {
       const body: { error?: string } = await res.json().catch(() => ({}));
@@ -72,7 +72,9 @@ export function SignInForm({ flow, event }: { flow: "member" | "create"; event?:
       ? "Log in"
       : flow === "create"
         ? "Email me a code to continue"
-        : "Email me a code";
+        : flow === "join"
+          ? "Send my code"
+          : "Email me a code";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate={false}>
@@ -83,7 +85,11 @@ export function SignInForm({ flow, event }: { flow: "member" | "create"; event?:
           </label>
           <input id="fullName" className="input" name="fullName" autoComplete="name" required maxLength={200} aria-describedby="fullName-help" />
           <span id="fullName-help" className="kb-help">
-            {flow === "create" ? "Shown to your members as the event's admin." : "As it appears on your event's list."}
+            {flow === "create"
+              ? "Shown to attendees and photographers as the organiser."
+              : flow === "join"
+                ? "So the organiser knows who you are."
+                : "As you gave it when you joined."}
           </span>
         </div>
       ) : null}
@@ -110,7 +116,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create"; event?:
         {submitLabel}
       </button>
 
-      {flow === "member" ? (
+      {flow !== "create" ? (
         <button
           type="button"
           className="kb-link self-center"

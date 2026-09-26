@@ -3,54 +3,62 @@ import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Privacy" };
 
+// A draft written to match what the code does, for a lawyer to check. Not
+// legal advice. Keep it in step with lib/copy/site.ts and lib/faces/copy.ts.
 const SECTIONS: [string, string][] = [
   [
-    "What we store",
-    "Your event gives us your name and email as part of its member list. When you sign in we store the name you typed, when you first signed in, and a session so you stay signed in for up to 30 days. Events upload photos and videos, which we keep exactly as uploaded, plus smaller preview copies.",
+    "Who is responsible",
+    "Klubbies Events runs the service. The organiser of each event decides who can get in, which photos are shared and for how long. For your details on an organiser's guest list, the organiser collected them and shared them with us to let you in.",
   ],
   [
-    "Who can see event media",
-    "Only people on that event's member list who have confirmed their email with a one time code. Nothing is public, and every image is served through a link that expires within minutes.",
+    "What we store",
+    "Your name and email, either from the organiser's guest list or from what you typed when you joined through the event link. When you sign in we store the name you gave, when you first signed in, and a session so you stay signed in for up to 30 days. Organisers and photographers upload photos and videos, which we keep exactly as uploaded, plus smaller preview copies. Each photo records the name of the photographer who uploaded it.",
+  ],
+  [
+    "Who can see an event's photos",
+    "Only people the organiser let in who have confirmed their email with a one-time code: anyone with the event link, or only the guest list, depending on how the organiser set up the event. Nothing is public or indexed by search engines, and every image is served through a link that expires within minutes. Photographers who upload through a link can't see the gallery.",
   ],
   [
     "We log who opens what",
-    "Every time a member views or downloads a photo or video we record which item, when, a scrambled version of the network address, and the browser. Event admins can see this log. We tell you because it is a record of your activity and you should know it exists.",
+    "Every time an attendee views or downloads a photo or video we record which item, when, a scrambled version of the network address, and the browser. The event's organisers can see this log. We tell you because it is a record of your activity and you should know it exists.",
   ],
   [
-    "When you leave a event",
-    "If a event admin takes you off the member list, you keep access to what was shared before that for 30 days, and we email you about it. After that your access to that event ends.",
-  ],
-  [
-    "Where data lives",
-    "Event data is stored in Sydney, Australia. Sign in emails are delivered by Resend.",
+    "How long galleries stay open",
+    "Each event has a date after which attendees can no longer open its photos, usually 90 days after the event. We email you a week before, unless you turned those reminders off. Organisers keep access after that date.",
   ],
   [
     "Removing a photo of you",
-    "Open the photo and choose Take it down. It is hidden from everyone straight away while the committee decides, and if they have not answered within 7 days it is removed. You do not have to give a reason. A event can switch this off, in which case ask the committee directly; admins can delete any item.",
-  ],
-  // The masterfile's rule about the access log applies here too: say the
-  // uncomfortable part plainly rather than burying it. The uncomfortable part
-  // is that we create a faceprint for everyone in a photo, not only for
-  // people who opted in.
-  [
-    "Face recognition: what we collect",
-    "When a event turns on face recognition, we send that event's photos to Amazon Rekognition, operated by Amazon Web Services in Sydney, Australia. Rekognition finds faces and creates a faceprint, a mathematical description of a face, for each one. This happens for every face in the photo, including people who are not Klubbies members. If you choose to enrol, we also create a faceprint from a selfie you give us, and we store that selfie. A faceprint is biometric information, which is sensitive information under the Privacy Act 1988. We only create one from your selfie with your express consent, given on the enrolment screen, and you can withdraw it at any time.",
+    "Open the photo and choose Request removal. It is hidden from attendees straight away while the organiser decides, and if they have not answered within 7 days it is removed. You do not have to give a reason. An organiser can switch this off, in which case contact them directly; organisers can delete any photo.",
   ],
   [
-    "Face recognition: what we use it for",
-    "To show you photos you appear in. Nothing else. Only you can see your own matches. Klubbies has no feature that searches a event's photos for a particular person, for members, for committees or for our own staff, and we have not built one.",
+    "Where data lives",
+    "Photos, attendee details and faceprints are stored in Sydney, Australia. Sign-in emails are delivered by Resend. Payments are processed by Stripe, which never shares card details with us.",
+  ],
+  // Say the uncomfortable part plainly: we create a faceprint for everyone in
+  // a photo, not only for people who opted in.
+  [
+    "Face search: what we collect",
+    "When an event has face search on, we send that event's photos to Amazon Rekognition, operated by Amazon Web Services in Sydney, Australia. Rekognition finds faces and creates a faceprint, a mathematical description of a face, for each one. This happens for every face in the photo, including people who never open the gallery. If you choose to add a selfie, we also create a faceprint from it and store the selfie. A faceprint is biometric information, which is sensitive information under the Privacy Act 1988. We only create one from your selfie with your express consent, given on the selfie screen, and you can withdraw it at any time.",
   ],
   [
-    "Face recognition: accuracy",
-    "Face recognition is not reliable. It misses people, and it sometimes matches the wrong person, particularly in dim light, in crowds, and where a photo is blurred or someone is turned away. Matches are suggestions, not statements of fact, and should never be treated as evidence that someone was or was not somewhere. You can reject any wrong match, and a rejected match is never suggested to you again.",
+    "Face search: what we use it for",
+    "To show you the photos you appear in. Nothing else. Only you can see your own matches. There is no feature that searches an event's photos for a particular person, for attendees, for organisers or for our own staff, and we have not built one.",
   ],
   [
-    "Face recognition: how long we keep it",
-    "A faceprint made from a photo is deleted when that photo is deleted. Your reference faceprint and your selfie are deleted when you withdraw consent, when your membership ends, or when the event turns the feature off: within 24 hours in each case. When a event turns it off, every faceprint for that event is deleted.",
+    "Face search: accuracy",
+    "Face recognition is not reliable. It misses people, and it sometimes matches the wrong person, particularly in dim light, in crowds, and where a photo is blurred or someone is turned away. Matches are suggestions, not statements of fact, and should never be treated as evidence that someone was or was not somewhere. You can reject any wrong match, and a rejected match is never suggested again.",
   ],
   [
-    "Face recognition: who else sees it",
+    "Face search: how long we keep it",
+    "A faceprint made from a photo is deleted when that photo is deleted. Your selfie and the faceprint made from it are deleted when you turn face search off, when your access to the event ends, or when the organiser turns the feature off: within 24 hours in each case. When an organiser turns it off, every faceprint for that event is deleted.",
+  ],
+  [
+    "Face search: who else sees it",
     "Amazon Web Services processes faceprints on our behalf, in the ap-southeast-2 (Sydney) region. We do not sell face data and we do not share it with anyone else.",
+  ],
+  [
+    "Your choices",
+    "You can change your name and email preferences on your profile, turn face search off per event, and ask us to delete your account or give you a copy of your data by emailing us.",
   ],
 ];
 
@@ -59,8 +67,8 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       doc="privacy"
-      title="Privacy at Klubbies"
-      updated="[DATE]"
+      title="Privacy at Klubbies Events"
+      updated="27 September 2026"
       minutes={Math.max(1, Math.round(words / 220))}
       sections={SECTIONS.map(([title, body]) => ({ title, body: <p>{body}</p> }))}
     />

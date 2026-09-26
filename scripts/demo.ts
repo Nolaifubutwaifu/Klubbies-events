@@ -1,8 +1,9 @@
 /**
- * Builds the event the design file is drawn around — UniMelb FC, @umfc — so the
- * screens can be looked at with real content in them.
+ * Builds a fictional event, Brisbane Product Summit 2026 (@demo_summit), so the
+ * screens can be looked at with content in them. Photos come from
+ * design/source-photos, which is gitignored: drop any JPGs in there first.
  *
- *   DEMO_ADMIN_EMAIL=you@example.com pnpm tsx --env-file=.env.local scripts/demo.ts
+ *   DEMO_ADMIN_EMAIL=you@example.com pnpm demo
  *
  * Re-running removes the previous demo event first, so it is safe to repeat.
  */
@@ -14,32 +15,31 @@ import type { Database } from "../lib/db/types";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const adminEmail = (process.env.DEMO_ADMIN_EMAIL ?? "mahi.demo@klubbies.test").trim().toLowerCase();
+const adminEmail = (process.env.DEMO_ADMIN_EMAIL ?? "organiser.demo@klubbies.test").trim().toLowerCase();
 if (!url || !key) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local");
 
 const db = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const BUCKET = "event_media";
-const HANDLE = "demo_umfc";
+const HANDLE = "demo_summit";
 const PHOTOS = path.join(process.cwd(), "design/source-photos");
 
+const EVENT_DAY = "2026-11-14";
+
 const ALBUMS = [
-  { title: "Semester 2 Ball", date: "2026-09-12", type: "formal", count: 6, status: "published" },
-  { title: "Grand Final vs Engineering", date: "2026-09-05", type: "sport", count: 4, status: "published" },
-  { title: "Trivia Night", date: "2026-09-17", type: "social", count: 3, status: "draft" },
-  { title: "Round 7 vs Monash", date: "2026-06-06", type: "sport", count: 3, status: "published" },
-  { title: "First Social, Naughtons", date: "2026-04-11", type: "night_out", count: 3, status: "published" },
-  { title: "Committee Camp", date: "2026-08-14", type: "camp", count: 2, status: "hidden" },
+  { title: "Opening keynote", date: EVENT_DAY, count: 5, status: "published", photographer: "Jane Citizen", hour: 9 },
+  { title: "Breakout sessions", date: EVENT_DAY, count: 4, status: "published", photographer: "Sam Lee", hour: 11 },
+  { title: "Networking drinks", date: EVENT_DAY, count: 5, status: "published", photographer: "Jane Citizen", hour: 18 },
+  { title: "Headshot booth", date: EVENT_DAY, count: 3, status: "draft", photographer: "Sam Lee", hour: 14 },
 ] as const;
 
-const MEMBERS = [
-  ["Mahi Patel", adminEmail],
-  ["Lachlan Doyle", "l.doyle@student.unimelb.test"],
-  ["Tilly Nguyen", "t.nguyen@student.unimelb.test"],
-  ["Ben Okafor", "b.okafor@student.unimelb.test"],
-  ["Sofia Marchetti", "s.marchetti@student.unimelb.test"],
-  ["Amara Chen", "a.chen@student.unimelb.test"],
-  ["Priya Raman", "p.raman@student.unimelb.test"],
-  ["Zoe Kaur", "z.kaur@student.unimelb.test"],
+// [name, email, role key]
+const PEOPLE = [
+  ["Alex Morgan", adminEmail, "admin"],
+  ["Sam Lee", "sam.lee@photo.example.test", "photographer"],
+  ["Priya Raman", "priya.raman@acme.example.test", "member"],
+  ["Ben Okafor", "ben.okafor@acme.example.test", "member"],
+  ["Sofia Marchetti", "sofia@studio.example.test", "member"],
+  ["Tom Walsh", "tom.walsh@acme.example.test", "member"],
 ] as const;
 
 async function main() {
@@ -62,40 +62,48 @@ async function main() {
     .from("events")
     .insert({
       handle: HANDLE,
-      name: "UniMelb FC",
-      organisation: "The University of Melbourne",
-      description: "Every night worth keeping, in one place.",
-      accent_colour: "#ec3013",
+      name: "Brisbane Product Summit 2026",
+      organisation: "Northwind Labs",
+      description: "A day of talks, workshops and drinks for product people in Brisbane.",
+      accent_colour: "#0e7490",
       billing_status: "comped",
+      starts_on: EVENT_DAY,
+      venue: "Brisbane Convention Centre",
+      access_mode: "link",
+      access_ends_at: new Date("2027-02-13T23:59:59+10:00").toISOString(),
     })
     .select("id")
     .single();
   if (error || !event) throw error;
   await db.rpc("seed_event_roles", { p_event_id: event.id });
 
-  const { data: roles } = await db.from("event_roles").select("id, key, manage_event").eq("event_id", event.id);
-  const adminRole = roles?.find((r) => r.manage_event);
-  const memberRole = roles?.find((r) => !r.manage_event && r.key === "member") ?? roles?.find((r) => !r.manage_event);
+  const { data: roles } = await db.from("event_roles").select("id, key").eq("event_id", event.id);
+  const roleId = (key: string) => roles?.find((r) => r.key === key)?.id ?? null;
 
   const files = (await readdir(PHOTOS)).filter((f) => /\.(jpe?g|png)$/i.test(f)).sort();
   let photoIndex = 0;
   const next = () => files[photoIndex++ % files.length];
 
-  for (const [i, [name, email]] of MEMBERS.entries()) {
-    const isAdmin = i === 0;
-    const { data: user } = await db.auth.admin.createUser({ email, email_confirm: true });
+  for (const [i, [name, email, key]] of PEOPLE.entries()) {
+    const joined = i < 5;
+    const { data: created } = await db.auth.admin.createUser({ email, email_confirm: true });
+    let userId = created?.user?.id ?? null;
+    if (!userId) {
+      const { data: list } = await db.auth.admin.listUsers({ perPage: 1000 });
+      userId = list?.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
+    }
     await db.from("memberships").insert({
       event_id: event.id,
       roster_name: name,
       roster_email: email,
-      claimed_name: i < 6 ? name : null,
-      role: isAdmin ? "event_admin" : "event_member",
-      role_id: (isAdmin ? adminRole?.id : memberRole?.id) ?? null,
-      status: i < 6 ? "active" : "pending",
-      user_id: user?.user?.id ?? null,
-      accepted_at: i < 6 ? new Date().toISOString() : null,
-      first_seen_at: i < 6 ? new Date().toISOString() : null,
+      claimed_name: joined ? name : null,
+      role: key === "admin" ? "event_admin" : "event_member",
+      role_id: roleId(key),
+      status: joined ? "active" : "pending",
+      user_id: joined ? userId : null,
+      first_seen_at: joined ? new Date().toISOString() : null,
     });
+    if (userId) await db.from("users").update({ display_name: name }).eq("id", userId);
   }
 
   for (const album of ALBUMS) {
@@ -105,11 +113,10 @@ async function main() {
         event_id: event.id,
         title: album.title,
         album_date: album.date,
-        event_type: album.type,
         status: album.status,
         published_at: album.status === "published" ? new Date(`${album.date}T10:00:00+10:00`).toISOString() : null,
         allow_download: true,
-        contributor_scope: album.title === "Trivia Night" ? "members" : "managers",
+        contributor_scope: "managers",
       })
       .select("id")
       .single();
@@ -149,7 +156,8 @@ async function main() {
         byte_size: original.length,
         mime_type: "image/jpeg",
         original_filename: `IMG_${4400 + photoIndex}.jpg`,
-        captured_at: new Date(`${album.date}T22:${String(10 + n).padStart(2, "0")}:00+10:00`).toISOString(),
+        captured_at: new Date(`${album.date}T${String(album.hour).padStart(2, "0")}:${String(10 + n).padStart(2, "0")}:00+10:00`).toISOString(),
+        photographer_name: album.photographer,
         status: "ready",
       });
     }
@@ -157,7 +165,7 @@ async function main() {
   }
 
   console.log(`\nDemo event ready at /e/${HANDLE} and /admin/${HANDLE}`);
-  console.log(`Admin signs in as ${adminEmail}`);
+  console.log(`The organiser signs in as ${adminEmail}`);
 }
 
 main().catch((error) => {

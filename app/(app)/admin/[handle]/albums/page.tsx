@@ -49,15 +49,15 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
     <main className="flex flex-col gap-6 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageTitle kicker={ctx.event.name} title="Albums">
-          {albums.length ? `${summary}. Drag to reorder what members see first.` : "Nothing here yet."}
+          {albums.length ? `${summary}. Drag to reorder what attendees see first.` : "Nothing here yet."}
         </PageTitle>
         <div className="flex items-center gap-2">
           <Link href={`/admin/${handle}/upload`} className="btn btn-primary">
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
-            <MoreLink href={`/e/${handle}`}>See it as a member</MoreLink>
-            <MoreLink href={`/admin/${handle}/guests`}>Make a guest upload link</MoreLink>
+            <MoreLink href={`/e/${handle}`}>See it as an attendee</MoreLink>
+            <MoreLink href={`/admin/${handle}/photographers`}>Make a guest upload link</MoreLink>
           </MoreMenu>
         </div>
       </div>
@@ -76,7 +76,7 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
             </Link>
           }
         >
-          Even last year&apos;s photos will do. Members land on this list, so one album is better than none.
+          Create one per part of the event, then add your photographers.
         </EmptyState>
       )}
     </main>

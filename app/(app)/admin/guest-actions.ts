@@ -55,7 +55,7 @@ export async function createGuestLinkAction(eventId: string, _prev: GuestLinkSta
   });
   if (error) return { error: "Could not make the link" };
 
-  revalidatePath(`/admin/${ctx.event.handle}/guests`);
+  revalidatePath(`/admin/${ctx.event.handle}/photographers`);
   return { ok: true, url: `${appUrl()}/g/${token}` };
 }
 
@@ -72,6 +72,6 @@ export async function revokeGuestLinkAction(linkId: string): Promise<ActionState
     .eq("id", linkId);
   if (error) return { error: "Could not turn the link off" };
 
-  revalidatePath(`/admin/${ctx.event.handle}/guests`);
+  revalidatePath(`/admin/${ctx.event.handle}/photographers`);
   return { ok: true, message: "Link revoked. It stops working straight away." };
 }

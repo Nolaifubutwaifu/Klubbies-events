@@ -20,7 +20,7 @@ type Props = {
 
 /**
  * Not a switch. Turning this on creates a faceprint for everyone in the
- * event's photos, including people who never opted in, so the committee reads
+ * event's photos, including people who never opted in, so the organiser reads
  * what that means and ticks a box before anything happens.
  */
 export function FaceRecognition({ eventId, eventName, configured, enabled, enrolledCount, backfill }: Props) {
@@ -58,7 +58,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
   if (!configured) {
     return (
       <div className="soft-card flex flex-col gap-2 p-5">
-        <span className="text-[14px] font-bold">Find yourself in photos</span>
+        <span className="text-[14px] font-medium">Face search</span>
         <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
           Not available on this deployment yet. It needs AWS credentials set on the server.
         </p>
@@ -71,13 +71,13 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
     return (
       <div className="soft-card flex flex-col gap-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-[14px] font-bold">Find yourself in photos</span>
+          <span className="text-[14px] font-medium">Face search</span>
           <span className="soft-chip">On</span>
         </div>
         <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
           {enrolledCount === 0
-            ? "No members have enrolled yet. They see the invitation on the event page."
-            : `${enrolledCount.toLocaleString("en-AU")} ${enrolledCount === 1 ? "member has" : "members have"} enrolled. Each of them sees only their own photos.`}
+            ? "No attendees have added a selfie yet. They see the invitation at the top of the event page."
+            : `${enrolledCount.toLocaleString("en-AU")} ${enrolledCount === 1 ? "attendee has" : "attendees have"} added a selfie. Each of them sees only their own photos.`}
         </p>
 
         <div className="flex flex-col gap-1.5">
@@ -100,7 +100,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
               {done.toLocaleString("en-AU")} of {live.total.toLocaleString("en-AU")}
             </span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text)_8%,transparent)]">
+          <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--kb-sand)]">
             <div
               className="h-full rounded-full bg-accent transition-[width] duration-700"
               style={{ width: `${live.total ? Math.round((done / live.total) * 100) : 100}%` }}
@@ -111,7 +111,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
               ? "\u00a0"
               : working
                 ? `${faces.toLocaleString("en-AU")} faces found so far. You can leave this page; it keeps going.`
-                : `${faces.toLocaleString("en-AU")} faces found. Members who enrol are matched against these.`}
+                : `${faces.toLocaleString("en-AU")} faces found. Attendees who add a selfie are matched against these.`}
           </span>
         </div>
 
@@ -121,7 +121,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
           {working ? (
             <button
               type="button"
-              className="btn btn-ghost"
+              className="btn btn-sm btn-secondary"
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
@@ -149,7 +149,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
               >
                 Yes, delete every faceprint
               </button>
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirmingOff(false)}>
+              <button type="button" className="btn btn-sm btn-secondary" onClick={() => setConfirmingOff(false)}>
                 Keep it on
               </button>
             </>
@@ -172,7 +172,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
 
   return (
     <div className="soft-card flex flex-col gap-3 p-5">
-      <span className="text-[15px] font-bold">{EVENT_NOTICE.title(eventName)}</span>
+      <span className="text-[15px] font-medium">{EVENT_NOTICE.title(eventName)}</span>
       <p className="m-0 text-[14px] text-[color:var(--ink-70)]">{EVENT_NOTICE.lead}</p>
       <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-normal text-[color:var(--ink-70)]">
         {EVENT_NOTICE.points.map((point) => (

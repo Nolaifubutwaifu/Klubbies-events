@@ -56,3 +56,22 @@ export function formatDuration(seconds: number | null | undefined): string {
 export function plural(count: number, one: string, many = `${one}s`): string {
   return `${count.toLocaleString("en-AU")} ${count === 1 ? one : many}`;
 }
+
+const dayFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", timeZone: "Australia/Brisbane" });
+const dayMonthFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Brisbane" });
+
+/**
+ * An event's dates as people say them: "14 Nov 2026", "14–15 Nov 2026",
+ * "30 Nov – 2 Dec 2026". Empty when the event has no date.
+ */
+export function formatEventDates(startsOn: string | null | undefined, endsOn: string | null | undefined): string {
+  if (!startsOn) return endsOn ? formatDate(endsOn) : "";
+  if (!endsOn || endsOn === startsOn) return formatDate(startsOn);
+  const start = toDate(startsOn);
+  const end = toDate(endsOn);
+  const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
+  const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth();
+  if (sameMonth) return `${dayFmt.format(start)}–${formatDate(end)}`;
+  if (sameYear) return `${dayMonthFmt.format(start)} – ${formatDate(end)}`;
+  return `${formatDate(start)} – ${formatDate(end)}`;
+}

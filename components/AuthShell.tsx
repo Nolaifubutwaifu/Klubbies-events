@@ -1,39 +1,28 @@
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element -- short-lived signed URL */
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { EventMark } from "@/components/EventMark";
+import { Brand } from "@/components/ui";
+import { formatEventDates } from "@/lib/format";
+import { eventToneStyle } from "@/lib/theme";
 
-export type AuthEvent = { name: string; handle: string; logoUrl: string | null; organisation: string | null };
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function EventBadge({ event, size = 44 }: { event: AuthEvent; size?: number }) {
-  return (
-    <span
-      className="relative flex flex-none items-center justify-center overflow-hidden rounded-[14px] bg-white text-[15px] font-bold text-[color:var(--kb-ink)]"
-      style={{ width: size, height: size }}
-    >
-      {event.logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-        <img src={event.logoUrl} alt="" className="h-full w-full object-cover" />
-      ) : (
-        initials(event.name)
-      )}
-    </span>
-  );
-}
+export type AuthEvent = {
+  name: string;
+  handle: string;
+  logoUrl: string | null;
+  organisation: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  venue: string | null;
+  accentColour: string | null;
+  accessMode: "link" | "guest_list";
+};
 
 /**
- * Log in, Start your event and the code step. A photo panel and the form side
- * by side from 1024px; on a phone, a short rounded photo that fades into the
- * page above the form.
- *
- * The photo is always a Klubbies marketing photo, never the event's own: the
- * page is public, and the product promises nobody off the list sees a single
- * thumbnail. The event is named and shown by its logo instead.
+ * Sign in, Create an event and the code step. From 1024px a panel sits beside
+ * the form: the event's own letterhead when someone arrived through its link,
+ * otherwise a plain statement of what this is. Never a photo: the page is
+ * public, and nothing from an event's gallery shows to anyone not let in.
  */
 export function AuthShell({
   children,
@@ -44,73 +33,75 @@ export function AuthShell({
     { href: "/terms", label: "Terms" },
   ],
   panel,
-  photo = "/marketing/night-ball.jpg",
 }: {
   children: ReactNode;
   event?: AuthEvent | null;
-  /** The one route out, top right: "Running a event? Start your event". */
+  /** The one route out, top right. */
   topLink?: ReactNode;
   footerLinks?: { href: string; label: string }[];
-  /** Replaces the photo panel on desktop (Start your event uses a preview). */
+  /** Replaces the default panel on desktop. */
   panel?: ReactNode;
-  photo?: string;
 }) {
+  const meta = event ? [formatEventDates(event.startsOn, event.endsOn), event.venue].filter(Boolean).join(" · ") : "";
+
   return (
-    <div className="theme-soft flex min-h-dvh flex-1 flex-col lg:grid lg:grid-cols-2">
-      {/* Desktop: left panel. */}
-      <div className="relative hidden overflow-hidden lg:block">
-        {panel ?? (
-          <>
-            <Image src={photo} alt="" fill priority sizes="50vw" className="object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgb(43_34_40/0.85)] via-[rgb(43_34_40/0.15)] to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-12 text-white">
-              {event ? (
-                <div className="flex items-center gap-4">
-                  <EventBadge event={event} size={56} />
-                  <span>
-                    <span className="block font-[family-name:var(--kb-font-display)] text-[28px] font-semibold leading-tight">{event.name}</span>
-                    <span className="block text-[16px] text-white/85">{event.organisation ?? "Members only albums"}</span>
-                  </span>
-                </div>
-              ) : (
-                <p className="max-w-[22ch] font-[family-name:var(--kb-font-display)] text-[34px] font-semibold leading-[1.15]">
-                  Every photo from Friday, waiting on Saturday.
-                </p>
-              )}
+    <div className="theme-soft flex min-h-dvh flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" style={eventToneStyle(event?.accentColour)}>
+      <div className="relative hidden lg:block">
+        {panel ??
+          (event ? (
+            <div className="flex h-full flex-col justify-between border-r border-[color:var(--kb-line)] bg-[color:var(--kb-white)] p-12 xl:p-16">
+              <span className="h-1 w-16 rounded-full bg-[color:var(--kb-ember)]" aria-hidden />
+              <div className="flex flex-col gap-5">
+                <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={72} />
+                {event.organisation ? <span className="kb-eyebrow">Hosted by {event.organisation}</span> : null}
+                <h2 className="serif max-w-[14ch] text-[64px]">{event.name}</h2>
+                {meta ? <p className="m-0 text-[17px] text-[color:var(--kb-ink-2)]">{meta}</p> : null}
+              </div>
+              <p className="m-0 max-w-[40ch] text-[15px] text-[color:var(--kb-ink-3)]">
+                The photos from this event are private. Confirm your email to see them and find the ones you&apos;re in.
+              </p>
             </div>
-          </>
-        )}
+          ) : (
+            <div className="flex h-full flex-col justify-between bg-[color:var(--kb-ink)] p-12 text-white xl:p-16">
+              <span className="h-1 w-16 rounded-full bg-[#5b78f0]" aria-hidden />
+              <p className="serif m-0 max-w-[16ch] text-[56px] text-white">
+                Every photo from your event, in every attendee&apos;s hands.
+              </p>
+              <p className="m-0 max-w-[44ch] text-[15px] text-white/80">
+                Private galleries for corporate events and meetups. Photographers upload, attendees find themselves with
+                a selfie.
+              </p>
+            </div>
+          ))}
       </div>
 
-      {/* The form column. */}
       <div className="flex min-h-dvh flex-col">
         <header className="flex h-16 flex-none items-center justify-between gap-3 px-5 lg:h-20 lg:px-12">
-          <Link href="/" className="soft-wordmark text-[24px] no-underline" aria-label="Klubbies home">
-            klubbies
-          </Link>
-          {topLink ? <span className="text-right text-[15px] text-[color:var(--kb-ink-2)]">{topLink}</span> : null}
+          <Brand />
+          {topLink ? <span className="text-right text-[14px] text-[color:var(--kb-ink-2)]">{topLink}</span> : null}
         </header>
 
         <main className="flex flex-1 flex-col px-5 lg:justify-center lg:px-12">
-          <div className="mx-auto w-full max-w-[460px] py-4 lg:py-10">
-            {/* Phone: a short photo that fades into the page, no hard edge. */}
-            <div className="relative mb-7 h-[150px] overflow-hidden rounded-[var(--kb-r-card)] lg:hidden">
-              <Image src={photo} alt="" fill priority sizes="100vw" className="object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[rgb(43_34_40/0.1)] via-[rgb(43_34_40/0.35)] to-[color:var(--kb-cream)]" />
-              {event ? (
-                <div className="absolute bottom-3 left-4 flex items-center gap-3">
-                  <EventBadge event={event} size={40} />
-                  <span className="font-[family-name:var(--kb-font-display)] text-[20px] font-semibold text-[color:var(--kb-ink)]">{event.name}</span>
-                </div>
-              ) : null}
-            </div>
+          <div className="mx-auto w-full max-w-[440px] py-4 lg:py-10">
+            {/* Phone: the event's letterhead above the form. */}
+            {event ? (
+              <div className="mb-8 flex flex-col gap-3 lg:hidden">
+                <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={52} />
+                <span className="serif text-[38px]">{event.name}</span>
+                {meta || event.organisation ? (
+                  <span className="text-[14px] text-[color:var(--kb-ink-2)]">
+                    {[meta, event.organisation ? `Hosted by ${event.organisation}` : null].filter(Boolean).join(" · ")}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             {children}
           </div>
         </main>
 
         <footer className="flex flex-none justify-center gap-6 px-5 pb-6 pt-4 lg:justify-start lg:px-12">
           {footerLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="flex min-h-[44px] items-center text-[15px] text-[color:var(--kb-ink-2)] no-underline hover:underline">
+            <Link key={link.href} href={link.href} className="flex min-h-[44px] items-center text-[14px] text-[color:var(--kb-ink-3)] no-underline hover:underline">
               {link.label}
             </Link>
           ))}
@@ -124,45 +115,21 @@ export function AuthShell({
 export function AuthHeading({ children, chip }: { children: ReactNode; chip?: ReactNode }) {
   return (
     <div>
-      {chip ? <span className="soft-chip mb-4">{chip}</span> : null}
-      <h1 className="font-[family-name:var(--kb-font-display)] text-[38px] font-bold leading-[1.05] lg:text-[52px]">{children}</h1>
+      {chip ? <span className="kb-eyebrow mb-2 block">{chip}</span> : null}
+      <h1 className="text-[30px] font-semibold leading-[1.1] tracking-[-0.025em] lg:text-[36px]">{children}</h1>
     </div>
   );
 }
 
-/** Info box: sand, one icon, one sentence. */
+/** Info box: mist, one icon, one sentence. */
 export function AuthNote({ children }: { children: ReactNode }) {
   return (
     <div className="kb-info mt-6">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="mt-0.5 flex-none" aria-hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 flex-none" aria-hidden>
         <circle cx="12" cy="12" r="9" />
         <path d="M12 11v5M12 7.6v.1" />
       </svg>
-      <p className="m-0">{children}</p>
+      <p className="m-0 text-[14px]">{children}</p>
     </div>
-  );
-}
-
-/** Onboarding steps for a new event, shared by Start and Create your event. */
-export function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
-  const steps = ["You", "Your event", "Activate"];
-  return (
-    <ol className="m-0 mb-6 flex list-none gap-2 p-0" aria-label="Setup steps">
-      {steps.map((label, i) => {
-        const here = i + 1 === current;
-        return (
-          <li
-            key={label}
-            aria-current={here ? "step" : undefined}
-            className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-[14px] font-bold ${
-              here ? "bg-[color:var(--kb-ink)] text-white" : "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]"
-            }`}
-          >
-            <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[14px] ${here ? "bg-white text-[color:var(--kb-ink)]" : "bg-white"}`}>{i + 1}</span>
-            {label}
-          </li>
-        );
-      })}
-    </ol>
   );
 }

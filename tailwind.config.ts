@@ -47,8 +47,10 @@ const config: Config = {
         },
       },
       fontFamily: {
-        heading: ["var(--font-fredoka)", "system-ui", "sans-serif"],
-        body: ["var(--font-dm-sans)", "system-ui", "sans-serif"],
+        heading: ["var(--font-geist)", "system-ui", "sans-serif"],
+        body: ["var(--font-geist)", "system-ui", "sans-serif"],
+        serif: ["var(--font-instrument-serif)", "Georgia", "serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: {
         sm: "0px",
@@ -56,8 +58,8 @@ const config: Config = {
         lg: "0px",
       },
       boxShadow: {
-        sm: "0 1px 2px rgb(43 34 40 / 0.06)",
-        md: "0 4px 12px rgb(43 34 40 / 0.1)",
+        sm: "0 1px 2px rgb(22 24 29 / 0.06)",
+        md: "0 4px 12px rgb(22 24 29 / 0.08)",
         lg: "var(--shadow-lg)",
       },
       fontSize: {

@@ -2,13 +2,13 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Klubbies",
-    short_name: "Klubbies",
-    description: "Your event's photos, for your event only.",
+    name: "Klubbies Events",
+    short_name: "Events",
+    description: "Private event photos. Every attendee finds the ones they're in.",
     start_url: "/events",
     display: "standalone",
-    background_color: "#fff8f4",
-    theme_color: "#fff8f4",
+    background_color: "#f7f7f5",
+    theme_color: "#f7f7f5",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
   };
 }

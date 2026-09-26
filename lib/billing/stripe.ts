@@ -54,7 +54,15 @@ export async function createCheckoutSession(event: EventRecord, email: string): 
     ...(event.stripe_customer_id ? { customer: event.stripe_customer_id } : { customer_email: email }),
     ...(mode === "subscription"
       ? { subscription_data: { metadata } }
-      : { payment_intent_data: { metadata }, customer_creation: "always" as const }),
+      : {
+          payment_intent_data: { metadata },
+          customer_creation: "always" as const,
+          // Companies pay for events: a real invoice, with their billing
+          // details, is what their accounts team asks for.
+          invoice_creation: { enabled: true, invoice_data: { metadata, description: event.name } },
+          billing_address_collection: "required" as const,
+          tax_id_collection: { enabled: true },
+        }),
     allow_promotion_codes: true,
     success_url: `${billingUrl}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${billingUrl}?canceled=1`,
@@ -146,61 +154,4 @@ export async function syncReturnedSession(sessionId: string, eventId: string): P
   if ((session.metadata?.event_id ?? session.client_reference_id) !== eventId) return false;
   await applyCheckoutSession(session);
   return session.payment_status === "paid" || session.payment_status === "no_payment_required";
-}
-
-export type CardSummary = { brand: string; last4: string; expMonth: number; expYear: number } | null;
-
-/** Makes sure the event has a Stripe customer, so cards can be saved before checkout. */
-export async function ensureCustomer(event: EventRecord, email: string): Promise<string> {
-  if (event.stripe_customer_id) return event.stripe_customer_id;
-  const customer = await stripe().customers.create({
-    email: email || undefined,
-    name: event.name,
-    metadata: { event_id: event.id, event_handle: event.handle },
-  });
-  await createAdminClient().from("events").update({ stripe_customer_id: customer.id }).eq("id", event.id);
-  return customer.id;
-}
-
-export async function createCardSetupIntent(event: EventRecord, email: string): Promise<string> {
-  const customer = await ensureCustomer(event, email);
-  const intent = await stripe().setupIntents.create({
-    customer,
-    usage: "off_session",
-    // Cards only: this form exists to keep the subscription card up to date.
-    payment_method_types: ["card"],
-    metadata: { event_id: event.id },
-  });
-  if (!intent.client_secret) throw new Error("Stripe did not return a client secret");
-  return intent.client_secret;
-}
-
-/** Makes the card from a completed SetupIntent the default for the event. */
-export async function applySetupIntent(event: EventRecord, setupIntentId: string): Promise<boolean> {
-  const intent = await stripe().setupIntents.retrieve(setupIntentId);
-  if (intent.metadata?.event_id !== event.id || intent.status !== "succeeded") return false;
-  const paymentMethod = typeof intent.payment_method === "string" ? intent.payment_method : intent.payment_method?.id;
-  const customer = typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
-  if (!paymentMethod || !customer) return false;
-
-  await stripe().customers.update(customer, { invoice_settings: { default_payment_method: paymentMethod } });
-  if (event.stripe_subscription_id) {
-    await stripe().subscriptions.update(event.stripe_subscription_id, { default_payment_method: paymentMethod });
-  }
-  return true;
-}
-
-export async function getDefaultCard(event: EventRecord): Promise<CardSummary> {
-  if (!event.stripe_customer_id) return null;
-  const customer = await stripe().customers.retrieve(event.stripe_customer_id, { expand: ["invoice_settings.default_payment_method"] });
-  if (customer.deleted) return null;
-  const method = customer.invoice_settings?.default_payment_method;
-  const card = typeof method === "string" ? null : method?.card;
-  if (!card) {
-    const methods = await stripe().paymentMethods.list({ customer: event.stripe_customer_id, type: "card", limit: 1 });
-    const fallback = methods.data[0]?.card;
-    if (!fallback) return null;
-    return { brand: fallback.brand, last4: fallback.last4, expMonth: fallback.exp_month, expYear: fallback.exp_year };
-  }
-  return { brand: card.brand, last4: card.last4, expMonth: card.exp_month, expYear: card.exp_year };
 }

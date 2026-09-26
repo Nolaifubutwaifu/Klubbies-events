@@ -10,12 +10,18 @@ export function SettingsForm({
   name,
   organisation,
   description,
+  startsOn,
+  endsOn,
+  venue,
   accentColour,
 }: {
   eventId: string;
   name: string;
   organisation: string | null;
   description: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  venue: string | null;
   accentColour: string | null;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(updateEventAction.bind(null, eventId), {});
@@ -23,25 +29,45 @@ export function SettingsForm({
   const preview = eventToneStyle(accent);
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="soft-card flex flex-col gap-4 p-5">
       <label className="field">
         Event name
         <input className="input" name="name" defaultValue={name} required maxLength={120} />
       </label>
       <label className="field">
-        University
-        <input className="input" name="organisation" defaultValue={organisation ?? ""} maxLength={160} />
+        Hosted by
+        <input className="input" name="organisation" defaultValue={organisation ?? ""} maxLength={160} placeholder="Company or organisation" />
+      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="field">
+          First day
+          <input className="input" name="startsOn" type="date" defaultValue={startsOn ?? ""} />
+        </label>
+        <label className="field">
+          Last day (optional)
+          <input className="input" name="endsOn" type="date" defaultValue={endsOn ?? ""} />
+        </label>
+      </div>
+      <label className="field">
+        Venue or city
+        <input className="input" name="venue" defaultValue={venue ?? ""} maxLength={160} placeholder="ICC Sydney" />
       </label>
       <label className="field">
-        Short description
-        <textarea className="input" name="description" defaultValue={description ?? ""} maxLength={1000} />
+        Description
+        <textarea
+          className="input"
+          name="description"
+          defaultValue={description ?? ""}
+          maxLength={1000}
+          placeholder="One or two lines attendees see under the event name."
+        />
       </label>
 
       <div className="flex flex-col gap-3">
-        <span className="text-[14px] font-semibold">Event tone</span>
+        <span className="text-[14px] font-medium">Brand colour</span>
         <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
-          Avatars, badges and the quiet labels across this event take this colour. Buttons and headlines keep the
-          Klubbies red, so your event still looks like Klubbies.
+          Used for links, highlights and the selected tab on every attendee screen. Buttons stay dark so they read on
+          any colour, and light colours are darkened until text on white is readable.
         </span>
         <input type="hidden" name="accentColour" value={accent} />
         <div className="flex flex-wrap items-center gap-2">
@@ -52,23 +78,14 @@ export function SettingsForm({
               aria-label={`Use ${swatch}`}
               aria-pressed={accent.toLowerCase() === swatch}
               onClick={() => setAccent(swatch)}
-              className="relative h-9 w-9 cursor-pointer rounded-full border-0 outline-offset-2"
+              className="relative h-8 w-8 cursor-pointer rounded-full border-0 outline-offset-2"
               style={{
                 background: swatch,
-                outline: accent.toLowerCase() === swatch ? "2px solid var(--color-text)" : "none",
+                outline: accent.toLowerCase() === swatch ? "2px solid var(--kb-ink)" : "none",
               }}
             >
               {accent.toLowerCase() === swatch ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                  className="absolute inset-0 m-auto h-4 w-4"
-                  fill="none"
-                  stroke="#fff"
-                  strokeWidth={3.4}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg viewBox="0 0 24 24" aria-hidden className="absolute inset-0 m-auto h-4 w-4" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
               ) : null}
@@ -77,39 +94,37 @@ export function SettingsForm({
           <label className="flex items-center gap-2 text-[14px]">
             <input
               type="color"
-              value={accent || "#cf2e12"}
+              value={accent || "#2b4acb"}
               onChange={(e) => setAccent(e.target.value)}
-              className="h-9 w-9 cursor-pointer soft-card bg-transparent p-0"
+              className="h-8 w-8 cursor-pointer rounded-[6px] border border-[color:var(--kb-line)] bg-transparent p-0"
               aria-label="Pick a custom colour"
             />
             <input
-              className="input w-[120px] font-mono text-[14px]"
+              className="input mono w-[112px] text-[14px]"
               value={accent}
               onChange={(e) => setAccent(e.target.value.startsWith("#") ? e.target.value : `#${e.target.value}`)}
               pattern="#[0-9a-fA-F]{6}"
               aria-label="Hex colour"
+              placeholder="#2b4acb"
             />
           </label>
           {accent ? (
-            <button type="button" className="btn btn-ghost text-[14px]" onClick={() => setAccent("")}>
-              Use the default tone
+            <button type="button" className="btn btn-sm btn-secondary" onClick={() => setAccent("")}>
+              Default
             </button>
           ) : null}
         </div>
-        {/* The preview shows what actually changes (the avatar and the quiet
-            label) beside what stays the same in every event (the button). */}
-        <div className="flex flex-wrap items-center gap-3 soft-card p-3" style={preview} aria-hidden>
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--tone-support)] text-[14px] font-bold text-[color:var(--tone-support-ink)]">
-            MP
-          </span>
-          <span className="soft-chip soft-chip-muted">Committee</span>
-          <span className="btn btn-primary btn-sm">Add photos</span>
+        <div className="flex flex-wrap items-center gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-3" style={preview} aria-hidden>
+          <span className="soft-chip">Your photos</span>
+          <span className="text-[14px] font-medium text-[color:var(--kb-ember)] underline underline-offset-4">See all 23</span>
+          <input type="checkbox" checked readOnly tabIndex={-1} />
+          <span className="btn btn-primary btn-sm">Download all</span>
         </div>
       </div>
 
       <FormMessage state={state} />
       <SubmitButton className="btn btn-primary self-start" pendingText="Saving…">
-        Save settings
+        Save details
       </SubmitButton>
     </form>
   );

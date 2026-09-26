@@ -95,7 +95,7 @@ export class UploadQueue {
         continue;
       }
       if (mimeType.startsWith("video/") && file.size > LARGE_VIDEO_BYTES) {
-        warnings.push(`${file.name} is over 500 MB. It will upload, but members on mobile data may struggle to play it.`);
+        warnings.push(`${file.name} is over 500 MB. It will upload, but attendees on mobile data may struggle to play it.`);
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
       this.jobs.set(key, { key, file, mimeType, status: "queued", uploaded: 0 });

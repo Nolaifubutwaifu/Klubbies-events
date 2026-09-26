@@ -65,6 +65,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
       original_filename: parsed.data.filename,
       uploaded_by: null,
       guest_link_id: session.linkId,
+      photographer_name: session.label,
       status: "processing",
       content_hash: parsed.data.contentHash,
     });

@@ -562,16 +562,22 @@ isOneToOne: false
                   ]
                 },"pending_sign_ins": {
                   Row: {
-                    "attempts": number,"claimed_name": string | null,"created_at": string,"email": string,"expires_at": string,"flow": string,"updated_at": string
+                    "attempts": number,"claimed_name": string | null,"created_at": string,"email": string,"event_id": string | null,"expires_at": string,"flow": string,"updated_at": string
                   }
                   Insert: {
-                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email": string,"expires_at": string,"flow": string,"updated_at"?: string
+                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email": string,"event_id"?: string | null,"expires_at": string,"flow": string,"updated_at"?: string
                   }
                   Update: {
-                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"flow"?: string,"updated_at"?: string
+                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email"?: string,"event_id"?: string | null,"expires_at"?: string,"flow"?: string,"updated_at"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "pending_sign_ins_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"roster_imports": {
                   Row: {

@@ -101,7 +101,7 @@ export function CodeForm({ restartHref, event }: { restartHref: string; event?: 
             aria-label={`Digit ${index + 1} of ${LENGTH}`}
             autoFocus={index === 0}
             disabled={pending}
-            className="soft-display h-[58px] w-full min-w-0 max-w-[48px] rounded-[14px] bg-white text-center text-[24px] text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:border-2 focus-visible:!border-[color:var(--kb-ink)] focus-visible:shadow-[0_0_0_4px_var(--kb-ember-tint)]"
+            className="mono h-[54px] w-full min-w-0 max-w-[46px] rounded-[8px] bg-white text-center text-[22px] font-medium text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:!border-[color:var(--kb-ember)] focus-visible:shadow-[0_0_0_3px_var(--kb-ember-tint)]"
             style={{ border: `1.5px solid ${digit ? "var(--kb-ink)" : "var(--kb-line-input)"}` }}
           />
         ))}

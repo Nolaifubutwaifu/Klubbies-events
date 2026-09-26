@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthHeading, AuthNote, AuthShell, StepIndicator } from "@/components/AuthShell";
+import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
 import { SIGNIN_COOKIE } from "@/lib/auth/flow";
 import { CodeForm } from "./CodeForm";
 
@@ -19,17 +19,16 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
   return (
     <AuthShell
       topLink={
-        <Link href={restartHref} className="font-bold">
+        <Link href={restartHref} className="font-medium">
           Use a different email
         </Link>
       }
     >
-      {isCreate ? <StepIndicator current={1} /> : null}
-      <AuthHeading>Check your email</AuthHeading>
+      <AuthHeading chip={isCreate ? "Step 1 of 2" : undefined}>Check your email</AuthHeading>
       {/* The address is theirs, they just typed it, so spelling it back is a
           help, not a leak. */}
-      <p className="kb-lead mt-3 !text-[17px]">
-        We sent a code to <strong className="font-bold text-[color:var(--kb-ink)]">{email}</strong>. It works for ten minutes.
+      <p className="kb-lead mt-3 !text-[16px]">
+        If that address can open the event, a code is on its way to <strong className="font-medium text-[color:var(--kb-ink)]">{email}</strong>. It works for ten minutes.
       </p>
 
       <div className="mt-7">
@@ -39,7 +38,7 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
       <AuthNote>
         {isCreate
           ? "Nothing arrived? Check junk, then send it again."
-          : "Nothing arrived? Use the email your event has on its list. If that's what you used, ask your committee to add you."}
+          : "Nothing arrived? Check junk. For a guest-list event, use the email you registered with; if that's what you used, ask the organiser to add you."}
       </AuthNote>
     </AuthShell>
   );

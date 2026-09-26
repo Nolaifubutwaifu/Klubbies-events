@@ -4,34 +4,38 @@ import { ContactLine, LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = { title: "Terms of service" };
 
+// A draft written to match what the product does, for a lawyer to check.
 export default function TermsPage() {
   return (
     <LegalPage
       doc="terms"
       title="Terms of service"
-      updated="16 September 2026"
+      updated="27 September 2026"
       minutes={3}
       sections={[
         {
           title: "Who we are",
           body: (
             <p>
-              Klubbies is a private photo and video sharing service for events, operated from Queensland, Australia. By
-              creating a event, signing in, or paying for Klubbies you agree to these terms. To contact us, <ContactLine />.
+              Klubbies Events is a private photo and video gallery service for events, operated from Queensland,
+              Australia. By creating an event, signing in, uploading or paying you agree to these terms. To contact us,{" "}
+              <ContactLine />.
             </p>
           ),
         },
         {
-          title: "Events, admins and members",
+          title: "Organisers, photographers and attendees",
           body: (
             <>
               <p>
-                A event admin creates a event, manages its member list and uploads media. Admins are responsible for keeping
-                the member list accurate and for removing people who should no longer have access.
+                An organiser creates an event, chooses who can get in, hands out photographer upload links and manages
+                what is shared. Organisers are responsible for how their event is set up, including who holds the event
+                link and who is on the guest list.
               </p>
               <p>
-                Members sign in with the email address on their event&apos;s list and a one-time code. Don&apos;t share codes
-                or let other people use your access.
+                Attendees sign in with their email address and a one-time code. Don&apos;t share codes or let other
+                people use your access. Photographers who upload through a link may only upload to the event it was made
+                for.
               </p>
             </>
           ),
@@ -41,24 +45,35 @@ export default function TermsPage() {
           body: (
             <>
               <p>
-                Events keep ownership of everything they upload. You give us permission to store, copy (for previews),
-                and show that content to the people on your member list, only so we can run the service.
+                Organisers and their photographers keep ownership of everything they upload. You give us permission to
+                store, copy (for previews) and show that content to the people the organiser lets in, only so we can run
+                the service.
               </p>
               <p>
-                By uploading, the admin confirms the event has the right to share the content with its members, and that
-                people who appear in it would reasonably expect it to be shared with the event. Remove content promptly
-                if someone asks you to.
+                By uploading, the organiser confirms they have the right to share the content with their attendees, that
+                people in the photos were told photography was taking place, and that they will act promptly on removal
+                requests.
               </p>
             </>
+          ),
+        },
+        {
+          title: "Face search",
+          body: (
+            <p>
+              If face search is on for an event, the organiser confirms they will tell attendees, for example in the
+              invitation or on signage at the venue. We show every attendee a notice as well. The{" "}
+              <Link href="/privacy">privacy policy</Link> explains how it works and how long faceprints are kept.
+            </p>
           ),
         },
         {
           title: "Acceptable use",
           body: (
             <p>
-              Don&apos;t upload anything unlawful, sexually explicit, or intended to harass, and don&apos;t use Klubbies to
-              share content with people outside your event, to probe other events&apos; data, or to overload the service. We
-              may suspend a event that breaks these rules.
+              Don&apos;t upload anything unlawful, sexually explicit, or intended to harass, and don&apos;t use Klubbies
+              Events to share content with people outside your event, to probe other events&apos; data, or to overload
+              the service. We may suspend an event that breaks these rules.
             </p>
           ),
         },
@@ -66,7 +81,7 @@ export default function TermsPage() {
           title: "Access logging",
           body: (
             <p>
-              We record when members view and download items, and event admins can see that log. The{" "}
+              We record when attendees view and download items, and the event&apos;s organisers can see that log. The{" "}
               <Link href="/privacy">privacy policy</Link> explains what is stored.
             </p>
           ),
@@ -75,8 +90,8 @@ export default function TermsPage() {
           title: "Payment",
           body: (
             <p>
-              Events pay a subscription through Stripe before they can add members or upload. Prices include GST where
-              applicable. Cancellation and refunds are covered in the <Link href="/refunds">refund and cancellation policy</Link>.
+              Each event is paid for once, through Stripe, before uploading and adding attendees unlock. Prices include
+              GST where applicable. Refunds are covered in the <Link href="/refunds">refund policy</Link>.
             </p>
           ),
         },
@@ -85,22 +100,24 @@ export default function TermsPage() {
           body: (
             <>
               <p>
-                We work to keep Klubbies available and your media safe, but we can&apos;t promise the service will be
-                uninterrupted or error free. Keep your own copies of anything irreplaceable.
+                We work to keep the service available and your media safe, but we can&apos;t promise it will be
+                uninterrupted or error free. Keep your own copies of anything irreplaceable; photographers should keep
+                their originals.
               </p>
               <p>
                 Nothing in these terms excludes rights you have under the Australian Consumer Law. To the extent the law
-                allows, our total liability to a event is limited to the fees it paid us in the 12 months before the claim.
+                allows, our total liability for an event is limited to the fee paid for that event.
               </p>
             </>
           ),
         },
         {
-          title: "Ending the service",
+          title: "How long we keep an event",
           body: (
             <p>
-              A event can cancel at any time. If a event is cancelled or suspended, we&apos;ll give the admin at least 30
-              days&apos; notice by email before deleting its media, so they can download what they want to keep.
+              Attendees lose access on the closing date the organiser sets. We keep the event&apos;s media for
+              organisers for at least 12 months after the event, and email them at least 30 days before deleting it, so
+              they can download what they want to keep.
             </p>
           ),
         },
@@ -108,7 +125,7 @@ export default function TermsPage() {
           title: "Changes and governing law",
           body: (
             <p>
-              We&apos;ll email event admins before making material changes to these terms. These terms are governed by the
+              We&apos;ll email organisers before making material changes to these terms. These terms are governed by the
               laws of Queensland, Australia.
             </p>
           ),

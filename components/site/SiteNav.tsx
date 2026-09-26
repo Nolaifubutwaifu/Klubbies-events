@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { Brand } from "@/components/ui";
+import { PRICE } from "@/lib/copy/site";
 import { useEffect, useRef, useState } from "react";
 
 export type SiteSection = "how" | "pricing" | "privacy" | null;
 
 const LINKS: { key: Exclude<SiteSection, null>; href: string; label: string }[] = [
-  { key: "how", href: "/how-it-works", label: "How it works" },
+  { key: "how", href: "/#how", label: "How it works" },
   { key: "pricing", href: "/#pricing", label: "Pricing" },
   { key: "privacy", href: "/privacy", label: "Privacy" },
 ];
@@ -54,11 +56,9 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
   }, [open]);
 
   return (
-    <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-cream)]">
+    <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
       <div className="kb-wrap flex h-16 items-center gap-3 sm:h-20">
-        <Link href="/" className="soft-wordmark text-[26px] no-underline" aria-label="Klubbies home">
-          klubbies
-        </Link>
+        <Brand />
 
         <nav aria-label="Main" className="ml-auto hidden items-center gap-7 sm:flex">
           {LINKS.map((link) => (
@@ -68,7 +68,7 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
               aria-current={current === link.key ? "page" : undefined}
               className={`flex min-h-[44px] items-center whitespace-nowrap text-[15px] no-underline ${
                 current === link.key
-                  ? "font-bold text-[color:var(--kb-ink)] underline decoration-[color:var(--kb-ember)] decoration-2 underline-offset-[8px]"
+                  ? "font-medium text-[color:var(--kb-ink)] underline decoration-[color:var(--kb-ember)] decoration-2 underline-offset-[8px]"
                   : "font-medium text-[color:var(--kb-ink-2)] hover:text-[color:var(--kb-ink)]"
               }`}
             >
@@ -76,18 +76,18 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
             </Link>
           ))}
           <span className="flex items-center gap-3">
-            <Link href="/signin" className="btn btn-secondary !min-h-[44px] !px-5 !text-[15px]">
-              Log in
+            <Link href="/signin" className="btn btn-secondary no-underline">
+              Sign in
             </Link>
-            <Link href="/start" className="btn btn-primary !min-h-[44px] !px-5 !text-[15px]">
-              Start your event
+            <Link href="/start" className="btn btn-primary no-underline">
+              Create an event
             </Link>
           </span>
         </nav>
 
         <div className="ml-auto flex items-center gap-2 sm:hidden">
-          <Link href="/signin" className="flex min-h-[44px] items-center px-2 text-[16px] font-bold text-[color:var(--kb-ink)] no-underline">
-            Log in
+          <Link href="/signin" className="flex min-h-[44px] items-center px-2 text-[15px] font-medium text-[color:var(--kb-ink)] no-underline">
+            Sign in
           </Link>
           <button
             ref={menuButton}
@@ -112,12 +112,12 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
           role="dialog"
           aria-modal="true"
           aria-label="Menu"
-          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-cream)] sm:hidden"
+          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] sm:hidden"
         >
           <div className="kb-wrap flex h-16 flex-none items-center">
-            <Link href="/" className="soft-wordmark text-[26px] no-underline" onClick={() => setOpen(false)}>
-              klubbies
-            </Link>
+            <span onClick={() => setOpen(false)}>
+              <Brand />
+            </span>
             <button type="button" className="kb-icon-btn ml-auto" aria-label="Close menu" onClick={() => setOpen(false)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
                 <path d="M6 6l12 12M18 6 6 18" />
@@ -131,7 +131,7 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
                 href={link.href}
                 onClick={() => setOpen(false)}
                 aria-current={current === link.key ? "page" : undefined}
-                className="flex min-h-[68px] items-center border-b border-[color:var(--kb-line)] font-[family-name:var(--kb-font-display)] text-[28px] font-semibold text-[color:var(--kb-ink)] no-underline"
+                className="flex min-h-[68px] items-center border-b border-[color:var(--kb-line)] serif text-[32px] text-[color:var(--kb-ink)] no-underline"
               >
                 {link.label}
               </Link>
@@ -139,12 +139,12 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
           </nav>
           <div className="kb-wrap mt-auto flex flex-col gap-3 pb-[max(24px,env(safe-area-inset-bottom))]">
             <Link href="/start" className="btn btn-primary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
-              Start your event
+              Create an event
             </Link>
             <Link href="/signin" className="btn btn-secondary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
-              Log in
+              Sign in
             </Link>
-            <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">A$20 a month per event. Cancel any time.</p>
+            <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.line}. No subscription.</p>
           </div>
         </div>
       ) : null}

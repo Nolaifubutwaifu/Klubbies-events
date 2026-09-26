@@ -23,7 +23,7 @@ export async function requestRemovalAction(mediaId: string): Promise<ActionState
   const ctx = await getEventContextById(media.event_id);
   if (!ctx?.membership) return { error: "Not authorised" };
   if (!ctx.event.allow_removal_requests) {
-    return { error: "This event asks you to contact the committee directly." };
+    return { error: "This event asks you to contact the organiser directly." };
   }
 
   const { error } = await supabase.from("media_removal_requests").insert({

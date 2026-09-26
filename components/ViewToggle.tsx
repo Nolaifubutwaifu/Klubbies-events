@@ -23,7 +23,7 @@ export function ViewToggle({ area, handle }: { area: "member" | "admin"; handle:
       disabled={pending}
       onClick={() => startTransition(() => setAreaAction(next, target))}
     >
-      {pending ? "Switching…" : next === "admin" ? "Admin view" : "Member view"}
+      {pending ? "Switching…" : next === "admin" ? "Organiser view" : "Attendee view"}
     </button>
   );
 }

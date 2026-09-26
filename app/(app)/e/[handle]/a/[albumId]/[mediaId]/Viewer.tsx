@@ -18,6 +18,8 @@ type Current = {
   height: number | null;
   duration: string;
   takenAt: string;
+  /** The photographer credit, when the upload carried one. */
+  photographer?: string | null;
 };
 
 const SWIPED_KEY = "kb-swiped";
@@ -194,6 +196,7 @@ export function Viewer({
           <div className="text-[14px] text-white/[0.68]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
             {current.takenAt ? ` · ${current.takenAt}` : ""}
+            {current.photographer ? ` · Photo: ${current.photographer}` : ""}
           </div>
         </div>
         {/* Keeps the title centred; More lives in the bottom bar. */}
@@ -325,7 +328,7 @@ export function Viewer({
                 setSheet("none");
                 try {
                   await navigator.clipboard.writeText(window.location.href);
-                  setMessage("Link copied. Only event members can open it.");
+                  setMessage("Link copied. Only people in this event can open it.");
                 } catch {
                   setMessage("Couldn't copy the link.");
                 }
@@ -352,11 +355,11 @@ export function Viewer({
               ) : null}
               {canAskRemoval ? (
                 <button type="button" className="kb-menu-item !min-h-[52px] !text-[16px]" data-danger="true" onClick={() => setSheet("removal")}>
-                  {asked ? "Removal requested" : "Ask for it to come down"}
+                  {asked ? "Removal requested" : "Request removal"}
                 </button>
               ) : null}
           </div>
-          <h2 className="soft-display text-[19px]">About this one</h2>
+          <h2 className="text-[18px] font-semibold">About this photo</h2>
           <dl className="m-0 mt-3 grid gap-x-5 gap-y-2.5" style={{ gridTemplateColumns: "auto 1fr" }}>
             {details.map((d) => (
               <div key={d.label} className="contents">
@@ -366,7 +369,7 @@ export function Viewer({
             ))}
           </dl>
           <p className="m-0 mt-3 text-[15px] text-[color:var(--kb-ink-2)]">
-            Only people on the event member list can open this. Views and downloads are logged.
+            Only people the organiser let into this event can open it. Views and downloads are logged.
           </p>
           <button type="button" className="btn btn-secondary mt-4 w-full" onClick={() => setSheet("none")}>
             Close

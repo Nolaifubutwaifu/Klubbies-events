@@ -26,7 +26,7 @@ export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumI
     .eq("id", albumId)
     .eq("event_id", ctx.event.id)
     .maybeSingle();
-  if (!album || (album.status !== "published" && !ctx.isAdmin)) notFound();
+  if (!album || (album.status !== "published" && !ctx.perms.manage_albums)) notFound();
 
   const data = await getViewerData(supabase, album.id, mediaId);
   if (!data) notFound();
@@ -46,6 +46,7 @@ export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumI
 
   const { media } = data;
   const details = [
+    ...(media.photographer_name ? [{ label: "Photographer", value: media.photographer_name }] : []),
     { label: "Taken", value: formatLongDate(media.captured_at) || "Unknown" },
     { label: "Uploaded", value: formatLongDate(media.created_at) },
     {
@@ -76,6 +77,7 @@ export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumI
         height: media.height,
         duration: formatDuration(media.duration_seconds),
         takenAt: formatTime(media.captured_at),
+        photographer: media.photographer_name,
       }}
       details={details}
       prevId={data.prevId}

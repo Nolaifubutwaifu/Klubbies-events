@@ -5,58 +5,49 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 /**
- * Most members open Klubbies on a phone at 11pm. Four destinations, thumb
- * height, always there — the design's tab bar, hidden once there's room for
- * the header nav instead. A fifth, Photos of you, joins them in a event where
- * the feature is on for this member: the rail was its only way in, and the
- * rail doesn't exist on a phone.
+ * Most attendees open the gallery on a phone, often straight from the QR on
+ * the night. Four destinations at thumb height, hidden once the header has
+ * room for them. "Your photos" is only there where face recognition is on.
  */
-export function MemberTabBar({ handle, photosOfYou = false }: { handle: string; photosOfYou?: boolean }) {
+export function MemberTabBar({ handle, facesEnabled = false }: { handle: string; facesEnabled?: boolean }) {
   const pathname = usePathname();
   const base = `/e/${handle}`;
-  // The lightbox is full-bleed and carries its own actions; a tab bar over the
-  // photo would be two rows of buttons arguing with each other.
-  const inLightbox = new RegExp(`^/e/[^/]+/a/[^/]+/[^/]+`).test(pathname);
+  // The lightbox is full-bleed and carries its own actions.
+  const inLightbox = /^\/e\/[^/]+\/a\/[^/]+\/[^/]+/.test(pathname);
 
-  const tabs: { href: string; label: string; icon: ReactNode; filled?: boolean; match: (p: string) => boolean }[] = [
+  const tabs: { href: string; label: string; icon: ReactNode; match: (p: string) => boolean }[] = [
     {
       href: base,
-      label: "Home",
-      match: (p) => p === base,
-      icon: <path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" />,
+      label: "Photos",
+      match: (p) => p === base || p.startsWith(`${base}/a/`),
+      icon: (
+        <>
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+          <path d="M3.5 15.5l4.5-4 4 3.5 3-2.5 5.5 4.5" />
+          <circle cx="15.5" cy="9" r="1.6" />
+        </>
+      ),
     },
-    ...(photosOfYou
+    ...(facesEnabled
       ? [
           {
             href: `${base}/me`,
-            label: "Photos of you",
+            label: "Your photos",
             match: (p: string) => p.startsWith(`${base}/me`),
             icon: (
               <>
-                <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
-                <circle cx="12" cy="10" r="3" />
-                <path d="M6.8 20.5c.9-2.9 2.8-4.3 5.2-4.3s4.3 1.4 5.2 4.3" />
+                <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+                <circle cx="12" cy="10.5" r="2.6" />
+                <path d="M7.8 16.5c.8-1.8 2.3-2.7 4.2-2.7s3.4.9 4.2 2.7" />
               </>
             ),
           },
         ]
       : []),
     {
-      href: `${base}/feed`,
-      label: "Event feed",
-      match: (p) => p.startsWith(`${base}/feed`),
-      icon: (
-        <>
-          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
-          <path d="M7 9h10M7 13h6" />
-        </>
-      ),
-    },
-    {
       href: `${base}/saved`,
       label: "Saved",
       match: (p) => p.startsWith(`${base}/saved`),
-      filled: true,
       icon: <path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.4 12 20 12 20Z" />,
     },
     {
@@ -75,44 +66,29 @@ export function MemberTabBar({ handle, photosOfYou = false }: { handle: string; 
   if (inLightbox) return null;
 
   return (
-    <>
-      <nav
-        data-tabbar
-        aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[color-mix(in_srgb,var(--color-text)_8%,transparent)] bg-[color:var(--color-surface)] px-2.5 pb-[max(16px,env(safe-area-inset-bottom))] pt-2 sm:hidden"
-      >
-        {tabs.map((tab) => {
-          const here = tab.match(pathname);
-          const colour = here ? "var(--color-accent-700)" : "var(--color-neutral-700)";
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              aria-current={here ? "page" : undefined}
-              className="flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-[3px] text-center text-[14px] font-bold leading-[1.15] no-underline"
-              style={{ color: colour }}
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill={here && tab.filled ? colour : "none"}
-                stroke={colour}
-                strokeWidth={here && tab.filled ? 1.6 : 2.2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                {tab.icon}
-              </svg>
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
-      {/* The footer after the page takes the bar's height as padding (see
-          .app-footer in globals.css). A spacer here sat above the footer,
-          which left the legal links under the bar. */}
-    </>
+    <nav
+      data-tabbar
+      aria-label="Sections"
+      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-2 pb-[max(12px,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+    >
+      {tabs.map((tab) => {
+        const here = tab.match(pathname);
+        const colour = here ? "var(--kb-ink)" : "var(--kb-ink-3)";
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            aria-current={here ? "page" : undefined}
+            className="flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-[3px] text-center text-[14px] font-medium leading-[1.15] no-underline"
+            style={{ color: colour }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={here ? "var(--kb-ember)" : colour} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {tab.icon}
+            </svg>
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

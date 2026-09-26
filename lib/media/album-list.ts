@@ -48,10 +48,11 @@ export async function listStackedAlbums(
       "id, title, description, album_date, status, created_at, published_at, publish_at, sort_order, allow_download, contributor_scope, cover_media_id, cover_path",
     )
     .eq("event_id", eventId)
-    // An explicit order wins; everything still at 0 falls back to event date.
+    // An explicit order wins; everything still at 0 runs in the order the
+    // event did: earliest day first, then the order albums were made.
     .order("sort_order", { ascending: false })
-    .order("album_date", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
+    .order("album_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
     .limit(limit);
   if (!opts.includeDrafts) query = query.eq("status", "published");
 

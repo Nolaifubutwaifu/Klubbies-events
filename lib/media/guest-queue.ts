@@ -54,7 +54,7 @@ export const EMPTY_GUEST_SNAPSHOT: readonly GuestJobView[] = [];
 function friendlyError(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
   if (/413|too large|maximum allowed size/i.test(text)) return "This file is larger than the event's plan allows.";
-  if (/403|expired|not valid/i.test(text)) return "The link stopped working. Ask the committee for a new one.";
+  if (/403|expired|not valid/i.test(text)) return "The link stopped working. Ask the organiser for a new one.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
 }

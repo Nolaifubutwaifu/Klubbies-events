@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       grid = parseManualEntry(text.slice(0, 500_000));
       filename = "Typed list";
     } else {
-      return NextResponse.json({ error: "Choose a file or paste some members" }, { status: 400 });
+      return NextResponse.json({ error: "Choose a file or paste some names and emails" }, { status: 400 });
     }
   } catch (error) {
     console.error("roster parse failed", error);
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   const sheet = structureSheet(grid);
   if (sheet.dataRows.length === 0) {
-    return NextResponse.json({ error: "That file doesn't have any member rows" }, { status: 422 });
+    return NextResponse.json({ error: "That file doesn't have any guest rows" }, { status: 422 });
   }
   if (sheet.dataRows.length > MAX_ROSTER_ROWS) {
     return NextResponse.json({ error: `Rosters are limited to ${MAX_ROSTER_ROWS.toLocaleString()} rows per import` }, { status: 413 });

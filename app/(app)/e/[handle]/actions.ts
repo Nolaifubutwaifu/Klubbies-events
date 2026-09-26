@@ -1,7 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getSessionUser } from "@/lib/auth/session";
+import { joinByLink } from "@/lib/auth/flow";
+import { getProfile, getPublicEvent, getSessionUser } from "@/lib/auth/session";
+import { normaliseEmail } from "@/lib/roster/email";
 import { listAlbumMedia, type GridItem } from "@/lib/media/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -86,4 +90,20 @@ export async function favouriteManyAction(mediaIds: string[]): Promise<{ saved: 
     .upsert(media.map((m) => ({ media_id: m.id, user_id: user.id, event_id: m.event_id })));
   if (error) return { saved: 0, error: "Could not save those. Try again." };
   return { saved: media.length };
+}
+
+/**
+ * A signed-in person opening an event link they aren't part of yet. In link
+ * mode that is enough to join; in guest-list mode it never is.
+ */
+export async function joinEventAction(handle: string): Promise<{ error?: string }> {
+  const user = await getSessionUser();
+  if (!user?.email) return { error: "Sign in first" };
+  const event = await getPublicEvent(handle);
+  if (!event || event.accessMode !== "link") return { error: "This event is only open to its guest list." };
+  const profile = await getProfile();
+  const joined = await joinByLink(event.id, user.id, normaliseEmail(user.email), profile?.display_name ?? null);
+  if (!joined) return { error: "The organiser has removed this address from the event." };
+  revalidatePath(`/e/${event.handle}`, "layout");
+  redirect(`/e/${event.handle}`);
 }

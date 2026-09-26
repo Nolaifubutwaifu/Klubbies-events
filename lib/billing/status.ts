@@ -1,6 +1,6 @@
 export type BillingStatus = "unpaid" | "active" | "past_due" | "canceled" | "comped";
 
-export const ACTIVATE_MESSAGE = "Activate your event to add members and upload. Go to Billing to finish setting up.";
+export const ACTIVATE_MESSAGE = "Activate the event to upload and add attendees. Go to Billing to finish setting up.";
 
 /** Paid, still retrying a failed renewal, or comped by a super admin. */
 export function canWrite(status: string): boolean {

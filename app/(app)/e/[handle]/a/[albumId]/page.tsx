@@ -10,7 +10,6 @@ import { UnfinishedUploads } from "@/components/UnfinishedUploads";
 import { getEventContext } from "@/lib/auth/session";
 import { faceStateFor, photosOfYouInAlbum } from "@/lib/faces/queries";
 import { formatLongDate, plural } from "@/lib/format";
-import { eventTypeLabel } from "@/lib/media/event-types";
 import { favouritedIds } from "@/lib/media/favourites";
 import { listAlbumMedia } from "@/lib/media/queries";
 import { ProcessingBanner } from "@/components/ProcessingBanner";
@@ -45,7 +44,7 @@ export default async function AlbumPage(props: Props) {
   const search = await props.searchParams;
 
   const canManage = ctx.perms.manage_albums;
-  const canAdd = canManage || (album.contributor_scope === "members" && Boolean(ctx.membership));
+  const canAdd = canManage || ctx.perms.upload || (album.contributor_scope === "members" && Boolean(ctx.membership));
   const editing = canManage && search.edit === "1";
   const adding = canAdd && search.add === "1";
   const albumHref = `/e/${handle}/a/${album.id}`;
@@ -81,6 +80,14 @@ export default async function AlbumPage(props: Props) {
     .select("id", { count: "exact", head: true })
     .eq("album_id", album.id)
     .not("guest_link_id", "is", null);
+  // The credit line: who took these. Set from the photographer's upload link
+  // or the uploader's name when each file arrived.
+  const creditsQuery = supabase
+    .from("media")
+    .select("photographer_name")
+    .eq("album_id", album.id)
+    .not("photographer_name", "is", null)
+    .limit(1000);
 
   // Members can't read an unfinished row, so the count comes from the service
   // role — after the membership check above, never before it. It's a tally of
@@ -140,7 +147,9 @@ export default async function AlbumPage(props: Props) {
     { photos: processingPhotos, videos: processingVideos },
     cover,
     mineItems,
-  ] = await Promise.all([firstPage, uploadersQuery, guestFilesQuery, processing, chosenCover, mine]);
+    { data: creditRows },
+  ] = await Promise.all([firstPage, uploadersQuery, guestFilesQuery, processing, chosenCover, mine, creditsQuery]);
+  const credits = [...new Set((creditRows ?? []).map((row) => row.photographer_name?.trim()).filter((n): n is string => Boolean(n)))];
 
   const uploaderIds = [...new Set((uploaders ?? []).map((m) => m.uploaded_by).filter((id): id is string => Boolean(id)))];
   const [{ count: savedTotal }, savedIds, { data: uploaderNames }] = await Promise.all([
@@ -170,7 +179,7 @@ export default async function AlbumPage(props: Props) {
       : firstNames.length > 1
         ? `${firstNames.slice(0, 2).join(" and ")}${firstNames.length > 2 ? ` +${firstNames.length - 2}` : ""}`
         : null,
-    guestCount > 0 ? "a guest photographer" : null,
+    guestCount > 0 ? "a photographer" : null,
   ]
     .filter(Boolean)
     .join(" and ");
@@ -185,12 +194,12 @@ export default async function AlbumPage(props: Props) {
     <main className="flex flex-1 flex-col">
       {/* Sticky album header: the title and the download stay reachable while
           you scroll a thousand photos. */}
-      <div className="sticky top-0 z-20 border-b border-[color:var(--kb-line)] bg-[rgb(255_248_244/0.94)] backdrop-blur-md">
+      <div className="sticky top-0 z-20 border-b border-[color:var(--kb-line)] bg-[rgb(247_247_245/0.94)] backdrop-blur-md">
         <div className="flex w-full flex-wrap items-center gap-4 px-4 py-3.5 sm:px-6">
           <Link
             href={`/e/${handle}`}
-            aria-label="Back to all events"
-            className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-text)_5%,transparent)] text-ink no-underline transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent)_12%,transparent)]"
+            aria-label="Back to the event"
+            className="kb-icon-btn flex-none text-ink no-underline"
           >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
               <path d="M14 6l-6 6 6 6" />
@@ -199,13 +208,10 @@ export default async function AlbumPage(props: Props) {
 
           <div className="min-w-[220px] flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="soft-display truncate text-[clamp(20px,2.6vw,28px)]">{album.title}</h1>
-              {eventTypeLabel(album.event_type) ? (
-                <span className="soft-chip">{eventTypeLabel(album.event_type)}</span>
-              ) : null}
+              <h1 className="truncate text-[clamp(20px,2.4vw,26px)] font-semibold">{album.title}</h1>
               {canManage ? (
                 <span className={album.status === "published" ? "soft-chip" : "soft-chip soft-chip-muted"}>
-                  {album.status === "published" ? "Published" : "Draft · members can't see it"}
+                  {album.status === "published" ? "Published" : "Draft · attendees can't see it"}
                 </span>
               ) : null}
             </div>
@@ -215,7 +221,11 @@ export default async function AlbumPage(props: Props) {
                   formatLongDate(album.album_date),
                   photoCount ? plural(photoCount, "photo") : null,
                   videoCount ? plural(videoCount, "video") : null,
-                  addedBy ? `added by ${addedBy}` : null,
+                  credits.length
+                    ? `photos by ${credits.slice(0, 3).join(", ")}${credits.length > 3 ? ` +${credits.length - 3}` : ""}`
+                    : addedBy
+                      ? `added by ${addedBy}`
+                      : null,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
@@ -225,15 +235,12 @@ export default async function AlbumPage(props: Props) {
                   <rect x="4" y="10" width="16" height="11" rx="2" />
                   <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                 </svg>
-                Members only
+                Private to attendees
               </span>
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            {canManage && album.status !== "published" ? (
-              <span className="soft-chip soft-chip-muted hidden sm:inline-flex">Draft · members can&rsquo;t see it</span>
-            ) : null}
             <AlbumActions
               albumId={album.id}
               mediaIds={(readyIds ?? []).map((m) => m.id)}
@@ -257,7 +264,7 @@ export default async function AlbumPage(props: Props) {
       ) : null}
 
       {album.contributor_scope === "members" && !canManage && ctx.membership ? (
-        <div className="kb-info mx-4 mt-4 sm:mx-6">Everyone in {ctx.event.name} can add photos to this album. Yours appear straight away.</div>
+        <div className="kb-info mx-4 mt-4 sm:mx-6">Attendees can add their own photos to this album. Yours appear straight away.</div>
       ) : null}
 
       {canManage && unfinished?.length ? <UnfinishedUploads items={unfinished} addHref={`${albumHref}?add=1`} /> : null}
@@ -277,7 +284,6 @@ export default async function AlbumPage(props: Props) {
             eventId: album.event_id,
             title: album.title,
             albumDate: album.album_date,
-            eventType: album.event_type,
             description: album.description,
             allowDownload: album.allow_download,
             visibility: album.visibility,

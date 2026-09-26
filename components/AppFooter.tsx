@@ -10,21 +10,17 @@ export function AppFooter() {
   if (/^\/e\/[^/]+\/a\/[^/]+\/[^/]+/.test(usePathname())) return null;
 
   return (
-    <footer className="app-footer relative z-10 mt-auto">
-      <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-8 text-[14px] text-[color:var(--ink-55)] sm:px-6">
-        <span className="soft-wordmark text-[17px] text-ink">klubbies</span>
-        <span>Your event&rsquo;s photos, for your event only.</span>
+    <footer className="app-footer relative z-10 mt-auto border-t border-[color:var(--kb-line)]">
+      <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-[14px] text-[color:var(--ink-55)] sm:px-6">
+        <span>Klubbies Events · Private event photos</span>
         <span className="flex flex-wrap gap-x-4 gap-y-2 sm:ml-auto">
-          <Link href="/how-it-works" className="text-[color:var(--ink-55)] no-underline hover:text-accent">
-            How it works
-          </Link>
-          <Link href="/privacy" className="text-[color:var(--ink-55)] no-underline hover:text-accent">
+          <Link href="/privacy" className="text-[color:var(--ink-55)] no-underline hover:text-ink">
             Privacy
           </Link>
-          <Link href="/terms" className="text-[color:var(--ink-55)] no-underline hover:text-accent">
+          <Link href="/terms" className="text-[color:var(--ink-55)] no-underline hover:text-ink">
             Terms
           </Link>
-          <Link href="/refunds" className="text-[color:var(--ink-55)] no-underline hover:text-accent">
+          <Link href="/refunds" className="text-[color:var(--ink-55)] no-underline hover:text-ink">
             Refunds
           </Link>
         </span>

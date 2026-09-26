@@ -10,7 +10,7 @@ export default function NotFound() {
         <h1 className="display text-[40px]">This page isn&apos;t available.</h1>
         <p className="text-[15px] text-ink-70">
           It may not exist, or it belongs to a event your account isn&apos;t on. If you think you should have access, ask
-          your committee to check the member list.
+          the organiser to check you have access.
         </p>
         <div className="flex gap-3 pt-2">
           <Link href="/events" className="btn btn-primary">

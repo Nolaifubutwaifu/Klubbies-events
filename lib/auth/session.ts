@@ -34,7 +34,14 @@ export type EventContext = {
   perms: Perms;
   isAdmin: boolean;
   userId: string;
+  /** The access window has passed and this person isn't on the organising
+      side. RLS already hides every photo; this lets pages say why. */
+  accessClosed: boolean;
 };
+
+export function accessHasEnded(event: Pick<EventRecord, "access_ends_at">, now = new Date()): boolean {
+  return event.access_ends_at !== null && new Date(event.access_ends_at) <= now;
+}
 
 function membershipIsLive(m: Pick<Membership, "status" | "grace_ends_at">): boolean {
   if (m.status === "active") return true;
@@ -74,7 +81,15 @@ async function resolveContext(event: EventRecord, userId: string): Promise<Event
 
   if (!live && !superAdmin) return null;
 
-  return { event, membership: live, role, perms, isAdmin: perms.manage_event, userId };
+  return {
+    event,
+    membership: live,
+    role,
+    perms,
+    isAdmin: perms.manage_event,
+    userId,
+    accessClosed: !perms.manage_albums && accessHasEnded(event),
+  };
 }
 
 /** For route handlers: never redirects, returns null when unauthorised. */
@@ -95,12 +110,13 @@ export type MyEvent = {
   organisation: string | null;
   logoPath: string | null;
   accentColour: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  venue: string | null;
+  accessEndsAt: string | null;
   roleName: string;
   isAdmin: boolean;
   since: string;
-  status: string;
-  graceEndsAt: string | null;
-  accepted: boolean;
   /** This event analyses faces in its photos, so joining it means yours too. */
   facesEnabled: boolean;
 };
@@ -116,20 +132,19 @@ export function eventInitials(name: string): string {
   return initialsOf(name);
 }
 
-/** Events the member has accepted, plus invitations still waiting. */
-export const listMyEvents = cache(async (): Promise<{ events: MyEvent[]; invites: MyEvent[] }> => {
+/** Every event this person can open, newest event first. */
+export const listMyEvents = cache(async (): Promise<MyEvent[]> => {
   const user = await requireUser();
   const supabase = await createClient();
   const { data } = await supabase
     .from("memberships")
     .select(
-      "id, role, status, grace_ends_at, created_at, invited_at, accepted_at, declined_at, event_roles(name, manage_event), events!inner(id, name, handle, organisation, status, logo_path, accent_colour, event_face_settings(enabled))",
+      "id, role, status, grace_ends_at, created_at, invited_at, event_roles(name, manage_event), events!inner(id, name, handle, organisation, status, logo_path, accent_colour, starts_on, ends_on, venue, access_ends_at, created_at, event_face_settings(enabled))",
     )
     .eq("user_id", user.id)
-    .in("status", ["active", "grace"])
-    .order("created_at", { ascending: true });
+    .eq("status", "active");
 
-  const rows = (data ?? [])
+  return (data ?? [])
     .filter((m) => m.events.status === "active" && membershipIsLive(m))
     .map((m) => ({
       membershipId: m.id,
@@ -139,22 +154,61 @@ export const listMyEvents = cache(async (): Promise<{ events: MyEvent[]; invites
       organisation: m.events.organisation,
       logoPath: m.events.logo_path,
       accentColour: m.events.accent_colour,
-      roleName: m.event_roles?.name ?? (m.role === "event_admin" ? "Admin" : "Member"),
+      startsOn: m.events.starts_on,
+      endsOn: m.events.ends_on,
+      venue: m.events.venue,
+      accessEndsAt: m.events.access_ends_at,
+      roleName: m.event_roles?.name ?? (m.role === "event_admin" ? "Organiser" : "Attendee"),
       isAdmin: Boolean(m.event_roles?.manage_event) || m.role === "event_admin",
       since: m.invited_at ?? m.created_at,
-      status: m.status,
-      graceEndsAt: m.grace_ends_at,
-      accepted: m.accepted_at !== null,
       facesEnabled:
         facesConfigured() &&
         Boolean(
           (Array.isArray(m.events.event_face_settings) ? m.events.event_face_settings[0] : m.events.event_face_settings)
             ?.enabled,
         ),
-    }));
+      sortKey: m.events.starts_on ?? m.events.created_at,
+    }))
+    .sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1))
+    .map(({ sortKey: _sortKey, ...event }) => event);
+});
 
+export type PublicEvent = {
+  id: string;
+  name: string;
+  handle: string;
+  organisation: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+  venue: string | null;
+  logoPath: string | null;
+  accentColour: string | null;
+  accessMode: "link" | "guest_list";
+};
+
+/**
+ * What anyone holding the event link may know: name, host, dates, venue and
+ * logo. Never counts, covers or photos.
+ */
+export const getPublicEvent = cache(async (handle: string): Promise<PublicEvent | null> => {
+  if (!/^[a-z0-9_]{1,48}$/i.test(handle)) return null;
+  const { data } = await createAdminClient()
+    .from("events")
+    .select("id, name, handle, organisation, starts_on, ends_on, venue, logo_path, accent_colour, access_mode")
+    .eq("handle", handle.toLowerCase())
+    .eq("status", "active")
+    .maybeSingle();
+  if (!data) return null;
   return {
-    events: rows.filter((m) => m.accepted),
-    invites: rows.filter((m) => !m.accepted),
+    id: data.id,
+    name: data.name,
+    handle: data.handle,
+    organisation: data.organisation,
+    startsOn: data.starts_on,
+    endsOn: data.ends_on,
+    venue: data.venue,
+    logoPath: data.logo_path,
+    accentColour: data.accent_colour,
+    accessMode: data.access_mode === "guest_list" ? "guest_list" : "link",
   };
 });

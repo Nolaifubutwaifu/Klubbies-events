@@ -12,7 +12,6 @@ import {
   setAlbumPublishedAction,
 } from "@/app/(app)/admin/actions";
 import { formatDate, formatLongDate } from "@/lib/format";
-import { eventTypeLabel } from "@/lib/media/event-types";
 import type { StackedAlbum } from "@/lib/media/album-list";
 
 /** Local datetime string for an <input type="datetime-local">. */
@@ -169,7 +168,7 @@ export function AlbumManager({
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="soft-display text-[19px]">Manage albums</h2>
         <span className="text-[14px] text-[color:var(--ink-70)]">
-          Drag to reorder — the top one is what members see first. Hiding keeps the files.
+          Drag to reorder: the top one is what attendees see first. Hiding keeps the files.
         </span>
         {message ? <span className="soft-chip ml-auto">{message}</span> : null}
       </div>
@@ -245,9 +244,6 @@ export function AlbumManager({
                   <Link href={`/e/${handle}/a/${album.id}`} className="soft-display text-[17px] text-ink no-underline">
                     {album.title}
                   </Link>
-                  {eventTypeLabel(album.eventType) ? (
-                    <span className="soft-chip soft-chip-muted !py-0.5 !text-[14px]">{eventTypeLabel(album.eventType)}</span>
-                  ) : null}
                 </span>
                 <span className="block text-[14px] text-[color:var(--ink-70)]">
                   {[
@@ -267,7 +263,7 @@ export function AlbumManager({
                 <Figures stats={stats[album.id] ?? { views: 0, downloads: 0, members: 0 }} />
               ) : (
                 <span className="hidden flex-none text-[14px] text-[color:var(--ink-55)] xl:block xl:w-[232px] xl:text-center">
-                  {album.status === "hidden" ? "Members can't see it, nothing deleted" : "Nobody can see this yet"}
+                  {album.status === "hidden" ? "Attendees can't see it, nothing deleted" : "Nobody can see this yet"}
                 </span>
               )}
 
@@ -300,7 +296,7 @@ export function AlbumManager({
                     </MoreButton>
                   ) : null}
                   <MoreButton disabled={pending} onClick={() => run(() => setAlbumHiddenAction(album.id, album.status !== "hidden"))}>
-                    {album.status === "hidden" ? "Show to members again" : "Hide from members"}
+                    {album.status === "hidden" ? "Show to attendees again" : "Hide from attendees"}
                   </MoreButton>
                 </MoreMenu>
               </span>

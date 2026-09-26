@@ -216,3 +216,80 @@ $$;
 
 revoke execute on function public.create_event(text, text, text, text, date, date, text, text) from public, anon;
 grant execute on function public.create_event(text, text, text, text, date, date, text, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Joining through the event link
+-- ---------------------------------------------------------------------------
+
+-- "join" is a code request made from an event's own link. For an event in
+-- link mode the address needn't be on any list; verifying the code creates
+-- the attendee row. event_id remembers which event the code was for.
+alter table public.pending_sign_ins drop constraint pending_sign_ins_flow_check;
+alter table public.pending_sign_ins add constraint pending_sign_ins_flow_check
+  check (flow in ('member', 'create', 'signup', 'join'));
+alter table public.pending_sign_ins
+  add column event_id uuid references public.events (id) on delete cascade;
+
+-- New events start with face recognition on, as Klubbies clubs do, recorded
+-- as the product's default rather than an organiser's acceptance. The
+-- organiser can switch it off in Settings, which deletes every faceprint.
+create or replace function private.event_faces_on_by_default()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.event_face_settings (event_id, enabled, notice_version)
+  values (new.id, true, 'events-default-2026-09-27')
+  on conflict (event_id) do nothing;
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Photographers with an account upload anywhere in their event
+-- ---------------------------------------------------------------------------
+
+-- In Klubbies the upload permission only reached albums open to member
+-- contributions. An event's Photographer role exists to upload, so it reaches
+-- every album; attendees still only reach albums that invite them.
+create or replace function private.can_contribute_to_album(album_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.albums a
+    where a.id = can_contribute_to_album.album_id
+      and (
+        private.event_perm(a.event_id, 'manage_albums')
+        or private.event_perm(a.event_id, 'upload')
+        or (a.contributor_scope = 'members' and private.is_event_member(a.event_id))
+      )
+  );
+$$;
+
+-- An uploader can read their own rows while they are still processing, which
+-- is what lets the finalize step (and storage signing, which joins media)
+-- work for someone who can't manage albums.
+drop policy media_select on public.media;
+create policy media_select on public.media
+  for select to authenticated
+  using (
+    private.event_perm(event_id, 'manage_albums')
+    or uploaded_by = (select auth.uid())
+    or (
+      status = 'ready'
+      and hidden_at is null
+      and private.can_view_event_item(event_id, created_at)
+      and exists (
+        select 1 from public.albums a
+        where a.id = media.album_id
+          and a.status = 'published'
+          and a.visibility = 'members'
+      )
+    )
+  );

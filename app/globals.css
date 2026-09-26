@@ -2,48 +2,51 @@
 @config "../tailwind.config.ts";
 
 /* ---------------------------------------------------------------------------
-   Klubbies tokens (design audit, 26 Sep 2026)
-   One accent, one ink, one rhythm. Ember is the only brand colour; ink carries
-   everything secondary. Nothing on the site goes below 14px, and no text is
-   set with opacity.
+   Klubbies Events tokens (docs/masterfile.md §5)
+   Calm and editorial: paper, ink, one accent, and the photos do the talking.
+   The accent is the event's own colour on its pages (lib/theme.ts rewrites
+   the three --kb-ember* tokens, contrast-checked); this blue is the default.
+   The --kb-ember names are kept from Klubbies so every call site follows.
+   Nothing on the site goes below 14px, and no text is set with opacity.
    --------------------------------------------------------------------------- */
 :root {
   /* Surfaces */
-  --kb-cream: #fff8f4; /* page background, theme colour */
-  --kb-sand: #f8eee9; /* alternate sections, info boxes */
+  --kb-cream: #f7f7f5; /* paper: page background, theme colour */
+  --kb-sand: #efefec; /* mist: alternate sections, info boxes, placeholders */
   --kb-white: #ffffff; /* cards, inputs */
-  --kb-line: #eaddd7; /* borders, dividers */
-  --kb-line-strong: #cdbdb6; /* secondary button borders */
-  /* Input edges need 3:1 against white to read as a field (WCAG 1.4.11);
-     line-strong is 1.8:1, so fields, checkboxes and radios use this. */
-  --kb-line-input: #968990;
+  --kb-line: #e4e4df; /* borders, dividers */
+  --kb-line-strong: #c9c9c2; /* secondary button borders */
+  /* Input edges need 3:1 against white to read as a field (WCAG 1.4.11). */
+  --kb-line-input: #8a8a82;
 
   /* Ink */
-  --kb-ink: #2b2228; /* headings, dark sections */
-  --kb-ink-2: #5f545a; /* body text, 6.9:1 on cream */
-  --kb-ink-3: #776b70; /* captions, 14px minimum; use ink-2 on sand */
+  --kb-ink: #16181d; /* headings, primary buttons */
+  --kb-ink-2: #4a4d55; /* body text */
+  --kb-ink-3: #6b6e76; /* captions, 4.9:1 on white */
 
-  /* Accent */
-  --kb-ember: #cf2e12; /* primary buttons, white text 5.2:1 */
-  --kb-ember-deep: #ae1800; /* accent words, links, hover */
-  --kb-ember-tint: #ffe7df; /* chips, highlights, focus halo */
-  --kb-ember-on-dark: #ffb3a1; /* accent on ink backgrounds */
+  /* Accent (the event's colour, else this blue) */
+  --kb-ember: #2b4acb; /* links, active nav, chips, 6.9:1 on white */
+  --kb-ember-deep: #1f379b; /* hover, emphasis */
+  --kb-ember-tint: #e7ecfb; /* chip backgrounds, focus halo */
+  --kb-ember-on-dark: #b3c1f6; /* accent on ink backgrounds */
 
-  /* Type */
-  --kb-font-display: var(--font-fredoka), system-ui, sans-serif;
-  --kb-font-body: var(--font-dm-sans), system-ui, sans-serif;
+  /* Type: Geist for everything functional, Instrument Serif for display. */
+  --kb-font-display: var(--font-geist), system-ui, sans-serif;
+  --kb-font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --kb-font-body: var(--font-geist), system-ui, sans-serif;
+  --kb-font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
 
   /* Radius */
   --kb-r-pill: 999px;
-  --kb-r-input: 14px;
-  --kb-r-photo: 16px;
-  --kb-r-card: 24px;
-  --kb-r-panel: 28px;
+  --kb-r-input: 8px;
+  --kb-r-photo: 6px;
+  --kb-r-card: 10px;
+  --kb-r-panel: 12px;
 
   /* Section rhythm */
-  --kb-section-y: 112px;
-  --kb-gutter: 80px;
-  --kb-content: 1280px;
+  --kb-section-y: 104px;
+  --kb-gutter: 64px;
+  --kb-content: 1200px;
 
   /* -------------------------------------------------------------------------
      Aliases. The app was built on an older token set; these point every old
@@ -65,13 +68,13 @@
   --color-neutral-900: var(--kb-ink);
   --color-accent-100: var(--kb-ember-tint);
   --color-accent-200: var(--kb-ember-tint);
-  --color-accent-300: #f7b9a8;
-  --color-accent-400: #e8765c;
+  --color-accent-300: #b3c1f6;
+  --color-accent-400: #6f86e3;
   --color-accent-500: var(--kb-ember);
   --color-accent-600: var(--kb-ember-deep);
   --color-accent-700: var(--kb-ember-deep);
   --color-accent-800: var(--kb-ember-deep);
-  --color-accent-900: #6e1403;
+  --color-accent-900: #14255f;
   /* Salmon is retired: the old second accent now resolves to sand and ink. */
   --color-accent-2: var(--kb-sand);
   --color-accent-2-100: var(--kb-sand);
@@ -92,10 +95,10 @@
   --soft-r-lg: var(--kb-r-panel);
   --soft-r: var(--kb-r-card);
   --soft-r-sm: var(--kb-r-photo);
-  --soft-shadow: 0 1px 2px rgb(43 34 40 / 0.04);
-  --soft-shadow-lift: 0 10px 28px -12px rgb(43 34 40 / 0.22);
+  --soft-shadow: 0 1px 2px rgb(22 24 29 / 0.04);
+  --soft-shadow-lift: 0 10px 28px -12px rgb(22 24 29 / 0.2);
   --soft-ease: 180ms cubic-bezier(0.22, 0.68, 0.32, 1);
-  --shadow-lg: 0 18px 44px -14px rgb(43 34 40 / 0.3);
+  --shadow-lg: 0 18px 44px -14px rgb(22 24 29 / 0.28);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -131,6 +134,7 @@
     font-size: 16px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "cv11";
   }
 
   h1,
@@ -140,8 +144,8 @@
   h5,
   h6 {
     font-family: var(--kb-font-display);
-    font-weight: 700;
-    line-height: 1.08;
+    font-weight: 600;
+    line-height: 1.15;
     letter-spacing: -0.02em;
     margin: 0;
     color: var(--kb-ink);
@@ -161,8 +165,8 @@
     outline: none;
   }
   :focus-visible {
-    outline: 3px solid var(--kb-ink);
-    outline-offset: 3px;
+    outline: 2px solid var(--kb-ember);
+    outline-offset: 2px;
   }
 
   ::selection {
@@ -197,25 +201,43 @@
   }
 
   .kb-h1 {
-    font-family: var(--kb-font-display);
-    font-weight: 700;
-    font-size: 68px;
+    font-family: var(--kb-font-serif);
+    font-weight: 400;
+    font-size: 72px;
     line-height: 1.02;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.015em;
   }
   .kb-h2 {
-    font-family: var(--kb-font-display);
-    font-weight: 700;
-    font-size: 48px;
-    line-height: 1.08;
-    letter-spacing: -0.02em;
+    font-family: var(--kb-font-serif);
+    font-weight: 400;
+    font-size: 50px;
+    line-height: 1.06;
+    letter-spacing: -0.01em;
   }
   .kb-h3 {
     font-family: var(--kb-font-display);
     font-weight: 600;
-    font-size: 22px;
-    line-height: 1.2;
+    font-size: 19px;
+    line-height: 1.3;
     letter-spacing: -0.01em;
+  }
+  /* The display voice: event names and attendee page titles. One weight. */
+  .serif {
+    font-family: var(--kb-font-serif);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+  .kb-eyebrow {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+  }
+  .mono {
+    font-family: var(--kb-font-mono);
+    font-feature-settings: normal;
   }
   .kb-lead {
     font-size: 19px;
@@ -234,10 +256,10 @@
   }
   @media (max-width: 639px) {
     .kb-h1 {
-      font-size: 42px;
+      font-size: 46px;
     }
     .kb-h2 {
-      font-size: 32px;
+      font-size: 36px;
     }
     .kb-h3 {
       font-size: 19px;
@@ -249,7 +271,8 @@
   /* The accent word in a heading. */
   .kb-accent,
   .soft-word {
-    color: var(--kb-ember-deep);
+    color: var(--kb-ember);
+    font-style: italic;
   }
   .kb-ink-band .kb-accent {
     color: var(--kb-ember-on-dark);
@@ -269,15 +292,15 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 52px;
-    padding: 0 26px;
-    border: 1.5px solid var(--kb-line-strong);
-    border-radius: var(--kb-r-pill);
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid var(--kb-line-strong);
+    border-radius: var(--kb-r-input);
     background: var(--kb-white);
     color: var(--kb-ink);
     font-family: var(--kb-font-body);
-    font-weight: 700;
-    font-size: 16px;
+    font-weight: 550;
+    font-size: 15px;
     line-height: 1.2;
     text-decoration: none;
     white-space: nowrap;
@@ -302,14 +325,14 @@
   /* Primary: the one thing this screen is for. */
   .btn-primary,
   .soft-btn-primary {
-    background: var(--kb-ember);
-    border-color: var(--kb-ember);
+    background: var(--kb-ink);
+    border-color: var(--kb-ink);
     color: #fff;
   }
   .btn-primary:hover:not(:disabled),
   .soft-btn-primary:hover:not(:disabled) {
-    background: var(--kb-ember-deep);
-    border-color: var(--kb-ember-deep);
+    background: #2d3038;
+    border-color: #2d3038;
   }
 
   /* Secondary. accent / tonal / ghost are old names for the same button. */
@@ -330,34 +353,45 @@
   /* Compact secondary, for rows and toolbars inside the app. */
   .btn-ghost,
   .soft-btn-tonal {
-    min-height: 44px;
-    padding: 0 18px;
-    font-size: 15px;
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  @media (pointer: coarse) {
+    .btn-ghost,
+    .soft-btn-tonal {
+      min-height: 44px;
+    }
   }
 
   /* Destructive: secondary shape, ember-deep ink. */
   .btn-danger,
   .soft-btn-danger {
     background: var(--kb-white);
-    border-color: var(--kb-ember-deep);
-    color: var(--kb-ember-deep);
+    border-color: #e3b4ae;
+    color: #b42318;
   }
   .btn-danger:hover:not(:disabled),
   .soft-btn-danger:hover:not(:disabled) {
-    background: var(--kb-ember-tint);
-    border-color: var(--kb-ember-deep);
+    background: #fef3f2;
+    border-color: #b42318;
   }
 
   .btn-lg,
   .soft-btn-lg {
-    min-height: 56px;
-    padding: 0 30px;
-    font-size: 17px;
+    min-height: 50px;
+    padding: 0 24px;
+    font-size: 16px;
   }
   .btn-sm {
-    min-height: 44px;
-    padding: 0 18px;
-    font-size: 15px;
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+  @media (pointer: coarse) {
+    .btn-sm {
+      min-height: 44px;
+    }
   }
 
   /* Secondary on an ink band. */
@@ -367,7 +401,7 @@
     color: #fff;
   }
   .btn-on-dark:hover:not(:disabled) {
-    background: #3a2f36;
+    background: #2d3038;
     border-color: #fff;
   }
 
@@ -379,9 +413,9 @@
     padding: 0;
     border: 0;
     background: none;
-    color: var(--kb-ember-deep);
+    color: var(--kb-ember);
     font: inherit;
-    font-weight: 700;
+    font-weight: 550;
     text-decoration: underline;
     text-underline-offset: 4px;
     cursor: pointer;
@@ -395,11 +429,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     flex: none;
-    border: 1.5px solid var(--kb-line-strong);
-    border-radius: var(--kb-r-pill);
+    border: 1px solid var(--kb-line-strong);
+    border-radius: var(--kb-r-input);
     background: var(--kb-white);
     color: var(--kb-ink);
     cursor: pointer;
@@ -422,8 +456,8 @@
 @layer components {
   .kb-label {
     display: block;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 550;
     color: var(--kb-ink);
   }
   .kb-help {
@@ -433,7 +467,7 @@
   .kb-error {
     font-size: 14px;
     font-weight: 500;
-    color: var(--kb-ember-deep);
+    color: #b42318;
   }
 
   .input,
@@ -446,9 +480,9 @@
   .theme-soft input[type="datetime-local"],
   .theme-soft input[type="time"] {
     width: 100%;
-    min-height: 52px;
-    padding: 12px 16px;
-    border: 1.5px solid var(--kb-line-input);
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--kb-line-input);
     border-radius: var(--kb-r-input);
     background: var(--kb-white);
     color: var(--kb-ink);
@@ -471,12 +505,12 @@
   .field textarea:focus-visible,
   .theme-soft select:focus-visible {
     outline: none;
-    border: 2px solid var(--kb-ink);
-    box-shadow: 0 0 0 4px var(--kb-ember-tint);
+    border-color: var(--kb-ember);
+    box-shadow: 0 0 0 3px var(--kb-ember-tint);
   }
   .input[aria-invalid="true"],
   .soft-input[aria-invalid="true"] {
-    border: 2px solid var(--kb-ember-deep);
+    border-color: #b42318;
   }
   textarea.input,
   .field textarea {
@@ -487,10 +521,10 @@
   .theme-soft select {
     appearance: none;
     -webkit-appearance: none;
-    padding-right: 44px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%232b2228' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    padding-right: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2316181d' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 16px center;
+    background-position: right 14px center;
     background-size: 12px;
   }
   .theme-soft select:disabled {
@@ -500,9 +534,9 @@
   .field {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 15px;
-    font-weight: 700;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 550;
     color: var(--kb-ink);
   }
 
@@ -514,15 +548,15 @@
     display: inline-grid;
     place-content: center;
     flex: none;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     margin: 0;
-    border: 1.5px solid var(--kb-line-input);
+    border: 1px solid var(--kb-line-input);
     background: var(--kb-white);
     cursor: pointer;
   }
   .theme-soft input[type="checkbox"] {
-    border-radius: 7px;
+    border-radius: 5px;
   }
   .theme-soft input[type="radio"] {
     border-radius: 50%;
@@ -545,8 +579,8 @@
   }
   .theme-soft input[type="checkbox"]:checked,
   .theme-soft input[type="radio"]:checked {
-    background: var(--kb-ink);
-    border-color: var(--kb-ink);
+    background: var(--kb-ember);
+    border-color: var(--kb-ember);
   }
   .theme-soft input[type="checkbox"]:checked::before,
   .theme-soft input[type="radio"]:checked::before {
@@ -662,8 +696,8 @@
     line-height: 1.5;
   }
   .notice[role="alert"] {
-    background: var(--kb-ember-tint);
-    color: var(--kb-ember-deep);
+    background: #fef3f2;
+    color: #b42318;
     font-weight: 500;
   }
 
@@ -673,13 +707,13 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 3px 10px;
     border: 0;
     border-radius: var(--kb-r-pill);
     background: var(--kb-ember-tint);
     color: var(--kb-ember-deep);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 550;
     line-height: 1.2;
     letter-spacing: 0;
     text-transform: none;
@@ -700,10 +734,10 @@
   .kicker,
   .label-caps {
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 550;
     letter-spacing: 0;
     text-transform: none;
-    color: var(--kb-ember-deep);
+    color: var(--kb-ember);
   }
 
   .display,
@@ -715,8 +749,8 @@
     letter-spacing: -0.015em;
   }
   .display {
-    font-weight: 700;
-    line-height: 1.05;
+    font-weight: 600;
+    line-height: 1.1;
   }
   .brand,
   .soft-wordmark {
@@ -741,8 +775,8 @@
     border-bottom: 1px solid var(--kb-line);
     text-align: left;
     font-size: 14px;
-    font-weight: 700;
-    color: var(--kb-ink-2);
+    font-weight: 500;
+    color: var(--kb-ink-3);
   }
   .table td {
     padding: 10px 8px;
@@ -760,7 +794,7 @@
     display: grid;
     place-items: center;
     padding: 16px;
-    background: rgb(43 34 40 / 0.55);
+    background: rgb(22 24 29 / 0.5);
   }
   .dialog {
     display: flex;
@@ -777,8 +811,8 @@
   }
   .dialog-title {
     font-family: var(--kb-font-display);
-    font-weight: 700;
-    font-size: 26px;
+    font-weight: 600;
+    font-size: 22px;
     letter-spacing: -0.02em;
   }
   .dialog-actions {
@@ -795,7 +829,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: 1.5px dashed var(--kb-line-input);
+    border: 1px dashed var(--kb-line-input);
     border-radius: var(--kb-r-card);
     background: var(--kb-white);
     text-align: center;
@@ -813,7 +847,7 @@
 @layer components {
   .tile-grid {
     display: grid;
-    gap: 6px;
+    gap: 4px;
   }
   .tile,
   .soft-tile {
@@ -829,11 +863,11 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 300ms cubic-bezier(0.22, 0.68, 0.32, 1);
+    transition: opacity 150ms ease;
   }
   .tile:hover img,
   .soft-tile:hover img {
-    transform: scale(1.03);
+    opacity: 0.92;
   }
   .theme-soft .tile-grid > * {
     border-radius: var(--kb-r-photo);
@@ -847,13 +881,13 @@
     flex-direction: column;
     gap: 4px;
     padding: 24px;
-    background: linear-gradient(to top, rgb(43 34 40 / 0.85), rgb(43 34 40 / 0));
+    background: linear-gradient(to top, rgb(22 24 29 / 0.85), rgb(22 24 29 / 0));
     color: #fff;
   }
 
   .masonry {
     columns: 2 160px;
-    column-gap: 6px;
+    column-gap: 4px;
   }
   @media (min-width: 768px) {
     .masonry {
@@ -862,7 +896,7 @@
   }
   .masonry > * {
     break-inside: avoid;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   /* Loading is a skeleton, never a spinner. */
@@ -877,7 +911,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
     animation: kb-shimmer 1.4s infinite;
   }
   @keyframes kb-shimmer {
@@ -934,9 +968,9 @@
     cursor: pointer;
     list-style: none;
     font-family: var(--kb-font-display);
-    font-weight: 600;
-    font-size: 19px;
-    line-height: 1.3;
+    font-weight: 550;
+    font-size: 17px;
+    line-height: 1.35;
     color: var(--kb-ink);
   }
   .kb-faq summary::-webkit-details-marker {
@@ -945,15 +979,15 @@
   .kb-faq summary::after {
     content: "+";
     flex: none;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: grid;
     place-items: center;
-    border-radius: 50%;
+    border-radius: 6px;
     background: var(--kb-sand);
     font-family: var(--kb-font-body);
-    font-size: 22px;
-    font-weight: 500;
+    font-size: 18px;
+    font-weight: 400;
     line-height: 1;
   }
   .kb-faq[open] summary::after {
@@ -978,8 +1012,8 @@
     cursor: pointer;
     list-style: none;
     font-family: var(--kb-font-display);
-    font-weight: 600;
-    font-size: 19px;
+    font-weight: 550;
+    font-size: 17px;
   }
   .soft-faq summary::-webkit-details-marker {
     display: none;
@@ -1006,9 +1040,9 @@
     position: absolute;
     z-index: 40;
     min-width: 232px;
-    padding: 6px;
+    padding: 4px;
     border: 1px solid var(--kb-line);
-    border-radius: 18px;
+    border-radius: var(--kb-r-card);
     background: var(--kb-white);
     box-shadow: var(--shadow-lg);
   }
@@ -1017,10 +1051,10 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    min-height: 44px;
-    padding: 0 14px;
+    min-height: 40px;
+    padding: 0 10px;
     border: 0;
-    border-radius: 12px;
+    border-radius: 6px;
     background: none;
     color: var(--kb-ink);
     font: inherit;
@@ -1036,7 +1070,7 @@
     outline-offset: -3px;
   }
   .kb-menu-item[data-danger="true"] {
-    color: var(--kb-ember-deep);
+    color: #b42318;
   }
   .kb-menu-sep {
     height: 1px;
@@ -1056,13 +1090,16 @@
   font-size: 16px;
   line-height: 1.6;
 }
-.theme-soft h1,
-.theme-soft h2,
-.theme-soft h3 {
-  font-family: var(--kb-font-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+/* In the base layer, so .kb-h1, .serif and friends (components layer) win. */
+@layer base {
+  .theme-soft h1,
+  .theme-soft h2,
+  .theme-soft h3 {
+    font-family: var(--kb-font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
 }
 
 /* Text on a dark photo band. */
@@ -1083,15 +1120,11 @@ html:has(.theme-soft) body {
   background: var(--kb-cream);
 }
 
-/* Below sm the member tab bar is fixed to the bottom of the window, so the
-   footer's links need room to clear it, and more again on pages where the
-   floating "+ Album" button sits above the bar. */
-@media (max-width: 639.98px) {
+/* Below md the attendee tab bar is fixed to the bottom of the window, so the
+   footer's links need room to clear it. */
+@media (max-width: 767.98px) {
   .theme-soft:has([data-tabbar]) .app-footer {
-    padding-bottom: calc(76px + max(16px, env(safe-area-inset-bottom)));
-  }
-  .theme-soft:has([data-tabbar]):has([data-fab]) .app-footer {
-    padding-bottom: calc(140px + max(16px, env(safe-area-inset-bottom)));
+    padding-bottom: calc(68px + max(12px, env(safe-area-inset-bottom)));
   }
 }
 

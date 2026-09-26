@@ -1,64 +1,47 @@
 import type { Metadata } from "next";
 import { ContactLine, LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Refunds and cancellation" };
+export const metadata: Metadata = { title: "Refunds" };
 
 export default function RefundsPage() {
   return (
     <LegalPage
       doc="refunds"
-      title="Refunds and cancellation"
-      updated="16 September 2026"
-      minutes={2}
+      title="Refunds"
+      updated="27 September 2026"
+      minutes={1}
       sections={[
         {
           title: "How billing works",
           body: (
             <p>
-              A Klubbies event is a monthly subscription, charged in advance through Stripe on the same day each month.
-              The price is shown before you pay and on every receipt.
+              Each event is a single payment, taken through Stripe when the organiser activates it. There is no
+              subscription and nothing renews. The price is shown before you pay and on the receipt and invoice.
             </p>
           ),
         },
         {
-          title: "Cancelling",
+          title: "Before anything is uploaded",
           body: (
-            <>
-              <p>
-                Event admins can cancel at any time from <strong>Admin → Billing → Manage billing and invoices</strong>.
-                The subscription stays active until the end of the month you&apos;ve already paid for, and you won&apos;t
-                be charged again.
-              </p>
-              <p>
-                After that, the event can&apos;t add members or upload, but members can still open existing albums. We give
-                at least 30 days&apos; notice before deleting a cancelled event&apos;s media.
-              </p>
-            </>
+            <p>
+              If you activated an event and nothing has been uploaded to it yet, contact us within 30 days of payment
+              and we will refund it in full.
+            </p>
           ),
         },
         {
-          title: "Refunds",
+          title: "Mistakes and faults",
           body: (
             <>
               <p>
-                We don&apos;t refund part months when you cancel. If you were charged by mistake, charged twice, or the
-                service didn&apos;t work as described, contact us within 30 days and we&apos;ll put it right.
+                If you were charged by mistake, charged twice, or the service didn&apos;t work as described, contact us
+                within 30 days and we&apos;ll put it right.
               </p>
               <p>
                 Our services come with guarantees that cannot be excluded under the Australian Consumer Law. For a major
-                failure you&apos;re entitled to cancel and receive a refund for the unused portion.
+                failure you&apos;re entitled to a refund.
               </p>
             </>
-          ),
-        },
-        {
-          title: "Failed payments",
-          body: (
-            <p>
-              If a renewal fails, Stripe retries the card over the following days and the event keeps working in the
-              meantime. Update your card from the billing page. If payment still fails, the event is paused as if it had
-              been cancelled.
-            </p>
           ),
         },
         {

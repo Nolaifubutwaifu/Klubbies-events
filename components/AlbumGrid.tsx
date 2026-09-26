@@ -305,7 +305,7 @@ export function AlbumGrid({
       ) : null}
 
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${selected.size} ${selected.size === 1 ? "item" : "items"}?`}>
-        <p className="text-[15px]">The originals go too. Members who already downloaded a copy keep it.</p>
+        <p className="text-[15px]">The originals go too. Attendees who already downloaded a copy keep it.</p>
         <div className="dialog-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirm(false)}>
             Cancel

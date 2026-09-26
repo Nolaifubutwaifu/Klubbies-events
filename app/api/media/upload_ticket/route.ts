@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { displayNameFor } from "@/lib/auth/display-name";
 import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { ACCEPTED_TYPES, resolveMimeType } from "@/lib/media/constants";
@@ -26,11 +27,14 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data: album } = await supabase.from("albums").select("id, event_id").eq("id", albumId).maybeSingle();
+  const { data: album } = await supabase.from("albums").select("id, event_id, contributor_scope").eq("id", albumId).maybeSingle();
   if (!album) return NextResponse.json({ error: "Album not found" }, { status: 404 });
 
+  // Organisers and Photographers upload anywhere; attendees only into albums
+  // that invite them. RLS (can_contribute_to_album) says the same thing.
   const ctx = await getEventContextById(album.event_id);
-  if (!ctx?.isAdmin) return NextResponse.json({ error: "Album not found" }, { status: 404 });
+  const allowed = ctx && !ctx.accessClosed && (ctx.perms.upload || (album.contributor_scope === "members" && ctx.membership));
+  if (!ctx || !allowed) return NextResponse.json({ error: "Album not found" }, { status: 404 });
   if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
@@ -70,6 +74,7 @@ export async function POST(request: Request) {
     mime_type: mimeType,
     original_filename: filename,
     uploaded_by: ctx.userId,
+    photographer_name: (await displayNameFor(ctx)) || null,
     status: "processing",
     content_hash: contentHash,
   });

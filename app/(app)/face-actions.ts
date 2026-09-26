@@ -75,8 +75,8 @@ export async function enableEventFacesAction(eventId: string, accepted: boolean)
   return {
     ok: true,
     message: queued
-      ? `On. ${queued.toLocaleString("en-AU")} photos queued — members can enrol now.`
-      : "On. Members can enrol now.",
+      ? `On. ${queued.toLocaleString("en-AU")} photos queued. Attendees can add a selfie now.`
+      : "On. Attendees can add a selfie now.",
   };
 }
 

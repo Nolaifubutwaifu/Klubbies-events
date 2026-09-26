@@ -1,18 +1,13 @@
-import { Readable } from "node:stream";
-import { ZipArchive } from "archiver";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { PART_SIZE, safeFilename, zipResponse } from "@/lib/media/zip";
 import { createClient } from "@/lib/supabase/server";
 
 // Pro's ceiling. A part of full quality photos and video is slow to stream on
 // a weak connection, and a zip cut off at 300s arrives corrupt.
 export const maxDuration = 800;
-
-// Albums are zipped in parts so one request stays inside the function limits.
-export const PART_SIZE = 150;
 
 export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/zip">) {
   const { id } = await ctx.params;
@@ -48,61 +43,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
   const { data: media } = await query;
   if (!media?.length) return NextResponse.json({ error: "Nothing to download" }, { status: 404 });
 
-  const urls = await signPaths(
-    supabase,
-    media.map((m) => m.storage_path),
-    SIGNED_URL_TTL.download,
-  );
-
-  // Stored (not deflated): photos and video are already compressed.
-  const archive = new ZipArchive({ store: true });
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      archive.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-      archive.on("end", () => controller.close());
-      archive.on("warning", (error: unknown) => console.error("zip warning", error));
-      archive.on("error", (error: unknown) => controller.error(error));
-
-      void (async () => {
-        const used = new Set<string>();
-        for (const item of media) {
-          const url = urls.get(item.storage_path);
-          if (!url) continue;
-          const response = await fetch(url);
-          if (!response.ok || !response.body) continue;
-
-          const fallback = item.storage_path.split("/").pop() ?? `${item.id}.jpg`;
-          let name = item.original_filename?.replace(/[/\\]/g, "-") || fallback;
-          if (used.has(name)) name = `${item.id.slice(0, 8)}-${name}`;
-          used.add(name);
-
-          archive.append(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), { name });
-        }
-        await archive.finalize();
-      })().catch((error) => {
-        console.error("zip failed", error);
-        archive.abort();
-      });
-    },
-    cancel() {
-      archive.abort();
-    },
-  });
-
   await logAccess(event, null, "zip");
 
-  const safeTitle = album.title.replace(/[^a-zA-Z0-9 _-]/g, "").trim() || "album";
-  const filename = only.length
-    ? `${safeTitle} (favourites).zip`
-    : part > 0
-      ? `${safeTitle} (part ${part + 1}).zip`
-      : `${safeTitle}.zip`;
-
-  return new NextResponse(stream, {
-    headers: {
-      "content-type": "application/zip",
-      "content-disposition": `attachment; filename="${filename}"`,
-      "cache-control": "no-store",
-    },
-  });
+  const title = safeFilename(album.title, "album");
+  const filename = only.length ? `${title} (selected).zip` : part > 0 ? `${title} (part ${part + 1}).zip` : `${title}.zip`;
+  return zipResponse(supabase, media, filename);
 }

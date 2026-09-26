@@ -36,10 +36,11 @@ export async function POST(request: Request) {
 
   const accepted = (memberships ?? []).filter((m) => m.accepted_at !== null);
   const wanted = parsed.data.event?.toLowerCase();
-  const redirectTo =
-    wanted && accepted.some((m) => m.events.handle === wanted)
-      ? `/e/${wanted}`
-      : accepted.length === 1
+  // An event's own link always goes back to that event: if they aren't in it
+  // yet, its page offers to join (link mode) or explains the guest list.
+  const redirectTo = wanted
+    ? `/e/${wanted}`
+    : accepted.length === 1
         ? `/e/${accepted[0].events.handle}`
         : "/events";
   return NextResponse.json({ ok: true, redirectTo });

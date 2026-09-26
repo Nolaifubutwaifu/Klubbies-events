@@ -1,12 +1,12 @@
 /**
- * Seeds two events, three members and a dozen sample photos so the UI can be
+ * Seeds two events, three attendees and a dozen sample photos so the UI can be
  * developed without manual setup. Safe to re-run: it removes the previous
  * seed events first.
  *
  *   SEED_ADMIN_EMAIL=you@example.com pnpm seed
  *
  * SEED_ADMIN_EMAIL becomes the admin of both events so you can sign in with a
- * real inbox. The three members use example.com addresses.
+ * real inbox. The three attendees use example.com addresses.
  */
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
@@ -23,26 +23,26 @@ const BUCKET = "event_media";
 
 const EVENTS = [
   {
-    handle: "seed_uq_volleyball",
-    name: "UQ Volleyball",
-    organisation: "The University of Queensland",
+    handle: "seed_design_meetup",
+    name: "Brisbane Design Meetup",
+    organisation: "Design Guild QLD",
     albums: [
-      { title: "Winter Ball", date: "2026-09-12", photos: 5 },
-      { title: "Intervarsity Finals", date: "2026-08-09", photos: 3 },
+      { title: "Talks", date: "2026-10-08", photos: 5 },
+      { title: "Drinks", date: "2026-10-08", photos: 3 },
     ],
   },
   {
-    handle: "seed_qut_rowing",
-    name: "QUT Rowing Event",
-    organisation: "Queensland University of Technology",
-    albums: [{ title: "Regatta Weekend", date: "2026-08-23", photos: 4 }],
+    handle: "seed_sales_kickoff",
+    name: "Sales Kickoff 2027",
+    organisation: "Acme Pty Ltd",
+    albums: [{ title: "Awards dinner", date: "2027-02-04", photos: 4 }],
   },
 ];
 
 const MEMBERS = [
-  { name: "Mara Lindqvist", email: "mara@example.com", events: ["seed_uq_volleyball"] },
-  { name: "Jonas Weber", email: "jonas@example.com", events: ["seed_qut_rowing"] },
-  { name: "Priya Raman", email: "priya@example.com", events: ["seed_uq_volleyball", "seed_qut_rowing"] },
+  { name: "Mara Lindqvist", email: "mara@example.com", events: ["seed_design_meetup"] },
+  { name: "Jonas Weber", email: "jonas@example.com", events: ["seed_sales_kickoff"] },
+  { name: "Priya Raman", email: "priya@example.com", events: ["seed_design_meetup", "seed_sales_kickoff"] },
 ];
 
 const PALETTE = ["#ec3013", "#2d2b2b", "#e15b47", "#605d5d", "#ae1800", "#9b9797"];

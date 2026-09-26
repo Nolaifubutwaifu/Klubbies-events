@@ -46,7 +46,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
             <span className="soft-display text-[19px]">Face recognition is off for {ctx.event.name}</span>
             <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
               {ctx.isAdmin
-                ? "Turn it on in Billing & settings and every member can find the photos they're in. Nobody is enrolled until they choose to be."
+                ? "Turn it on in Settings and every attendee can find the photos they're in. Nobody is findable until they add a selfie."
                 : "This event hasn't turned it on, so there's nothing to search. Every album is still in the event's events."}
             </p>
             <div className="flex flex-wrap gap-2">

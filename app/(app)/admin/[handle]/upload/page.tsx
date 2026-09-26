@@ -22,33 +22,34 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
       <PageTitle kicker={ctx.event.name} title="New album">
-        Drop the whole night in. Name it, say when it goes live, then upload — it keeps going in the background.
+        One album per part of the event works best: keynote, breakout sessions, drinks, headshots. Name it, choose when
+        attendees see it, then upload. It keeps going in the background.
       </PageTitle>
 
       {writable ? null : <BillingGate handle={handle} action="upload photos" />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        {writable ? <NewAlbumPanel eventId={ctx.event.id} /> : <div />}
+        {writable ? <NewAlbumPanel eventId={ctx.event.id} defaultDate={ctx.event.starts_on} /> : <div />}
 
         <div className="flex flex-col gap-5">
           <section className="soft-card flex flex-col gap-3 p-5">
-            <h2 className="soft-display text-[18px]">Or add to one you already made</h2>
+            <h2 className="text-[16px] font-semibold">Or add to an existing album</h2>
             {recent.length ? (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {recent.map((album) => (
                   <li key={album.id}>
                     <Link
                       href={`/e/${handle}/a/${album.id}?add=1`}
-                      className="flex items-center gap-3 rounded-[16px] p-2 text-ink no-underline transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent)_8%,transparent)]"
+                      className="flex items-center gap-3 rounded-[8px] p-2 text-ink no-underline transition-colors hover:bg-[color:var(--kb-cream)]"
                     >
-                      <span className="h-11 w-11 flex-none overflow-hidden rounded-[12px] bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]">
+                      <span className="h-11 w-11 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
                         {album.coverUrl ? <img src={album.coverUrl} alt="" className="h-full w-full object-cover" /> : null}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-bold">{album.title}</span>
+                        <span className="block truncate text-[14px] font-medium">{album.title}</span>
                         <span className="block text-[14px] text-[color:var(--ink-70)]">
-                          {formatDate(album.date)} ·{" "}
                           {(album.photoCount + album.videoCount).toLocaleString("en-AU")} files
+                          {album.status === "published" ? ` · ${formatDate(album.date)}` : ""}
                         </span>
                       </span>
                       {album.status === "draft" ? <span className="soft-chip soft-chip-muted">Draft</span> : null}
@@ -61,11 +62,11 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
             )}
           </section>
 
-          <section className="rounded-[var(--soft-r)] bg-[color:var(--tone-support)] p-5 text-[color:var(--tone-support-ink)]">
-            <span className="block text-[14px] font-bold">What uploads well</span>
-            <p className="m-0 mt-1 text-[14px]">
-              HEIC, JPG, PNG, WebP, MP4 and MOV, at whatever size your camera made them. We keep the original and make
-              the small versions ourselves, so nobody has to export anything first.
+          <section className="kb-info flex-col">
+            <span className="block text-[14px] font-semibold">What uploads well</span>
+            <p className="m-0 text-[14px]">
+              JPG, HEIC, PNG, WebP, MP4 and MOV at full resolution. We keep the original and make the web versions
+              ourselves. Photographers without an account upload through their own link from Photographers.
             </p>
           </section>
         </div>

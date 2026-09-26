@@ -132,6 +132,6 @@ export async function POST(request: Request) {
     })
     .eq("id", importRow.id);
 
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
+  revalidatePath(`/admin/${ctx.event.handle}/attendees`);
   return NextResponse.json({ ...summary, dryRun: false });
 }

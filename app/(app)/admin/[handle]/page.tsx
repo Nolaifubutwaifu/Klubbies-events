@@ -1,133 +1,116 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
 import { PageTitle, Stat } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { formatBytes, formatDate, formatDateTime, plural } from "@/lib/format";
+import { personName } from "@/lib/auth/display-name";
+import { accessHasEnded } from "@/lib/auth/session";
+import { canWrite } from "@/lib/billing/status";
+import { formatDateTime, formatEventDates, formatLongDate, plural } from "@/lib/format";
 import { listStackedAlbums } from "@/lib/media/album-list";
 import { EXPIRE_AFTER_DAYS, STUCK_AFTER_MS } from "@/lib/media/constants";
+import { eventLink, eventQrSvg } from "@/lib/share";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { personName } from "@/lib/auth/display-name";
 
-export const metadata: Metadata = { title: "Admin" };
-
-/** Cutoff for the "views this week" figure. */
-function sevenDaysAgo(): string {
-  return new Date(Date.now() - 7 * 86_400_000).toISOString();
-}
+export const metadata: Metadata = { title: "Overview" };
 
 /** Uploads started before this and still unfinished have stopped. */
 function stuckCutoff(): string {
   return new Date(Date.now() - STUCK_AFTER_MS).toISOString();
 }
 
-export default async function AdminDashboard(props: PageProps<"/admin/[handle]">) {
+export default async function OrganiserOverview(props: PageProps<"/admin/[handle]">) {
   const { handle } = await props.params;
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
-  const eventId = ctx.event.id;
-
-  const count = (status?: string) => {
-    let q = supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId);
-    q = status ? q.eq("status", status) : q.in("status", ["pending", "active", "grace"]);
-    return q;
-  };
+  const { event } = ctx;
+  const eventId = event.id;
 
   const [
+    joined,
     onList,
-    active,
-    pending,
-    grace,
     albumCount,
     published,
-    usage,
-    mismatches,
+    readyItems,
+    downloads,
+    removals,
+    stuck,
     activity,
     stacked,
-    viewsWeek,
-    removals,
-    engagement,
-    readyItems,
-    stuck,
+    photographerLinks,
+    findable,
+    qrSvg,
   ] = await Promise.all([
-      count(),
-      count("active"),
-      count("pending"),
-      count("grace"),
-      supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId),
-      supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "published"),
-      supabase.from("event_storage_usage").select("*").eq("event_id", eventId).maybeSingle(),
-      supabase
-        .from("memberships")
-        .select("id, roster_name, claimed_name, roster_email")
-        .eq("event_id", eventId)
-        .eq("name_mismatch", true)
-        .in("status", ["active", "grace"])
-        .limit(5),
-      supabase
-        .from("access_events")
-        .select("id, action, occurred_at, memberships(roster_name, claimed_name, users!memberships_user_id_fkey(display_name)), media(original_filename)")
-        .eq("event_id", eventId)
-        .order("occurred_at", { ascending: false })
-        .limit(6),
-      listStackedAlbums(supabase, eventId, { includeDrafts: true, limit: 4 }),
-      supabase
-        .from("access_events")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("action", "view")
-        .gte("occurred_at", sevenDaysAgo()),
-      supabase
-        .from("media_removal_requests")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("status", "open"),
-      supabase.from("album_engagement").select("*").eq("event_id", eventId),
-      // What members can actually open, the same rule as album_media_counts.
-      // event_storage_usage counts every row, finished or not, which is how
-      // this page said 114 while the album said 110.
-      supabase.from("media").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "ready"),
-      // Uploads that stopped. Given an hour, so one still going isn't flagged.
-      supabase
-        .from("media")
-        .select("id, album_id, albums!media_album_id_fkey(title)", { count: "exact" })
-        .eq("event_id", eventId)
-        .neq("status", "ready")
-        .lt("created_at", stuckCutoff())
-        .order("created_at", { ascending: true })
-        .limit(50),
-    ]);
+    supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "active"),
+    supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId).in("status", ["pending", "active"]),
+    supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId),
+    supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "published"),
+    // What attendees can actually open: finished files.
+    supabase.from("media").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "ready"),
+    supabase
+      .from("access_events")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .in("action", ["download", "zip"]),
+    supabase.from("media_removal_requests").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "open"),
+    supabase
+      .from("media")
+      .select("id, album_id, albums!media_album_id_fkey(title)", { count: "exact" })
+      .eq("event_id", eventId)
+      .neq("status", "ready")
+      .lt("created_at", stuckCutoff())
+      .order("created_at", { ascending: true })
+      .limit(50),
+    supabase
+      .from("access_events")
+      .select("id, action, occurred_at, memberships(roster_name, claimed_name, users!memberships_user_id_fkey(display_name)), media(original_filename)")
+      .eq("event_id", eventId)
+      .order("occurred_at", { ascending: false })
+      .limit(6),
+    listStackedAlbums(supabase, eventId, { includeDrafts: true, limit: 4 }),
+    supabase.from("album_guest_links").select("id", { count: "exact", head: true }).eq("event_id", eventId),
+    // How many attendees found themselves. A count only, read with the
+    // service role after the organiser check above: profiles are private to
+    // their owners, and nothing here says who.
+    createAdminClient()
+      .from("member_face_profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .eq("status", "ready"),
+    eventQrSvg(handle),
+  ]);
 
   const drafts = (albumCount.count ?? 0) - (published.count ?? 0);
-  const firstRun = (onList.count ?? 0) <= 1 && (albumCount.count ?? 0) === 0;
   const openRemovals = removals.count ?? 0;
   const stuckCount = stuck.count ?? 0;
   const stuckAlbums = [
-    ...new Map(
-      (stuck.data ?? []).filter((row) => row.album_id).map((row) => [row.album_id!, row.albums?.title ?? "an album"]),
-    ),
+    ...new Map((stuck.data ?? []).filter((row) => row.album_id).map((row) => [row.album_id!, row.albums?.title ?? "an album"])),
   ];
+  const writable = canWrite(event.billing_status);
+  const firstRun = (albumCount.count ?? 0) === 0;
+  const link = eventLink(handle);
+  const closed = accessHasEnded(event);
 
-  const views = new Map((engagement.data ?? []).map((row) => [row.album_id, row]));
-  const mostOpened = [...(engagement.data ?? [])].sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))[0];
-  const mostOpenedTitle = mostOpened ? stacked.find((a) => a.id === mostOpened.album_id)?.title : null;
-
-  const today = new Date().toLocaleDateString("en-AU", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "Australia/Brisbane",
-  });
-
-  // The committee screen is a control panel: what needs doing, then the
-  // numbers, then the evidence.
+  // What needs doing, then the numbers, then the evidence.
   const tasks = [
+    !writable
+      ? {
+          key: "billing",
+          title: "Activate the event",
+          body: "Uploading, photographer links and attendee invites unlock after payment.",
+          href: `/admin/${handle}/billing`,
+          cta: "Activate",
+          urgent: true,
+        }
+      : null,
     openRemovals > 0
       ? {
           key: "removals",
-          title: `${openRemovals} photo${openRemovals === 1 ? "" : "s"} asked to come down`,
-          body: "Already hidden from members. Confirm or put back within seven days.",
+          title: `${plural(openRemovals, "photo")} asked to come down`,
+          body: "Already hidden from attendees. Confirm or put back within seven days.",
           href: `/admin/${handle}/removals`,
           cta: "Review",
           urgent: true,
@@ -137,258 +120,227 @@ export default async function AdminDashboard(props: PageProps<"/admin/[handle]">
       ? {
           key: "unfinished",
           title: `${plural(stuckCount, "upload")} didn't finish`,
-          body: `In ${stuckAlbums.map(([, title]) => title).join(", ")}. Members can't see them. Upload them again or remove them; they clear themselves after ${EXPIRE_AFTER_DAYS} days.`,
+          body: `In ${stuckAlbums.map(([, title]) => title).join(", ")}. Attendees can't see them. Upload them again or remove them; they clear themselves after ${EXPIRE_AFTER_DAYS} days.`,
           href: stuckAlbums[0] ? `/e/${handle}/a/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
           cta: "Fix",
           urgent: true,
         }
       : null,
-    mismatches.data?.length
+    writable && (photographerLinks.count ?? 0) === 0 && (readyItems.count ?? 0) === 0
       ? {
-          key: "names",
-          title: `${mismatches.data.length} member${mismatches.data.length === 1 ? "" : "s"} signed in under a different name`,
-          body: mismatches.data.map((m) => m.roster_name).join(", "),
-          href: `/admin/${handle}/members`,
-          cta: "Review",
-          urgent: true,
+          key: "photographer",
+          title: "No photographer link yet",
+          body: "Give each photographer their own upload link. They need no account.",
+          href: `/admin/${handle}/photographers`,
+          cta: "Add photographer",
+          urgent: false,
         }
       : null,
     drafts > 0
       ? {
           key: "drafts",
-          title: `${drafts} album${drafts === 1 ? "" : "s"} still in draft`,
-          body: "Nobody in the event can see a draft yet.",
+          title: `${plural(drafts, "album")} still in draft`,
+          body: "Attendees can't see a draft yet.",
           href: `/admin/${handle}/albums`,
           cta: "Publish",
-          urgent: true,
+          urgent: false,
         }
       : null,
-    (pending.count ?? 0) > 0
+    (published.count ?? 0) > 0 && (joined.count ?? 0) <= 1
       ? {
-          key: "pending",
-          title: `${plural(pending.count ?? 0, "member")} ${(pending.count ?? 0) === 1 ? "has" : "have"} never signed in`,
-          // No guess about who they are: "mostly first years" read oddly for
-          // a event with one pending member.
-          body: "On the member list, but they haven't opened Klubbies yet.",
-          href: `/admin/${handle}/members`,
-          cta: "Open members",
+          key: "share",
+          title: "Photos are live, but nobody has joined yet",
+          body: "Send the announcement email or put the QR code on screen.",
+          href: `/admin/${handle}/share`,
+          cta: "Share",
           urgent: false,
         }
       : null,
   ].filter((task): task is NonNullable<typeof task> => task !== null);
 
   return (
-    <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
+    <main className="flex flex-col gap-6 pb-12 pt-2">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <PageTitle kicker={ctx.event.name} title={today}>
-          {tasks.length
-            ? `${plural(tasks.length, "thing")} ${tasks.length === 1 ? "needs" : "need"} you. Everything else is running itself.`
-            : "Nothing needs you. Everything is running itself."}
+        <PageTitle kicker={formatEventDates(event.starts_on, event.ends_on) || "Overview"} title={event.name}>
+          {closed
+            ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
+            : event.access_ends_at
+              ? `Open to attendees until ${formatLongDate(event.access_ends_at)}. ${event.access_mode === "link" ? "Anyone with the link can join." : "Guest list only."}`
+              : event.access_mode === "link"
+                ? "Anyone with the link can join."
+                : "Guest list only."}
         </PageTitle>
         <div className="flex items-center gap-2">
-          <Link href={`/admin/${handle}/upload`} className={`btn ${firstRun ? "btn-secondary" : "btn-primary"}`}>
+          <Link href={`/admin/${handle}/upload`} className="btn btn-primary no-underline">
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
-            <MoreLink href={`/e/${handle}`}>See it as a member</MoreLink>
-            <MoreLink href={`/admin/${handle}/guests`}>Make a guest upload link</MoreLink>
+            <MoreLink href={`/e/${handle}`}>See it as an attendee</MoreLink>
+            <MoreLink href={`/admin/${handle}/setup`}>Setup checklist</MoreLink>
             <MoreLink href={`/admin/${handle}/activity`}>Full activity log</MoreLink>
           </MoreMenu>
         </div>
       </div>
 
       {firstRun ? (
-        <div className="kb-card flex flex-wrap items-center justify-between gap-4 p-5">
+        <div className="soft-card flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
-            <span className="soft-chip">Getting started</span>
-            <div className="soft-display mt-2 text-[20px]">Five minutes, once. Then every event is a drag and drop.</div>
+            <span className="kb-eyebrow">Getting started</span>
+            <div className="mt-1 text-[18px] font-semibold">Six steps, about ten minutes. Then photographers take it from there.</div>
           </div>
-          <Link href={`/admin/${handle}/setup`} className="btn btn-primary">
+          <Link href={`/admin/${handle}/setup`} className="btn btn-secondary no-underline">
             Open the checklist
           </Link>
         </div>
       ) : null}
 
-      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))" }}>
-        <Stat
-          value={(onList.count ?? 0).toLocaleString("en-AU")}
-          label="Members"
-          hint={`${(active.count ?? 0).toLocaleString("en-AU")} signed in`}
-        />
-        <Stat
-          value={(albumCount.count ?? 0).toLocaleString("en-AU")}
-          label="Albums"
-          hint={drafts > 0 ? plural(drafts, "draft") : "all published"}
-          tone={drafts > 0 ? "attention" : "plain"}
-        />
+      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
         <Stat
           value={(readyItems.count ?? 0).toLocaleString("en-AU")}
           label="Photos and videos"
-          hint={stuckCount > 0 ? `${stuckCount.toLocaleString("en-AU")} unfinished` : "originals kept"}
+          hint={stuckCount > 0 ? `${stuckCount.toLocaleString("en-AU")} unfinished` : `${plural(published.count ?? 0, "album")} live`}
           tone={stuckCount > 0 ? "attention" : "plain"}
         />
-        <Stat value={formatBytes(usage.data?.total_bytes ?? 0)} label="Storage" hint="Included" />
         <Stat
-          value={(viewsWeek.count ?? 0).toLocaleString("en-AU")}
-          label="Views this week"
-          hint={(viewsWeek.count ?? 0) > 0 ? "members opening albums" : "nothing opened yet"}
-          tone={(viewsWeek.count ?? 0) > 0 ? "good" : "plain"}
+          value={(joined.count ?? 0).toLocaleString("en-AU")}
+          label="Attendees joined"
+          hint={event.access_mode === "guest_list" ? `of ${(onList.count ?? 0).toLocaleString("en-AU")} on the list` : "through the event link"}
         />
         <Stat
-          value={(grace.count ?? 0).toLocaleString("en-AU")}
-          label="Winding down"
-          hint={(grace.count ?? 0) > 0 ? "30 day access window" : "nobody leaving"}
-          tone={(grace.count ?? 0) > 0 ? "attention" : "plain"}
+          value={(findable.count ?? 0).toLocaleString("en-AU")}
+          label="Found their photos"
+          hint="added a selfie"
+          tone={(findable.count ?? 0) > 0 ? "good" : "plain"}
+        />
+        <Stat
+          value={(downloads.count ?? 0).toLocaleString("en-AU")}
+          label="Downloads"
+          hint="single photos and zips"
+          tone={(downloads.count ?? 0) > 0 ? "good" : "plain"}
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <section className="soft-card flex flex-col gap-4 p-5">
+          <section className="soft-card flex flex-col gap-3 p-5">
             <div className="flex items-center gap-3">
-              <h2 className="soft-display text-[19px]">Needs you</h2>
+              <h2 className="text-[16px] font-semibold">Needs you</h2>
               {tasks.length ? <span className="soft-chip">{tasks.length}</span> : <span className="soft-chip soft-chip-muted">All clear</span>}
             </div>
             {tasks.length ? (
-              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-                {tasks.map((task) => (
+              <ul className="m-0 flex list-none flex-col p-0">
+                {tasks.map((task, index) => (
                   <li
                     key={task.key}
-                    className="flex flex-wrap items-center gap-3 rounded-[16px] border border-[color-mix(in_srgb,var(--color-text)_7%,transparent)] bg-[color:var(--color-bg)] p-3.5"
+                    className={`flex flex-wrap items-center gap-3 py-3 ${index > 0 ? "border-t border-[color:var(--kb-line)]" : ""}`}
                   >
                     <span
-                      className={`h-[7px] w-[7px] flex-none rounded-full ${task.urgent ? "bg-accent" : "bg-[color:var(--color-neutral-400)]"}`}
+                      className="h-[7px] w-[7px] flex-none rounded-full"
+                      style={{ background: task.urgent ? "#b42318" : "var(--kb-line-strong)" }}
                       aria-hidden
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[14px] font-bold">{task.title}</span>
-                      <span className="block truncate text-[14px] text-[color:var(--ink-70)]">{task.body}</span>
+                      <span className="block text-[14px] font-medium">{task.title}</span>
+                      <span className="block text-[14px] text-[color:var(--ink-70)]">{task.body}</span>
                     </span>
-                    <Link
-                      href={task.href}
-                      className="btn btn-ghost"
-                    >
+                    <Link href={task.href} className="btn btn-sm btn-secondary no-underline">
                       {task.cta}
                     </Link>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                Nothing waiting on you. Every album is published and everyone on the list has signed in.
-              </p>
+              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">Nothing waiting on you.</p>
             )}
           </section>
 
           <section className="soft-card flex flex-col gap-4 p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="soft-display text-[19px]">Recent albums</h2>
-              <Link href={`/admin/${handle}/albums`} className="text-[14px] font-bold">
-                See all {(albumCount.count ?? 0).toLocaleString("en-AU")}
+              <h2 className="text-[16px] font-semibold">Albums</h2>
+              <Link href={`/admin/${handle}/albums`} className="text-[14px] font-medium">
+                All {(albumCount.count ?? 0).toLocaleString("en-AU")}
               </Link>
             </div>
             {stacked.length ? (
               <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-                {stacked.map((album) => {
-                  const row = views.get(album.id);
-                  return (
-                    <Link key={album.id} href={`/e/${handle}/a/${album.id}`} className="flex flex-col gap-2 text-ink no-underline">
-                      <span className="soft-tile relative block aspect-[4/3]">
-                        {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" /> : null}
-                        {album.status !== "published" ? (
-                          <span className="absolute left-2 top-2 rounded-full bg-[rgba(25,18,22,0.72)] px-2.5 py-0.5 text-[14px] font-bold text-white">
-                            {album.status === "hidden" ? "Hidden" : "Draft"}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span>
-                        <span className="block truncate text-[14px] font-bold">{album.title}</span>
-                        <span className="block text-[14px] text-[color:var(--ink-70)]">
-                          {(album.photoCount + album.videoCount).toLocaleString("en-AU")} ·{" "}
-                          {album.status === "published"
-                            ? plural(row?.view_count ?? 0, "view")
-                            : "not live"}
+                {stacked.map((album) => (
+                  <Link key={album.id} href={`/e/${handle}/a/${album.id}`} className="flex flex-col gap-2 text-ink no-underline">
+                    <span className="soft-tile relative block aspect-[4/3]">
+                      {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" /> : null}
+                      {album.status !== "published" ? (
+                        <span className="absolute left-2 top-2 rounded-[6px] bg-[rgb(22_24_29/0.78)] px-2 py-0.5 text-[14px] font-medium text-white">
+                          {album.status === "hidden" ? "Hidden" : "Draft"}
                         </span>
+                      ) : null}
+                    </span>
+                    <span>
+                      <span className="block truncate text-[14px] font-medium">{album.title}</span>
+                      <span className="block text-[14px] text-[color:var(--ink-70)]">
+                        {plural(album.photoCount + album.videoCount, "file")}
                       </span>
-                    </Link>
-                  );
-                })}
+                    </span>
+                  </Link>
+                ))}
               </div>
             ) : (
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                Nothing uploaded yet. Your newest albums will show up here.
-              </p>
+              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No albums yet. Create one, then add photographers.</p>
             )}
           </section>
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
-          <section className="soft-card flex flex-col gap-4 p-5">
+          <section className="soft-card flex flex-col gap-3 p-5">
+            <h2 className="text-[16px] font-semibold">Share with attendees</h2>
+            <div className="flex items-center gap-4">
+              <span
+                className="block w-[112px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+                // Generated server-side from the event link by the qrcode package.
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+                aria-label="QR code for the event link"
+                role="img"
+              />
+              <span className="min-w-0 break-all text-[14px] text-[color:var(--kb-ink-2)]">{link.replace(/^https?:\/\//, "")}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <CopyButton value={link} label="Copy link" className="btn btn-sm btn-secondary" />
+              <Link href={`/admin/${handle}/share`} className="btn btn-sm btn-secondary no-underline">
+                Poster and email
+              </Link>
+            </div>
+          </section>
+
+          <section className="soft-card flex flex-col gap-3 p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="soft-display text-[19px]">Activity</h2>
-              <Link href={`/admin/${handle}/activity`} className="text-[14px] font-bold">
+              <h2 className="text-[16px] font-semibold">Activity</h2>
+              <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
                 Full log
               </Link>
             </div>
             {activity.data?.length ? (
-              <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
-                {activity.data.map((e, i) => (
-                  <li key={e.id} className="flex gap-3">
-                    <span
-                      className={`mt-[7px] h-2 w-2 flex-none rounded-full ${i === 0 ? "bg-accent" : "bg-[color:var(--color-neutral-400)]"}`}
-                      aria-hidden
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-[14px]">
-                        <strong className="font-bold">
-                          {e.memberships
-                            ? personName({
-                                displayName: e.memberships.users?.display_name,
-                                claimedName: e.memberships.claimed_name,
-                                rosterName: e.memberships.roster_name,
-                              })
-                            : "Admin"}
-                        </strong>{" "}
-                        {e.action === "download" ? "downloaded" : "viewed"} {e.media?.original_filename ?? "an item"}
-                      </span>
-                      <span className="block text-[14px] text-[color:var(--ink-55)]">{formatDateTime(e.occurred_at)}</span>
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {activity.data.map((e) => (
+                  <li key={e.id} className="flex flex-col">
+                    <span className="text-[14px]">
+                      <strong className="font-medium">
+                        {e.memberships
+                          ? personName({
+                              displayName: e.memberships.users?.display_name,
+                              claimedName: e.memberships.claimed_name,
+                              rosterName: e.memberships.roster_name,
+                            })
+                          : "An organiser"}
+                      </strong>{" "}
+                      {e.action === "zip" ? "downloaded a zip" : e.action === "download" ? "downloaded" : "viewed"}
+                      {e.action === "zip" ? "" : ` ${e.media?.original_filename ?? "a photo"}`}
                     </span>
+                    <span className="text-[14px] text-[color:var(--ink-55)]">{formatDateTime(e.occurred_at)}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                No views yet. Once members open an album, you&apos;ll see who looked at what.
-              </p>
+              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
             )}
           </section>
-
-          {mostOpenedTitle ? (
-            <section className="rounded-[var(--soft-r)] bg-[color:var(--tone-support)] p-5 text-[color:var(--tone-support-ink)]">
-              <span className="block text-[14px] font-bold">Most opened album</span>
-              <span className="soft-display mt-1 block text-[21px] text-ink">{mostOpenedTitle}</span>
-              <span className="mt-1 block text-[14px]">
-                {plural(mostOpened?.view_count ?? 0, "view")} · {plural(mostOpened?.download_count ?? 0, "download")} ·{" "}
-                {plural(mostOpened?.member_count ?? 0, "member")}
-              </span>
-            </section>
-          ) : null}
-
-          <section className="soft-card flex flex-col gap-2 p-5">
-            <span className="text-[14px] font-bold">Guest links</span>
-            <span className="text-[14px] text-[color:var(--ink-70)]">
-              Hired a photographer? Give them a link that uploads into one album and shows them nothing else.
-            </span>
-            <Link href={`/admin/${handle}/guests`} className="kb-link self-start">
-              Make a guest link
-            </Link>
-          </section>
-
-          {stacked[0] ? (
-            <p className="m-0 text-[14px] text-[color:var(--ink-55)]">
-              Newest album added {formatDate(stacked[0].date)}.
-            </p>
-          ) : null}
         </div>
       </div>
     </main>

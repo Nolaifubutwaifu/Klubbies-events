@@ -10,7 +10,6 @@ import {
 } from "@/app/(app)/admin/actions";
 import { Dialog } from "@/components/Dialog";
 import { FormMessage, SubmitButton } from "@/components/forms";
-import { EVENT_TYPES } from "@/lib/media/event-types";
 import { createClient } from "@/lib/supabase/client";
 
 type Album = {
@@ -18,7 +17,6 @@ type Album = {
   eventId: string;
   title: string;
   albumDate: string | null;
-  eventType: string | null;
   description: string | null;
   allowDownload: boolean;
   visibility: string;
@@ -29,11 +27,11 @@ type Album = {
 
 const AUDIENCE = [
   { value: "members", label: "All members" },
-  { value: "admins", label: "Committee only" },
+  { value: "admins", label: "Organisers only" },
 ];
 
 const CONTRIBUTORS = [
-  { value: "managers", label: "Committee only" },
+  { value: "managers", label: "Organisers and photographers" },
   { value: "members", label: "Any member" },
 ];
 
@@ -106,29 +104,18 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
   }
 
   return (
-    <div className="flex flex-col gap-6 border-b-2 border-divider p-6">
-      <span className="font-heading text-[22px] font-bold tracking-[-0.02em]">Album details</span>
+    <div className="flex flex-col gap-6 border-b border-[color:var(--kb-line)] p-4 sm:p-6">
+      <span className="text-[20px] font-semibold tracking-[-0.02em]">Album details</span>
       <form action={action} className="flex flex-col gap-6">
         <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
           <div className="flex flex-col gap-4">
             <label className="field">
-              Event name
+              Album name
               <input className="input" name="title" defaultValue={album.title} required maxLength={160} />
             </label>
             <label className="field">
-              Date
+              Date (optional)
               <input className="input" name="albumDate" type="date" defaultValue={album.albumDate ?? ""} />
-            </label>
-            <label className="field">
-              Event type
-              <select className="input" name="eventType" defaultValue={album.eventType ?? ""}>
-                <option value="">No label</option>
-                {EVENT_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
             </label>
             <label className="field">
               Description
@@ -140,7 +127,7 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
                 name="allowDownload"
                 defaultChecked={album.allowDownload}
               />
-              Members may download originals
+              Attendees can download the originals
             </label>
           </div>
 
@@ -150,13 +137,13 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
               <div className="flex flex-wrap items-start gap-3">
                 {album.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-                  <img src={album.coverUrl} alt="" className="w-[150px] border-2 border-neutral-300 object-cover" style={{ aspectRatio: "4 / 3" }} />
+                  <img src={album.coverUrl} alt="" className="w-[150px] rounded-[var(--kb-r-photo)] border border-[color:var(--kb-line)] object-cover" style={{ aspectRatio: "4 / 3" }} />
                 ) : (
-                  <span className="w-[150px] border-2 border-neutral-300 bg-neutral-400" style={{ aspectRatio: "4 / 3" }} />
+                  <span className="w-[150px] rounded-[var(--kb-r-photo)] border border-[color:var(--kb-line)] bg-[color:var(--kb-sand)]" style={{ aspectRatio: "4 / 3" }} />
                 )}
                 <div className="flex min-w-[160px] flex-1 flex-col gap-2">
                   <span className="text-[14px] leading-normal text-ink-70">{album.coverSource}</span>
-                  <a href={onPickCover} className="btn btn-ghost border-2 border-divider text-[14px]">
+                  <a href={onPickCover} className="btn btn-ghost text-[14px]">
                     Pick from this album
                   </a>
                   <button
@@ -189,7 +176,7 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
               <Choice name="contributorScope" value={contributorScope} onChange={setContributorScope} options={CONTRIBUTORS} />
               <span className="max-w-[46ch] text-[14px] leading-normal text-ink-70">
                 {contributorScope === "members"
-                  ? "Every member can add their own photos, so the album fills up from everyone's phones."
+                  ? "Every attendee can add their own photos, so the album fills up from everyone's phones."
                   : "Only people whose role can manage albums or upload may add photos."}
               </span>
             </div>

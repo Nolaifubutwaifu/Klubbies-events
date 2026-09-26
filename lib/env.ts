@@ -19,7 +19,7 @@ const schema = z.object({
   AWS_REGION: z.string().min(1).default("ap-southeast-2"),
   AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
   AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-  REKOGNITION_COLLECTION_PREFIX: z.string().regex(/^[a-zA-Z0-9_.\-]+$/).default("klubbies-dev"),
+  REKOGNITION_COLLECTION_PREFIX: z.string().regex(/^[a-zA-Z0-9_.\-]+$/).default("klubbies-events-dev"),
 });
 
 export type ServerEnv = z.infer<typeof schema>;

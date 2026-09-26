@@ -64,7 +64,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
   return (
     <main className="flex flex-col gap-7 px-4 py-8 sm:px-6">
       <PageTitle kicker={ctx.event.name} title="Removal requests">
-        A member asked for a photo to come down. It is already hidden from everyone — you decide whether the original
+        An attendee asked for a photo to come down. It is already hidden from attendees. You decide whether the original
         goes too.
       </PageTitle>
 
@@ -77,7 +77,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
           {open.map((request) => {
             const item = byMedia.get(request.media_id);
             const url = item ? urls.get(item.display_path ?? item.thumb_path ?? "") : null;
-            const asker = request.requested_by ? (nameByUser.get(request.requested_by) ?? "A member") : "A member";
+            const asker = request.requested_by ? (nameByUser.get(request.requested_by) ?? "An attendee") : "An attendee";
             return (
               <section key={request.id} className="soft-card grid gap-5 p-5 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
                 <div className="overflow-hidden rounded-[var(--soft-r-sm)] bg-[color-mix(in_srgb,var(--color-accent)_8%,transparent)]">
@@ -93,7 +93,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="soft-chip">{daysLeft(request.auto_delete_at)}</span>
-                    <span className="soft-chip soft-chip-muted">Hidden from members</span>
+                    <span className="soft-chip soft-chip-muted">Hidden from attendees</span>
                   </div>
                   <div>
                     <span className="soft-display block text-[19px]">{asker} asked for this down</span>

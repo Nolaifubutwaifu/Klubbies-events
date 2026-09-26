@@ -11,19 +11,19 @@ export const metadata: Metadata = { title: "Upload", robots: { index: false, fol
 const DEAD: Record<Exclude<GuestLinkState, "ok">, { title: string; body: string }> = {
   unknown: {
     title: "This link doesn't work.",
-    body: "Check you copied the whole thing, including the dashes. If it still won't open, ask the committee for a fresh one.",
+    body: "Check you copied the whole thing, including the dashes. If it still won't open, ask the organiser for a fresh one.",
   },
   revoked: {
     title: "This link has been turned off.",
-    body: "Anything you already uploaded is safe with the event. Ask the committee to reissue the link if you have more to add.",
+    body: "Anything you already uploaded is safe with the event. Ask the organiser for a new link if you have more to add.",
   },
   expired: {
     title: "This link has expired.",
-    body: "Guest links run out on a date the committee picks. Ask them to reissue it and you'll get a new one.",
+    body: "Upload links run out on a date the organiser picks. Ask them for a new one.",
   },
   unpaid: {
     title: "This event isn't active right now.",
-    body: "Uploads are paused until the committee sorts their subscription. Nothing you already sent has been lost.",
+    body: "Uploads are paused until the organiser activates the event. Nothing you already sent has been lost.",
   },
 };
 

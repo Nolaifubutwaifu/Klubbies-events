@@ -30,7 +30,7 @@ export async function FaceRow({ events }: { events: MyEvent[] }) {
 
   return (
     <>
-      <h2 className="soft-display mt-2 text-[18px]">Face recognition</h2>
+      <h2 className="mt-2 text-[16px] font-semibold">Face recognition</h2>
       <div className="soft-card flex flex-col">
         {rows.map((event, index) => {
           const status = statusByEvent.get(event.eventId);
@@ -38,11 +38,11 @@ export async function FaceRow({ events }: { events: MyEvent[] }) {
             <div
               key={event.membershipId}
               className={`flex flex-wrap items-center gap-3 p-4 ${
-                index > 0 ? "border-t border-[color-mix(in_srgb,var(--color-text)_7%,transparent)]" : ""
+                index > 0 ? "border-t border-[color:var(--kb-line)]" : ""
               }`}
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-bold">{event.name}</span>
+                <span className="block truncate text-[14px] font-medium">{event.name}</span>
                 <span className="block text-[14px] text-[color:var(--ink-70)]">
                   {status === "ready"
                     ? "On. Only you see your matches."
@@ -55,7 +55,7 @@ export async function FaceRow({ events }: { events: MyEvent[] }) {
               </span>
               <Link
                 href={`/e/${event.handle}/me`}
-                className="soft-btn soft-btn-tonal !min-h-[36px] !px-3.5 !text-[14px] no-underline"
+                className="btn btn-sm btn-secondary no-underline"
               >
                 {status === "ready" ? "Manage" : "Set it up"}
               </Link>
