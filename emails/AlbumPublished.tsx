@@ -13,15 +13,15 @@ export type AlbumPublishedProps = {
 export default function AlbumPublished({ name, eventName, albumTitle, albumMeta, albumUrl, unsubscribeUrl }: AlbumPublishedProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
-    <EmailLayout preview={`${albumTitle} is up on Klubbies`}>
+    <EmailLayout preview={`${albumTitle} from ${eventName} is ready`}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>{albumTitle}</Text>
       <Text style={emailStyles.body}>
-        Hi {firstName}, the committee has shared a new album{albumMeta ? ` — ${albumMeta}` : ""}. Only people on the
-        member list can see it.
+        Hi {firstName}, new photos from {eventName} are ready{albumMeta ? `: ${albumMeta}` : ""}. Only people the
+        organiser let in can see them.
       </Text>
       <Link href={albumUrl} style={emailStyles.button}>
-        Open the album
+        See the photos
       </Link>
       <Text style={{ ...emailStyles.body, fontSize: 14, marginTop: 24 }}>
         Don&apos;t want these? <Link href={unsubscribeUrl}>Turn off new album emails</Link>.

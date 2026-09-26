@@ -9,7 +9,6 @@ export type StackedAlbum = {
   title: string;
   description: string | null;
   date: string; // event date, else published, else created
-  eventType: string | null;
   status: string;
   photoCount: number;
   videoCount: number;
@@ -46,7 +45,7 @@ export async function listStackedAlbums(
   let query = supabase
     .from("albums")
     .select(
-      "id, title, description, album_date, event_type, status, created_at, published_at, publish_at, sort_order, allow_download, contributor_scope, cover_media_id, cover_path",
+      "id, title, description, album_date, status, created_at, published_at, publish_at, sort_order, allow_download, contributor_scope, cover_media_id, cover_path",
     )
     .eq("event_id", eventId)
     // An explicit order wins; everything still at 0 falls back to event date.
@@ -124,7 +123,6 @@ export async function listStackedAlbums(
       title: album.title,
       description: album.description,
       date: album.album_date ?? album.published_at ?? album.created_at,
-      eventType: album.event_type,
       status: album.status,
       photoCount: count?.photo_count ?? 0,
       videoCount: count?.video_count ?? 0,

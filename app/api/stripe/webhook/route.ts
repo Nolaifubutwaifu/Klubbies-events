@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { error: insertError } = await admin
     .from("stripe_events")
-    .insert({ id: stripeEvent.id, type: stripeEvent.type, payload: stripeEvent as unknown as Json });
+    .insert({ id: stripeEvent.id, type: stripeEvent.type, payload: stripeEvent as unknown as NonNullable<Json> });
   if (insertError) {
     if (insertError.code === "23505") return NextResponse.json({ received: true, duplicate: true });
     return NextResponse.json({ error: "Could not record stripeEvent" }, { status: 500 });

@@ -8,12 +8,11 @@ export const metadata: Metadata = { title: "Email settings" };
 
 const LABELS: Record<NotifyKind, string> = {
   notify_new_album: "emails about new albums",
-  notify_feed_post: "emails about event feed posts",
-  notify_access_ending: "emails about your access ending",
+  notify_access_ending: "reminders that a gallery is about to close",
 };
 
 function isKind(value: unknown): value is NotifyKind {
-  return value === "notify_new_album" || value === "notify_feed_post" || value === "notify_access_ending";
+  return value === "notify_new_album" || value === "notify_access_ending";
 }
 
 export default async function UnsubscribePage(props: PageProps<"/unsubscribe">) {

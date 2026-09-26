@@ -2,8 +2,7 @@ import "server-only";
 import { render } from "@react-email/render";
 import { Resend } from "resend";
 import AlbumPublished, { type AlbumPublishedProps } from "@/emails/AlbumPublished";
-import FeedPost, { type FeedPostProps } from "@/emails/FeedPost";
-import GraceNotice, { type GraceNoticeProps } from "@/emails/GraceNotice";
+import AccessEnding, { type AccessEndingProps } from "@/emails/AccessEnding";
 import SignInCode, { type SignInCodeProps } from "@/emails/SignInCode";
 import { serverEnv } from "@/lib/env";
 
@@ -16,7 +15,10 @@ function resend(): Resend {
 
 async function send(to: string, subject: string, element: React.ReactElement): Promise<void> {
   if (process.env.EMAIL_DRY_RUN === "1") {
-    console.info(`[email dry run] "${subject}" → ${to}`);
+    // Local development has no inbox, so the dry run prints the message. The
+    // sign-in code is in it, which is the point; never set this in production.
+    const body = process.env.NODE_ENV === "production" ? "" : `\n${await render(element, { plainText: true })}`;
+    console.info(`[email dry run] "${subject}" → ${to}${body}`);
     return;
   }
   const env = serverEnv();
@@ -26,19 +28,16 @@ async function send(to: string, subject: string, element: React.ReactElement): P
 }
 
 export function sendSignInCode(to: string, props: SignInCodeProps) {
-  return send(to, `${props.code} is your Klubbies code`, <SignInCode {...props} />);
+  return send(to, `${props.code} is your Klubbies Events code`, <SignInCode {...props} />);
 }
 
-export function sendGraceNotice(to: string, props: GraceNoticeProps) {
-  return send(to, `Your access to ${props.eventName} ends on ${props.endsOn}`, <GraceNotice {...props} />);
-}
 
 export type BatchMessage = {
   to: string;
   subject: string;
   template:
     | { kind: "album"; props: AlbumPublishedProps }
-    | { kind: "post"; props: FeedPostProps };
+    | { kind: "access_ending"; props: AccessEndingProps };
 };
 
 /**
@@ -59,7 +58,7 @@ export async function sendBatch(messages: BatchMessage[]): Promise<void> {
         message.template.kind === "album" ? (
           <AlbumPublished {...message.template.props} />
         ) : (
-          <FeedPost {...message.template.props} />
+          <AccessEnding {...message.template.props} />
         );
       const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
       const unsubscribe = message.template.props.unsubscribeUrl;

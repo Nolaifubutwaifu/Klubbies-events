@@ -68,7 +68,7 @@ async function resolveContext(event: EventRecord, userId: string): Promise<Event
   ]);
 
   const live = membership && membershipIsLive(membership) ? membership : null;
-  const role = (membership?.event_roles as EventRole | null) ?? null;
+  const role = (membership?.event_roles as unknown as EventRole | null) ?? null;
   const superAdmin = Boolean(profile?.is_super_admin);
   const perms = superAdmin ? permsFromRole({ ...role, manage_event: true } as EventRole) : live ? permsFromRole(role) : { ...NO_PERMS };
 

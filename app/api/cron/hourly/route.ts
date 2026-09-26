@@ -6,7 +6,7 @@ import { runFaceJobs } from "@/lib/faces/jobs";
 import { runRemovalSweep } from "@/lib/media/removals";
 import { runScheduledPublishJob } from "@/lib/media/schedule";
 import { runUnfinishedSweep } from "@/lib/media/unfinished";
-import { runGraceJob } from "@/lib/membership/grace";
+import { prunePendingSignIns, runAccessEndingJob } from "@/lib/notify";
 
 export const maxDuration = 300;
 
@@ -17,9 +17,10 @@ function authorised(request: Request): boolean {
 }
 
 // Via Vercel Cron (vercel.json), hourly on the Pro plan: publishes albums whose scheduled time has
-// passed, deletes photos whose removal request nobody answered, revokes
-// expired grace memberships, sends the day 7 and day 29 reminders, and clears
-// uploads that never finished within 14 days.
+// passed, deletes photos whose removal request nobody answered, emails
+// attendees a week before a gallery closes, and clears uploads that never
+// finished within 14 days. Closing itself needs no job: RLS compares
+// events.access_ends_at with now() on every read.
 // Publishing runs first so a scheduled album is live as early in the pass as
 // possible.
 //
@@ -31,9 +32,10 @@ export async function GET(request: Request) {
   if (!authorised(request)) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   const scheduled = await runScheduledPublishJob();
   const removals = await runRemovalSweep();
-  const grace = await runGraceJob();
+  const accessEnding = await runAccessEndingJob();
+  await prunePendingSignIns();
   const unfinished = await runUnfinishedSweep();
   const faces = await runFaceJobs();
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, grace, unfinished, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, faces });
 }

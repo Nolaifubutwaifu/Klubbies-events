@@ -7,14 +7,12 @@ import { z } from "zod";
 import { getEventContextById, requireUser } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import type { Permission } from "@/lib/permissions";
-import { graceWindow, sendDueGraceNotice } from "@/lib/membership/grace";
 import { drainFacePurgeQueue } from "@/lib/faces/purge";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { generateHandleBase } from "@/lib/roster/handle";
 import sharp from "sharp";
 import { BUCKET, LOGO_MARK_SIZE, logoMarkPath, removeObjects } from "@/lib/storage";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = { error?: string; ok?: boolean; message?: string };
@@ -41,20 +39,38 @@ function text(form: FormData, key: string): string {
 // Events
 // ---------------------------------------------------------------------------
 
-const eventSchema = z.object({
-  name: z.string().trim().min(2, "Give the event a name").max(120),
-  organisation: z.string().trim().max(160),
-  description: z.string().trim().max(1000),
-});
+const isoDate = z.union([z.literal(""), z.iso.date("Pick a date")]);
 
-export async function createEventAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  await requireUser("/admin/new");
-  const parsed = eventSchema.safeParse({
+const eventSchema = z
+  .object({
+    name: z.string().trim().min(2, "Give the event a name").max(120),
+    organisation: z.string().trim().max(160),
+    description: z.string().trim().max(1000),
+    startsOn: isoDate,
+    endsOn: isoDate,
+    venue: z.string().trim().max(160),
+  })
+  .refine((v) => !v.endsOn || !v.startsOn || v.endsOn >= v.startsOn, {
+    message: "The last day can't be before the first",
+    path: ["endsOn"],
+  });
+
+function eventInput(form: FormData) {
+  return {
     name: text(form, "name"),
     organisation: text(form, "organisation"),
     description: text(form, "description"),
-  });
+    startsOn: text(form, "startsOn"),
+    endsOn: text(form, "endsOn"),
+    venue: text(form, "venue"),
+  };
+}
+
+export async function createEventAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireUser("/admin/new");
+  const parsed = eventSchema.safeParse(eventInput(form));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  const accessMode = text(form, "accessMode") === "guest_list" ? "guest_list" : "link";
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_event", {
@@ -62,25 +78,26 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
     p_handle_base: generateHandleBase(parsed.data.name),
     p_organisation: parsed.data.organisation,
     p_description: parsed.data.description,
+    p_starts_on: parsed.data.startsOn || undefined,
+    p_ends_on: parsed.data.endsOn || undefined,
+    p_venue: parsed.data.venue,
+    p_access_mode: accessMode,
   });
   if (error || !data) return { error: "Could not create the event. Try again." };
 
   redirect(`/admin/${data.handle}/billing?step=2`);
 }
 
-const eventSettingsSchema = eventSchema.extend({
-  accentColour: z.union([z.literal(""), z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colour must look like #cf2e12")]),
+const eventSettingsSchema = z.object({
+  accentColour: z.union([z.literal(""), z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colour must look like #2b4acb")]),
 });
 
 export async function updateEventAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await adminContext(eventId);
-  const parsed = eventSettingsSchema.safeParse({
-    name: text(form, "name"),
-    organisation: text(form, "organisation"),
-    description: text(form, "description"),
-    accentColour: text(form, "accentColour"),
-  });
+  const parsed = eventSchema.safeParse(eventInput(form));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  const colour = eventSettingsSchema.safeParse({ accentColour: text(form, "accentColour") });
+  if (!colour.success) return { error: colour.error.issues[0]?.message };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -89,7 +106,10 @@ export async function updateEventAction(eventId: string, _prev: ActionState, for
       name: parsed.data.name,
       organisation: parsed.data.organisation || null,
       description: parsed.data.description || null,
-      accent_colour: parsed.data.accentColour || null,
+      starts_on: parsed.data.startsOn || null,
+      ends_on: parsed.data.endsOn || null,
+      venue: parsed.data.venue || null,
+      accent_colour: colour.data.accentColour || null,
     })
     .eq("id", eventId);
   if (error) return { error: "Could not save the settings" };
@@ -98,19 +118,51 @@ export async function updateEventAction(eventId: string, _prev: ActionState, for
   return { ok: true, message: "Saved" };
 }
 
-/** The two event-wide switches the settings screen shows. */
+const accessSchema = z.object({
+  accessMode: z.enum(["link", "guest_list"]),
+  // A calendar day; the gallery closes at the end of it, Brisbane time.
+  accessEndsOn: isoDate,
+});
+
+/** Who can get in, and until when. */
+export async function setEventAccessAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
+  const ctx = await adminContext(eventId);
+  const parsed = accessSchema.safeParse({ accessMode: text(form, "accessMode"), accessEndsOn: text(form, "accessEndsOn") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+
+  const endsAt = parsed.data.accessEndsOn ? endOfDayBrisbane(parsed.data.accessEndsOn) : null;
+  const previous = ctx.event.access_ends_at;
+  const unchanged = endsAt === null ? previous === null : previous !== null && Date.parse(previous) === Date.parse(endsAt);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("events")
+    .update({
+      access_mode: parsed.data.accessMode,
+      access_ends_at: endsAt,
+      ...(unchanged ? {} : { access_notice_sent_at: null }),
+    })
+    .eq("id", eventId);
+  if (error) return { error: "Could not save access" };
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+  revalidatePath(`/e/${ctx.event.handle}`, "layout");
+  return { ok: true, message: "Saved" };
+}
+
+/** 23:59:59 on that day in Brisbane (UTC+10, no daylight saving). */
+function endOfDayBrisbane(day: string): string {
+  return new Date(`${day}T23:59:59+10:00`).toISOString();
+}
+
+/** The event-wide privacy switch the settings screen shows. */
 export async function setEventPrivacyAction(
   eventId: string,
-  prefs: { allow_removal_requests: boolean; grace_period_enabled: boolean },
+  prefs: { allow_removal_requests: boolean },
 ): Promise<ActionState> {
   const ctx = await permContext(eventId, "manage_event");
   const supabase = await createClient();
   const { error } = await supabase
     .from("events")
-    .update({
-      allow_removal_requests: prefs.allow_removal_requests,
-      grace_period_enabled: prefs.grace_period_enabled,
-    })
+    .update({ allow_removal_requests: prefs.allow_removal_requests })
     .eq("id", eventId);
   if (error) return { error: "Could not save that" };
   revalidatePath(`/admin/${ctx.event.handle}`, "layout");
@@ -159,27 +211,35 @@ export async function setEventLogoAction(eventId: string, path: string | null): 
 }
 
 // ---------------------------------------------------------------------------
-// Members
+// Attendees and team
 // ---------------------------------------------------------------------------
 
 const memberSchema = z.object({
-  name: z.string().trim().min(1, "Enter the member's full name").max(200),
+  name: z.string().trim().min(1, "Enter their full name").max(200),
   email: z.string().transform(normaliseEmail).refine(isValidEmail, "Enter a valid email address"),
+  roleKey: z.enum(["member", "photographer", "admin"]),
 });
 
 export async function addMemberAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await adminContext(eventId);
   if (!canWrite(ctx.event.billing_status)) return { error: ACTIVATE_MESSAGE };
-  const parsed = memberSchema.safeParse({ name: text(form, "name"), email: text(form, "email") });
+  const parsed = memberSchema.safeParse({
+    name: text(form, "name"),
+    email: text(form, "email"),
+    roleKey: text(form, "roleKey") || "member",
+  });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const supabase = await createClient();
-  const { data: existing } = await supabase
-    .from("memberships")
-    .select("id, status, user_id")
-    .eq("event_id", eventId)
-    .eq("roster_email", parsed.data.email)
-    .maybeSingle();
+  const [{ data: existing }, { data: role }] = await Promise.all([
+    supabase
+      .from("memberships")
+      .select("id, status, user_id")
+      .eq("event_id", eventId)
+      .eq("roster_email", parsed.data.email)
+      .maybeSingle(),
+    supabase.from("event_roles").select("id").eq("event_id", eventId).eq("key", parsed.data.roleKey).maybeSingle(),
+  ]);
 
   if (existing && (existing.status === "active" || existing.status === "pending")) {
     return { error: `${parsed.data.email} is already on the list` };
@@ -189,13 +249,7 @@ export async function addMemberAction(eventId: string, _prev: ActionState, form:
   const { error } = existing
     ? await supabase
         .from("memberships")
-        .update({
-          status: existing.user_id ? "active" : "pending",
-          grace_started_at: null,
-          grace_ends_at: null,
-          grace_notices_sent: 0,
-          invited_at: now,
-        })
+        .update({ status: existing.user_id ? "active" : "pending", invited_at: now, role_id: role?.id ?? null })
         .eq("id", existing.id)
     : await supabase.from("memberships").insert({
         event_id: eventId,
@@ -203,18 +257,20 @@ export async function addMemberAction(eventId: string, _prev: ActionState, form:
         roster_name: parsed.data.name,
         status: "pending",
         role: "event_member",
+        role_id: role?.id ?? null,
         invited_at: now,
       });
-  if (error) return { error: "Could not add that member" };
+  if (error) return { error: "Could not add them" };
 
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
+  revalidatePath(`/admin/${ctx.event.handle}/attendees`);
   return { ok: true, message: existing ? `${parsed.data.name} is back on the list` : `${parsed.data.name} added` };
 }
 
+/** Removal is immediate: an event has no members who leave and keep access. */
 export async function removeMembersAction(eventId: string, membershipIds: string[]): Promise<ActionState> {
   const ctx = await adminContext(eventId);
   const ids = z.array(z.uuid()).min(1).max(1000).safeParse(membershipIds);
-  if (!ids.success) return { error: "Select at least one member" };
+  if (!ids.success) return { error: "Select at least one person" };
 
   const supabase = await createClient();
   const { data: rows } = await supabase
@@ -222,7 +278,7 @@ export async function removeMembersAction(eventId: string, membershipIds: string
     .select("id, user_id, role, status")
     .eq("event_id", eventId)
     .in("id", ids.data)
-    .in("status", ["pending", "active"]);
+    .in("status", ["pending", "active", "grace"]);
   const targets = rows ?? [];
   if (targets.some((m) => m.user_id === ctx.userId)) return { error: "You can't remove yourself" };
 
@@ -234,63 +290,17 @@ export async function removeMembersAction(eventId: string, membershipIds: string
       .eq("role", "event_admin")
       .eq("status", "active");
     const removingAdmins = targets.filter((m) => m.role === "event_admin" && m.status === "active").length;
-    if ((count ?? 0) - removingAdmins < 1) return { error: "A event needs at least one admin" };
+    if ((count ?? 0) - removingAdmins < 1) return { error: "An event needs at least one organiser" };
   }
-
-  // People who never signed in have nothing to keep, so they are revoked
-  // straight away. Everyone else enters the 30 day grace window.
-  const neverJoined = targets.filter((m) => m.user_id === null).map((m) => m.id);
-  const joined = targets.filter((m) => m.user_id !== null).map((m) => m.id);
-  const { startedAt, endsAt } = graceWindow();
-
-  if (neverJoined.length) {
-    await supabase.from("memberships").update({ status: "revoked" }).in("id", neverJoined);
-  }
-  if (joined.length) {
-    await supabase
-      .from("memberships")
-      .update({ status: "grace", role: "event_member", grace_started_at: startedAt, grace_ends_at: endsAt, grace_notices_sent: 0 })
-      .in("id", joined);
-
-    after(async () => {
-      const { data } = await createAdminClient()
-        .from("memberships")
-        .select("id, roster_email, roster_name, claimed_name, grace_started_at, grace_ends_at, grace_notices_sent, events!inner(name, handle)")
-        .in("id", joined);
-      for (const row of data ?? []) {
-        await sendDueGraceNotice(row).catch((err) => console.error("grace notice failed", row.id, err));
-      }
-    });
-  }
-
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
-  return {
-    ok: true,
-    message: `${targets.length} removed. ${joined.length ? `${joined.length} keep access to earlier albums for 30 days.` : ""}`.trim(),
-  };
-}
-
-export async function endGraceAction(eventId: string, membershipId: string, typedName: string): Promise<ActionState> {
-  const ctx = await adminContext(eventId);
-  const supabase = await createClient();
-  const { data: member } = await supabase
-    .from("memberships")
-    .select("id, roster_name, status")
-    .eq("event_id", eventId)
-    .eq("id", membershipId)
-    .maybeSingle();
-  if (!member || member.status !== "grace") return { error: "That member isn't in a grace period" };
-
-  const clean = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
-  if (clean(typedName) !== clean(member.roster_name)) return { error: `Type ${member.roster_name} exactly to confirm` };
 
   const { error } = await supabase
     .from("memberships")
-    .update({ status: "revoked", grace_ends_at: new Date().toISOString() })
-    .eq("id", member.id);
-  if (error) return { error: "Could not end access" };
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
-  return { ok: true, message: `${member.roster_name} no longer has access` };
+    .update({ status: "revoked" })
+    .in("id", targets.map((m) => m.id));
+  if (error) return { error: "Could not remove them" };
+
+  revalidatePath(`/admin/${ctx.event.handle}/attendees`);
+  return { ok: true, message: `${targets.length} removed. They can no longer open the event.` };
 }
 
 export async function restoreMemberAction(eventId: string, membershipId: string): Promise<ActionState> {
@@ -302,12 +312,12 @@ export async function restoreMemberAction(eventId: string, membershipId: string)
     .eq("event_id", eventId)
     .eq("id", membershipId)
     .maybeSingle();
-  if (!member) return { error: "Member not found" };
+  if (!member) return { error: "Not found" };
   await supabase
     .from("memberships")
-    .update({ status: member.user_id ? "active" : "pending", grace_started_at: null, grace_ends_at: null, grace_notices_sent: 0 })
+    .update({ status: member.user_id ? "active" : "pending", grace_started_at: null, grace_ends_at: null })
     .eq("id", member.id);
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
+  revalidatePath(`/admin/${ctx.event.handle}/attendees`);
   return { ok: true, message: "Access restored" };
 }
 
@@ -322,7 +332,6 @@ const albumSchema = z.object({
   allowDownload: z.boolean(),
   visibility: z.enum(["members", "admins"]),
   contributorScope: z.enum(["managers", "members"]),
-  eventType: z.union([z.literal(""), z.enum(["formal", "sport", "social", "camp", "night_out", "other"])]),
 });
 
 function albumInput(form: FormData) {
@@ -333,7 +342,6 @@ function albumInput(form: FormData) {
     allowDownload: form.get("allowDownload") === "on",
     visibility: text(form, "visibility") || "members",
     contributorScope: text(form, "contributorScope") || "managers",
-    eventType: text(form, "eventType"),
   });
 }
 
@@ -350,7 +358,6 @@ export async function createAlbumAction(eventId: string, _prev: ActionState, for
       event_id: eventId,
       title: parsed.data.title,
       album_date: parsed.data.albumDate || null,
-      event_type: parsed.data.eventType || null,
       description: parsed.data.description || null,
       allow_download: parsed.data.allowDownload,
       status: "draft",
@@ -389,7 +396,6 @@ export async function updateAlbumAction(albumId: string, _prev: ActionState, for
     .update({
       title: parsed.data.title,
       album_date: parsed.data.albumDate || null,
-      event_type: parsed.data.eventType || null,
       description: parsed.data.description || null,
       allow_download: parsed.data.allowDownload,
       visibility: parsed.data.visibility,
@@ -425,7 +431,7 @@ export async function setAlbumPublishedAction(albumId: string, published: boolea
     .eq("id", albumId);
   if (error) return { error: "Could not update the album" };
 
-  // Tell members who opted in, once, when the album first goes live.
+  // Tell attendees who opted in, once, when the album first goes live.
   if (published && album.published_at === null) {
     after(async () => {
       try {
@@ -440,7 +446,7 @@ export async function setAlbumPublishedAction(albumId: string, published: boolea
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
   return {
     ok: true,
-    message: published ? "Album published. Members who opted in get an email." : "Album moved back to draft",
+    message: published ? "Album published. Attendees who opted in get an email." : "Album moved back to draft",
   };
 }
 
@@ -533,114 +539,18 @@ export async function deleteAlbumAction(albumId: string, typedTitle: string): Pr
 }
 
 // ---------------------------------------------------------------------------
-// Roles
+// Roles: Organiser, Photographer, Attendee
 // ---------------------------------------------------------------------------
-
-const roleSchema = z.object({
-  name: z.string().trim().min(2, "Give the role a name").max(40),
-  manage_event: z.boolean(),
-  manage_members: z.boolean(),
-  manage_albums: z.boolean(),
-  upload: z.boolean(),
-  post_feed: z.boolean(),
-  is_default: z.boolean(),
-});
-
-function roleInput(form: FormData) {
-  return roleSchema.safeParse({
-    name: text(form, "name"),
-    manage_event: form.get("manage_event") === "on",
-    manage_members: form.get("manage_members") === "on",
-    manage_albums: form.get("manage_albums") === "on",
-    upload: form.get("upload") === "on",
-    post_feed: form.get("post_feed") === "on",
-    is_default: form.get("is_default") === "on",
-  });
-}
-
-function roleKey(name: string): string {
-  return name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "role";
-}
-
-export async function createRoleAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
-  const ctx = await permContext(eventId, "manage_event");
-  const parsed = roleInput(form);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
-
-  const supabase = await createClient();
-  if (parsed.data.is_default) await supabase.from("event_roles").update({ is_default: false }).eq("event_id", eventId);
-  const { error } = await supabase.from("event_roles").insert({
-    event_id: eventId,
-    key: `${roleKey(parsed.data.name)}_${Math.random().toString(36).slice(2, 6)}`,
-    name: parsed.data.name,
-    manage_event: parsed.data.manage_event,
-    manage_members: parsed.data.manage_members,
-    manage_albums: parsed.data.manage_albums,
-    upload: parsed.data.upload,
-    post_feed: parsed.data.post_feed,
-    is_default: parsed.data.is_default,
-    sort_order: 10,
-  });
-  if (error) return { error: "Could not create that role" };
-  revalidatePath(`/admin/${ctx.event.handle}/roles`);
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
-  return { ok: true, message: `${parsed.data.name} added` };
-}
-
-export async function updateRoleAction(eventId: string, roleId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
-  const ctx = await permContext(eventId, "manage_event");
-  const parsed = roleInput(form);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
-
-  const supabase = await createClient();
-  if (parsed.data.is_default) await supabase.from("event_roles").update({ is_default: false }).eq("event_id", eventId);
-  const { error } = await supabase
-    .from("event_roles")
-    .update({
-      name: parsed.data.name,
-      manage_event: parsed.data.manage_event,
-      manage_members: parsed.data.manage_members,
-      manage_albums: parsed.data.manage_albums,
-      upload: parsed.data.upload,
-      post_feed: parsed.data.post_feed,
-      is_default: parsed.data.is_default,
-    })
-    .eq("id", roleId)
-    .eq("event_id", eventId);
-  if (error) return { error: "Could not save that role" };
-  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
-  return { ok: true, message: "Role saved" };
-}
-
-export async function deleteRoleAction(eventId: string, roleId: string): Promise<ActionState> {
-  const ctx = await permContext(eventId, "manage_event");
-  const supabase = await createClient();
-  const { data: role } = await supabase.from("event_roles").select("id, is_builtin, name").eq("id", roleId).eq("event_id", eventId).maybeSingle();
-  if (!role) return { error: "Role not found" };
-  if (role.is_builtin) return { error: "Built-in roles can't be deleted" };
-
-  const { data: fallback } = await supabase
-    .from("event_roles")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("key", "member")
-    .maybeSingle();
-  await supabase.from("memberships").update({ role_id: fallback?.id ?? null }).eq("event_id", eventId).eq("role_id", roleId);
-  const { error } = await supabase.from("event_roles").delete().eq("id", roleId);
-  if (error) return { error: "Could not delete that role" };
-  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
-  return { ok: true, message: `${role.name} deleted` };
-}
 
 export async function setMemberRoleAction(eventId: string, membershipIds: string[], roleId: string): Promise<ActionState> {
   const ctx = await permContext(eventId, "manage_members");
   const ids = z.array(z.uuid()).min(1).max(500).safeParse(membershipIds);
-  if (!ids.success || !z.uuid().safeParse(roleId).success) return { error: "Select members and a role" };
+  if (!ids.success || !z.uuid().safeParse(roleId).success) return { error: "Select people and a role" };
 
   const supabase = await createClient();
   const { data: role } = await supabase.from("event_roles").select("id, name, manage_event").eq("id", roleId).eq("event_id", eventId).maybeSingle();
   if (!role) return { error: "Role not found" };
-  if (role.manage_event && !ctx.perms.manage_event) return { error: "Only an admin can hand out admin roles" };
+  if (role.manage_event && !ctx.perms.manage_event) return { error: "Only an organiser can make someone an organiser" };
 
   // Moving people off an admin role can orphan the event: nobody left who can
   // add members, publish, or reach billing. The removal path already checks
@@ -661,14 +571,14 @@ export async function setMemberRoleAction(eventId: string, membershipIds: string
         .eq("event_id", eventId)
         .eq("role", "event_admin")
         .eq("status", "active");
-      if ((count ?? 0) - losing < 1) return { error: "A event needs at least one admin" };
+      if ((count ?? 0) - losing < 1) return { error: "An event needs at least one organiser" };
     }
   }
 
   const { error } = await supabase.from("memberships").update({ role_id: roleId }).eq("event_id", eventId).in("id", ids.data);
   if (error) return { error: "Could not change the role" };
-  revalidatePath(`/admin/${ctx.event.handle}/members`);
-  return { ok: true, message: `${ids.data.length} moved to ${role.name}` };
+  revalidatePath(`/admin/${ctx.event.handle}/attendees`);
+  return { ok: true, message: `${ids.data.length} now ${role.name}` };
 }
 
 /** Hides an album from members, or puts it back. No files are touched. */
@@ -686,7 +596,7 @@ export async function setAlbumHiddenAction(albumId: string, hidden: boolean): Pr
 
   revalidatePath(`/admin/${ctx.event.handle}`, "layout");
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
-  return { ok: true, message: hidden ? "Hidden from members" : "Back in the event" };
+  return { ok: true, message: hidden ? "Hidden from attendees" : "Back in the event" };
 }
 
 /**
@@ -720,7 +630,7 @@ export async function scheduleAlbumAction(albumId: string, publishAt: string | n
 /**
  * Writes an explicit order for a event's albums. The caller sends the full list
  * in the order it wants, so a move is idempotent and can't interleave with
- * another committee member's.
+ * another organiser's.
  */
 export async function setAlbumOrderAction(eventId: string, orderedIds: string[]): Promise<ActionState> {
   const ctx = await permContext(eventId, "manage_albums");
@@ -743,47 +653,4 @@ export async function setAlbumOrderAction(eventId: string, orderedIds: string[])
   revalidatePath(`/admin/${ctx.event.handle}`, "layout");
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
   return { ok: true, message: "Order saved" };
-}
-
-/**
- * Hands the event to another member: they get an admin role, and the event's
- * created_by follows so the record of who runs it stays true. The outgoing
- * owner keeps their own role — stepping down is a separate, deliberate act.
- */
-export async function transferOwnershipAction(eventId: string, membershipId: string): Promise<ActionState> {
-  const ctx = await permContext(eventId, "manage_event");
-  if (!z.uuid().safeParse(membershipId).success) return { error: "Pick who takes over" };
-
-  const supabase = await createClient();
-  const { data: target } = await supabase
-    .from("memberships")
-    .select("id, user_id, roster_name, claimed_name, status")
-    .eq("id", membershipId)
-    .eq("event_id", eventId)
-    .maybeSingle();
-  if (!target) return { error: "That member isn't in this event" };
-  if (target.status !== "active") return { error: "They need to have signed in first" };
-  if (!target.user_id) return { error: "They need to have signed in first" };
-
-  const { data: adminRole } = await supabase
-    .from("event_roles")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("manage_event", true)
-    .order("sort_order")
-    .limit(1)
-    .maybeSingle();
-  if (!adminRole) return { error: "This event has no admin role to hand over" };
-
-  const { error: roleError } = await supabase
-    .from("memberships")
-    .update({ role_id: adminRole.id })
-    .eq("id", membershipId);
-  if (roleError) return { error: "Could not give them the admin role" };
-
-  const { error: eventError } = await supabase.from("events").update({ created_by: target.user_id }).eq("id", eventId);
-  if (eventError) return { error: "Handed over the role, but could not update the event record" };
-
-  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
-  return { ok: true, message: `${target.claimed_name ?? target.roster_name} now runs ${ctx.event.name}` };
 }

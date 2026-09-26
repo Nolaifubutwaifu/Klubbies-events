@@ -2,9 +2,10 @@ import "server-only";
 import { createHmac } from "node:crypto";
 import { sendBatch } from "@/lib/email/send";
 import { appUrl, serverEnv } from "@/lib/env";
+import { formatLongDate } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type NotifyKind = "notify_new_album" | "notify_feed_post" | "notify_access_ending";
+export type NotifyKind = "notify_new_album" | "notify_access_ending";
 
 export function unsubscribeToken(userId: string, kind: NotifyKind): string {
   return createHmac("sha256", serverEnv().SIGNED_URL_SECRET).update(`unsub:${userId}:${kind}`).digest("hex").slice(0, 32);
@@ -15,14 +16,14 @@ export function unsubscribeUrl(userId: string, kind: NotifyKind): string {
   return `${appUrl()}/unsubscribe?${params.toString()}`;
 }
 
-type Recipient = { userId: string; email: string; name: string };
+type Recipient = { userId: string; email: string; name: string; isOrganiser: boolean };
 
 /** Everyone in the event who still wants this kind of email, minus the actor. */
 async function recipients(eventId: string, kind: NotifyKind, exceptUserId?: string | null): Promise<Recipient[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("memberships")
-    .select("user_id, roster_name, claimed_name, accepted_at, status, users!inner(id, email, display_name, notify_new_album, notify_feed_post, notify_access_ending)")
+    .select("user_id, role, roster_name, claimed_name, accepted_at, status, users!inner(id, email, display_name, notify_new_album, notify_access_ending)")
     .eq("event_id", eventId)
     .eq("status", "active")
     .not("user_id", "is", null)
@@ -35,6 +36,7 @@ async function recipients(eventId: string, kind: NotifyKind, exceptUserId?: stri
       userId: m.users.id,
       email: m.users.email,
       name: m.claimed_name ?? m.users.display_name ?? m.roster_name,
+      isOrganiser: m.role === "event_admin",
     }));
 }
 
@@ -75,41 +77,56 @@ export async function notifyNewAlbum(eventId: string, albumId: string, actorUser
   return people.length;
 }
 
-export async function notifyFeedPost(eventId: string, postId: string, actorUserId?: string | null): Promise<number> {
+/**
+ * A week before an event's gallery closes, attendees who still want reminders
+ * get one email saying so. Organisers aren't told: they never lose access.
+ * Stamped per event, so an hourly cron sends it once, and cleared whenever the
+ * closing date moves.
+ */
+export async function runAccessEndingJob(now = new Date()): Promise<{ events: number; emails: number }> {
   const admin = createAdminClient();
-  const [{ data: post }, { data: event }] = await Promise.all([
-    // Named for the same reason as lib/feed/queries.ts: post_reactions gives
-    // posts a second route to memberships.
-    admin
-      .from("posts")
-      .select("id, body, author_membership_id, memberships!posts_author_membership_id_fkey(roster_name, claimed_name)")
-      .eq("id", postId)
-      .maybeSingle(),
-    admin.from("events").select("name, handle").eq("id", eventId).maybeSingle(),
-  ]);
-  if (!post || !event) return 0;
+  const inAWeek = new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString();
+  const { data: events, error } = await admin
+    .from("events")
+    .select("id, name, handle, access_ends_at")
+    .is("access_notice_sent_at", null)
+    .gt("access_ends_at", now.toISOString())
+    .lte("access_ends_at", inAWeek)
+    .eq("status", "active");
+  if (error) throw error;
 
-  const people = await recipients(eventId, "notify_feed_post", actorUserId);
-  if (people.length === 0) return 0;
-
-  const author = post.memberships?.claimed_name ?? post.memberships?.roster_name ?? "The committee";
-
-  await sendBatch(
-    people.map((person) => ({
-      to: person.email,
-      subject: `${event.name}: ${author} posted an update`,
-      template: {
-        kind: "post" as const,
-        props: {
-          name: person.name,
-          eventName: event.name,
-          author,
-          body: post.body.slice(0, 600),
-          feedUrl: `${appUrl()}/e/${event.handle}/feed`,
-          unsubscribeUrl: unsubscribeUrl(person.userId, "notify_feed_post"),
+  let emails = 0;
+  for (const event of events ?? []) {
+    // Stamp first: a failed send is better than a second copy next hour.
+    await admin.from("events").update({ access_notice_sent_at: now.toISOString() }).eq("id", event.id);
+    const people = (await recipients(event.id, "notify_access_ending")).filter((p) => !p.isOrganiser);
+    if (people.length === 0 || !event.access_ends_at) continue;
+    const endsOn = formatLongDate(event.access_ends_at);
+    await sendBatch(
+      people.map((person) => ({
+        to: person.email,
+        subject: `The ${event.name} gallery closes on ${endsOn}`,
+        template: {
+          kind: "access_ending" as const,
+          props: {
+            name: person.name,
+            eventName: event.name,
+            endsOn,
+            eventUrl: `${appUrl()}/e/${event.handle}`,
+            unsubscribeUrl: unsubscribeUrl(person.userId, "notify_access_ending"),
+          },
         },
-      },
-    })),
-  );
-  return people.length;
+      })),
+    );
+    emails += people.length;
+  }
+  return { events: events?.length ?? 0, emails };
+}
+
+/** Sign-in attempts older than a day are dead weight. */
+export async function prunePendingSignIns(now = new Date()): Promise<void> {
+  await createAdminClient()
+    .from("pending_sign_ins")
+    .delete()
+    .lt("expires_at", new Date(now.getTime() - 24 * 3600 * 1000).toISOString());
 }

@@ -6,7 +6,7 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/grace",
+      "path": "/api/cron/hourly",
       "schedule": "0 * * * *"
     }
   ]

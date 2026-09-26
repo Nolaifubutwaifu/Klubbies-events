@@ -6,21 +6,24 @@ export type SignInCodeProps = { code: string; name: string; eventName: string | 
 export default function SignInCode({ code, name, eventName }: SignInCodeProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
-    <EmailLayout preview={`Your Klubbies code is ${code}`}>
-      <Text style={emailStyles.kicker}>{eventName ?? "Klubbies"}</Text>
+    <EmailLayout preview={`Your Klubbies Events code is ${code}`}>
+      <Text style={emailStyles.kicker}>{eventName ?? "Klubbies Events"}</Text>
       <Text style={emailStyles.heading}>Your sign-in code</Text>
-      <Text style={emailStyles.body}>Hi {firstName}, enter this code to open your event&apos;s photos.</Text>
+      <Text style={emailStyles.body}>
+        Hi {firstName}, enter this code to {eventName ? `open the photos from ${eventName}` : "sign in"}.
+      </Text>
       <Text
         style={{
-          fontSize: 40,
-          fontWeight: 700,
+          fontSize: 36,
+          fontWeight: 600,
           letterSpacing: "0.18em",
-          background: "#fff8f4",
-          border: "1px solid #eaddd7",
-          borderRadius: 16,
+          background: "#f7f7f5",
+          border: "1px solid #e4e4df",
+          borderRadius: 8,
           padding: "14px 18px",
           margin: "0 0 16px",
           textAlign: "center",
+          fontFamily: "'Geist Mono', ui-monospace, Menlo, monospace",
         }}
       >
         {code}
