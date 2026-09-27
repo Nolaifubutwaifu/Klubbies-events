@@ -5,8 +5,15 @@ import AlbumPublished, { type AlbumPublishedProps } from "@/emails/AlbumPublishe
 import AccessEnding, { type AccessEndingProps } from "@/emails/AccessEnding";
 import SignInCode, { type SignInCodeProps } from "@/emails/SignInCode";
 import { serverEnv } from "@/lib/env";
+import { supportEmail } from "@/lib/support";
 
 let client: Resend | undefined;
+
+/** Mail is sent from an address nobody reads; replies go to support. */
+function replyTo(): { replyTo?: string } {
+  const address = supportEmail();
+  return address ? { replyTo: address } : {};
+}
 
 function resend(): Resend {
   client ??= new Resend(serverEnv().RESEND_API_KEY);
@@ -23,7 +30,7 @@ async function send(to: string, subject: string, element: React.ReactElement): P
   }
   const env = serverEnv();
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
-  const { error } = await resend().emails.send({ from: env.EMAIL_FROM, to, subject, html, text });
+  const { error } = await resend().emails.send({ from: env.EMAIL_FROM, ...replyTo(), to, subject, html, text });
   if (error) throw new Error(`Resend: ${error.name}: ${error.message}`);
 }
 
@@ -64,6 +71,7 @@ export async function sendBatch(messages: BatchMessage[]): Promise<void> {
       const unsubscribe = message.template.props.unsubscribeUrl;
       return {
         from: env.EMAIL_FROM,
+        ...replyTo(),
         to: message.to,
         subject: message.subject,
         html,
