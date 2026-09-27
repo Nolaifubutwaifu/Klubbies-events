@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaceNotice } from "@/components/FaceNotice";
+import { EventMark } from "@/components/EventMark";
 import { MarkVisited } from "@/components/MarkVisited";
 import { PushPrompt } from "@/components/PushPrompt";
 import { YourPhotosCard } from "@/components/event/YourPhotosCard";
@@ -11,6 +12,7 @@ import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/que
 import { formatDate, formatEventDates, plural } from "@/lib/format";
 import { listStackedAlbums, type StackedAlbum } from "@/lib/media/album-list";
 import { PART_SIZE } from "@/lib/media/zip";
+import { signLogoMarks } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 export async function generateMetadata(props: PageProps<"/e/[handle]">): Promise<Metadata> {
@@ -34,10 +36,12 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
   const { event } = ctx;
 
   const supabase = await createClient();
-  const [albums, faceState] = await Promise.all([
+  const [albums, faceState, logos] = await Promise.all([
     listStackedAlbums(supabase, event.id, { includeDrafts: ctx.perms.manage_albums, since: ctx.membership?.last_seen_at ?? null }),
     faceStateFor(supabase, event.id, ctx.userId),
+    signLogoMarks(supabase, [event.logo_path]),
   ]);
+  const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
 
   const enrolled = faceState.enabled && faceState.profile?.status === "ready";
   const [preview, matchCount] = enrolled
@@ -54,9 +58,14 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
 
   return (
     <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col px-4 pb-20 pt-8 sm:px-6 sm:pt-12">
-      <header className="flex flex-col gap-3 border-b border-[color:var(--kb-line)] pb-8">
-        {event.organisation ? <span className="kb-eyebrow">Hosted by {event.organisation}</span> : null}
-        <h1 className="serif max-w-[20ch] text-[clamp(40px,6.5vw,72px)]">{event.name}</h1>
+      {/* The branded band: the event's own colour, mixed into the paper so a
+          client's loud brand stays calm, with its logo and serif name. */}
+      <header className="flex flex-col gap-3 rounded-[var(--kb-r-card)] bg-[color:var(--tone-support,var(--kb-mist))] px-5 py-7 sm:px-10 sm:py-11">
+        <div className="flex items-center gap-3">
+          <EventMark name={event.name} logoUrl={logoUrl} accentColour={event.accent_colour} size={40} />
+          {event.organisation ? <span className="kb-eyebrow">Hosted by {event.organisation}</span> : null}
+        </div>
+        <h1 className="serif mt-2 max-w-[24ch] text-balance text-[clamp(40px,6.5vw,72px)]">{event.name}</h1>
         <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-[15px] text-[color:var(--kb-ink-2)]">
           {meta ? <span>{meta}</span> : null}
           {totals ? <span className="text-[color:var(--kb-ink-3)]">{plural(totals, "photo or video", "photos and videos")}</span> : null}

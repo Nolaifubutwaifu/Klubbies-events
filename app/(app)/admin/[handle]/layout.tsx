@@ -42,9 +42,12 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
 
   const billing = event.billing_status as BillingStatus;
   const writable = canWrite(billing);
-  const plan = writable
-    ? { line: PRICE.line, hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
-    : { line: BILLING_LABEL[billing], hint: "Activate to upload" };
+  const plan =
+    billing === "comped"
+      ? { line: "Complimentary", hint: "Nothing to pay for this event" }
+      : writable
+        ? { line: PRICE.line, hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
+        : { line: BILLING_LABEL[billing], hint: "Activate to upload" };
 
   const status: { label: string; tone: "live" | "quiet" | "attention" } = !writable
     ? { label: "Not activated", tone: "attention" }

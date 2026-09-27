@@ -42,17 +42,28 @@ export function YourPhotosCard({
             </Link>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-1 sm:grid-cols-8">
+        {/* Fixed-size tiles rather than a stretched grid, so two photos look
+            like two photos and not like a page that failed to load. */}
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {previews.map((item) => (
             <Link
               key={item.id}
               href={item.albumId ? `/e/${handle}/a/${item.albumId}/${item.id}` : meHref}
-              className="soft-tile aspect-square"
+              className="soft-tile aspect-[4/5] w-[112px] flex-none sm:w-[148px]"
               aria-label="Open photo"
             >
               {item.url ? <img src={item.url} alt="" loading="lazy" /> : null}
             </Link>
           ))}
+          {count > previews.length ? (
+            <Link
+              href={meHref}
+              className="flex aspect-[4/5] w-[112px] flex-none flex-col items-center justify-center gap-1 rounded-[6px] bg-[color:var(--kb-mist)] text-[15px] font-medium text-ink no-underline sm:w-[148px]"
+            >
+              +{(count - previews.length).toLocaleString("en-AU")}
+              <span className="text-[14px] font-normal text-[color:var(--kb-ink-3)]">more</span>
+            </Link>
+          ) : null}
         </div>
       </section>
     );
