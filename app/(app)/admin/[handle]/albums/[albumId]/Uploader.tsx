@@ -68,7 +68,7 @@ export function Uploader({ albumId }: { albumId: string }) {
           />
         </div>
         <div className="flex flex-col gap-2 soft-card p-4">
-          <span className="text-[14px] font-semibold">You can keep using Klubbies while this runs.</span>
+          <span className="text-[14px] font-semibold">You can keep working while this runs.</span>
           <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
             Uploads continue as you move around the app, and a progress box follows you. Leave this tab open until it
             finishes; if your connection drops, each file picks up where it left off.

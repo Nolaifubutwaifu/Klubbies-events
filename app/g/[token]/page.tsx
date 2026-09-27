@@ -63,7 +63,7 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
             <EventMark name={session.eventName} logoUrl={logoUrl} accentColour={session.eventAccent} size={30} />
             <span className="truncate text-[15px] font-semibold">{session.eventName}</span>
           </span>
-          <span className="text-[14px] text-[color:var(--kb-ink-3)]">Link expires {formatLongDate(session.expiresAt)}</span>
+          <span className="hidden text-[14px] text-[color:var(--kb-ink-3)] sm:inline">Link expires {formatLongDate(session.expiresAt)}</span>
         </div>
       </header>
 
@@ -72,8 +72,7 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
           <span className="kb-eyebrow">Uploading as {name}</span>
           <h1 className="serif mt-2 text-[clamp(36px,6vw,52px)]">{session.albumTitle}</h1>
           <p className="m-0 mt-2 text-[15px] text-[color:var(--ink-70)]">
-            {session.albumDate ? `${formatLongDate(session.albumDate)} · ` : ""}
-            Full resolution JPG, HEIC, PNG, MP4 or MOV. Every photo is credited to you.
+            Every photo is credited to you. This link works until {formatLongDate(session.expiresAt)}.
           </p>
         </div>
 

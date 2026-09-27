@@ -1,43 +1,46 @@
-# Klubbies
+# Klubbies Events
 
-Private photo and video albums for university clubs. Only people on a club's member list, verified with an emailed code, can see anything. Members can find the photos they're in with face recognition, which is on for every club (a club admin can switch it off).
+Private photo galleries for one-off events: conferences, launches, meetups. The organiser creates an event, gives each photographer an upload link, and shares one link or QR code with attendees. Attendees confirm their email with a code, take a selfie if they want, and get every photo they're in at full quality. Nothing is public.
 
-Live at https://www.klubbies.app (`APP_URL`) on Vercel (project `klubbies`, region `syd1`). The database, auth and file storage are the Supabase project `klubbies` (Sydney). Face recognition uses AWS Rekognition.
+Live at https://events.klubbies.app (`APP_URL`) on Vercel (project `klubbies-events`, team `couple-app-s-projects`, region `syd1`). Database, auth and file storage are the Supabase project `klubbies-events` (ref `yfdglvhhakbuahyfrihs`, Sydney). Face search uses AWS Rekognition. Email goes out through Resend as `Klubbies Events <events@klubbies.app>`.
+
+This started as a fork of Klubbies (club photo archives). Klubbies is a separate product with real users: its folder, Supabase project (`gyeqrmsidwmfpeunjntl`), Vercel project and iPhone app are not this one.
 
 ## Where things are
 
 | Path | What's there |
 | --- | --- |
-| `app/(marketing)` | The public site: home, how it works, privacy, terms, refunds |
-| `app/(auth)` | Sign in, email code, start a club |
-| `app/(app)/c/[handle]` | The member side of a club: events, albums, the photo viewer, Photos of you (`me`), Saved, Club feed |
-| `app/(app)/admin/[handle]` | The committee side: dashboard, albums, upload, members, guest links, removals, handover, billing and settings |
-| `app/(app)/account`, `clubs` | Your profile, and the list of your clubs |
-| `app/g/[token]` | Guest photographer upload page (the only signed-out page with content) |
-| `app/api` | Route handlers: uploads, downloads, zips, face crops, roster import, Stripe, the hourly cron |
-| `components` | Shared UI. `components/soft` is the theme's building blocks and the landing page |
-| `lib` | Everything that isn't UI: `auth`, `billing`, `faces`, `media`, `storage`, `roster`, `email`, `supabase` clients |
+| `app/(marketing)` | The public site: home, privacy, terms, refunds, support |
+| `app/(auth)` | Sign in, the event join screen (`/signin?event=`), email code, create an event (`/start`) |
+| `app/(app)/e/[handle]` | The attendee side: event home, albums, the photo viewer, Your photos (`me`), Saved |
+| `app/(app)/admin/[handle]` | The organiser side: overview, setup checklist, albums, upload, photographers, attendees, share kit and poster, removals, activity, settings, billing |
+| `app/(app)/admin/new` | Create an event |
+| `app/(app)/account`, `events` | Your profile (with account deletion), and the list of your events |
+| `app/g/[token]` | Photographer upload page (the only signed-out page with content) |
+| `app/api` | Route handlers: uploads, downloads, zips, face crops, guest list import, push registration, Stripe, the hourly cron |
+| `components` | Shared UI |
+| `lib` | Everything that isn't UI: `auth`, `billing`, `faces`, `media`, `storage`, `roster` (guest lists), `email`, `push`, `account`, `events`, `supabase` clients |
 | `emails` | React Email templates |
 | `supabase/migrations` | The whole database schema, in order. `supabase/tests` holds the face RLS checks |
-| `scripts` | One-off and maintenance scripts (below) |
-| `tests` | `unit` (Vitest) and `e2e` (Playwright access-control tests) |
-| `docs` | The spec (`masterfile.md`), every decision made since (`decisions.md`), design history and the face tuning method |
+| `ios` | The iPhone app (see `ios/README.md`) |
+| `tests` | `unit` (Vitest) and `e2e` (Playwright access-control and account tests) |
+| `docs` | The spec (`masterfile.md`), decisions made since (`decisions.md`), QA reports (`reports/`), and Klubbies' own history |
 
-Start with `docs/masterfile.md` for what the product is meant to be, and `docs/decisions.md` for why it is the way it is. The newest decisions are at the bottom.
+Start with `docs/masterfile.md` for what the product is meant to be, and `docs/decisions.md` for why it is the way it is.
 
 ## Setup
 
 ```bash
 pnpm install
 cp .env.example .env.local   # fill in the values
+npx supabase start           # local database in Docker
 pnpm dev
 ```
 
-Every migration in `supabase/migrations` is applied to the Supabase project. For a fresh project, apply them in order with `supabase db push` or the SQL editor. Sample data:
+Locally, `.env.local` points at the Supabase stack on `127.0.0.1:54321`, and `EMAIL_DRY_RUN=1` prints every email, sign-in codes included, to the server log instead of sending it. Sample data:
 
 ```bash
-SEED_ADMIN_EMAIL=you@example.com pnpm seed   # two small clubs
-pnpm demo                                    # the design's fictional club, UniMelb FC
+pnpm demo   # Brisbane Product Summit 2026 (@demo_summit); the organiser is organiser.demo@klubbies.test
 ```
 
 ## Checks
@@ -48,7 +51,7 @@ pnpm demo                                    # the design's fictional club, UniM
 | `pnpm typecheck` | Route types + `tsc` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Unit tests |
-| `pnpm test:e2e` | Access-control tests against the real Supabase project (needs the service role key) |
+| `pnpm test:e2e` | Access-control and account tests against the Supabase project in `.env.local` (needs the service role key) |
 
 ## Maintenance scripts
 
@@ -56,33 +59,26 @@ All read `.env.local` and use the service role. Nothing destructive happens with
 
 | Command | What it does |
 | --- | --- |
-| `pnpm backfill-faces --club <handle>` | Face-index a big library locally, with no function timeout |
-| `pnpm dedupe-media --club <handle>` | Report photos uploaded twice into an album; `--confirm` deletes the extra copies |
-| `pnpm logo-marks` | Make the small badge version of club logos uploaded before those existed |
-
-## iPhone app
-
-`ios/` holds the native iPhone app. Open `ios/Klubbies.xcodeproj` in Xcode; `ios/README.md` covers running it on a phone and shipping it through TestFlight.
+| `pnpm backfill-faces --event <handle>` | Face-index a big library locally, with no function timeout |
+| `pnpm dedupe-media --event <handle>` | Report photos uploaded twice into an album; `--confirm` deletes the extra copies |
+| `pnpm logo-marks` | Make the small badge version of logos uploaded before those existed |
 
 ## Deploying
 
-Vercel deploys `main` to production. Set every variable from `.env.example`, and apply new migrations to Supabase before the code that needs them goes live.
+Vercel deploys `main` to production. Every variable from `.env.example` is set in the Vercel project, pointed at the cloud Supabase project. Apply new migrations to Supabase, in order, before the code that needs them goes live.
 
-`CRON_SECRET` enables the hourly job at `/api/cron/grace`: it publishes scheduled albums, sweeps unanswered removal requests, expires grace memberships, clears uploads that never finished, and works through the face recognition queue.
+`CRON_SECRET` enables the hourly job at `/api/cron/hourly`: it publishes scheduled albums, sweeps unanswered removal requests, sends the "gallery closes in a week" email, clears uploads that never finished, and works through the face search queue.
 
-The project is on Vercel Pro, which the hourly cron (`0 * * * *` in `vercel.json`) needs: Hobby refuses more than one cron run a day and fails the deploy. Dropping back to Hobby means going back to `0 23 * * *` and the "first morning after" wording in `AlbumManager`, `NewAlbumPanel` and `scheduleAlbumAction` (see decision 68).
+## Payments
 
-## Billing
+One payment per event, through Stripe Checkout in `payment` mode. Setting up an event is free; paying unlocks uploading, photographer links and attendees.
 
-Clubs pay through Stripe Checkout before they can add members or upload.
-
-1. Set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` (use test mode keys locally).
-2. In Stripe → Developers → Webhooks, add `https://<your-domain>/api/stripe/webhook` with these events:
-   - `checkout.session.completed`
-   - `checkout.session.async_payment_succeeded`
-   - `customer.subscription.created`, `.updated` and `.deleted`
+1. Set `STRIPE_SECRET_KEY` and `STRIPE_PRICE_ID` (a one-time price). Use test mode keys locally.
+2. In Stripe, Developers, Webhooks, add `https://events.klubbies.app/api/stripe/webhook` with `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
 3. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
-4. For local webhooks, run `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
+4. The price shown on the site lives in `lib/copy/site.ts` (`PRICE`). Change it together with the Stripe price.
+
+Without Stripe keys, local development shows "Activate without payment (development)" on the billing page. Production never does.
 
 ## Stack
 

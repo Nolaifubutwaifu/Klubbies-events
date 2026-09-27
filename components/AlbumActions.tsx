@@ -104,7 +104,7 @@ export function AlbumActions({
         }
         if (files.length === 0) continue;
         setProgress(`Saving ${files.length} photos…`);
-        await navigator.share({ files, title: "Klubbies" });
+        await navigator.share({ files, title: "Klubbies Events" });
       }
       setProgress(native ? `Saved ${saved} to Photos` : "Done");
     } catch (shareError) {

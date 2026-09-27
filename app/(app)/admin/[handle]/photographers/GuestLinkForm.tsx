@@ -88,7 +88,7 @@ export function GuestLinkForm({
         <div className="soft-card flex flex-col gap-3 !border-[color:var(--kb-ember)] p-5">
           <span className="text-[14px] font-medium">Copy this link now and send it to the photographer. It isn&apos;t shown again.</span>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="mono min-w-0 flex-1 overflow-x-auto rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3 py-2.5 text-[14px]">
+            <code className="mono min-w-0 flex-1 break-all rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3 py-2.5 text-[14px]">
               {state.url}
             </code>
             <button

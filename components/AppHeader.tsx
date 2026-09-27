@@ -94,7 +94,7 @@ export async function AppHeader({
             ) : (
               <>
                 <span>This event isn&apos;t activated yet. Uploading and adding attendees unlock after payment.</span>
-                <Link href={`/admin/${event.handle}/billing`} className="btn btn-primary btn-sm no-underline">
+                <Link href={`/admin/${event.handle}/billing`} className="btn btn-secondary btn-sm no-underline">
                   Activate event
                 </Link>
               </>

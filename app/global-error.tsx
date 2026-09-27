@@ -6,7 +6,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
       <body style={{ margin: 0, background: "#fff8f4", color: "#2b2228", fontFamily: "system-ui, sans-serif" }}>
         <main style={{ padding: 24, maxWidth: 520 }}>
           <p style={{ fontWeight: 700, fontSize: 20 }}>klubbies</p>
-          <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.03em", margin: "48px 0 12px" }}>Klubbies hit a problem.</h1>
+          <h1 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.03em", margin: "48px 0 12px" }}>Klubbies Events hit a problem.</h1>
           <p style={{ fontSize: 16, color: "#5f545a" }}>We&apos;ve been notified. Try again in a moment.</p>
           {error.digest ? <p style={{ fontSize: 14, color: "#776b70" }}>Reference: {error.digest}</p> : null}
           <button
