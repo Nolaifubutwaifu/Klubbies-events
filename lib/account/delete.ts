@@ -1,7 +1,8 @@
 import "server-only";
 import { revokeProfile } from "@/lib/faces/enrol";
-import { deleteEventCollection, drainFacePurgeQueue } from "@/lib/faces/purge";
-import { BUCKET, logoMarkPath, removeObjects } from "@/lib/storage";
+import { deleteEventEverywhere } from "@/lib/events/delete";
+import { drainFacePurgeQueue } from "@/lib/faces/purge";
+import { BUCKET, removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -69,32 +70,6 @@ export async function planAccountDeletion(userId: string): Promise<DeletionPlan>
   return plan;
 }
 
-/** Closes an event nobody else has joined: face data, files, rows. */
-async function closeEvent(eventId: string): Promise<void> {
-  const admin = createAdminClient();
-  const { data: event } = await admin.from("events").select("id, logo_path").eq("id", eventId).maybeSingle();
-  if (!event) return;
-
-  const { data: settings } = await admin.from("event_face_settings").select("collection_id").eq("event_id", eventId).maybeSingle();
-  if (settings?.collection_id) {
-    await deleteEventCollection(settings.collection_id);
-    await admin.from("face_purge_queue").delete().eq("collection_id", settings.collection_id);
-  }
-
-  const paths: string[] = [];
-  const { data: media } = await admin.from("media").select("storage_path, thumb_path, display_path, poster_path").eq("event_id", eventId);
-  for (const m of media ?? []) paths.push(...[m.storage_path, m.thumb_path, m.display_path, m.poster_path].filter((p): p is string => Boolean(p)));
-  const { data: albums } = await admin.from("albums").select("cover_path").eq("event_id", eventId);
-  for (const a of albums ?? []) if (a.cover_path) paths.push(a.cover_path);
-  const { data: selfies } = await admin.from("member_face_profiles").select("selfie_path").eq("event_id", eventId);
-  for (const s of selfies ?? []) if (s.selfie_path) paths.push(s.selfie_path);
-  if (event.logo_path) paths.push(event.logo_path, logoMarkPath(event.logo_path));
-
-  const { error } = await admin.from("events").delete().eq("id", eventId);
-  if (error) throw error;
-  await removeObjects(paths).catch((removeError) => console.error("could not remove files of closed event", eventId, removeError));
-}
-
 export type DeletionResult = { ok: true; closed: EventRef[] } | { ok: false; handOver: EventRef[] };
 
 export async function deleteAccount(userId: string, email: string): Promise<DeletionResult> {
@@ -102,7 +77,7 @@ export async function deleteAccount(userId: string, email: string): Promise<Dele
   if (plan.handOver.length > 0) return { ok: false, handOver: plan.handOver };
 
   const admin = createAdminClient();
-  for (const event of plan.closes) await closeEvent(event.id);
+  for (const event of plan.closes) await deleteEventEverywhere(event.id);
 
   // Face recognition first, so faceprints leave AWS before anything else goes.
   const { data: profiles } = await admin.from("member_face_profiles").select("id").eq("user_id", userId);

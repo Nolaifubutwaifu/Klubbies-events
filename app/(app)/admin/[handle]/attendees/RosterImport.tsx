@@ -117,7 +117,7 @@ export function RosterImport({ eventId }: { eventId: string }) {
         value={mapping[key] ?? NONE}
         onChange={(e) => setColumn(key, Number(e.target.value))}
       >
-        {optional ? <option value={NONE}>—</option> : null}
+        {optional ? <option value={NONE}>Not in this file</option> : null}
         {preview?.columns.map((c, i) => (
           <option key={`${c}-${i}`} value={i}>
             {c}
@@ -337,7 +337,7 @@ export function RosterImport({ eventId }: { eventId: string }) {
                     <ul className="max-h-40 overflow-auto text-[14px] text-[color:var(--ink-70)]">
                       {summary.problems.slice(0, 50).map((p) => (
                         <li key={`${p.row}-${p.email}`}>
-                          Row {p.row}: {p.name || "(no name)"} {p.email ? `· ${p.email}` : ""} — {p.reason}
+                          Row {p.row}: {p.name || "(no name)"} {p.email ? `· ${p.email}` : ""}: {p.reason}
                         </li>
                       ))}
                     </ul>

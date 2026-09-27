@@ -39,7 +39,7 @@ export async function requestRemovalAction(mediaId: string): Promise<ActionState
   await createAdminClient().from("media").update({ hidden_at: new Date().toISOString() }).eq("id", media.id);
 
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
-  return { ok: true, message: "Hidden. Your media officer confirms it from here." };
+  return { ok: true, message: "Hidden from attendees. The organiser decides within 7 days." };
 }
 
 async function loadRequest(requestId: string) {

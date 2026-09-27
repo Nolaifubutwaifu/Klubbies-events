@@ -9,6 +9,7 @@ import { eventLink } from "@/lib/share";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { AccessForm } from "./AccessForm";
+import { DeleteEvent } from "./DeleteEvent";
 import { FaceRecognition } from "./FaceRecognition";
 import { LogoUploader } from "./LogoUploader";
 import { PrivacySwitches } from "./PrivacySwitches";
@@ -40,7 +41,7 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
         <div className="flex min-w-0 flex-col gap-8">
-          <section className="flex flex-col gap-3">
+          <section id="brand" className="flex scroll-mt-6 flex-col gap-3">
             <h2 className="text-[16px] font-semibold">Event details and brand</h2>
             <SettingsForm
               eventId={event.id}
@@ -82,6 +83,11 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
               enrolledCount={enrolledCount ?? 0}
               backfill={faceBackfill}
             />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[16px] font-semibold">Danger zone</h2>
+            <DeleteEvent eventId={event.id} eventName={event.name} />
           </section>
         </div>
 

@@ -17,6 +17,7 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
   const restartHref = isCreate ? "/start" : event ? `/signin?event=${event}` : "/signin";
   if (!email) redirect(restartHref);
   const preview = await authEventPreview(event);
+  const openLink = preview?.accessMode === "link";
 
   return (
     <AuthShell
@@ -31,7 +32,10 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
       {/* The address is theirs, they just typed it, so spelling it back is a
           help, not a leak. */}
       <p className="kb-lead mt-3 !text-[16px]">
-        If that address can open the event, a code is on its way to <strong className="font-medium text-[color:var(--kb-ink)]">{email}</strong>. It works for ten minutes.
+        {/* Only an open-link event can say so plainly: anywhere else the
+            answer stays neutral, so a guest list can't be probed. */}
+        {openLink ? "A code is on its way to " : "If that address can open the event, a code is on its way to "}
+        <strong className="font-medium text-[color:var(--kb-ink)]">{email}</strong>. It works for ten minutes.
       </p>
 
       <div className="mt-7">
@@ -41,7 +45,11 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
       <AuthNote>
         {isCreate
           ? "Nothing arrived? Check junk, then send it again."
-          : "Nothing arrived? Check junk. For a guest-list event, use the email you registered with; if that's what you used, ask the organiser to add you."}
+          : openLink
+            ? "Nothing arrived? Check junk and the spelling of your address, then send a new code."
+            : preview
+              ? "Nothing arrived? Check junk. This event uses a guest list, so use the email you registered with; if that's what you used, ask the organiser to add you."
+              : "Nothing arrived? Check junk. Use the email you joined your event with, or open the event's link or QR code again."}
       </AuthNote>
     </AuthShell>
   );

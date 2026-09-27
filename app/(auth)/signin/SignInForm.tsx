@@ -73,7 +73,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
       : flow === "create"
         ? "Email me a code to continue"
         : flow === "join"
-          ? "Send my code"
+          ? "Get my photos"
           : "Email me a code";
 
   return (

@@ -50,7 +50,7 @@ export function GuestUploader({ token }: { token: string }) {
       >
         <span className="soft-display text-[19px]">Drop photos and videos here</span>
         <span className="text-[14px] text-[color:var(--ink-70)]">
-          HEIC, JPG, PNG, WebP, MP4, MOV — originals, kept at full quality
+          HEIC, JPG, PNG, WebP, MP4 or MOV, kept at full quality
         </span>
         <input
           ref={input}

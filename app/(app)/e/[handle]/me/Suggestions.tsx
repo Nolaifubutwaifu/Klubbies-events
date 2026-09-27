@@ -50,7 +50,7 @@ export function Suggestions({
         <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
           Saying yes helps us recognise you next time. Saying no means we never suggest that photo again.
           {total > suggestions.length
-            ? ` ${total.toLocaleString("en-AU")} waiting — answer these and the next ones appear.`
+            ? ` ${total.toLocaleString("en-AU")} waiting. Answer these and the next ones appear.`
             : ""}
         </p>
       </div>

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getEventContextById, requireUser } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import type { Permission } from "@/lib/permissions";
+import { deleteEventEverywhere } from "@/lib/events/delete";
 import { drainFacePurgeQueue } from "@/lib/faces/purge";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
@@ -536,6 +537,25 @@ export async function deleteAlbumAction(albumId: string, typedTitle: string): Pr
 
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
   redirect(`/admin/${ctx.event.handle}/albums`);
+}
+
+/**
+ * Deletes the whole event: photos, faceprints, attendees and the log. Only
+ * someone who runs the event can, and only after typing its name.
+ */
+export async function deleteEventAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
+  const ctx = await adminContext(eventId);
+  if (text(form, "confirm").toLowerCase() !== ctx.event.name.trim().toLowerCase()) {
+    return { error: `Type ${ctx.event.name} to confirm` };
+  }
+  try {
+    await deleteEventEverywhere(eventId);
+  } catch (error) {
+    console.error("event delete failed", eventId, error);
+    return { error: "Something went wrong and the event is still here. Try again." };
+  }
+  revalidatePath("/events");
+  redirect("/events");
 }
 
 // ---------------------------------------------------------------------------

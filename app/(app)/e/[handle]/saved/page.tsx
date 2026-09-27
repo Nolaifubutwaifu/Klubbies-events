@@ -68,15 +68,15 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
             <div>
               <span className="kb-eyebrow">{ctx.event.name}</span>
               <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Saved</h1>
-              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">Your favourites and downloads from this event.</p>
+              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">Photos you saved from this event, ready to download.</p>
             </div>
           </div>
 
           {total === 0 && downloads.length === 0 ? (
             <div className="soft-dashed mt-8 flex max-w-[640px] flex-col items-start gap-3 p-7">
-              <h2 className="text-[18px] font-semibold">No favourites yet</h2>
+              <h2 className="text-[18px] font-semibold">Nothing saved yet</h2>
               <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
-                Open any photo and hit Favourite. It turns up here at full quality, ready to download.
+                Open any photo and tap Save. It turns up here at full quality, ready to download.
               </p>
               <Link href={`/e/${handle}`} className="btn btn-primary no-underline">
                 Browse the albums

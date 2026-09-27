@@ -23,8 +23,8 @@ export default async function SignInPage(props: PageProps<"/signin">) {
         <AuthHeading>Get your photos</AuthHeading>
         <p className="kb-lead mt-3 !text-[16px]">
           {open
-            ? "Enter your name and email. We'll send a code to confirm it's you, then you're in."
-            : "This event is for its guest list. Use the email you registered with and we'll send you a code."}
+            ? "Use the email you'd like your photos under. We'll send a code to confirm it's you, then you're in."
+            : "This event is for its guest list. Use the email you registered with, and we'll send you a code."}
         </p>
         <div className="mt-7">
           <SignInForm flow="join" event={event.handle} />

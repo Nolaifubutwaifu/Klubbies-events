@@ -53,7 +53,7 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
   const logoUrl = session.eventLogoPath
     ? ((await signLogoMarks(createAdminClient(), [session.eventLogoPath])).get(session.eventLogoPath) ?? null)
     : null;
-  const name = session.label.split("—")[0].trim();
+  const name = session.label.trim();
 
   return (
     <div className="theme-soft relative flex min-h-dvh flex-col" style={eventToneStyle(session.eventAccent)}>

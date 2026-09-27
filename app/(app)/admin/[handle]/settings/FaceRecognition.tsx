@@ -71,7 +71,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
     return (
       <div className="soft-card flex flex-col gap-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-[14px] font-medium">Face search</span>
+          <span className="text-[14px] font-medium">Attendees find their photos with a selfie</span>
           <span className="soft-chip">On</span>
         </div>
         <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
@@ -155,7 +155,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
             </>
           ) : (
             <button type="button" className="kb-link kb-link-quiet" onClick={() => setConfirmingOff(true)}>
-              Turn face recognition off
+              Turn face search off
             </button>
           )}
         </div>
@@ -199,7 +199,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
           })
         }
       >
-        {pending ? "Setting it up…" : "Turn on face recognition"}
+        {pending ? "Setting it up…" : "Turn on face search"}
       </button>
       {message ? <p className="m-0 text-[14px] text-[color:var(--ink-55)]">{message}</p> : null}
     </div>

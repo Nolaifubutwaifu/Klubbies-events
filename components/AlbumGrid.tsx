@@ -139,21 +139,18 @@ export function AlbumGrid({
     return <p className="soft-card m-6 p-6 text-[14px] text-[color:var(--ink-70)]">Nothing in this album yet.</p>;
   }
 
+  const chips = (
+    [
+      ["all", `All ${total.toLocaleString("en-AU")}`, true],
+      ["mine", `You ${mineItems.length.toLocaleString("en-AU")}`, mineItems.length > 0],
+      ["photo", `Photos ${photoCount.toLocaleString("en-AU")}`, photoCount > 0 && videoCount > 0],
+      ["video", `Videos ${videoCount.toLocaleString("en-AU")}`, videoCount > 0],
+      ["saved", `Saved ${savedTotal.toLocaleString("en-AU")}`, savedTotal > 0],
+    ] as const
+  ).filter(([, , show]) => show);
+
   return (
     <div className="flex flex-col gap-3">
-      {/* "Select photos" is everyone's — the whole point of an album is
-          taking a handful home. What the bar then offers depends on who you
-          are: members favourite and download, the committee also recovers a
-          cover and deletes. */}
-      <div className="flex min-h-[40px] flex-wrap items-center gap-2 px-4 text-[14px] sm:px-6">
-        {selecting ? null : (
-          <button type="button" className="soft-btn soft-btn-tonal !min-h-[38px] !px-4 !text-[14px]" onClick={() => setSelecting(true)}>
-            Select photos
-          </button>
-        )}
-        {!selecting && message ? <span className="text-[14px] text-[color:var(--ink-70)]">{message}</span> : null}
-      </div>
-
       {selecting ? (
         <div className="sticky bottom-[84px] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
           <strong className="text-[14px] font-bold">
@@ -176,7 +173,7 @@ export function AlbumGrid({
               })
             }
           >
-            Favourite
+            Save
           </button>
 
           {canDownload ? (
@@ -232,33 +229,31 @@ export function AlbumGrid({
         </div>
       ) : null}
 
-      {/* The design's filter row: one pressed chip, the rest quiet. Counts are
-          on the chip so you know what you're about to see. */}
-      <div className="flex w-full flex-wrap gap-2 px-4 sm:px-6">
-        {(
-          [
-            ["all", `All ${total.toLocaleString("en-AU")}`, true],
-            ["mine", `You ${mineItems.length.toLocaleString("en-AU")}`, mineItems.length > 0],
-            ["photo", `Photos ${photoCount.toLocaleString("en-AU")}`, photoCount > 0 && videoCount > 0],
-            ["video", `Videos ${videoCount.toLocaleString("en-AU")}`, videoCount > 0],
-            ["saved", `Favourites ${savedTotal.toLocaleString("en-AU")}`, savedTotal > 0],
-          ] as const
-        )
-          .filter(([, , show]) => show)
-          .map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={kind === value}
-              onClick={() => setKind(value)}
-              className={`soft-btn !min-h-[38px] !px-4 !text-[14px] ${
-                kind === value ? "!bg-ink !text-white" : "soft-btn-tonal"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-      </div>
+      {/* One row: the filters, then "Select photos", which is everyone's: the
+          whole point of an album is taking a handful home. What the selection
+          bar offers depends on who you are. A lone "All" chip is left out:
+          there is nothing to switch to. */}
+      {selecting ? null : (
+        <div className="flex w-full flex-wrap items-center gap-2 px-4 pt-4 sm:px-6">
+          {chips.length > 1
+            ? chips.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={kind === value}
+                  onClick={() => setKind(value)}
+                  className={`soft-btn !min-h-[38px] !px-4 !text-[14px] ${kind === value ? "!bg-ink !text-white" : "soft-btn-tonal"}`}
+                >
+                  {label}
+                </button>
+              ))
+            : null}
+          <button type="button" className="btn btn-secondary btn-sm ml-auto" onClick={() => setSelecting(true)}>
+            Select photos
+          </button>
+          {message ? <span className="w-full text-[14px] text-[color:var(--ink-70)]">{message}</span> : null}
+        </div>
+      )}
 
       <div
         className="grid w-full gap-1 px-1 pb-6 pt-3 sm:gap-1.5 sm:px-4"

@@ -117,7 +117,7 @@ export const ORGANISER_FEATURES: Feature[] = [
 export const ATTENDEE_FEATURES: Feature[] = [
   { icon: "face", title: "Photos of you, found", body: "One selfie, and every photo they're in is in one place." },
   { icon: "download", title: "Full quality downloads", body: "The photographer's original file, one at a time or all at once." },
-  { icon: "heart", title: "Saved for later", body: "Heart the good ones and come back to them." },
+  { icon: "heart", title: "Saved for later", body: "Save the good ones and come back to them." },
   { icon: "bell", title: "Told when photos land", body: "An email when a new album is published, and a week before the gallery closes." },
 ];
 

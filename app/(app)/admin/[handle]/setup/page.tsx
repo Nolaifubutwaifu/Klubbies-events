@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { canWrite } from "@/lib/billing/status";
+import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
+import { plural } from "@/lib/format";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,10 +47,17 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   const inApp = await isNativeAppRequest();
   const { event } = ctx;
 
-  const [{ count: onList }, { count: albums }, { count: links }, { count: photographerAccounts }] = await Promise.all([
+  const [{ count: onList }, { count: joined }, { count: albums }, { count: links }, { count: photographerAccounts }] = await Promise.all([
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", event.id).in("status", ["pending", "active"]),
+    supabase
+      .from("memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", event.id)
+      .eq("status", "active")
+      .not("user_id", "is", null)
+      .neq("role", "event_admin"),
     supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", event.id),
-    supabase.from("album_guest_links").select("id", { count: "exact", head: true }).eq("event_id", event.id),
+    supabase.from("album_guest_links").select("id", { count: "exact", head: true }).eq("event_id", event.id).is("revoked_at", null),
     supabase
       .from("memberships")
       .select("id, event_roles!inner(key)", { count: "exact", head: true })
@@ -58,6 +66,10 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   ]);
 
   const guestList = event.access_mode === "guest_list";
+  const billing = event.billing_status as BillingStatus;
+  const paid = canWrite(billing);
+  const photographers = (links ?? 0) + (photographerAccounts ?? 0);
+  const attendees = joined ?? 0;
   const steps: Step[] = [
     {
       key: "details",
@@ -65,28 +77,45 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
       hint: event.starts_on ? "Name, dates and venue are set" : "Add the date and venue attendees will see",
       done: Boolean(event.starts_on),
       href: `/admin/${handle}/settings`,
-      cta: "Edit details",
+      cta: event.starts_on ? "Edit" : "Add details",
     },
     {
       key: "pay",
-      title: inApp ? "Event status" : "Activate the event",
-      hint: canWrite(event.billing_status) ? "Paid" : inApp ? "Not active yet" : "One payment unlocks uploading and attendees",
-      done: canWrite(event.billing_status),
+      title: inApp || paid ? "Event status" : "Activate the event",
+      hint: paid ? BILLING_LABEL[billing] : inApp ? "Not active yet" : "One payment unlocks uploading and attendees",
+      done: paid,
       href: `/admin/${handle}/billing`,
-      cta: inApp ? "Status" : "Activate",
+      cta: inApp || paid ? "View" : "Activate",
     },
     {
       key: "brand",
       title: "Logo and brand colour",
       hint: event.logo_path ? "Your logo is on every attendee screen" : "Attendees should see your brand, not ours",
       done: Boolean(event.logo_path),
-      href: `/admin/${handle}/settings`,
-      cta: event.logo_path ? "Change it" : "Add your logo",
+      href: `/admin/${handle}/settings#brand`,
+      cta: event.logo_path ? "Change" : "Add your logo",
     },
+    guestList
+      ? {
+          key: "access",
+          title: "Import the guest list",
+          hint: (onList ?? 0) > 1 ? `${(onList ?? 0).toLocaleString("en-AU")} on the list` : "Guest list only: nobody else can get in",
+          done: (onList ?? 0) > 1,
+          href: `/admin/${handle}/attendees`,
+          cta: (onList ?? 0) > 1 ? "View list" : "Import",
+        }
+      : {
+          key: "access",
+          title: "Choose who can get in",
+          hint: "Anyone with the event link who confirms their email",
+          done: true,
+          href: `/admin/${handle}/settings#access`,
+          cta: "Change",
+        },
     {
       key: "album",
       title: "Create an album",
-      hint: (albums ?? 0) > 0 ? `${albums} so far` : "One per part of the event: keynote, drinks, headshots",
+      hint: (albums ?? 0) > 0 ? plural(albums ?? 0, "album") : "One per part of the event: keynote, drinks, headshots",
       done: (albums ?? 0) > 0,
       href: `/admin/${handle}/upload`,
       cta: "New album",
@@ -94,31 +123,19 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
     {
       key: "photographer",
       title: "Add your photographers",
-      hint:
-        (links ?? 0) + (photographerAccounts ?? 0) > 0
-          ? "Upload links sent"
-          : "Each gets an upload link. No account needed",
-      done: (links ?? 0) + (photographerAccounts ?? 0) > 0,
+      hint: photographers > 0 ? `${plural(photographers, "photographer")} can upload` : "Each gets an upload link. No account needed",
+      done: photographers > 0,
       href: `/admin/${handle}/photographers`,
-      cta: "Add photographer",
+      cta: photographers > 0 ? "Manage" : "Add photographer",
     },
-    guestList
-      ? {
-          key: "list",
-          title: "Import the guest list",
-          hint: (onList ?? 0) > 1 ? `${(onList ?? 0).toLocaleString("en-AU")} on the list` : "Only people on it can get in",
-          done: (onList ?? 0) > 1,
-          href: `/admin/${handle}/attendees`,
-          cta: "Import",
-        }
-      : {
-          key: "share",
-          title: "Get the QR code",
-          hint: "For the closing slide, table cards and the follow-up email",
-          done: false,
-          href: `/admin/${handle}/share`,
-          cta: "Open share kit",
-        },
+    {
+      key: "share",
+      title: "Share the link and QR code",
+      hint: attendees > 0 ? `${plural(attendees, "attendee")} joined` : "For the closing slide, table cards and the follow-up email",
+      done: attendees > 0,
+      href: `/admin/${handle}/share`,
+      cta: "Open share kit",
+    },
   ];
 
   const doneCount = steps.filter((s) => s.done).length;

@@ -116,7 +116,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
               <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
                 We&rsquo;re comparing your selfie against this event&rsquo;s photos.{" "}
                 {progress.remaining > 0
-                  ? `There are ${progress.remaining.toLocaleString("en-AU")} photos still being read, so this may take a while. Your photos appear here as they are found — you don't need to wait on this page.`
+                  ? `There are ${progress.remaining.toLocaleString("en-AU")} photos still being read, so this may take a while. Your photos appear here as they are found, so you don't need to wait on this page.`
                   : "This usually takes under a minute."}
               </p>
             </div>

@@ -76,7 +76,7 @@ function Figures({ stats }: { stats: AlbumStats }) {
   const cells: [number, string][] = [
     [stats.views, stats.views === 1 ? "view" : "views"],
     [stats.downloads, stats.downloads === 1 ? "download" : "downloads"],
-    [stats.members, stats.members === 1 ? "member" : "members"],
+    [stats.members, stats.members === 1 ? "attendee" : "attendees"],
   ];
   return (
     <span className="hidden flex-none gap-5 xl:flex">

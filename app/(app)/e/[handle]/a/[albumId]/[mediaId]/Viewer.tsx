@@ -282,7 +282,7 @@ export function Viewer({
 
       <div className="flex flex-none px-2 pb-6 pt-3">
         <Action
-          label={saved ? "Favourited" : "Favourite"}
+          label={saved ? "Saved" : "Save"}
           active={saved}
           filled={saved}
           onClick={() => {
@@ -383,8 +383,8 @@ export function Viewer({
           <h2 className="soft-display text-[21px]">{asked ? "Already on its way down." : "Take this one down?"}</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
             {asked
-              ? "It's hidden from the album. Your media officer confirms it within seven days, and if they don't, it deletes itself."
-              : "It hides from the album straight away. Your media officer gets a note and confirms it — no reason needed."}
+              ? "It's hidden from the album. The organiser confirms it within seven days, and if they don't, it's deleted."
+              : "It's hidden from attendees straight away while the organiser decides. You don't need to give a reason."}
           </p>
           <div className="mt-4 flex gap-2.5">
             <button type="button" className="btn btn-secondary flex-1" onClick={() => setSheet("none")}>

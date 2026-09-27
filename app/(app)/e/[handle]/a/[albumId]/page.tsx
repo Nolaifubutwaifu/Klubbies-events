@@ -216,7 +216,7 @@ export default async function AlbumPage(props: Props) {
               ) : null}
             </div>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[14px] text-[color:var(--ink-70)]">
-              <span className="whitespace-nowrap">
+              <span>
                 {[
                   formatLongDate(album.album_date),
                   photoCount ? plural(photoCount, "photo") : null,
