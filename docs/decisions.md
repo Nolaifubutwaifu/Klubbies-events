@@ -1,0 +1,15 @@
+# Decisions
+
+Choices made while building Klubbies Events that `docs/masterfile.md` does not settle. Newest at the bottom. Klubbies' own history, which this product inherits, is in `docs/klubbies-decisions.md`.
+
+## 2026-09-27 · Going live, and what came over from Klubbies
+
+1. **The cloud database was built through the Supabase connector, not the CLI.** Every file in `supabase/migrations` was applied in order to project `yfdglvhhakbuahyfrihs`. The connector records each migration under the time it was applied rather than the file's own number, so the names in the cloud list match the files but the version numbers don't. Keep applying new migrations the same way, one file at a time, in order.
+2. **Members and uploaders can no longer rewrite their own rows.** `authenticated` had table-wide update rights on `memberships` and `media`, and the "your own row" policies only checked whose row it was. Any attendee could have made themselves an organiser, undone their own removal, or moved their membership into another event through the REST API, and an uploader could un-hide a photo someone asked to take down. Klubbies has the same hole. `20260927000023_row_update_guards.sql` adds triggers: the service role passes, people who manage the event keep their rights, everyone else can only touch the columns the app writes for them (accept, decline, face notice; an uploader's finishing step).
+3. **Push devices are migration 24, not 23.** The handoff suggested renumbering Klubbies' `…000022_push_devices.sql` to 23; 23 went to the security fix above, which had to land first.
+4. **Deleting an account, for events.** The only organiser of an event that attendees have joined must make someone a co-organiser first. An event nobody else joined closes with the account and its photos are deleted (there is no subscription to cancel: events are paid once). An attendee who joined through an open link leaves that event's attendee list, because the organiser only had the address because they joined; an attendee on an imported guest list stays on it as "not joined yet", because the list is the organiser's.
+5. **The iPhone app says `KlubbiesEventsApp/`.** Klubbies' app sends `KlubbiesApp/`. Neither string contains the other, so neither site mistakes the other app for its own. APNs defaults to the bundle ID `app.klubbies.events`.
+6. **No payment prompts inside the app, anywhere.** The billing gate, the organiser banner, the setup checklist and the overview's "Needs you" all switch to a plain status inside the app. The billing page already did.
+7. **Dates avoid Intl's short months everywhere**, including event date ranges ("30 Sep – 2 Oct 2026"), which Klubbies' fix didn't cover because Klubbies has no ranges. `tests/unit/format.test.ts` pins it.
+8. **Rekognition collections:** `klubbies-events` in production, `klubbies-events-preview` for Vercel preview builds, `klubbies-events-dev` locally. All are covered by the existing IAM policy on `collection/klubbies-*`.
+9. **Support email is `support@klubbies.app`**, shared with Klubbies. It is the address on the support page, the legal pages and the App Store listing.

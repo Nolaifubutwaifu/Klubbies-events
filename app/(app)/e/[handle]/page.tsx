@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaceNotice } from "@/components/FaceNotice";
 import { MarkVisited } from "@/components/MarkVisited";
+import { PushPrompt } from "@/components/PushPrompt";
 import { YourPhotosCard } from "@/components/event/YourPhotosCard";
 import { getEventContext } from "@/lib/auth/session";
 import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/queries";
@@ -96,6 +97,9 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
           />
         </div>
       ) : null}
+
+      {/* One ask at a time: the notification card waits behind the face notice. */}
+      {needsNotice ? null : <PushPrompt eventName={event.name} />}
 
       <section className="mt-10 flex flex-col gap-4" aria-labelledby="albums-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">

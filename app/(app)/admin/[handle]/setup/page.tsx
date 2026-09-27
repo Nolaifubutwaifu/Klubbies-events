@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Set up your event" };
@@ -42,6 +43,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   const { handle } = await props.params;
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
+  const inApp = await isNativeAppRequest();
   const { event } = ctx;
 
   const [{ count: onList }, { count: albums }, { count: links }, { count: photographerAccounts }] = await Promise.all([
@@ -67,11 +69,11 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
     },
     {
       key: "pay",
-      title: "Activate the event",
-      hint: canWrite(event.billing_status) ? "Paid" : "One payment unlocks uploading and attendees",
+      title: inApp ? "Event status" : "Activate the event",
+      hint: canWrite(event.billing_status) ? "Paid" : inApp ? "Not active yet" : "One payment unlocks uploading and attendees",
       done: canWrite(event.billing_status),
       href: `/admin/${handle}/billing`,
-      cta: "Activate",
+      cta: inApp ? "Status" : "Activate",
     },
     {
       key: "brand",

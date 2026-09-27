@@ -579,6 +579,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_devices": {
+                  Row: {
+                    "created_at": string,"environment": string,"id": string,"last_seen_at": string,"platform": string,"token": string,"user_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"environment": string,"id"?: string,"last_seen_at"?: string,"platform"?: string,"token": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"environment"?: string,"id"?: string,"last_seen_at"?: string,"platform"?: string,"token"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_devices_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"roster_imports": {
                   Row: {
                     "added_count": number | null,"created_at": string,"error_count": number | null,"event_id": string,"filename": string | null,"id": string,"imported_at": string,"imported_by": string | null,"mapping": Json | null,"matched_count": number | null,"report": Json | null,"row_count": number | null,"status": string,"updated_at": string

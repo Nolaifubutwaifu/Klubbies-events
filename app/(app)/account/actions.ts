@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
+import { deleteAccount } from "@/lib/account/delete";
 import { requireUser } from "@/lib/auth/session";
 import { removeObjects } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -80,4 +82,31 @@ export async function notifyOnNewAlbumsAction(): Promise<AccountResult> {
   if (error) return { error: "Could not turn that on. Try again." };
   revalidatePath("/account");
   return { ok: true, message: "We'll email you when new photos are published." };
+}
+
+/**
+ * Deletes the signed-in person's account. See lib/account/delete.ts for what
+ * goes and what stays. The page has already explained both; the tick box is
+ * checked again here so a stray request can't delete anyone.
+ */
+export async function deleteAccountAction(_prev: AccountResult, form: FormData): Promise<AccountResult> {
+  const user = await requireUser();
+  if (form.get("understand") !== "yes") return { error: "Tick the box to confirm" };
+
+  let result;
+  try {
+    result = await deleteAccount(user.id, user.email ?? "");
+  } catch (error) {
+    console.error("account deletion failed", user.id, error);
+    return { error: "Something went wrong and your account is still here. Try again, or email us." };
+  }
+  if (!result.ok) {
+    return { error: `Make someone a co-organiser of ${result.handOver.map((event) => event.name).join(" and ")} first.` };
+  }
+
+  // The account is gone, so there is nothing to sign out of on the server;
+  // clearing this browser's session is all that is left.
+  const supabase = await createClient();
+  await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+  redirect("/account-deleted");
 }

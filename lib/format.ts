@@ -1,12 +1,14 @@
-const dateFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "Australia/Brisbane" });
+// Short months are spelled out here rather than left to Intl: Node says
+// "Sept" for en-AU and Safari says "Sep", and that one letter made React throw
+// away every server-rendered page with a date on it on iPhones.
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const partsFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Australia/Brisbane" });
+
+function dayMonthYear(date: Date): { day: string; month: string; year: string } {
+  const parts = Object.fromEntries(partsFmt.formatToParts(date).map((part) => [part.type, part.value]));
+  return { day: String(Number(parts.day)), month: SHORT_MONTHS[Number(parts.month) - 1], year: parts.year };
+}
 const longDateFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric", timeZone: "Australia/Brisbane" });
-const dateTimeFmt = new Intl.DateTimeFormat("en-AU", {
-  day: "numeric",
-  month: "short",
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone: "Australia/Brisbane",
-});
 // Every formatter names its zone. The server renders in UTC on Vercel, so a
 // bare toLocaleTimeString() there turned a 6pm photo into "8:01 am".
 const timeFmt = new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit", timeZone: "Australia/Brisbane" });
@@ -18,7 +20,16 @@ function toDate(value: string | Date): Date {
 }
 
 export function formatDate(value: string | Date | null | undefined): string {
-  return value ? dateFmt.format(toDate(value)) : "";
+  if (!value) return "";
+  const { day, month, year } = dayMonthYear(toDate(value));
+  return `${day} ${month} ${year}`;
+}
+
+/** "23 Sep": for places where the year goes without saying. */
+export function formatDayMonth(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const { day, month } = dayMonthYear(toDate(value));
+  return `${day} ${month}`;
 }
 
 export function formatLongDate(value: string | Date | null | undefined): string {
@@ -26,7 +37,10 @@ export function formatLongDate(value: string | Date | null | undefined): string 
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {
-  return value ? dateTimeFmt.format(toDate(value)) : "";
+  if (!value) return "";
+  const date = toDate(value);
+  const { day, month } = dayMonthYear(date);
+  return `${day} ${month}, ${timeFmt.format(date)}`;
 }
 
 export function formatTime(value: string | Date | null | undefined): string {
@@ -58,7 +72,6 @@ export function plural(count: number, one: string, many = `${one}s`): string {
 }
 
 const dayFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", timeZone: "Australia/Brisbane" });
-const dayMonthFmt = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Brisbane" });
 
 /**
  * An event's dates as people say them: "14 Nov 2026", "14–15 Nov 2026",
@@ -72,6 +85,6 @@ export function formatEventDates(startsOn: string | null | undefined, endsOn: st
   const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
   const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth();
   if (sameMonth) return `${dayFmt.format(start)}–${formatDate(end)}`;
-  if (sameYear) return `${dayMonthFmt.format(start)} – ${formatDate(end)}`;
+  if (sameYear) return `${formatDayMonth(start)} – ${formatDate(end)}`;
   return `${formatDate(start)} – ${formatDate(end)}`;
 }

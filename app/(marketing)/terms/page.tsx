@@ -122,6 +122,17 @@ export default function TermsPage() {
           ),
         },
         {
+          title: "The iPhone app",
+          body: (
+            <p>
+              If you use the Klubbies Events iPhone app, Apple&apos;s standard Licensed Application End User License Agreement
+              applies alongside these terms. These terms are between you and us, not Apple: Apple has no responsibility
+              for the app, its content, its maintenance or support, or any claim about it. The app doesn&apos;t sell
+              anything.
+            </p>
+          ),
+        },
+        {
           title: "Changes and governing law",
           body: (
             <p>

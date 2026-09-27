@@ -57,8 +57,16 @@ const SECTIONS: [string, string][] = [
     "Amazon Web Services processes faceprints on our behalf, in the ap-southeast-2 (Sydney) region. We do not sell face data and we do not share it with anyone else.",
   ],
   [
-    "Your choices",
-    "You can change your name and email preferences on your profile, turn face search off per event, and ask us to delete your account or give you a copy of your data by emailing us.",
+    "The iPhone app",
+    "The app shows the same Klubbies Events as the website and stores the same things. It uses the camera only when you take a selfie or scan an event's QR code, and it asks for permission to add to your photo library only when you tap Save to Photos, so it can never read your library. If you turn on notifications, we store a device token from Apple against your account so we can tell your phone about new albums; it is deleted when you delete your account, and when you remove the app we delete it the next time Apple tells us it no longer works. The app has no advertising, no tracking and no analytics tools.",
+  ],
+  [
+    "Deleting your account",
+    "Open your profile and choose Delete my account, in the app or on the website. That deletes your sign-in, your profile and photo, your saved photos, your face search selfie and faceprints, and your notification device tokens, straight away. If you joined an event through its link, you also leave that event's attendee list. Photos you uploaded belong to the event and stay; ask the organiser to take any of them down. A guest list the organiser imported keeps your name, and the activity log keeps its entries, because both are the organiser's records.",
+  ],
+  [
+    "Your choices and rights",
+    "You can change your name and email preferences on your profile and turn face search off per event. Under the Australian Privacy Principles you can ask for a copy of the personal information we hold about you and ask us to correct it. To do that, to complain, or with any other question, email us at the address on the support page. If you are not happy with our answer you can contact the Office of the Australian Information Commissioner at oaic.gov.au.",
   ],
 ];
 

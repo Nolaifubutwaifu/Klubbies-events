@@ -6,6 +6,7 @@ import { BrandTile } from "@/components/ui";
 import { displayNameFor } from "@/lib/auth/display-name";
 import { getProfile, type EventContext } from "@/lib/auth/session";
 import { canWrite } from "@/lib/billing/status";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { formatEventDates } from "@/lib/format";
 import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -88,10 +89,16 @@ export async function AppHeader({
       {area === "organiser" && !canWrite(event.billing_status) ? (
         <div className="mx-auto w-full max-w-[1320px] px-4 pt-3 sm:px-6">
           <div className="kb-info flex-wrap items-center justify-between">
-            <span>This event isn&apos;t activated yet. Uploading and adding attendees unlock after payment.</span>
-            <Link href={`/admin/${event.handle}/billing`} className="btn btn-primary btn-sm no-underline">
-              Activate event
-            </Link>
+            {(await isNativeAppRequest()) ? (
+              <span>This event isn&apos;t active yet, so uploading and adding attendees are switched off.</span>
+            ) : (
+              <>
+                <span>This event isn&apos;t activated yet. Uploading and adding attendees unlock after payment.</span>
+                <Link href={`/admin/${event.handle}/billing`} className="btn btn-primary btn-sm no-underline">
+                  Activate event
+                </Link>
+              </>
+            )}
           </div>
         </div>
       ) : null}

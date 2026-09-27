@@ -23,6 +23,9 @@ export function AppFooter() {
           <Link href="/refunds" className="text-[color:var(--ink-55)] no-underline hover:text-ink">
             Refunds
           </Link>
+          <Link href="/support" className="text-[color:var(--ink-55)] no-underline hover:text-ink">
+            Support
+          </Link>
         </span>
       </div>
     </footer>

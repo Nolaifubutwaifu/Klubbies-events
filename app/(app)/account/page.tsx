@@ -4,12 +4,15 @@ import Link from "next/link";
 import { EventMark } from "@/components/EventMark";
 import { MemberTabBar } from "@/components/MemberTabBar";
 import { SimpleHeader } from "@/components/SimpleHeader";
+import { planAccountDeletion } from "@/lib/account/delete";
 import { getProfile, getSessionUser, listMyEvents, requireUser } from "@/lib/auth/session";
 import { formatEventDates, formatLongDate } from "@/lib/format";
 import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { AvatarUploader, NotificationToggles, PasswordForm, ProfileForm } from "./AccountForms";
+import { DeleteAccount } from "./DeleteAccount";
 import { FaceRow } from "./FaceRow";
+import { PhoneNotifications } from "./PhoneNotifications";
 
 export const metadata: Metadata = { title: "Your profile" };
 
@@ -25,9 +28,10 @@ export default async function AccountPage() {
   if (!profile || !user) return null;
 
   const supabase = await createClient();
-  const [avatar, signed] = await Promise.all([
+  const [avatar, signed, deletion] = await Promise.all([
     profile.avatar_url ? signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display) : new Map<string, string>(),
     signLogoMarks(supabase, events.map((event) => event.logoPath)),
+    planAccountDeletion(user.id),
   ]);
   const avatarUrl = profile.avatar_url ? (avatar.get(profile.avatar_url) ?? null) : null;
   // Set when the person saves a password from this page.
@@ -93,8 +97,9 @@ export default async function AccountPage() {
 
             <FaceRow events={events} />
 
-            <h2 className="mt-2 text-[16px] font-semibold">Email</h2>
+            <h2 className="mt-2 text-[16px] font-semibold">Notifications</h2>
             <div className="soft-card p-4">
+              <PhoneNotifications />
               <NotificationToggles
                 initial={{
                   notify_new_album: profile.notify_new_album,
@@ -125,9 +130,13 @@ export default async function AccountPage() {
             </div>
 
             <p className="m-0 text-[14px] leading-normal text-[color:var(--ink-70)]">
-              To delete your account or get a copy of everything shared with you, contact us. We reply within a few
-              days.
+              For a copy of everything shared with you, use Download in each album, or{" "}
+              <Link href="/support" className="kb-link">
+                contact us
+              </Link>
+              .
             </p>
+            <DeleteAccount handOver={deletion.handOver} closes={deletion.closes} />
           </section>
         </div>
       </div>

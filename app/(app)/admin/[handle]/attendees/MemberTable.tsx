@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Dialog } from "@/components/Dialog";
 import { FormMessage } from "@/components/forms";
+import { formatDate } from "@/lib/format";
 import {
   removeMembersAction,
   restoreMemberAction,
@@ -43,7 +44,7 @@ function statusTag(member: MemberRow) {
 }
 
 function shortDate(value: string): string {
-  return new Date(value).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+  return formatDate(value);
 }
 
 export function MemberTable({

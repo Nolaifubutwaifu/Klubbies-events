@@ -8,6 +8,7 @@ import { requireAdminContext } from "@/lib/auth/admin-context";
 import { personName } from "@/lib/auth/display-name";
 import { accessHasEnded } from "@/lib/auth/session";
 import { canWrite } from "@/lib/billing/status";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { formatDateTime, formatEventDates, formatLongDate, plural } from "@/lib/format";
 import { listStackedAlbums } from "@/lib/media/album-list";
 import { EXPIRE_AFTER_DAYS, STUCK_AFTER_MS } from "@/lib/media/constants";
@@ -90,6 +91,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     ...new Map((stuck.data ?? []).filter((row) => row.album_id).map((row) => [row.album_id!, row.albums?.title ?? "an album"])),
   ];
   const writable = canWrite(event.billing_status);
+  const inApp = await isNativeAppRequest();
   const firstRun = (albumCount.count ?? 0) === 0;
   const link = eventLink(handle);
   const closed = accessHasEnded(event);
@@ -99,10 +101,12 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     !writable
       ? {
           key: "billing",
-          title: "Activate the event",
-          body: "Uploading, photographer links and attendee invites unlock after payment.",
+          title: inApp ? "The event isn't active yet" : "Activate the event",
+          body: inApp
+            ? "Uploading, photographer links and attendee invites are switched off until it is."
+            : "Uploading, photographer links and attendee invites unlock after payment.",
           href: `/admin/${handle}/billing`,
-          cta: "Activate",
+          cta: inApp ? "Status" : "Activate",
           urgent: true,
         }
       : null,

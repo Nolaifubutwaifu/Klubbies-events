@@ -3,11 +3,9 @@ import type { ReactNode } from "react";
 import { LegalContents } from "@/components/LegalContents";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
+import { supportEmail } from "@/lib/support";
 
-export function supportEmail(): string | null {
-  const value = process.env.SUPPORT_EMAIL?.trim();
-  return value ? value : null;
-}
+export { supportEmail };
 
 export function ContactLine() {
   const email = supportEmail();
@@ -26,6 +24,7 @@ const DOCS = [
   { key: "privacy", href: "/privacy", label: "Privacy" },
   { key: "terms", href: "/terms", label: "Terms" },
   { key: "refunds", href: "/refunds", label: "Refunds" },
+  { key: "support", href: "/support", label: "Support" },
 ] as const;
 
 export function slug(title: string): string {

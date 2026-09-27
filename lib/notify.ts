@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { sendBatch } from "@/lib/email/send";
 import { appUrl, serverEnv } from "@/lib/env";
 import { formatLongDate } from "@/lib/format";
+import { pushToUsers } from "@/lib/push/devices";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type NotifyKind = "notify_new_album" | "notify_access_ending";
@@ -52,6 +53,21 @@ export async function notifyNewAlbum(eventId: string, albumId: string, actorUser
   const people = await recipients(eventId, "notify_new_album", actorUserId);
   if (people.length === 0) return 0;
 
+  const albumUrl = `${appUrl()}/e/${event.handle}/a/${album.id}`;
+  const albumMeta = [
+    counts?.photo_count ? `${counts.photo_count} photos` : null,
+    counts?.video_count ? `${counts.video_count} videos` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  // The same people get an iPhone notification if they use the app. The
+  // email preference covers both, so one switch stops both.
+  const push = pushToUsers(
+    people.map((person) => person.userId),
+    { title: event.name, body: albumMeta ? `${album.title} is up: ${albumMeta}` : `${album.title} is up`, url: albumUrl, threadId: `event-${eventId}` },
+  );
+
   await sendBatch(
     people.map((person) => ({
       to: person.email,
@@ -62,18 +78,14 @@ export async function notifyNewAlbum(eventId: string, albumId: string, actorUser
           name: person.name,
           eventName: event.name,
           albumTitle: album.title,
-          albumMeta: [
-            counts?.photo_count ? `${counts.photo_count} photos` : null,
-            counts?.video_count ? `${counts.video_count} videos` : null,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-          albumUrl: `${appUrl()}/e/${event.handle}/a/${album.id}`,
+          albumMeta,
+          albumUrl,
           unsubscribeUrl: unsubscribeUrl(person.userId, "notify_new_album"),
         },
       },
     })),
   );
+  await push;
   return people.length;
 }
 

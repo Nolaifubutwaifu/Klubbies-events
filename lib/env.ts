@@ -20,6 +20,14 @@ const schema = z.object({
   AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
   AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   REKOGNITION_COLLECTION_PREFIX: z.string().regex(/^[a-zA-Z0-9_.\-]+$/).default("klubbies-events-dev"),
+  // iPhone push notifications (Apple Push Notification service). Optional in
+  // the same way: without them nothing is pushed and nothing breaks. The key
+  // comes from developer.apple.com, Certificates, Identifiers & Profiles,
+  // Keys; APNS_PRIVATE_KEY is the whole .p8 file, newlines and all.
+  APNS_KEY_ID: z.string().min(1).optional(),
+  APNS_TEAM_ID: z.string().min(1).optional(),
+  APNS_PRIVATE_KEY: z.string().min(1).optional(),
+  APNS_BUNDLE_ID: z.string().min(1).default("app.klubbies.events"),
 });
 
 export type ServerEnv = z.infer<typeof schema>;
