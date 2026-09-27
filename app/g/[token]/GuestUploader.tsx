@@ -118,7 +118,7 @@ export function GuestUploader({ token }: { token: string }) {
                   {job.status === "failed" ? (
                     <span className="mt-0.5 flex items-center gap-2">
                       <span className="text-[14px] text-accent-800">{job.error}</span>
-                      <button type="button" className="soft-btn soft-btn-tonal !min-h-[32px] !px-3 !text-[14px]" onClick={() => queue.retry(job.key)}>
+                      <button type="button" className="soft-btn soft-btn-tonal !min-h-[44px] !px-4 !text-[14px]" onClick={() => queue.retry(job.key)}>
                         Retry
                       </button>
                     </span>

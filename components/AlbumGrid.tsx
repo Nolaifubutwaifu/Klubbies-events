@@ -242,7 +242,7 @@ export function AlbumGrid({
                   type="button"
                   aria-pressed={kind === value}
                   onClick={() => setKind(value)}
-                  className={`soft-btn !min-h-[38px] !px-4 !text-[14px] ${kind === value ? "!bg-ink !text-white" : "soft-btn-tonal"}`}
+                  className={`soft-btn !min-h-[44px] !px-4 !text-[14px] ${kind === value ? "!bg-ink !text-white" : "soft-btn-tonal"}`}
                 >
                   {label}
                 </button>

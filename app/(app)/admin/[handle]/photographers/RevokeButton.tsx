@@ -10,7 +10,7 @@ export function RevokeButton({ linkId, label }: { linkId: string; label: string 
 
   return (
     <>
-      <button type="button" className="soft-btn soft-btn-tonal !min-h-[38px] !px-4 !text-[14px]" onClick={() => setOpen(true)}>
+      <button type="button" className="soft-btn soft-btn-tonal !min-h-[44px] !px-4 !text-[14px]" onClick={() => setOpen(true)}>
         Revoke
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Turn this link off?">

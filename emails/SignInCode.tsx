@@ -7,7 +7,7 @@ export default function SignInCode({ code, name, eventName }: SignInCodeProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
     <EmailLayout preview={`Your Klubbies Events code is ${code}`}>
-      <Text style={emailStyles.kicker}>{eventName ?? "Klubbies Events"}</Text>
+      <Text style={emailStyles.kicker}>{eventName ?? "Sign in"}</Text>
       <Text style={emailStyles.heading}>Your sign-in code</Text>
       <Text style={emailStyles.body}>
         Hi {firstName}, enter this code to {eventName ? `open the photos from ${eventName}` : "sign in"}.

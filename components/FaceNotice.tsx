@@ -23,7 +23,7 @@ export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: strin
       <div className="min-w-0 flex-1">
         <span className="block text-[16px] font-semibold">{MEMBER_NOTICE.title}</span>
         <details className="mt-1">
-          <summary className="kb-link !min-h-[36px] cursor-pointer list-none">What this means</summary>
+          <summary className="kb-link !min-h-[44px] cursor-pointer list-none">What this means</summary>
           <ul className="m-0 mt-1 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">
             {MEMBER_NOTICE.points.map((point) => (
               <li key={point}>{point}</li>

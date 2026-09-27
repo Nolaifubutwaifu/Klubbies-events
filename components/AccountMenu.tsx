@@ -22,7 +22,7 @@ export function AccountMenu({ name, avatarUrl = null }: { name: string; avatarUr
   return (
     <MoreMenu
       label={`Your account, ${name}`}
-      triggerClassName="flex h-9 w-9 flex-none cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[color:var(--kb-line)] bg-[color:var(--kb-sand)] text-[14px] font-semibold text-ink"
+      triggerClassName="flex h-11 w-11 flex-none cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[color:var(--kb-line)] bg-[color:var(--kb-sand)] text-[14px] font-semibold text-ink"
       trigger={
         avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL

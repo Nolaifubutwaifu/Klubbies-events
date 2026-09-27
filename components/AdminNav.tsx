@@ -157,7 +157,7 @@ export function AdminNav({
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className="flex min-h-[40px] flex-none items-center gap-2.5 rounded-[8px] px-3 text-[14px] font-medium no-underline transition-colors lg:flex-auto"
+                className="flex min-h-[44px] flex-none items-center gap-2.5 rounded-[8px] px-3 text-[14px] lg:min-h-[40px] font-medium no-underline transition-colors lg:flex-auto"
                 style={{
                   background: active ? "var(--kb-white)" : "transparent",
                   boxShadow: active ? "inset 0 0 0 1px var(--kb-line)" : undefined,
