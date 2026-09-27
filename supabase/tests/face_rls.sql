@@ -55,8 +55,10 @@ begin
   insert into public.media (id, event_id, album_id, kind, storage_path, status)
   values (v_media, v_event, v_album, 'photo', 'events/x/albums/y/z/original.jpg', 'ready');
 
+  -- New events already get a settings row from the faces-on-by-default trigger.
   insert into public.event_face_settings (event_id, enabled, collection_id)
-  values (v_event, true, 'klubbies-test-event-x');
+  values (v_event, true, 'klubbies-test-event-x')
+  on conflict (event_id) do update set enabled = true, collection_id = excluded.collection_id;
 
   insert into public.media_faces (event_id, media_id, collection_id, rekognition_face_id, bounding_box)
   values (v_event, v_media, 'klubbies-test-event-x', 'face-1', '{"Left":0.1,"Top":0.1,"Width":0.2,"Height":0.2}')

@@ -11,19 +11,31 @@ test.afterAll(async () => {
   if (world) await destroyWorld(world);
 });
 
-test("non-member is refused", async ({ page, context, request }) => {
-  // The request_code response must not reveal whether an email is on a roster.
+test("someone not in the event sees its join screen and no photos", async ({ page, context, request }) => {
+  // The request_code response must not reveal whether an email is on a list.
   const known = await request.post("/api/auth/request_code", { data: { fullName: "Mara Lindqvist", email: world.memberEmail } });
   const unknown = await request.post("/api/auth/request_code", { data: { fullName: "Nobody", email: world.outsiderEmail } });
   expect(known.status()).toBe(unknown.status());
   expect(await known.json()).toEqual(await unknown.json());
 
-  // Even with a verified session, someone on no roster sees nothing.
+  // With a verified session but no membership, the event's link shows the
+  // join door (events are open to anyone with the link by default), never
+  // its albums, and nothing can be signed.
   await signIn(context, request, world.outsiderEmail, "Nobody");
-  const res = await page.goto(`/e/${world.eventA.handle}`);
-  expect(res?.status()).toBe(404);
+  await page.goto(`/e/${world.eventA.handle}`);
+  await expect(page.getByRole("button", { name: "Join event" })).toBeVisible();
+  await expect(page.getByText("Album a")).toHaveCount(0);
   const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId] } });
   expect((await signed.json()).urls).toEqual({});
+});
+
+test("a guest-list event can't be joined from its link", async ({ page, context, request }) => {
+  await admin().from("events").update({ access_mode: "guest_list" }).eq("id", world.eventB.id);
+  await signIn(context, request, world.outsiderEmail, "Nobody");
+  await page.goto(`/e/${world.eventB.handle}`);
+  await expect(page.getByRole("button", { name: "Join event" })).toHaveCount(0);
+  await expect(page.getByText("Album b")).toHaveCount(0);
+  await admin().from("events").update({ access_mode: "link" }).eq("id", world.eventB.id);
 });
 
 test("member sees only their event", async ({ page, context, request }) => {
@@ -34,25 +46,28 @@ test("member sees only their event", async ({ page, context, request }) => {
   await expect(page.getByRole("heading", { level: 1, name: `E2E a ${world.runId}` })).toBeVisible();
   await expect(page.getByText("Album a")).toBeVisible();
 
-  const other = await page.goto(`/e/${world.eventB.handle}`);
-  expect(other?.status()).toBe(404);
+  await page.goto(`/e/${world.eventB.handle}`);
+  await expect(page.getByText("Album b")).toHaveCount(0);
 
   const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId, world.eventB.mediaId] } });
   const { urls } = await signed.json();
   expect(Object.keys(urls)).toEqual([world.eventA.mediaId]);
 });
 
-test("revoked member loses access", async ({ page, context, request }) => {
+test("removed attendee loses access and can't rejoin through the link", async ({ page, context, request }) => {
   await signIn(context, request, world.memberEmail, "Mara Lindqvist");
   await page.goto(`/e/${world.eventA.handle}`);
   await expect(page.getByText("Album a")).toBeVisible();
 
   await admin().from("memberships").update({ status: "revoked" }).eq("event_id", world.eventA.id).eq("roster_email", world.memberEmail);
 
-  const res = await page.goto(`/e/${world.eventA.handle}`);
-  expect(res?.status()).toBe(404);
+  await page.goto(`/e/${world.eventA.handle}`);
+  await expect(page.getByText("Album a")).toHaveCount(0);
   const signed = await context.request.post("/api/media/sign", { data: { mediaIds: [world.eventA.mediaId] } });
   expect((await signed.json()).urls).toEqual({});
+
+  await page.getByRole("button", { name: "Join event" }).click();
+  await expect(page.getByText("The organiser has removed this address from the event.")).toBeVisible();
 
   await admin().from("memberships").update({ status: "active" }).eq("event_id", world.eventA.id).eq("roster_email", world.memberEmail);
 });
