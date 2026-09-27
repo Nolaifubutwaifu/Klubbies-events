@@ -23,8 +23,8 @@
  * Change both together.
  */
 export const PRICE = {
-  amount: "A$149",
-  line: "A$149 per event",
+  amount: "A$1",
+  line: "A$1 per event",
   unit: "one payment per event",
   trust: ["One payment per event", "No subscription", "Unlimited photos and attendees"],
   note: "Setting up is free. You pay once when you activate the event to upload and invite attendees.",

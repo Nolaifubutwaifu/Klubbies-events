@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Faq } from "@/components/site/Faq";
@@ -6,26 +7,20 @@ import { SiteNav } from "@/components/site/SiteNav";
 import { ATTENDEE_FEATURES, FACE, FAQS, ORGANISER_FEATURES, PRICE, PRIVACY_PROMISES, STEPS, type Feature } from "@/lib/copy/site";
 
 /*
- * The public home page, for organisers. No stock photography and no
- * testimonials: the photos in an event gallery are private by design, and we
- * have no customer quotes yet that could honestly go here. The product is
- * shown as drawn interface instead, with tonal tiles standing in for photos.
+ * The public home page, for organisers. No testimonials: we have no customer
+ * quotes yet that could honestly go here. The product is shown as drawn
+ * interface, filled with Klubbies' own marketing photos (public/marketing),
+ * never with anything from a real event's private gallery.
  */
 
-const TONES = [
-  "linear-gradient(135deg,#c9cdd6,#9aa1b1)",
-  "linear-gradient(135deg,#d8d2c6,#b3a893)",
-  "linear-gradient(135deg,#b9c4cf,#7f8fa0)",
-  "linear-gradient(135deg,#e0d6cf,#c1ab9c)",
-  "linear-gradient(135deg,#c4c9bd,#949d8a)",
-  "linear-gradient(135deg,#d3d6de,#a9afbf)",
-  "linear-gradient(135deg,#cfc7bf,#a39584)",
-  "linear-gradient(135deg,#bfc8d3,#8e9cad)",
-  "linear-gradient(135deg,#dcd9d2,#b7b1a4)",
-];
+const PHOTOS = Array.from({ length: 12 }, (_, i) => `/marketing/sq-${i + 1}.webp`);
 
-function Tile({ index, className = "" }: { index: number; className?: string }) {
-  return <span className={`block rounded-[4px] ${className}`} style={{ background: TONES[index % TONES.length] }} aria-hidden />;
+function Tile({ index, className = "", src }: { index: number; className?: string; src?: string }) {
+  return (
+    <span className={`relative block overflow-hidden rounded-[4px] bg-[color:var(--kb-mist)] ${className}`} aria-hidden>
+      <Image src={src ?? PHOTOS[index % PHOTOS.length]} alt="" fill sizes="(max-width: 768px) 30vw, 160px" className="object-cover" />
+    </span>
+  );
 }
 
 const ICONS: Record<Feature["icon"], ReactNode> = {
@@ -107,9 +102,12 @@ function PhoneMock() {
           </span>
           <span className="mt-1 text-[14px] font-semibold">Albums</span>
           <div className="grid grid-cols-2 gap-2">
-            {["Keynote", "Networking"].map((title, i) => (
+            {[
+              ["Awards night", "/marketing/cover-awards.webp"],
+              ["Networking drinks", "/marketing/cover-drinks.webp"],
+            ].map(([title, cover], i) => (
               <span key={title} className="flex flex-col gap-1">
-                <Tile index={i + 4} className="aspect-[4/3]" />
+                <Tile index={i} src={cover} className="aspect-[4/3]" />
                 <span className="text-[14px] font-medium">{title}</span>
               </span>
             ))}
@@ -247,11 +245,8 @@ export function Home() {
             <div className="rounded-[var(--kb-r-panel)] border border-[color:var(--kb-line)] bg-white p-6 sm:p-8">
               <span className="kb-eyebrow">What an attendee sees</span>
               <div className="mt-4 flex items-center gap-4">
-                <span className="flex h-20 w-20 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]" aria-hidden>
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                    <circle cx="12" cy="9" r="3.6" />
-                    <path d="M5.5 20c.9-3.6 3.4-5.4 6.5-5.4s5.6 1.8 6.5 5.4" />
-                  </svg>
+                <span className="relative block h-20 w-20 flex-none overflow-hidden rounded-full" aria-hidden>
+                  <Image src="/marketing/selfie.webp" alt="" fill sizes="80px" className="object-cover" />
                 </span>
                 <span>
                   <span className="block text-[17px] font-semibold">Find the photos you&apos;re in</span>
@@ -260,11 +255,11 @@ export function Home() {
               </div>
               <div className="mt-6 grid grid-cols-4 gap-1">
                 {Array.from({ length: 8 }, (_, i) => (
-                  <Tile key={i} index={i + 2} className="aspect-square" />
+                  <Tile key={i} index={i + 4} className="aspect-square" />
                 ))}
               </div>
               <span className="mt-4 block text-[14px] text-[color:var(--kb-ink-2)]">
-                Matched across Keynote, Breakouts and Networking drinks
+                Matched across Awards night, the dance floor and Networking drinks
               </span>
             </div>
           </div>
