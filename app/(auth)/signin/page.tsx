@@ -52,11 +52,18 @@ export default async function SignInPage(props: PageProps<"/signin">) {
     >
       <AuthHeading>Sign in</AuthHeading>
       <p className="kb-lead mt-3 !text-[16px]">
-        Use the email you joined an event with. We&rsquo;ll send you a code, so there&rsquo;s no password to remember.
+        For attendees and organisers of an existing event. Use the email you joined it with and we&rsquo;ll send you a
+        code, so there&rsquo;s no password to remember.
       </p>
       <div className="mt-7 flex flex-col gap-3">
         <ScanEventButton />
         <SignInForm flow="member" />
+        <p className="m-0 text-center text-[15px] text-[color:var(--kb-ink-2)]">
+          New here and organising an event?{" "}
+          <Link href="/start" className="kb-link">
+            Create an event
+          </Link>
+        </p>
       </div>
       <AuthNote>
         Attending an event? The quickest way in is the link or QR code the organiser shared. It takes you straight to

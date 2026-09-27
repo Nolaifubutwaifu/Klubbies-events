@@ -49,7 +49,7 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
             ? "Nothing arrived? Check junk and the spelling of your address, then send a new code."
             : preview
               ? "Nothing arrived? Check junk. This event uses a guest list, so use the email you registered with; if that's what you used, ask the organiser to add you."
-              : "Nothing arrived? Check junk. Use the email you joined your event with, or open the event's link or QR code again."}
+              : "Nothing arrived? Check junk. Codes only go to addresses that are already in an event: open the event's link or QR code instead, or to organise a new event, start from Create an event."}
       </AuthNote>
     </AuthShell>
   );
