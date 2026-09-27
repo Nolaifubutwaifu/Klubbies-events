@@ -31,7 +31,7 @@ export async function reportServerError(err: unknown, context: ErrorContext): Pr
     await new Resend(apiKey).emails.send({
       from: process.env.EMAIL_FROM ?? "Klubbies <onboarding@resend.dev>",
       to,
-      subject: `[Klubbies error] ${message.slice(0, 90)}`,
+      subject: `[Klubbies Events error] ${message.slice(0, 90)}`,
       text: [
         `Path: ${context.method} ${path}`,
         `Route: ${context.routeType} (${context.routerKind})`,
