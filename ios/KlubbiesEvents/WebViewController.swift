@@ -2,16 +2,17 @@ import SafariServices
 import UIKit
 import WebKit
 
-/// The whole app: one web view on www.klubbies.app, plus the native pieces a
+/// The whole app: one web view on events.klubbies.app, plus the native pieces a
 /// plain web view lacks. Those are confirm dialogs, file downloads, Save to
-/// Photos, pull to refresh, an offline screen, and sending outside links to
-/// Safari.
+/// Photos, notifications, a QR scanner to join an event, pull to refresh, an
+/// offline screen, and sending outside links to Safari.
 final class WebViewController: UIViewController {
     private var webView: WKWebView!
     private let progressBar = UIProgressView(progressViewStyle: .bar)
     private let offlineView = OfflineView()
     private var progressObservation: NSKeyValueObservation?
     private let photoSaver = PhotoSaver()
+    private let scanBridge = ScanBridge()
     /// Where each download in flight is being written.
     fileprivate var downloads: [ObjectIdentifier: URL] = [:]
 
@@ -25,14 +26,10 @@ final class WebViewController: UIViewController {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         config.userContentController.addScriptMessageHandler(photoSaver, contentWorld: .page, name: "klubbiesSaveToPhotos")
+        config.userContentController.addScriptMessageHandler(PushManager.shared, contentWorld: .page, name: "klubbiesPush")
+        config.userContentController.add(scanBridge, contentWorld: .page, name: "klubbiesEventsScan")
+        scanBridge.onScanRequested = { [weak self] in self?.presentScanner() }
 
-        // TEMP-QA-HOOK
-        #if DEBUG
-        if let script = ProcessInfo.processInfo.environment["KLUBBIES_TEST_SCRIPT"] {
-            config.userContentController.addUserScript(WKUserScript(source: script, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
-        }
-        #endif
-        // END-TEMP-QA-HOOK
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -81,7 +78,54 @@ final class WebViewController: UIViewController {
             self.progressBar.isHidden = progress >= 1
         }
 
-        webView.load(URLRequest(url: AppConfig.startURL))
+        NotificationCenter.default.addObserver(self, selector: #selector(openFromNotification(_:)), name: .klubbiesOpenURL, object: nil)
+        // Opened by tapping a notification: go straight to what it was about.
+        let first = PushManager.shared.pendingURL ?? AppConfig.startURL
+        PushManager.shared.pendingURL = nil
+        webView.load(URLRequest(url: first))
+    }
+
+    @objc private func openFromNotification(_ note: Notification) {
+        guard let url = note.object as? URL, isViewLoaded else { return }
+        PushManager.shared.pendingURL = nil
+        offlineView.isHidden = true
+        webView.load(URLRequest(url: url))
+    }
+
+    /// The site keeps each phone's notification token against the person
+    /// signed in on it. Hand it over after pages load until the site has it
+    /// for this launch; a signed-out page just answers 401 and we try again.
+    private var tokenSentForLaunch = false
+
+    private func sendPushTokenIfNeeded() {
+        guard !tokenSentForLaunch, let token = PushManager.shared.token,
+              let url = webView.url, AppConfig.isAppURL(url) else { return }
+        let script = """
+        const response = await fetch('/api/push/register', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token, environment })
+        });
+        return response.status;
+        """
+        webView.callAsyncJavaScript(script, arguments: ["token": token, "environment": PushManager.environment], in: nil, in: .defaultClient) { [weak self] result in
+            if case .success(let status) = result, (status as? Int) == 200 || (status as? NSNumber)?.intValue == 200 {
+                self?.tokenSentForLaunch = true
+            }
+        }
+    }
+
+    /// The native QR scanner, opened from "Scan the event's QR code" on the
+    /// sign-in and "Your events" pages. It only ever opens an event link.
+    private func presentScanner() {
+        guard presentedViewController == nil else { return }
+        let scanner = QRScannerViewController()
+        scanner.modalPresentationStyle = .fullScreen
+        scanner.onEventLink = { [weak self] url in
+            self?.offlineView.isHidden = true
+            self?.webView.load(URLRequest(url: url))
+        }
+        present(scanner, animated: true)
     }
 
     @objc private func pullToRefresh(_ control: UIRefreshControl) {
@@ -150,6 +194,7 @@ extension WebViewController: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         offlineView.isHidden = true
+        sendPushTokenIfNeeded()
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {

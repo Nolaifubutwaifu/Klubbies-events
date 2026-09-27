@@ -54,3 +54,12 @@ export async function pushAction(action: "status" | "enable" | "openSettings"): 
   }
   return state;
 }
+
+type PostHandler = { postMessage(body: unknown): void };
+
+/** The app's QR scanner, or null in a normal browser. */
+export function nativeScanner(): PostHandler | null {
+  if (typeof window === "undefined") return null;
+  const handlers = (window as unknown as { webkit?: { messageHandlers?: Record<string, PostHandler> } }).webkit?.messageHandlers;
+  return handlers?.klubbiesEventsScan ?? null;
+}

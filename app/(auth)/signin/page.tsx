@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
+import { ScanEventButton } from "@/components/ScanEventButton";
 import { authEventPreview } from "@/lib/auth/preview";
 import { getSessionUser } from "@/lib/auth/session";
 import { SignInForm } from "./SignInForm";
@@ -53,7 +54,8 @@ export default async function SignInPage(props: PageProps<"/signin">) {
       <p className="kb-lead mt-3 !text-[16px]">
         Use the email you joined an event with. We&rsquo;ll send you a code, so there&rsquo;s no password to remember.
       </p>
-      <div className="mt-7">
+      <div className="mt-7 flex flex-col gap-3">
+        <ScanEventButton />
         <SignInForm flow="member" />
       </div>
       <AuthNote>

@@ -9,9 +9,9 @@ final class OfflineView: UIView {
         backgroundColor = AppConfig.background
 
         let title = UILabel()
-        title.text = "Can't reach Klubbies"
+        title.text = "Can't reach Klubbies Events"
         title.font = .systemFont(ofSize: 22, weight: .bold)
-        title.textColor = .black
+        title.textColor = AppConfig.ink
 
         let body = UILabel()
         body.text = "Check your connection and try again."
@@ -22,8 +22,8 @@ final class OfflineView: UIView {
 
         var buttonConfig = UIButton.Configuration.filled()
         buttonConfig.title = "Try again"
-        buttonConfig.baseBackgroundColor = AppConfig.accent
-        buttonConfig.cornerStyle = .capsule
+        buttonConfig.baseBackgroundColor = AppConfig.ink
+        buttonConfig.cornerStyle = .medium
         buttonConfig.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 24)
         let button = UIButton(configuration: buttonConfig, primaryAction: UIAction { [weak self] _ in self?.onRetry?() })
 

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EventMark } from "@/components/EventMark";
 import { SimpleHeader } from "@/components/SimpleHeader";
+import { ScanEventButton } from "@/components/ScanEventButton";
 import { PageTitle } from "@/components/ui";
 import { accessHasEnded, getProfile, listMyEvents, requireUser } from "@/lib/auth/session";
 import { formatDate, formatEventDates, plural } from "@/lib/format";
@@ -28,9 +29,12 @@ export default async function EventsPage() {
       <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <PageTitle title="Your events">Every event you can open, newest first.</PageTitle>
-          <Link href="/admin/new" className="btn btn-secondary no-underline">
-            Create an event
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <ScanEventButton className="btn btn-primary" />
+            <Link href="/admin/new" className="btn btn-secondary no-underline">
+              Create an event
+            </Link>
+          </div>
         </div>
 
         {events.length === 0 ? (

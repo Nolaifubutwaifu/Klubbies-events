@@ -16,7 +16,7 @@ final class PhotoSaver: NSObject, WKScriptMessageHandlerWithReply {
             return (nil, "Nothing to save")
         }
         guard await Self.canAddToPhotos() else {
-            return (nil, "Klubbies needs Photos access to save. Turn it on in Settings, Klubbies, Photos.")
+            return (nil, "Klubbies Events needs Photos access to save. Turn it on in Settings, Klubbies Events, Photos.")
         }
 
         var saved = 0

@@ -7,14 +7,15 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		4B1D00000000000000000001 /* Klubbies.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Klubbies.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B1D00000000000000000001 /* KlubbiesEvents.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlubbiesEvents.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B1D00000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4B1D00000000000000000011 /* KlubbiesEvents.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KlubbiesEvents.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4B1D00000000000000000003 /* Klubbies */ = {
+		4B1D00000000000000000003 /* KlubbiesEvents */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Klubbies;
+			path = KlubbiesEvents;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -33,8 +34,9 @@
 		4B1D00000000000000000005 = {
 			isa = PBXGroup;
 			children = (
-				4B1D00000000000000000003 /* Klubbies */,
+				4B1D00000000000000000003 /* KlubbiesEvents */,
 				4B1D00000000000000000002 /* Info.plist */,
+				4B1D00000000000000000011 /* KlubbiesEvents.entitlements */,
 				4B1D00000000000000000006 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -42,7 +44,7 @@
 		4B1D00000000000000000006 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4B1D00000000000000000001 /* Klubbies.app */,
+				4B1D00000000000000000001 /* KlubbiesEvents.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -50,9 +52,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4B1D00000000000000000007 /* Klubbies */ = {
+		4B1D00000000000000000007 /* KlubbiesEvents */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4B1D0000000000000000000C /* Build configuration list for PBXNativeTarget "Klubbies" */;
+			buildConfigurationList = 4B1D0000000000000000000C /* Build configuration list for PBXNativeTarget "KlubbiesEvents" */;
 			buildPhases = (
 				4B1D00000000000000000008 /* Sources */,
 				4B1D00000000000000000004 /* Frameworks */,
@@ -63,13 +65,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4B1D00000000000000000003 /* Klubbies */,
+				4B1D00000000000000000003 /* KlubbiesEvents */,
 			);
-			name = Klubbies;
+			name = KlubbiesEvents;
 			packageProductDependencies = (
 			);
-			productName = Klubbies;
-			productReference = 4B1D00000000000000000001 /* Klubbies.app */;
+			productName = KlubbiesEvents;
+			productReference = 4B1D00000000000000000001 /* KlubbiesEvents.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -87,7 +89,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4B1D0000000000000000000B /* Build configuration list for PBXProject "Klubbies" */;
+			buildConfigurationList = 4B1D0000000000000000000B /* Build configuration list for PBXProject "KlubbiesEvents" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -101,7 +103,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4B1D00000000000000000007 /* Klubbies */,
+				4B1D00000000000000000007 /* KlubbiesEvents */,
 			);
 		};
 /* End PBXProject section */
@@ -176,6 +178,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KlubbiesEvents.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -187,7 +190,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.klubbies.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = app.klubbies.events;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -200,6 +203,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KlubbiesEvents.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -211,7 +215,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.klubbies.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = app.klubbies.events;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -222,7 +226,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4B1D0000000000000000000B /* Build configuration list for PBXProject "Klubbies" */ = {
+		4B1D0000000000000000000B /* Build configuration list for PBXProject "KlubbiesEvents" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4B1D0000000000000000000D /* Debug */,
@@ -231,7 +235,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4B1D0000000000000000000C /* Build configuration list for PBXNativeTarget "Klubbies" */ = {
+		4B1D0000000000000000000C /* Build configuration list for PBXNativeTarget "KlubbiesEvents" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4B1D0000000000000000000F /* Debug */,
