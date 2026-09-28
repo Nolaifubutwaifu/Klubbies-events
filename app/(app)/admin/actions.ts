@@ -169,6 +169,11 @@ export async function setEventAccessAction(eventId: string, _prev: ActionState, 
   if (error) return { error: "Could not save access" };
   revalidatePath(`/admin/${ctx.event.handle}`, "layout");
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
+  // The database caps the closing date at the 12 month deletion (migration 31).
+  const deleteAt = ctx.event.photos_delete_at;
+  if (endsAt && deleteAt && Date.parse(endsAt) > Date.parse(deleteAt)) {
+    return { ok: true, message: "Saved. The gallery closes when the photos are deleted, which is as late as it can stay open." };
+  }
   return { ok: true, message: "Saved" };
 }
 

@@ -9,8 +9,9 @@ import { EVENT_NOTICE_VERSION, CONSENT_VERSION, MEMBER_NOTICE_VERSION } from "@/
 import { facesConfigured } from "@/lib/faces/client";
 import { promoteMatchToReference, revokeProfile, selfiePath } from "@/lib/faces/enrol";
 import { enqueueEnrolJob, kickFaceJobs, runFaceJobs } from "@/lib/faces/jobs";
-import { deleteEventCollection, drainFacePurgeQueue } from "@/lib/faces/purge";
-import { BUCKET, removeObjects } from "@/lib/storage";
+import { drainFacePurgeQueue } from "@/lib/faces/purge";
+import { deleteEventFaceData } from "@/lib/faces/purge-event";
+import { BUCKET } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "./admin/actions";
@@ -90,50 +91,8 @@ export async function disableEventFacesAction(eventId: string): Promise<ActionSt
   const ctx = await managerContext(eventId);
   if (!ctx) return { error: "Not authorised" };
 
-  const admin = createAdminClient();
-  const { data: settings } = await admin
-    .from("event_face_settings")
-    .select("collection_id")
-    .eq("event_id", eventId)
-    .maybeSingle();
-
-  const { data: profiles } = await admin
-    .from("member_face_profiles")
-    .select("id, selfie_path")
-    .eq("event_id", eventId);
-  const selfies = (profiles ?? []).map((p) => p.selfie_path).filter((p): p is string => Boolean(p));
-
-  // Rows first. The purge triggers will queue every face id, which is belt
-  // and braces: DeleteCollection below takes them all in one call anyway.
-  await admin.from("face_jobs").delete().eq("event_id", eventId);
-  await admin.from("member_face_profiles").delete().eq("event_id", eventId);
-  await admin.from("media_faces").delete().eq("event_id", eventId);
-
-  if (settings?.collection_id) {
-    try {
-      await deleteEventCollection(settings.collection_id);
-      // The collection is gone, so its queued ids are already dead.
-      await admin.from("face_purge_queue").delete().eq("collection_id", settings.collection_id);
-    } catch (error) {
-      console.error("could not delete face collection", eventId, error);
-      return { error: "We removed the records but AWS did not confirm. Try again." };
-    }
-  }
-
-  if (selfies.length) {
-    await removeObjects(selfies).catch((error) => console.error("could not remove selfies", eventId, error));
-  }
-
-  await admin
-    .from("event_face_settings")
-    .update({
-      enabled: false,
-      collection_id: null,
-      backfill_status: "idle",
-      backfill_queued_at: null,
-      backfill_completed_at: null,
-    })
-    .eq("event_id", eventId);
+  const done = await deleteEventFaceData(eventId);
+  if (!done) return { error: "We removed the records but AWS did not confirm. Try again." };
 
   revalidatePath(`/admin/${ctx.event.handle}/settings`);
   revalidatePath(`/e/${ctx.event.handle}`, "layout");

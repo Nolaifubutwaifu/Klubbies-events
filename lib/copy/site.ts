@@ -158,7 +158,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How long do attendees have access?",
-    a: "90 days after the event by default. You can move the date or remove it from the event's settings. Organisers always keep access.",
+    a: "12 months after the event, on every size, including Free. You can close the gallery earlier in the event's settings. After 12 months the photos are deleted, unless you keep the event for another year; you're emailed 30 and 7 days before.",
   },
   {
     q: "How does face search handle consent?",

@@ -27,3 +27,9 @@ describe("billing status", () => {
     expect(canWrite({ plan: "unlimited", billing_status: "canceled" })).toBe(false);
   });
 });
+
+describe("after the 12 month deletion", () => {
+  it("takes nothing new", () => {
+    expect(canWrite({ plan: "free", billing_status: "unpaid", photos_deleted_at: "2027-10-11T00:00:00Z" })).toBe(false);
+  });
+});

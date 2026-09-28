@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normaliseClubCode } from "@/lib/billing/club-codes";
-import { includedGuests, mediaUnits, suggestedTier, TIERS, tierOffers, upgradePrice, windowCeiling } from "@/lib/billing/plans";
+import { includedGuests, mediaUnits, retentionNotice, suggestedTier, TIERS, tierOffers, upgradePrice, windowCeiling } from "@/lib/billing/plans";
 
 describe("tiers", () => {
   it("match the pricing handoff", () => {
@@ -101,5 +101,14 @@ describe("club codes", () => {
     expect(normaliseClubCode(" uqclubs ")).toBe("UQCLUBS");
     expect(normaliseClubCode("QUT CLUBS")).toBe("QUTCLUBS");
     expect(normaliseClubCode("FOUNDING25")).toBeNull();
+  });
+});
+
+describe("the deletion banner", () => {
+  const now = new Date("2027-08-01T00:00:00Z");
+  it("shows from 60 days before, and after", () => {
+    expect(retentionNotice({ photos_delete_at: "2027-12-01T00:00:00Z", photos_deleted_at: null }, now)).toBeNull();
+    expect(retentionNotice({ photos_delete_at: "2027-09-15T00:00:00Z", photos_deleted_at: null }, now)).toMatchObject({ kind: "soon" });
+    expect(retentionNotice({ photos_delete_at: "2027-07-01T00:00:00Z", photos_deleted_at: "2027-07-01T01:00:00Z" }, now)).toMatchObject({ kind: "deleted" });
   });
 });

@@ -12,7 +12,8 @@ export function isPaidStatus(status: string): boolean {
  * event can without paying; its limits do the gating (migration 27). The
  * database's private.event_can_write says the same.
  */
-export function canWrite(event: { billing_status: string; plan: string }): boolean {
+export function canWrite(event: { billing_status: string; plan: string; photos_deleted_at?: string | null }): boolean {
+  if (event.photos_deleted_at) return false; // deleted at 12 months: nothing new goes in
   return event.plan === "free" || isPaidStatus(event.billing_status);
 }
 

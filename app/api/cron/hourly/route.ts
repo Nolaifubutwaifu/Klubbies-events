@@ -5,6 +5,7 @@ import { isMonthlyCheckHour, runBackupDrain, runBackupPurge, runMonthlyBackupChe
 import { runPlanNotices } from "@/lib/billing/notices";
 import { closeOverflowWindows } from "@/lib/billing/usage";
 import { serverEnv } from "@/lib/env";
+import { runRetentionJob } from "@/lib/events/retention";
 import { refreshUsage } from "@/lib/usage/refresh";
 import { runFaceJobs } from "@/lib/faces/jobs";
 import { runBinPurge } from "@/lib/media/bin";
@@ -28,7 +29,9 @@ function authorised(request: Request): boolean {
 // than 30 days, and closes guest overflow windows that have run 48 hours
 // (pausing the guests who joined last). It copies new uploads to R2 that the
 // upload request didn't, deletes R2 copies whose 30 days are up, and on the
-// 1st of each month checks R2 for events that no longer exist. Closing itself needs no job: RLS compares
+// 1st of each month checks R2 for events that no longer exist. It warns
+// organisers 30 and 7 days before an event's photos are deleted, deletes the
+// face data of galleries that have closed, and deletes photos at 12 months. Closing itself needs no job: RLS compares
 // events.access_ends_at with now() on every read.
 // Publishing runs first so a scheduled album is live as early in the pass as
 // possible.
@@ -59,7 +62,9 @@ export async function GET(request: Request) {
     : null;
   // Usage totals for the usage view, refreshed before face search takes the rest of the run.
   const usageRows = await refreshUsage().catch((error) => (console.error("usage refresh", error), 0));
+  // After the usage refresh, so an event's saved totals are its last before its photos go.
+  const retention = await runRetentionJob(left(40_000)).catch((error) => (console.error("retention", error), null));
   const faces = await runFaceJobs({ budgetMs: left(240_000) });
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, retention, faces });
 }

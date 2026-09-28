@@ -134,3 +134,20 @@ export function overflowWindow(
   const windowEnds = new Date(new Date(event.overflow_started_at).getTime() + WINDOW_HOURS * 3600 * 1000);
   return { windowEnds, windowOpen: !event.overflow_closed_at && windowEnds > now };
 }
+
+/** "Keep another year": A$ per event per year (retention handoff, phase 3). */
+export const KEEP_YEAR_AUD = 29;
+
+/**
+ * The organiser banner about the 12 month deletion: from 60 days before it,
+ * and a plain statement after. Null when there is nothing to say yet.
+ */
+export function retentionNotice(
+  event: { photos_delete_at: string | null; photos_deleted_at: string | null },
+  now = new Date(),
+): { kind: "soon"; on: string } | { kind: "deleted"; on: string } | null {
+  if (event.photos_deleted_at) return { kind: "deleted", on: event.photos_deleted_at };
+  if (!event.photos_delete_at) return null;
+  const msLeft = new Date(event.photos_delete_at).getTime() - now.getTime();
+  return msLeft <= 60 * 24 * 3600 * 1000 ? { kind: "soon", on: event.photos_delete_at } : null;
+}

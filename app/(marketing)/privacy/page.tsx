@@ -28,7 +28,11 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "How long galleries stay open",
-    "Each event has a date after which attendees can no longer open its photos, usually 90 days after the event. We email you a week before, unless you turned those reminders off. Organisers keep access after that date.",
+    "Attendees can open an event's photos for 12 months after the event, unless the organiser closes the gallery earlier. We email you a week before it closes, unless you turned those reminders off. When a gallery closes, attendees' selfies and all of the event's face search data are deleted within 24 hours.",
+  ],
+  [
+    "When photos and guest lists are deleted",
+    "12 months after the event, every photo and video, the guest list, the access log and any face data left are deleted, unless the organiser has paid to keep the event for another year. The organiser is warned 30 and 7 days before. The copy of each photo at Cloudflare is deleted 30 days after the photo. After that nothing can be recovered. We keep the event's name, dates, payment records and usage totals, which hold no photos and no attendee details.",
   ],
   [
     "Removing a photo of you",

@@ -14,14 +14,19 @@ export function AccessForm({
   eventId,
   accessMode,
   accessEndsAt,
+  photosDeleteAt,
 }: {
   eventId: string;
   accessMode: "link" | "guest_list";
   accessEndsAt: string | null;
+  /** The 12 month deletion date; the gallery can't stay open past it. */
+  photosDeleteAt: string | null;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(setEventAccessAction.bind(null, eventId), {});
   const [mode, setMode] = useState(accessMode);
-  const [closes, setCloses] = useState(Boolean(accessEndsAt));
+  // Closing "early" means before the deletion date; on it is the default.
+  const [closes, setCloses] = useState(Boolean(accessEndsAt && accessEndsAt !== photosDeleteAt));
+  const deletesOn = photosDeleteAt ? brisbaneDay(new Date(new Date(photosDeleteAt).getTime() - 1000).toISOString()) : "";
 
   const options = [
     {
@@ -65,7 +70,7 @@ export function AccessForm({
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-3 text-[14px] font-medium">
           <input type="checkbox" checked={closes} onChange={(e) => setCloses(e.target.checked)} />
-          Close the gallery to attendees on a date
+          Close the gallery to attendees earlier
         </label>
         {closes ? (
           <input
@@ -73,6 +78,7 @@ export function AccessForm({
             type="date"
             name="accessEndsOn"
             defaultValue={brisbaneDay(accessEndsAt)}
+            max={deletesOn || undefined}
             required
             aria-label="Gallery closes at the end of"
           />
@@ -80,8 +86,14 @@ export function AccessForm({
           <input type="hidden" name="accessEndsOn" value="" />
         )}
         <span className="kb-help">
-          Attendees can&apos;t open photos after the end of that day and get a reminder a week before. Organisers keep
-          access. Photos are not deleted.
+          {deletesOn ? (
+            <>
+              Otherwise the gallery stays open until {deletesOn}, when the event&apos;s photos are deleted, 12 months after
+              the event.{" "}
+            </>
+          ) : null}
+          Attendees get a reminder a week before it closes. Organisers keep access. Closing the gallery also deletes
+          attendees&apos; selfies and all face search data within the hour.
         </span>
       </div>
 

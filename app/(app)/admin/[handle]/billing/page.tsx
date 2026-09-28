@@ -6,13 +6,13 @@ import { PlanMeters } from "@/components/PlanMeters";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { CLUB_CODES } from "@/lib/billing/club-codes";
-import { overflowWindow, planName, suggestedTier, TIERS, tierOffers, windowCeiling } from "@/lib/billing/plans";
+import { KEEP_YEAR_AUD, overflowWindow, planName, suggestedTier, TIERS, tierOffers, windowCeiling } from "@/lib/billing/plans";
 import { stripeConfigured, syncReturnedSession } from "@/lib/billing/stripe";
 import { getPlanUsage } from "@/lib/billing/usage";
 import { formatDateTime, formatLongDate } from "@/lib/format";
 import { isNativeAppUserAgent } from "@/lib/native-app";
 import { createClient } from "@/lib/supabase/server";
-import { devActivateAction, openBillingPortalAction, startCheckoutAction } from "../../billing-actions";
+import { devActivateAction, openBillingPortalAction, startCheckoutAction, startKeepYearAction } from "../../billing-actions";
 import { ClubCodeForm, ExpectedGuestsForm } from "./BillingForms";
 
 export const metadata: Metadata = { title: "Billing" };
@@ -67,8 +67,14 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
       {search.error === "portal" ? <div className="notice">We couldn&apos;t open your receipts. Try again in a moment.</div> : null}
       {justPaid ? (
         <div className="notice" role="status">
-          Paid. {event.name} is now {planName(event.plan)}.{" "}
-          <Link href={`/admin/${handle}/setup`}>Continue setting up</Link>
+          {purchases?.[0]?.kind === "keep_year" && event.photos_delete_at ? (
+            <>Paid. Photos from {event.name} are now kept until {formatLongDate(event.photos_delete_at)}.</>
+          ) : (
+            <>
+              Paid. {event.name} is now {planName(event.plan)}.{" "}
+              <Link href={`/admin/${handle}/setup`}>Continue setting up</Link>
+            </>
+          )}
         </div>
       ) : null}
 
@@ -171,6 +177,36 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
         </section>
       ) : null}
 
+      <section id="keep" className="soft-card flex scroll-mt-6 flex-col gap-3 p-6" aria-labelledby="keep-heading">
+        <h2 id="keep-heading" className="text-[18px] font-semibold">
+          How long photos are kept
+        </h2>
+        {event.photos_deleted_at ? (
+          <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">
+            Photos from this event were deleted on {formatLongDate(event.photos_deleted_at)}, 12 months after the event.
+          </p>
+        ) : (
+          <>
+            <p className="m-0 max-w-[62ch] text-[15px] text-[color:var(--kb-ink-2)]">
+              Photos, the guest list and face search data are kept until{" "}
+              <strong>{formatLongDate(event.photos_delete_at)}</strong>, 12 months after the event
+              {event.extra_years ? ` plus ${event.extra_years === 1 ? "a year" : `${event.extra_years} years`} kept` : ""}. We
+              email you 30 and 7 days before. After that nothing can be recovered.
+            </p>
+            {inApp ? null : (
+              <form action={startKeepYearAction.bind(null, event.id)} className="flex flex-wrap items-center gap-3">
+                <SubmitButton className="btn btn-secondary" pendingText="Opening secure checkout…" disabled={!configured}>
+                  Keep another year: A${KEEP_YEAR_AUD}
+                </SubmitButton>
+                <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                  Keeps everything, and the gallery open, 12 months longer. Can be bought again each year.
+                </span>
+              </form>
+            )}
+          </>
+        )}
+      </section>
+
       {devActivate && event.plan !== "unlimited" ? (
         <form action={devActivateAction.bind(null, event.id)}>
           <SubmitButton className="btn btn-secondary" pendingText="Activating…">
@@ -188,7 +224,11 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             {purchases.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-[15px]">
                 <span>
-                  {p.kind === "upgrade" ? `${planName(p.from_plan ?? "")} to ${planName(p.to_plan ?? "")}` : planName(p.to_plan ?? "")}
+                  {p.kind === "keep_year"
+                    ? "Keep another year"
+                    : p.kind === "upgrade"
+                      ? `${planName(p.from_plan ?? "")} to ${planName(p.to_plan ?? "")}`
+                      : planName(p.to_plan ?? "")}
                   {p.late ? " (late)" : ""}
                 </span>
                 <span className="text-[color:var(--kb-ink-2)]">

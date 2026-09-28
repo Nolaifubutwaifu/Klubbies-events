@@ -205,8 +205,8 @@ export async function runBackupPurge(now = new Date()): Promise<number> {
  * The monthly safety net: any event folder in R2 whose event no longer
  * exists, and has nothing still waiting in the purge queue, is deleted. A
  * fixed age rule on the bucket would wrongly delete events that paid to keep
- * another year, so this reads the database instead. (The 12 month expiry adds
- * "past its deletion date plus 30 days" to this check.)
+ * another year, so this reads the database instead. It also clears the album
+ * copies of events whose photos were deleted at 12 months, 30 days on.
  */
 export async function runMonthlyBackupCheck(): Promise<{ checked: number; deleted: number }> {
   const target = r2();
@@ -225,6 +225,16 @@ export async function runMonthlyBackupCheck(): Promise<{ checked: number; delete
         .like("key", `events/${eventId}/%`);
       if (count) continue; // still inside its 30 days
       const keys = await listR2Keys(target.client, target.config, `events/${eventId}/`);
+      await deleteFromR2(target.client, target.config, keys);
+      deleted += keys.length;
+    }
+    // Events whose photos were deleted at 12 months, more than 30 days ago:
+    // anything still under their albums goes (the logo stays with the event).
+    const { data: expired, error: expiredError } = await admin.rpc("events_past_backup_keep", { p_ids: ids.slice(i, i + 200) });
+    if (expiredError) throw expiredError;
+    for (const eventId of (expired as string[] | null) ?? []) {
+      const keys = await listR2Keys(target.client, target.config, `events/${eventId}/albums/`);
+      if (keys.length === 0) continue;
       await deleteFromR2(target.client, target.config, keys);
       deleted += keys.length;
     }

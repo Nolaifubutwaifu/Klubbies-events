@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { CLUB_CODES, normaliseClubCode } from "@/lib/billing/club-codes";
 import { isTier, tierOffers } from "@/lib/billing/plans";
-import { createCheckoutSession, createPortalSession, stripeConfigured } from "@/lib/billing/stripe";
+import { createCheckoutSession, createKeepYearCheckout, createPortalSession, stripeConfigured } from "@/lib/billing/stripe";
 import { isNativeAppUserAgent } from "@/lib/native-app";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -33,6 +33,22 @@ export async function startCheckoutAction(eventId: string, tier: string): Promis
     url = await createCheckoutSession(ctx.event, profile?.email ?? "", offer);
   } catch (error) {
     console.error("checkout failed", error);
+    redirect(`${billing}?error=checkout`);
+  }
+  redirect(url);
+}
+
+/** Keep another year, on Stripe's Checkout page. Website only, like every payment. */
+export async function startKeepYearAction(eventId: string): Promise<void> {
+  const ctx = await billingContext(eventId);
+  const billing = `/admin/${ctx.event.handle}/billing`;
+  if (isNativeAppUserAgent((await headers()).get("user-agent")) || ctx.event.photos_deleted_at) redirect(billing);
+  const profile = await getProfile();
+  let url: string;
+  try {
+    url = await createKeepYearCheckout(ctx.event, profile?.email ?? "");
+  } catch (error) {
+    console.error("keep year checkout failed", error);
     redirect(`${billing}?error=checkout`);
   }
   redirect(url);

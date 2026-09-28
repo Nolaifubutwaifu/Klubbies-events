@@ -5,7 +5,7 @@ import type { EventRecord } from "@/lib/db/types";
 import { appUrl } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkPlanNotices } from "./notices";
-import { isTier, planName, TIER_ORDER, TIERS, tierLimits, type Rate, type Tier, type TierOffer } from "./plans";
+import { isTier, KEEP_YEAR_AUD, planName, TIER_ORDER, TIERS, tierLimits, type Rate, type Tier, type TierOffer } from "./plans";
 import { statusFromSubscription, type BillingStatus } from "./status";
 
 const priceId = z.string().regex(/^price_/).optional();
@@ -23,6 +23,8 @@ const stripeSchema = z.object({
   STRIPE_PRICE_MEDIUM_STANDARD: priceId,
   STRIPE_PRICE_LARGE_CLUB: priceId,
   STRIPE_PRICE_LARGE_STANDARD: priceId,
+  // Keep another year, A$29 one-off. Optional like the others.
+  STRIPE_PRICE_KEEP_YEAR: priceId,
 });
 
 export function stripeConfigured(): boolean {
@@ -101,6 +103,33 @@ export async function createCheckoutSession(event: EventRecord, email: string, o
   return session.url;
 }
 
+/** "Keep another year": one A$29 payment that moves the deletion date 12 months on. */
+export async function createKeepYearCheckout(event: EventRecord, email: string): Promise<string> {
+  const billingUrl = `${appUrl()}/admin/${event.handle}/billing`;
+  const metadata = { event_id: event.id, event_handle: event.handle, kind: "keep_year", list_amount_cents: String(KEEP_YEAR_AUD * 100) };
+  const price = stripeEnv().STRIPE_PRICE_KEEP_YEAR;
+  const session = await stripe().checkout.sessions.create({
+    mode: "payment",
+    line_items: [
+      price
+        ? { price, quantity: 1 }
+        : { quantity: 1, price_data: { currency: "aud", unit_amount: KEEP_YEAR_AUD * 100, product_data: { name: "Keep another year" } } },
+    ],
+    client_reference_id: event.id,
+    metadata,
+    ...(event.stripe_customer_id ? { customer: event.stripe_customer_id } : { customer_email: email || undefined, customer_creation: "always" as const }),
+    payment_intent_data: { metadata, description: `Keep another year: ${event.name}` },
+    invoice_creation: { enabled: true, invoice_data: { metadata, description: `Keep another year: ${event.name}` } },
+    billing_address_collection: "required",
+    tax_id_collection: { enabled: true },
+    allow_promotion_codes: false,
+    success_url: `${billingUrl}?session_id={CHECKOUT_SESSION_ID}#keep`,
+    cancel_url: `${billingUrl}?canceled=1#keep`,
+  });
+  if (!session.url) throw new Error("Stripe did not return a checkout URL");
+  return session.url;
+}
+
 export async function createPortalSession(event: EventRecord): Promise<string> {
   if (!event.stripe_customer_id) throw new Error("This event has no Stripe customer");
   const session = await stripe().billingPortal.sessions.create({
@@ -128,6 +157,10 @@ export async function applyCheckoutSession(session: Stripe.Checkout.Session): Pr
     return eventId;
   }
   const kind = session.metadata?.kind;
+  if (kind === "keep_year") {
+    await applyKeepYear(eventId, session);
+    return eventId;
+  }
   if (kind === "tier" || kind === "upgrade") {
     await applyTierPurchase(eventId, session);
     return eventId;
@@ -203,6 +236,28 @@ async function applyTierPurchase(eventId: string, session: Stripe.Checkout.Sessi
   if (error) throw error;
   // Paused guests were just let in: email them.
   await checkPlanNotices(eventId).catch((noticeError) => console.error("let-in emails after upgrade", eventId, noticeError));
+}
+
+/** Adds a year: the database trigger moves the deletion date, the closing date with it, and clears the warnings. */
+async function applyKeepYear(eventId: string, session: Stripe.Checkout.Session): Promise<void> {
+  const admin = createAdminClient();
+  const { error: purchaseError } = await admin.from("event_purchases").insert({
+    event_id: eventId,
+    kind: "keep_year",
+    amount_cents: session.amount_total ?? 0,
+    list_amount_cents: KEEP_YEAR_AUD * 100,
+    currency: session.currency ?? "aud",
+    stripe_session_id: session.id,
+  });
+  if (purchaseError?.code === "23505") return; // already applied
+  if (purchaseError) throw purchaseError;
+  const { data: event } = await admin.from("events").select("extra_years, photos_deleted_at").eq("id", eventId).maybeSingle();
+  if (!event || event.photos_deleted_at) return; // too late: nothing left to keep
+  const { error } = await admin
+    .from("events")
+    .update({ extra_years: event.extra_years + 1, stripe_customer_id: idOf(session.customer) })
+    .eq("id", eventId);
+  if (error) throw error;
 }
 
 async function setUnlimited(eventId: string): Promise<void> {

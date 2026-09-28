@@ -120,8 +120,10 @@ export default function TermsPage() {
             <p>
               Attendees lose access on the closing date the organiser sets. We keep the event&apos;s media for
               organisers for at least 12 months after the event, and email them at least 30 days before deleting it, so
-              they can download what they want to keep. When an organiser deletes a photo, an album or the whole event,
-              it can be restored from Recently deleted for 30 days before it is deleted for good.
+              they can download what they want to keep. Photos are deleted 12 months after the event unless the organiser
+              keeps the event for another year. After that deletion nothing can be recovered.
+              When an organiser deletes a photo, an album or the whole event, it can be restored from Recently deleted
+              for 30 days before it is deleted for good.
             </p>
           ),
         },

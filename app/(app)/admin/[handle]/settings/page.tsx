@@ -77,6 +77,7 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
               eventId={event.id}
               accessMode={event.access_mode === "guest_list" ? "guest_list" : "link"}
               accessEndsAt={event.access_ends_at}
+              photosDeleteAt={event.photos_delete_at}
             />
           </section>
 
