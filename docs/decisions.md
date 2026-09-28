@@ -108,3 +108,7 @@ The retention and pricing handoffs are `docs/handoff-retention-backups.md` and `
 82. **Organiser pages carry a banner from 60 days before deletion**, and "Photos from this event were deleted on (date)" after. Inside the iPhone app the banner's link says "Details" rather than "Keep another year".
 83. **Nothing new goes into an event after its photos are deleted**: no uploads, albums, guests or photographer links (`canWrite` and `private.event_can_write`).
 84. **Copy:** the privacy page says galleries are open 12 months, that face data goes when a gallery closes, and what is deleted at 12 months and when the Cloudflare copy goes; the FAQ answers "How long do attendees have access?" with 12 months; the terms add that nothing can be recovered after the 12 month deletion. The terms leave the A$29 out, because the iPhone app can open them.
+
+## 2026-09-28 · Live database
+
+85. **Migration 26 (the bin) is applied to the live project** through the Supabase connector, after checking the live functions and rules it replaces matched the repo. `supabase/tests/bin_rls.sql` then passed against the live database inside a transaction that was rolled back, leaving no test rows. Migrations 27 to 31 are not applied: they switch on the Free tier and the new prices, so they go live together once R2 works. Until the app code from this branch is deployed nothing sets `deleted_at`, so the live site behaves exactly as before.
