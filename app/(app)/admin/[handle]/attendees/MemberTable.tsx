@@ -24,6 +24,8 @@ export type MemberRow = {
   isAdminRole: boolean;
   since: string;
   firstSeenAt: string | null;
+  /** Joined after the event filled up and its overflow window closed. */
+  paused: boolean;
   userId: string | null;
   /** Found themselves with a selfie. */
   findable: boolean;
@@ -39,6 +41,7 @@ const FILTERS = [
 
 function statusTag(member: MemberRow) {
   if (member.status === "revoked") return <span className="tag tag-neutral">Removed</span>;
+  if (member.paused) return <span className="tag tag-neutral">Paused</span>;
   if (member.firstSeenAt) return <span className="tag">Joined</span>;
   return <span className="tag tag-neutral">Not joined yet</span>;
 }

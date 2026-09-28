@@ -90,8 +90,11 @@ export default function TermsPage() {
           title: "Payment",
           body: (
             <p>
-              Each event is paid for once, through Stripe, before uploading and adding attendees unlock. Prices include
-              GST where applicable. Refunds are covered in the <Link href="/refunds">refund policy</Link>.
+              An event is free up to the Free size&apos;s guest and photo limits. A bigger size is paid for once, through
+              Stripe, and moving up a size costs the difference between the two, or the difference plus 25% once the
+              event has run out of room. When an event is past its size, new guests can be refused and the guests who
+              joined last paused, not removed, until the organiser upgrades or makes room, as described on the billing
+              page. Prices include GST where applicable. Refunds are covered in the <Link href="/refunds">refund policy</Link>.
             </p>
           ),
         },
@@ -117,7 +120,10 @@ export default function TermsPage() {
             <p>
               Attendees lose access on the closing date the organiser sets. We keep the event&apos;s media for
               organisers for at least 12 months after the event, and email them at least 30 days before deleting it, so
-              they can download what they want to keep.
+              they can download what they want to keep. Photos are deleted 12 months after the event unless the organiser
+              keeps the event for another year. After that deletion nothing can be recovered.
+              When an organiser deletes a photo, an album or the whole event, it can be restored from Recently deleted
+              for 30 days before it is deleted for good.
             </p>
           ),
         },

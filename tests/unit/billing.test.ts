@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canWrite, statusFromSubscription } from "@/lib/billing/status";
+import { canWrite, isPaidStatus, statusFromSubscription } from "@/lib/billing/status";
 
 describe("billing status", () => {
   it.each([
@@ -15,8 +15,21 @@ describe("billing status", () => {
     expect(statusFromSubscription(stripeStatus)).toBe(expected);
   });
 
-  it("only lets paid, retrying or comped events add members and upload", () => {
-    expect(["active", "past_due", "comped"].every(canWrite)).toBe(true);
-    expect(["unpaid", "canceled"].some(canWrite)).toBe(false);
+  it("counts paid, retrying or comped as paid", () => {
+    expect(["active", "past_due", "comped"].every(isPaidStatus)).toBe(true);
+    expect(["unpaid", "canceled"].some(isPaidStatus)).toBe(false);
+  });
+
+  it("lets a Free event upload and take guests without paying", () => {
+    expect(canWrite({ plan: "free", billing_status: "unpaid" })).toBe(true);
+    expect(canWrite({ plan: "small", billing_status: "active" })).toBe(true);
+    expect(canWrite({ plan: "small", billing_status: "unpaid" })).toBe(false);
+    expect(canWrite({ plan: "unlimited", billing_status: "canceled" })).toBe(false);
+  });
+});
+
+describe("after the 12 month deletion", () => {
+  it("takes nothing new", () => {
+    expect(canWrite({ plan: "free", billing_status: "unpaid", photos_deleted_at: "2027-10-11T00:00:00Z" })).toBe(false);
   });
 });

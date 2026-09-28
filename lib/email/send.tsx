@@ -3,6 +3,9 @@ import { render } from "@react-email/render";
 import { Resend } from "resend";
 import AlbumPublished, { type AlbumPublishedProps } from "@/emails/AlbumPublished";
 import AccessEnding, { type AccessEndingProps } from "@/emails/AccessEnding";
+import DeletionWarning, { type DeletionWarningProps } from "@/emails/DeletionWarning";
+import LetIn, { type LetInProps } from "@/emails/LetIn";
+import PlanNotice, { type PlanNoticeProps } from "@/emails/PlanNotice";
 import SignInCode, { type SignInCodeProps } from "@/emails/SignInCode";
 import { serverEnv } from "@/lib/env";
 import { supportEmail } from "@/lib/support";
@@ -36,6 +39,19 @@ async function send(to: string, subject: string, element: React.ReactElement): P
 
 export function sendSignInCode(to: string, props: SignInCodeProps) {
   return send(to, `${props.code} is your Klubbies Events code`, <SignInCode {...props} />);
+}
+
+/** About the organiser's own event and its limits: service email, no unsubscribe. */
+export function sendPlanNotice(to: string, subject: string, props: PlanNoticeProps) {
+  return send(to, subject, <PlanNotice {...props} />);
+}
+
+export function sendDeletionWarning(to: string, props: DeletionWarningProps) {
+  return send(to, `Photos from ${props.eventName} will be deleted on ${props.deletesOn}`, <DeletionWarning {...props} />);
+}
+
+export function sendLetIn(to: string, props: LetInProps) {
+  return send(to, `Your photos from ${props.eventName} are ready`, <LetIn {...props} />);
 }
 
 

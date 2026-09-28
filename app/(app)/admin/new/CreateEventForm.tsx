@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
+import { HEARD_FROM } from "@/lib/attribution";
 import { formatEventDates } from "@/lib/format";
 import { generateHandleBase } from "@/lib/roster/handle";
 import { createEventAction, type ActionState } from "../actions";
@@ -91,6 +92,18 @@ export function CreateEventForm({ appUrl }: { appUrl: string }) {
             </label>
           ))}
         </fieldset>
+
+        <label className="field">
+          How did you hear about us? <span className="font-normal text-[color:var(--ink-70)]">(optional)</span>
+          <select className="input" name="heardFrom" defaultValue="">
+            <option value="">Choose one</option>
+            {HEARD_FROM.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <FormMessage state={state} />
         <SubmitButton className="btn btn-primary btn-lg self-start" pendingText="Creating…">

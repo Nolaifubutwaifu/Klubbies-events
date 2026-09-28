@@ -2,6 +2,7 @@ import "server-only";
 import { IndexFacesCommand } from "@aws-sdk/client-rekognition";
 import { BUCKET, removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countFaceCalls } from "@/lib/usage/faces";
 import { collectionIdFor, faceClient, referenceExternalId } from "./client";
 import { MAX_REFERENCES_PER_PROFILE, QUALITY_FILTER } from "./constants";
 import { matchEventMedia } from "./match";
@@ -46,6 +47,7 @@ export async function enrolProfile(profileId: string): Promise<EnrolResult> {
     }),
   );
 
+  await countFaceCalls(profile.event_id, 1);
   const record = indexed.FaceRecords?.[0];
   // Zero faces back means the photo was unusable. Saying so is better than
   // leaving someone waiting for matches that will never come.

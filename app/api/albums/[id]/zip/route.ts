@@ -34,7 +34,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
 
   let query = supabase
     .from("media")
-    .select("id, storage_path, original_filename, sort_at")
+    .select("id, storage_path, original_filename, sort_at, backed_up_at")
     .eq("album_id", album.id)
     .eq("status", "ready")
     .order("sort_at", { ascending: true })

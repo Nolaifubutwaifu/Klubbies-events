@@ -23,7 +23,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/events/[id]/
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("face_matches")
-    .select("media_id, media!inner(id, storage_path, original_filename, status, sort_at, content_hash, albums!media_album_id_fkey(allow_download))")
+    .select("media_id, media!inner(id, storage_path, original_filename, status, sort_at, content_hash, backed_up_at, albums!media_album_id_fkey(allow_download))")
     .eq("event_id", id)
     .eq("state", "confirmed")
     .order("media_id")

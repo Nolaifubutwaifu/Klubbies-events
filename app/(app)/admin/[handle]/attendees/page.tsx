@@ -20,13 +20,13 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
   const { event } = ctx;
-  const writable = canWrite(event.billing_status);
+  const writable = canWrite(event);
 
   const [{ data: members }, { data: roles }, imports, { data: findable }] = await Promise.all([
     supabase
       .from("memberships")
       .select(
-        "id, roster_name, roster_email, claimed_name, name_mismatch, status, role, role_id, first_seen_at, invited_at, created_at, user_id, event_roles(id, name, manage_event)",
+        "id, roster_name, roster_email, claimed_name, name_mismatch, status, role, role_id, first_seen_at, paused_at, invited_at, created_at, user_id, event_roles(id, name, manage_event)",
       )
       .eq("event_id", event.id)
       .order("roster_name", { ascending: true })
@@ -58,6 +58,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
     isAdminRole: Boolean(m.event_roles?.manage_event) || m.role === "event_admin",
     since: m.invited_at ?? m.created_at,
     firstSeenAt: m.first_seen_at,
+    paused: Boolean(m.paused_at),
     userId: m.user_id,
     findable: m.user_id ? findableUsers.has(m.user_id) : false,
   }));

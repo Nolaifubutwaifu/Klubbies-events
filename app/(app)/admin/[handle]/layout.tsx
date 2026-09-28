@@ -1,13 +1,15 @@
+import Link from "next/link";
 import { AdminNav } from "@/components/AdminNav";
 import { AppHeader } from "@/components/AppHeader";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { accessHasEnded } from "@/lib/auth/session";
+import { isTier, planName, retentionNotice, TIERS } from "@/lib/billing/plans";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
-import { PRICE } from "@/lib/copy/site";
 import { eventAddress } from "@/lib/env";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatLongDate } from "@/lib/format";
 import { signLogoMarks } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { eventToneStyle } from "@/lib/theme";
 
 export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">) {
@@ -40,13 +42,19 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
 
   const logoUrl = event.logo_path ? ((await signLogoMarks(supabase, [event.logo_path])).get(event.logo_path) ?? null) : null;
 
+  const retention = retentionNotice(event);
+  const inApp = await isNativeAppRequest();
   const billing = event.billing_status as BillingStatus;
-  const writable = canWrite(billing);
-  const plan =
-    billing === "comped"
+  const writable = canWrite(event);
+  const plan = isTier(event.plan)
+    ? {
+        line: `${planName(event.plan)}${event.plan_rate === "club" ? " · club rate" : ""}`,
+        hint: `Up to ${TIERS[event.plan].guests.toLocaleString("en-AU")} guests and ${TIERS[event.plan].photos.toLocaleString("en-AU")} photos`,
+      }
+    : billing === "comped"
       ? { line: "Complimentary", hint: "Nothing to pay for this event" }
       : writable
-        ? { line: PRICE.line, hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
+        ? { line: planName(event.plan), hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
         : { line: BILLING_LABEL[billing], hint: "Activate to upload" };
 
   const status: { label: string; tone: "live" | "quiet" | "attention" } = !writable
@@ -76,7 +84,25 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
           }}
           plan={plan}
         />
-        <div className="min-w-0 flex-1">{props.children}</div>
+        <div className="min-w-0 flex-1">
+          {retention ? (
+            <div className="kb-info mb-4 flex-wrap items-center justify-between" role="status">
+              {retention.kind === "deleted" ? (
+                <span>Photos from this event were deleted on {formatLongDate(retention.on)}, 12 months after the event.</span>
+              ) : (
+                <>
+                  <span>
+                    Photos from this event will be deleted on {formatLongDate(retention.on)}. Download what you want to keep.
+                  </span>
+                  <Link href={`/admin/${handle}/billing#keep`} className="font-medium">
+                    {inApp ? "Details" : "Keep another year"}
+                  </Link>
+                </>
+              )}
+            </div>
+          ) : null}
+          {props.children}
+        </div>
       </div>
     </div>
   );

@@ -59,7 +59,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
         files, and every photo is credited to them.
       </PageTitle>
 
-      {!canWrite(ctx.event.billing_status) ? <BillingGate handle={handle} action="add photographers" /> : null}
+      {!canWrite(ctx.event) ? <BillingGate handle={handle} action="add photographers" /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <GuestLinkForm eventId={ctx.event.id} albums={albums ?? []} defaultExpiry={defaultExpiry} />

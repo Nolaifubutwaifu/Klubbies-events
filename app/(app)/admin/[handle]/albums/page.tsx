@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
 import { BillingGate } from "@/components/BillingGate";
+import { DeletedUndo } from "@/components/DeletedUndo";
 import { EmptyState, PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
 import { listStackedAlbums } from "@/lib/media/album-list";
+import { recentlyDeleted } from "@/lib/media/bin";
 import { createClient } from "@/lib/supabase/server";
 import { AlbumManager, type AlbumStats } from "./AlbumManager";
 
@@ -16,9 +18,11 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
 
-  const [albums, { data: engagement }] = await Promise.all([
+  const { deleted } = await props.searchParams;
+  const [albums, { data: engagement }, justDeleted] = await Promise.all([
     listStackedAlbums(supabase, ctx.event.id, { includeDrafts: true }),
     supabase.from("album_engagement").select("*").eq("event_id", ctx.event.id),
+    recentlyDeleted("albums", deleted, ctx.event.id),
   ]);
 
   const stats: Record<string, AlbumStats> = {};
@@ -57,11 +61,12 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
           <MoreMenu iconOnly label="More actions">
             <MoreLink href={`/e/${handle}`}>See it as an attendee</MoreLink>
             <MoreLink href={`/admin/${handle}/photographers`}>Make a guest upload link</MoreLink>
+            <MoreLink href={`/admin/${handle}/settings/deleted`}>Recently deleted</MoreLink>
           </MoreMenu>
         </div>
       </div>
 
-      {canWrite(ctx.event.billing_status) ? null : <BillingGate handle={handle} action="create albums" />}
+      {canWrite(ctx.event) ? null : <BillingGate handle={handle} action="create albums" />}
 
       {albums.length ? (
         <AlbumManager eventId={ctx.event.id} handle={handle} albums={albums} stats={stats} />
@@ -78,6 +83,8 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
           Create one per part of the event, then add your photographers.
         </EmptyState>
       )}
+
+      {justDeleted ? <DeletedUndo kind="album" id={justDeleted.id} name={justDeleted.name} /> : null}
     </main>
   );
 }

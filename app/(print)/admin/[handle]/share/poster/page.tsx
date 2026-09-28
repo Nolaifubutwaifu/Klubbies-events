@@ -89,7 +89,9 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
 
         <div className="mt-[10mm] flex items-center justify-between border-t border-[#e4e4df] pt-[4mm] text-[14px] text-[#6b6e76]">
           <span>{link}</span>
-          <span>Private to attendees · Klubbies Events</span>
+          {/* The credit line, printed only (pricing handoff §5.7): a second QR
+              code would confuse people scanning for the event. */}
+          <span>Private to attendees · Photos by Klubbies Events</span>
         </div>
       </article>
     </div>

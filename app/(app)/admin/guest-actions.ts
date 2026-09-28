@@ -21,7 +21,7 @@ const schema = z.object({
 export async function createGuestLinkAction(eventId: string, _prev: GuestLinkState, form: FormData): Promise<GuestLinkState> {
   const ctx = await getEventContextById(eventId);
   if (!ctx?.perms.manage_albums) return { error: "Not authorised" };
-  if (!canWrite(ctx.event.billing_status)) return { error: ACTIVATE_MESSAGE };
+  if (!canWrite(ctx.event)) return { error: ACTIVATE_MESSAGE };
 
   const parsed = schema.safeParse({
     label: String(form.get("label") ?? "").trim(),

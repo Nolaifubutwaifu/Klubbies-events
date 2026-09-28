@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveGuestLink } from "@/lib/guest/links";
-import { ACCEPTED_TYPES, resolveMimeType } from "@/lib/media/constants";
+import { MAX_VIDEO_BYTES } from "@/lib/billing/plans";
+import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
+import { ACCEPTED_TYPES, resolveMimeType, VIDEO_TOO_BIG } from "@/lib/media/constants";
 import { contentHashSchema, findExistingUpload, isUniqueViolation } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -38,6 +40,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
 
   const admin = createAdminClient();
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
+  if (kind === "video" && parsed.data.byteSize > MAX_VIDEO_BYTES) {
+    return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
+  }
 
   // The same file twice is one photo. A guest learns nothing from this beyond
   // "done": the album is the one their link already writes to. They resume a
@@ -77,6 +82,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
       }
       id = winner.id;
       storagePath = winner.storagePath;
+    } else if (error?.code === PHOTOS_FULL) {
+      return NextResponse.json({ error: PHOTOGRAPHER_FULL_MESSAGE, full: true }, { status: 409 });
     } else if (error) {
       return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
     }

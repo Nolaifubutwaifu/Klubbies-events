@@ -1,7 +1,11 @@
-import { Body, Container, Head, Hr, Html, Preview, Section, Text } from "@react-email/components";
+import { Body, Container, Head, Hr, Html, Link, Preview, Section, Text } from "@react-email/components";
 import type { ReactNode } from "react";
 
 const fontFamily = "Geist, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+// The credit line's links (pricing handoff §5.7), tagged so sign ups from
+// email can be counted.
+const site = (process.env.APP_URL ?? "https://events.klubbies.app").replace(/\/$/, "");
 
 export function EmailLayout({ preview, children }: { preview: string; children: ReactNode }) {
   return (
@@ -19,6 +23,15 @@ export function EmailLayout({ preview, children }: { preview: string; children: 
             <Text style={{ fontSize: 14, color: "#6b6e76", margin: 0, lineHeight: 1.5 }}>
               Klubbies Events keeps event photos private to the people the organiser let in. If you weren&apos;t
               expecting this email you can ignore it.
+            </Text>
+            <Text style={{ fontSize: 14, color: "#6b6e76", margin: "8px 0 0", lineHeight: 1.5 }}>
+              <Link href={`${site}/?src=credit-email`} style={{ color: "#6b6e76" }}>
+                Photos by Klubbies Events
+              </Link>
+              {" · "}
+              <Link href={`${site}/start?src=credit-email`} style={{ color: "#6b6e76" }}>
+                Run your own event
+              </Link>
             </Text>
           </Section>
         </Container>

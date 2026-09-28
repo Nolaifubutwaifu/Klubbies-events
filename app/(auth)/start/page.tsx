@@ -5,12 +5,13 @@ import { AuthHeading, AuthShell } from "@/components/AuthShell";
 import { CheckIcon } from "@/components/soft/icons";
 import { getSessionUser } from "@/lib/auth/session";
 import { PRICE } from "@/lib/copy/site";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { SignInForm } from "../signin/SignInForm";
 
 export const metadata: Metadata = { title: "Create an event" };
 
 /** The desktop panel: what the organiser gets, in four lines. */
-function Preview() {
+function Preview({ inApp }: { inApp: boolean }) {
   return (
     <div className="flex h-full flex-col justify-center gap-8 bg-[color:var(--kb-ink)] p-12 text-white xl:p-16">
       <p className="serif m-0 max-w-[15ch] text-[52px] text-white">Ten minutes to set up. Photographers do the rest.</p>
@@ -27,9 +28,11 @@ function Preview() {
           </li>
         ))}
       </ul>
-      <p className="m-0 text-[14px] text-white/75">
-        {PRICE.line}. {PRICE.note}
-      </p>
+      {inApp ? null : (
+        <p className="m-0 text-[14px] text-white/75">
+          {PRICE.line}. {PRICE.note}
+        </p>
+      )}
     </div>
   );
 }
@@ -39,7 +42,7 @@ export default async function StartPage() {
 
   return (
     <AuthShell
-      panel={<Preview />}
+      panel={<Preview inApp={await isNativeAppRequest()} />}
       topLink={
         <>
           <span className="hidden sm:inline">Already have an account? </span>

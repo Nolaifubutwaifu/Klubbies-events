@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EventMark } from "@/components/EventMark";
 import { Brand } from "@/components/ui";
 import { formatLongDate } from "@/lib/format";
+import { getPlanUsage } from "@/lib/billing/usage";
 import { resolveGuestLink, type GuestLinkState } from "@/lib/guest/links";
 import { signLogoMarks } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -29,11 +30,19 @@ const DEAD: Record<Exclude<GuestLinkState, "ok">, { title: string; body: string 
     title: "This event isn't active right now.",
     body: "Uploads are paused until the organiser activates the event. Nothing you already sent has been lost.",
   },
+  full: {
+    title: "This event is full.",
+    body: "It has used all the photos its size allows. Ask the organiser to make room. Nothing you already sent has been lost.",
+  },
 };
 
 export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
   const { token } = await props.params;
-  const { state, session } = await resolveGuestLink(token);
+  const resolved = await resolveGuestLink(token);
+  const usage = resolved.session ? await getPlanUsage(resolved.session.eventId) : null;
+  // Out of photos: say so up front rather than failing each file.
+  const full = Boolean(usage?.photoLimit && usage.unitsUsed >= usage.photoLimit);
+  const { state, session } = full ? { state: "full" as const, session: null } : resolved;
 
   if (!session) {
     const copy = DEAD[state as Exclude<GuestLinkState, "ok">] ?? DEAD.unknown;

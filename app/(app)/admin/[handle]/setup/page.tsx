@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
+import { isTier, planName, TIERS } from "@/lib/billing/plans";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
 import { plural } from "@/lib/format";
 import { isNativeAppRequest } from "@/lib/native-app-server";
@@ -67,7 +68,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
 
   const guestList = event.access_mode === "guest_list";
   const billing = event.billing_status as BillingStatus;
-  const paid = canWrite(billing);
+  const paid = canWrite(event);
   const photographers = (links ?? 0) + (photographerAccounts ?? 0);
   const attendees = joined ?? 0;
   const steps: Step[] = [
@@ -81,11 +82,18 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
     },
     {
       key: "pay",
-      title: inApp || paid ? "Event status" : "Activate the event",
-      hint: paid ? BILLING_LABEL[billing] : inApp ? "Not active yet" : "One payment unlocks uploading and attendees",
-      done: paid,
+      title: "Event size",
+      hint: isTier(event.plan)
+        ? `${planName(event.plan)}: up to ${TIERS[event.plan].guests.toLocaleString("en-AU")} guests and ${TIERS[event.plan].photos.toLocaleString("en-AU")} photos`
+        : paid
+          ? BILLING_LABEL[billing]
+          : inApp
+            ? "Not active yet"
+            : "One payment unlocks uploading and attendees",
+      // Free is a real choice; saying how many guests to expect is what makes it one.
+      done: event.plan !== "free" || Boolean(event.expected_guests),
       href: `/admin/${handle}/billing`,
-      cta: inApp || paid ? "View" : "Activate",
+      cta: inApp ? "View" : event.plan === "free" ? "Choose" : "View",
     },
     {
       key: "brand",

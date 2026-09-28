@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { joinByLink } from "@/lib/auth/flow";
+import { EVENT_FULL_MESSAGE } from "@/lib/billing/usage";
 import { getProfile, getPublicEvent, getSessionUser } from "@/lib/auth/session";
 import { normaliseEmail } from "@/lib/roster/email";
 import { listAlbumMedia, type GridItem } from "@/lib/media/queries";
@@ -103,7 +104,8 @@ export async function joinEventAction(handle: string): Promise<{ error?: string 
   if (!event || event.accessMode !== "link") return { error: "This event is only open to its guest list." };
   const profile = await getProfile();
   const joined = await joinByLink(event.id, user.id, normaliseEmail(user.email), profile?.display_name ?? null);
-  if (!joined) return { error: "The organiser has removed this address from the event." };
+  if (joined === "full") return { error: EVENT_FULL_MESSAGE };
+  if (joined !== "joined") return { error: "The organiser has removed this address from the event." };
   revalidatePath(`/e/${event.handle}`, "layout");
   redirect(`/e/${event.handle}`);
 }

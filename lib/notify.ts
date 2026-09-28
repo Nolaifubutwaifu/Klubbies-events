@@ -44,8 +44,8 @@ async function recipients(eventId: string, kind: NotifyKind, exceptUserId?: stri
 export async function notifyNewAlbum(eventId: string, albumId: string, actorUserId?: string | null): Promise<number> {
   const admin = createAdminClient();
   const [{ data: album }, { data: event }, { data: counts }] = await Promise.all([
-    admin.from("albums").select("id, title, description, album_date").eq("id", albumId).maybeSingle(),
-    admin.from("events").select("name, handle").eq("id", eventId).maybeSingle(),
+    admin.from("albums").select("id, title, description, album_date").eq("id", albumId).is("deleted_at", null).maybeSingle(),
+    admin.from("events").select("name, handle").eq("id", eventId).is("deleted_at", null).maybeSingle(),
     admin.from("album_media_counts").select("photo_count, video_count").eq("album_id", albumId).maybeSingle(),
   ]);
   if (!album || !event) return 0;
@@ -104,7 +104,8 @@ export async function runAccessEndingJob(now = new Date()): Promise<{ events: nu
     .is("access_notice_sent_at", null)
     .gt("access_ends_at", now.toISOString())
     .lte("access_ends_at", inAWeek)
-    .eq("status", "active");
+    .eq("status", "active")
+    .is("deleted_at", null);
   if (error) throw error;
 
   let emails = 0;

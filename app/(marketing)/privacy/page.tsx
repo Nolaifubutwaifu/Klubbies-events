@@ -23,8 +23,16 @@ const SECTIONS: [string, string][] = [
     "Every time an attendee views or downloads a photo or video we record which item, when, a scrambled version of the network address, and the browser. The event's organisers can see this log. We tell you because it is a record of your activity and you should know it exists.",
   ],
   [
+    "How organisers found us",
+    "If you arrive through one of our tracked links (a flyer's QR code, or the Photos by Klubbies Events line on a gallery), we remember which link in a cookie for 30 days and note it on any event you create, with your answer to \"How did you hear about us?\" if you give one. It is only ever about organisers: guests opening a gallery are not tracked, and the cookie holds nothing but the link's name.",
+  ],
+  [
     "How long galleries stay open",
-    "Each event has a date after which attendees can no longer open its photos, usually 90 days after the event. We email you a week before, unless you turned those reminders off. Organisers keep access after that date.",
+    "Attendees can open an event's photos for 12 months after the event, unless the organiser closes the gallery earlier. We email you a week before it closes, unless you turned those reminders off. When a gallery closes, attendees' selfies and all of the event's face search data are deleted within 24 hours.",
+  ],
+  [
+    "When photos and guest lists are deleted",
+    "12 months after the event, every photo and video, the guest list, the access log and any face data left are deleted, unless the organiser has paid to keep the event for another year. The organiser is warned 30 and 7 days before. The copy of each photo at Cloudflare is deleted 30 days after the photo. After that nothing can be recovered. We keep the event's name, dates, payment records and usage totals, which hold no photos and no attendee details.",
   ],
   [
     "Removing a photo of you",
@@ -32,7 +40,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "Where data lives",
-    "Photos, attendee details and faceprints are stored in Sydney, Australia. Sign-in emails are delivered by Resend. Payments are processed by Stripe, which never shares card details with us.",
+    "Photos, attendee details and faceprints are stored in Sydney, Australia. A second copy of each photo and video, and of event logos, is kept by Cloudflare R2 as a backup, encrypted at rest, and full quality downloads and video are delivered from that copy. Cloudflare may hold it outside Australia. Selfies and faceprints are never copied: they stay in Sydney. When a photo is deleted for good, its copy at Cloudflare is deleted 30 days later. Sign-in emails are delivered by Resend. Payments are processed by Stripe, which never shares card details with us.",
   ],
   // Say the uncomfortable part plainly: we create a faceprint for everyone in
   // a photo, not only for people who opted in.
@@ -50,7 +58,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "Face search: how long we keep it",
-    "A faceprint made from a photo is deleted when that photo is deleted. Your selfie and the faceprint made from it are deleted when you turn face search off, when your access to the event ends, or when the organiser turns the feature off: within 24 hours in each case. When an organiser turns it off, every faceprint for that event is deleted.",
+    "A faceprint made from a photo is deleted when that photo is deleted for good. A photo an organiser deletes waits 30 days in Recently deleted, where only organisers can see it, in case it was deleted by mistake; a photo taken down because someone asked is deleted straight away. Your selfie and the faceprint made from it are deleted when you turn face search off, when your access to the event ends, or when the organiser turns the feature off: within 24 hours in each case. When an organiser turns it off, every faceprint for that event is deleted.",
   ],
   [
     "Face search: who else sees it",

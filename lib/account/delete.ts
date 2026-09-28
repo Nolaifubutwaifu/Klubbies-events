@@ -22,8 +22,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * An event can't be left without an organiser. If this person is its only
  * organiser and attendees have joined, they must make someone a co-organiser
- * first. If nobody else ever joined, the event closes with the account and
- * its photos are deleted.
+ * first. If nobody else ever joined, or the event is already in Recently
+ * deleted, the event closes with the account and its photos are deleted.
  */
 
 export type EventRef = { id: string; name: string; handle: string };
@@ -35,7 +35,7 @@ type MembershipRow = {
   role: string | null;
   status: string;
   event_roles: { manage_event: boolean } | null;
-  events: { id: string; name: string; handle: string; access_mode: string } | null;
+  events: { id: string; name: string; handle: string; access_mode: string; deleted_at: string | null } | null;
 };
 
 function runsEvent(m: Pick<MembershipRow, "role" | "event_roles">): boolean {
@@ -46,7 +46,7 @@ export async function planAccountDeletion(userId: string): Promise<DeletionPlan>
   const admin = createAdminClient();
   const { data: mine, error } = await admin
     .from("memberships")
-    .select("id, event_id, role, status, event_roles(manage_event), events!inner(id, name, handle, access_mode)")
+    .select("id, event_id, role, status, event_roles(manage_event), events!inner(id, name, handle, access_mode, deleted_at)")
     .eq("user_id", userId)
     .eq("status", "active");
   if (error) throw error;
@@ -64,7 +64,9 @@ export async function planAccountDeletion(userId: string): Promise<DeletionPlan>
     const people = (others ?? []) as unknown as Pick<MembershipRow, "role" | "event_roles">[];
     if (people.some(runsEvent)) continue; // someone else already runs it
     const event = { id: m.events.id, name: m.events.name, handle: m.events.handle };
-    if (people.length > 0) plan.handOver.push(event);
+    // An event already in Recently deleted goes with the account: nobody else
+    // could restore it, so there is nothing to hand over.
+    if (people.length > 0 && !m.events.deleted_at) plan.handOver.push(event);
     else plan.closes.push(event);
   }
   return plan;

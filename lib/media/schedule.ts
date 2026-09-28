@@ -19,6 +19,7 @@ export async function runScheduledPublishJob(now = new Date()): Promise<Schedule
     .from("albums")
     .select("id, event_id, published_at")
     .eq("status", "draft")
+    .is("deleted_at", null)
     .not("publish_at", "is", null)
     .lte("publish_at", now.toISOString())
     .limit(200);
@@ -32,7 +33,8 @@ export async function runScheduledPublishJob(now = new Date()): Promise<Schedule
       .from("media")
       .select("id", { count: "exact", head: true })
       .eq("album_id", album.id)
-      .eq("status", "ready");
+      .eq("status", "ready")
+      .is("deleted_at", null);
 
     // An empty album stays a draft and keeps its schedule, so the committee
     // can still upload and have it go live on the next pass.

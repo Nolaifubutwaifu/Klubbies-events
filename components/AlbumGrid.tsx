@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { favouriteManyAction, loadAlbumPageAction } from "@/app/(app)/e/[handle]/actions";
 import { ProcessingTiles } from "@/components/ProcessingBanner";
-import { deleteMediaAction, setAlbumCoverAction } from "@/app/(app)/admin/actions";
+import { deleteMediaAction, restoreMediaAction, setAlbumCoverAction } from "@/app/(app)/admin/actions";
 import { Dialog } from "@/components/Dialog";
+import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
 
 function duration(seconds: number | null): string {
@@ -100,6 +101,26 @@ export function AlbumGrid({
   const [saved, setSaved] = useState<Set<string>>(new Set(savedIds));
   const [pending, startTransition] = useTransition();
   const [kind, setKind] = useState<"all" | "mine" | "photo" | "video" | "saved">("all");
+  const [undo, setUndo] = useState<{ key: number; message: string; ids: string[]; before: GridItem[] } | null>(null);
+
+  // Undo puts the tiles back where they were, then fetches fresh counts.
+  const restoreDeleted = async () => {
+    if (!undo) return { error: "Nothing to restore" };
+    const res = await restoreMediaAction(undo.ids);
+    if (res.ok) {
+      const restored = new Set(res.ids ?? []);
+      const beforeIds = new Set(undo.before.map((i) => i.id));
+      setItems((current) => {
+        const present = new Set(current.map((i) => i.id));
+        return [
+          ...undo.before.filter((i) => present.has(i.id) || restored.has(i.id)),
+          ...current.filter((i) => !beforeIds.has(i.id)),
+        ];
+      });
+      router.refresh();
+    }
+    return res;
+  };
 
   const toggle = (id: string) =>
     setSelected((current) => {
@@ -300,7 +321,11 @@ export function AlbumGrid({
       ) : null}
 
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${selected.size} ${selected.size === 1 ? "item" : "items"}?`}>
-        <p className="text-[15px]">The originals go too. Attendees who already downloaded a copy keep it.</p>
+        <p className="text-[15px]">
+          Attendees stop seeing {selected.size === 1 ? "it" : "them"} straight away. You can restore{" "}
+          {selected.size === 1 ? "it" : "them"} from Recently deleted in Settings for 30 days, then{" "}
+          {selected.size === 1 ? "it's" : "they're"} deleted for good. Attendees who already downloaded a copy keep it.
+        </p>
         <div className="dialog-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirm(false)}>
             Cancel
@@ -314,6 +339,8 @@ export function AlbumGrid({
                 const res = await deleteMediaAction(selectedIds);
                 setMessage(res.error ?? res.message ?? "");
                 if (res.ok) {
+                  setMessage("");
+                  setUndo({ key: Date.now(), message: res.message ?? "Deleted", ids: res.ids ?? selectedIds, before: items });
                   setItems((current) => current.filter((i) => !selected.has(i.id)));
                   setSelected(new Set());
                   setConfirm(false);
@@ -326,6 +353,8 @@ export function AlbumGrid({
           </button>
         </div>
       </Dialog>
+
+      {undo ? <UndoBar key={undo.key} message={undo.message} onUndo={restoreDeleted} onDone={() => setUndo(null)} /> : null}
     </div>
   );
 }

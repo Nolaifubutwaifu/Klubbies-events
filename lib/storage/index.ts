@@ -3,12 +3,15 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/types";
 import { serverEnv } from "@/lib/env";
+import { queueBackupPurge } from "@/lib/backup/r2";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Narrow storage interface (masterfile §8.1). Swapping Supabase Storage for S3
 // or R2 should only touch this module.
 
-export const BUCKET = "event_media";
+import { BUCKET, logoMarkPath } from "./paths";
+
+export { BUCKET, logoMarkPath } from "./paths";
 
 export const SIGNED_URL_TTL = {
   thumb: 10 * 60,
@@ -18,6 +21,11 @@ export const SIGNED_URL_TTL = {
 } as const;
 
 type Client = SupabaseClient<Database>;
+
+/** A signed URL's lifetime, shortened in tests by SIGNED_URL_TTL_OVERRIDE_SECONDS. */
+export function signedUrlLifetime(seconds: number): number {
+  return ttl(seconds);
+}
 
 function ttl(seconds: number): number {
   return serverEnv().SIGNED_URL_TTL_OVERRIDE_SECONDS ?? seconds;
@@ -38,16 +46,6 @@ export function logoPath(eventId: string, ext: string): string {
 /** Size of the small logo rendition: 96px, for 32 to 48px badges at 2x. */
 export const LOGO_MARK_SIZE = 96;
 
-/**
- * The small rendition that sits beside a logo: logo-1727.png → mark-1727.webp.
- * Every badge in the app is 24 to 48px, and they were loading the original
- * upload — one event's was 3936px wide — on every page.
- */
-export function logoMarkPath(logoPath: string): string {
-  const slash = logoPath.lastIndexOf("/");
-  const base = logoPath.slice(slash + 1).replace(/\.[^.]+$/, "").replace(/^logo/, "mark");
-  return `${logoPath.slice(0, slash)}/${base}.webp`;
-}
 
 // Signed URLs already issued, reused while they still have most of their life.
 //
@@ -161,7 +159,11 @@ export async function listFolder(client: Client, folder: string): Promise<Map<st
   return sizes;
 }
 
-/** Removes objects with the service role. Authorise before calling. */
+/**
+ * Removes objects with the service role. Authorise before calling. Every
+ * permanent file delete comes through here, so this is also where the R2
+ * copies are queued to go 30 days later.
+ */
 export async function removeObjects(paths: string[]): Promise<void> {
   const unique = [...new Set(paths.filter(Boolean))];
   const admin = createAdminClient();
@@ -169,4 +171,5 @@ export async function removeObjects(paths: string[]): Promise<void> {
     const { error } = await admin.storage.from(BUCKET).remove(unique.slice(i, i + 1000));
     if (error) throw error;
   }
+  await queueBackupPurge(unique);
 }

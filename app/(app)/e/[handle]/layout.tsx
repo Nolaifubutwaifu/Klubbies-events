@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { CreditLine } from "@/components/event/CreditLine";
 import { EventIntro } from "@/components/event/EventIntro";
 import { JoinEvent } from "@/components/event/JoinEvent";
 import { MemberTabBar } from "@/components/MemberTabBar";
@@ -10,6 +11,7 @@ import { formatLongDate } from "@/lib/format";
 import { signLogoMarks } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { eventToneStyle } from "@/lib/theme";
 
 export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
@@ -47,7 +49,7 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
   const supabase = await createClient();
   const faceState = await faceStateFor(supabase, ctx.event.id, ctx.userId);
 
-  if (ctx.accessClosed) {
+  if (ctx.accessClosed || ctx.paused) {
     const logo = ctx.event.logo_path
       ? ((await signLogoMarks(supabase, [ctx.event.logo_path])).get(ctx.event.logo_path) ?? null)
       : null;
@@ -62,13 +64,23 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
           logoUrl={logo}
           accentColour={ctx.event.accent_colour}
         >
-          <div className="kb-info max-w-[52ch] flex-col">
-            <strong>This gallery closed on {formatLongDate(ctx.event.access_ends_at)}.</strong>
-            <span>
-              The organiser set it to close after the event. If you still need a photo, contact
-              {ctx.event.organisation ? ` ${ctx.event.organisation}` : " the organiser"} directly.
-            </span>
-          </div>
+          {ctx.accessClosed ? (
+            <div className="kb-info max-w-[52ch] flex-col">
+              <strong>This gallery closed on {formatLongDate(ctx.event.access_ends_at)}.</strong>
+              <span>
+                The organiser set it to close after the event. If you still need a photo, contact
+                {ctx.event.organisation ? ` ${ctx.event.organisation}` : " the organiser"} directly.
+              </span>
+            </div>
+          ) : (
+            <div className="kb-info max-w-[52ch] flex-col">
+              <strong>This gallery is full for now.</strong>
+              <span>
+                We&apos;ve asked the organiser to make room, and we&apos;ll email you when it opens. Your selfie and saved
+                photos are kept.
+              </span>
+            </div>
+          )}
         </EventIntro>
       </Door>
     );
@@ -78,13 +90,14 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
     <div className="flex flex-1 flex-col" style={eventToneStyle(ctx.event.accent_colour)}>
       <AppHeader ctx={ctx} area="attendee" facesEnabled={faceState.enabled} />
       <div className="flex min-w-0 flex-1 flex-col">{props.children}</div>
+      <CreditLine inApp={await isNativeAppRequest()} />
       <MemberTabBar handle={handle} facesEnabled={faceState.enabled} />
     </div>
   );
 }
 
 /** The quiet single-column screen used when the event itself can't open. */
-function Door({ accentColour, children }: { accentColour: string | null; children: React.ReactNode }) {
+async function Door({ accentColour, children }: { accentColour: string | null; children: React.ReactNode }) {
   return (
     <div className="flex flex-1 flex-col" style={eventToneStyle(accentColour)}>
       <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-10 px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
@@ -93,6 +106,7 @@ function Door({ accentColour, children }: { accentColour: string | null; childre
         </a>
         {children}
       </div>
+      <CreditLine inApp={await isNativeAppRequest()} />
     </div>
   );
 }

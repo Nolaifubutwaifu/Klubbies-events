@@ -86,7 +86,7 @@ export async function AppHeader({
         </div>
       </header>
 
-      {area === "organiser" && !canWrite(event.billing_status) ? (
+      {area === "organiser" && !canWrite(event) ? (
         <div className="mx-auto w-full max-w-[1320px] px-4 pt-3 sm:px-6">
           <div className="kb-info flex-wrap items-center justify-between">
             {(await isNativeAppRequest()) ? (
