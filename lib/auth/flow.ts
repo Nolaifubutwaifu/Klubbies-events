@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { sendSignInCode } from "@/lib/email/send";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
+import { eventIsFull, GUESTS_FULL } from "@/lib/billing/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { namesLooselyMatch } from "./names";
@@ -61,14 +62,18 @@ async function findJoinableEvent(handle: string) {
   return data;
 }
 
+export type JoinResult = "joined" | "refused" | "full";
+
 /**
  * Makes the attendee row for someone who verified an email through an event
- * in link mode. Someone the organiser removed stays removed.
+ * in link mode. Someone the organiser removed stays removed. The database
+ * refuses a join past the event's guest limit and overflow window
+ * (migration 27), which comes back as "full".
  */
-export async function joinByLink(eventId: string, userId: string, email: string, name: string | null): Promise<boolean> {
+export async function joinByLink(eventId: string, userId: string, email: string, name: string | null): Promise<JoinResult> {
   const admin = createAdminClient();
   const { data: event } = await admin.from("events").select("id, access_mode, status, deleted_at").eq("id", eventId).maybeSingle();
-  if (!event || event.status !== "active" || event.deleted_at || event.access_mode !== "link") return false;
+  if (!event || event.status !== "active" || event.deleted_at || event.access_mode !== "link") return "refused";
 
   const { data: existing } = await admin
     .from("memberships")
@@ -76,7 +81,7 @@ export async function joinByLink(eventId: string, userId: string, email: string,
     .eq("event_id", eventId)
     .eq("roster_email", email)
     .maybeSingle();
-  if (existing) return existing.status === "active";
+  if (existing) return existing.status === "active" ? "joined" : "refused";
 
   const { data: role } = await admin.from("event_roles").select("id").eq("event_id", eventId).eq("key", "member").maybeSingle();
   const now = nowIso();
@@ -93,11 +98,12 @@ export async function joinByLink(eventId: string, userId: string, email: string,
     first_seen_at: now,
     accepted_at: now,
   });
+  if (error?.code === GUESTS_FULL) return "full";
   if (error) {
     console.error("join by link failed", error);
-    return false;
+    return "refused";
   }
-  return true;
+  return "joined";
 }
 
 async function issueOtp(email: string): Promise<string> {
@@ -133,10 +139,12 @@ export async function processCodeRequest(input: RequestCodeInput, ip: string): P
     // way the caller has already had the same neutral answer.
     const event = input.event ? await findJoinableEvent(input.event) : null;
     if (!event) return;
-    if (event.access_mode !== "link") {
-      const memberships = await findEligibleMemberships(email);
-      if (!memberships.some((m) => m.event_id === event.id)) return;
-    }
+    const memberships = await findEligibleMemberships(email);
+    const mine = memberships.find((m) => m.event_id === event.id);
+    if (event.access_mode !== "link" && !mine) return;
+    // A full event sends no code to someone who hasn't joined yet; the join
+    // screen already said it's full. Guests who joined still sign in.
+    if (!mine?.first_seen_at && (await eventIsFull(event.id))) return;
     eventName = event.name;
     eventId = event.id;
   } else if (input.flow === "member") {
@@ -184,7 +192,7 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   // new row gets the same first-sign-in treatment as everyone else's.
   let joinedHandle: string | null = null;
   if (pending.flow === "join" && pending.event_id) {
-    if (await joinByLink(pending.event_id, userId, email, pending.claimed_name)) {
+    if ((await joinByLink(pending.event_id, userId, email, pending.claimed_name)) === "joined") {
       const { data: joined } = await admin.from("events").select("handle").eq("id", pending.event_id).maybeSingle();
       joinedHandle = joined?.handle ?? null;
     }
@@ -195,18 +203,24 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   const now = nowIso();
 
   await Promise.all(
-    memberships.map((m) => {
+    memberships.map(async (m) => {
       const nameToCompare = m.claimed_name ?? claimedName;
-      return admin
+      const identity = {
+        user_id: userId,
+        claimed_name: nameToCompare,
+        name_mismatch: nameToCompare ? !namesLooselyMatch(m.roster_name, nameToCompare) : false,
+      };
+      const { error } = await admin
         .from("memberships")
         .update({
-          user_id: userId,
+          ...identity,
           first_seen_at: m.first_seen_at ?? now,
           status: m.status === "pending" ? "active" : m.status,
-          claimed_name: nameToCompare,
-          name_mismatch: nameToCompare ? !namesLooselyMatch(m.roster_name, nameToCompare) : false,
         })
         .eq("id", m.id);
+      // On the guest list, but the event filled up before they first signed
+      // in: they stay "not joined yet" until the organiser makes room.
+      if (error?.code === GUESTS_FULL) await admin.from("memberships").update(identity).eq("id", m.id);
     }),
   );
 

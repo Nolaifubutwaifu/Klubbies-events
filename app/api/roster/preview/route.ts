@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   const ctx = await getEventContextById(eventId.data);
   if (!ctx?.isAdmin) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
+  if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const file = form.get("file");
   const text = form.get("text");

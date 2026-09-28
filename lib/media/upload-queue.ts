@@ -95,7 +95,8 @@ export class UploadQueue {
         continue;
       }
       if (mimeType.startsWith("video/") && file.size > LARGE_VIDEO_BYTES) {
-        warnings.push(`${file.name} is over 500 MB. It will upload, but attendees on mobile data may struggle to play it.`);
+        warnings.push(`${file.name} is over 500 MB, so it wasn't added. Videos can be up to 500 MB.`);
+        continue;
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
       this.jobs.set(key, { key, file, mimeType, status: "queued", uploaded: 0 });
@@ -123,6 +124,13 @@ export class UploadQueue {
       previewUrl: j.previewUrl,
     }));
     for (const listener of this.listeners) listener();
+  }
+
+  /** The event's photo allowance is used up: nothing still waiting will get in either. */
+  private stopQueued(message: string) {
+    for (const job of this.jobs.values()) {
+      if (job.status === "queued") this.patch(job, { status: "failed", error: message });
+    }
   }
 
   private patch(job: Job, changes: Partial<Job>) {
@@ -198,7 +206,8 @@ export class UploadQueue {
             contentHash: job.hash,
           }),
         });
-        const body: Ticket & { error?: string } = await res.json();
+        const body: Ticket & { error?: string; full?: boolean } = await res.json();
+        if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
         if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
         if (body.duplicate) {
           this.patch(job, { status: "done", uploaded: job.file.size, note: "Already in this album" });

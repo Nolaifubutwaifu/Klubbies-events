@@ -202,13 +202,13 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "deleted_by": string | null,"deleted_at": string | null,"accent_colour": string | null,"access_ends_at": string | null,"access_mode": string,"access_notice_sent_at": string | null,"allow_removal_requests": boolean,"billing_status": string,"created_at": string,"created_by": string | null,"description": string | null,"ends_on": string | null,"grace_period_enabled": boolean,"handle": string,"id": string,"logo_path": string | null,"name": string,"organisation": string | null,"paid_at": string | null,"roster_mapping": Json | null,"starts_on": string | null,"status": string,"stripe_checkout_session_id": string | null,"stripe_customer_id": string | null,"stripe_subscription_id": string | null,"updated_at": string,"venue": string | null
+                    "overflow_closed_at": string | null,"overflow_started_at": string | null,"expected_guests": number | null,"photo_limit": number | null,"guest_limit": number | null,"plan_rate": string | null,"plan": string,"deleted_by": string | null,"deleted_at": string | null,"accent_colour": string | null,"access_ends_at": string | null,"access_mode": string,"access_notice_sent_at": string | null,"allow_removal_requests": boolean,"billing_status": string,"created_at": string,"created_by": string | null,"description": string | null,"ends_on": string | null,"grace_period_enabled": boolean,"handle": string,"id": string,"logo_path": string | null,"name": string,"organisation": string | null,"paid_at": string | null,"roster_mapping": Json | null,"starts_on": string | null,"status": string,"stripe_checkout_session_id": string | null,"stripe_customer_id": string | null,"stripe_subscription_id": string | null,"updated_at": string,"venue": string | null
                   }
                   Insert: {
-                    "deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle": string,"id"?: string,"logo_path"?: string | null,"name": string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
+                    "overflow_closed_at"?: string | null,"overflow_started_at"?: string | null,"expected_guests"?: number | null,"photo_limit"?: number | null,"guest_limit"?: number | null,"plan_rate"?: string | null,"plan"?: string,"deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle": string,"id"?: string,"logo_path"?: string | null,"name": string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
                   }
                   Update: {
-                    "deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle"?: string,"id"?: string,"logo_path"?: string | null,"name"?: string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
+                    "overflow_closed_at"?: string | null,"overflow_started_at"?: string | null,"expected_guests"?: number | null,"photo_limit"?: number | null,"guest_limit"?: number | null,"plan_rate"?: string | null,"plan"?: string,"deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle"?: string,"id"?: string,"logo_path"?: string | null,"name"?: string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
                   }
                   Relationships: [
                     {
@@ -531,13 +531,13 @@ isOneToOne: false
                   ]
                 },"memberships": {
                   Row: {
-                    "accepted_at": string | null,"claimed_name": string | null,"created_at": string,"declined_at": string | null,"event_id": string,"face_notice_ack_at": string | null,"face_notice_version": string | null,"first_seen_at": string | null,"grace_ends_at": string | null,"grace_notices_sent": number,"grace_started_at": string | null,"id": string,"invited_at": string | null,"last_seen_at": string | null,"name_mismatch": boolean,"role": string,"role_id": string | null,"roster_email": string,"roster_name": string,"status": string,"updated_at": string,"user_id": string | null
+                    "paused_at": string | null,"accepted_at": string | null,"claimed_name": string | null,"created_at": string,"declined_at": string | null,"event_id": string,"face_notice_ack_at": string | null,"face_notice_version": string | null,"first_seen_at": string | null,"grace_ends_at": string | null,"grace_notices_sent": number,"grace_started_at": string | null,"id": string,"invited_at": string | null,"last_seen_at": string | null,"name_mismatch": boolean,"role": string,"role_id": string | null,"roster_email": string,"roster_name": string,"status": string,"updated_at": string,"user_id": string | null
                   }
                   Insert: {
-                    "accepted_at"?: string | null,"claimed_name"?: string | null,"created_at"?: string,"declined_at"?: string | null,"event_id": string,"face_notice_ack_at"?: string | null,"face_notice_version"?: string | null,"first_seen_at"?: string | null,"grace_ends_at"?: string | null,"grace_notices_sent"?: number,"grace_started_at"?: string | null,"id"?: string,"invited_at"?: string | null,"last_seen_at"?: string | null,"name_mismatch"?: boolean,"role"?: string,"role_id"?: string | null,"roster_email": string,"roster_name": string,"status"?: string,"updated_at"?: string,"user_id"?: string | null
+                    "paused_at"?: string | null,"accepted_at"?: string | null,"claimed_name"?: string | null,"created_at"?: string,"declined_at"?: string | null,"event_id": string,"face_notice_ack_at"?: string | null,"face_notice_version"?: string | null,"first_seen_at"?: string | null,"grace_ends_at"?: string | null,"grace_notices_sent"?: number,"grace_started_at"?: string | null,"id"?: string,"invited_at"?: string | null,"last_seen_at"?: string | null,"name_mismatch"?: boolean,"role"?: string,"role_id"?: string | null,"roster_email": string,"roster_name": string,"status"?: string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "accepted_at"?: string | null,"claimed_name"?: string | null,"created_at"?: string,"declined_at"?: string | null,"event_id"?: string,"face_notice_ack_at"?: string | null,"face_notice_version"?: string | null,"first_seen_at"?: string | null,"grace_ends_at"?: string | null,"grace_notices_sent"?: number,"grace_started_at"?: string | null,"id"?: string,"invited_at"?: string | null,"last_seen_at"?: string | null,"name_mismatch"?: boolean,"role"?: string,"role_id"?: string | null,"roster_email"?: string,"roster_name"?: string,"status"?: string,"updated_at"?: string,"user_id"?: string | null
+                    "paused_at"?: string | null,"accepted_at"?: string | null,"claimed_name"?: string | null,"created_at"?: string,"declined_at"?: string | null,"event_id"?: string,"face_notice_ack_at"?: string | null,"face_notice_version"?: string | null,"first_seen_at"?: string | null,"grace_ends_at"?: string | null,"grace_notices_sent"?: number,"grace_started_at"?: string | null,"id"?: string,"invited_at"?: string | null,"last_seen_at"?: string | null,"name_mismatch"?: boolean,"role"?: string,"role_id"?: string | null,"roster_email"?: string,"roster_name"?: string,"status"?: string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -706,6 +706,26 @@ isOneToOne: false
                 }
           }
           Functions: {
+            "apply_event_plan":
+{ Args: { "p_event_id": string, "p_plan": string, "p_rate": string | null, "p_guest_limit": number | null, "p_photo_limit": number | null }; Returns: undefined
+                           },
+            "close_overflow_windows":
+{ Args: never; Returns: string[]
+                           },
+            "event_plan_usage":
+{ Args: { "p_event_id": string }; Returns: {
+              "plan": string,
+"plan_rate": string | null,
+"guest_limit": number | null,
+"photo_limit": number | null,
+"guests_joined": number,
+"guests_paused": number,
+"units_used": number,
+"join_state": string,
+"overflow_started_at": string | null,
+"overflow_closed_at": string | null
+            }[]
+                           },
             "claim_face_jobs":
 { Args: { "batch_size": number }; Returns: {
               "attempts": number,

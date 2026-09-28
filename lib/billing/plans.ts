@@ -1,0 +1,83 @@
+/**
+ * The tiers (docs/handoff-pricing-tiers.md). The one place these numbers live:
+ * the database is told the limits when an event moves plan
+ * (public.apply_event_plan), and pricing copy reads them from here.
+ *
+ * Safe for the browser: no secrets, no server imports.
+ */
+
+export type Tier = "free" | "small" | "medium" | "large";
+export type Plan = Tier | "custom" | "unlimited";
+export type Rate = "club" | "standard";
+
+export type TierSpec = {
+  name: string;
+  guests: number;
+  photos: number;
+  /** A$, one payment per event. */
+  price: Record<Rate, number>;
+};
+
+export const TIERS: Record<Tier, TierSpec> = {
+  free: { name: "Free", guests: 50, photos: 200, price: { club: 0, standard: 0 } },
+  small: { name: "Small", guests: 150, photos: 1500, price: { club: 29, standard: 49 } },
+  medium: { name: "Medium", guests: 400, photos: 4000, price: { club: 59, standard: 79 } },
+  large: { name: "Large", guests: 1000, photos: 10000, price: { club: 119, standard: 149 } },
+};
+
+export const TIER_ORDER: Tier[] = ["free", "small", "medium", "large"];
+
+/** Guests past the limit who still join normally: 10%. */
+export const INCLUDED_OVER = 0.1;
+/** How far past the limit the overflow window lets guests keep joining: 50%. */
+export const WINDOW_OVER = 0.5;
+export const WINDOW_HOURS = 48;
+/** Upgrading after the window has opened costs the difference plus 25%. */
+export const LATE_SURCHARGE = 0.25;
+
+/** Each started minute of video counts as this many photos. */
+export const VIDEO_UNITS_PER_MINUTE = 10;
+/** The largest video anyone can upload, in bytes. */
+export const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
+
+export function isTier(value: string | null | undefined): value is Tier {
+  return value === "free" || value === "small" || value === "medium" || value === "large";
+}
+
+export function planName(plan: string): string {
+  if (isTier(plan)) return TIERS[plan].name;
+  if (plan === "custom") return "Custom";
+  return "Unlimited";
+}
+
+/** Guests who join normally: the limit plus 10%. 150 → 165. */
+export function includedGuests(limit: number): number {
+  return Math.floor(limit * (1 + INCLUDED_OVER));
+}
+
+/** The most guests the overflow window lets in: the limit plus 50%. 150 → 225. */
+export function windowCeiling(limit: number): number {
+  return Math.floor(limit * (1 + WINDOW_OVER));
+}
+
+/** Photos a file uses up: 1 for a photo, 10 per started minute of video. */
+export function mediaUnits(kind: string, durationSeconds: number | null | undefined): number {
+  if (kind !== "video") return 1;
+  return VIDEO_UNITS_PER_MINUTE * Math.max(1, Math.ceil((durationSeconds ?? 60) / 60));
+}
+
+/**
+ * What moving from one tier to a bigger one costs, in whole A$. On time it is
+ * the difference; late (the overflow window has opened) the difference plus
+ * 25%, rounded to the nearest dollar. Null when it isn't an upgrade.
+ */
+export function upgradePrice(from: Tier, to: Tier, rate: Rate, late: boolean): number | null {
+  if (TIER_ORDER.indexOf(to) <= TIER_ORDER.indexOf(from)) return null;
+  const difference = TIERS[to].price[rate] - TIERS[from].price[rate];
+  return late ? Math.round(difference * (1 + LATE_SURCHARGE)) : difference;
+}
+
+/** The limits the database enforces for a tier. */
+export function tierLimits(tier: Tier): { guestLimit: number; photoLimit: number } {
+  return { guestLimit: TIERS[tier].guests, photoLimit: TIERS[tier].photos };
+}

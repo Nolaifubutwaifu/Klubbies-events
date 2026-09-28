@@ -90,7 +90,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   const stuckAlbums = [
     ...new Map((stuck.data ?? []).filter((row) => row.album_id).map((row) => [row.album_id!, row.albums?.title ?? "an album"])),
   ];
-  const writable = canWrite(event.billing_status);
+  const writable = canWrite(event);
   const inApp = await isNativeAppRequest();
   const firstRun = (albumCount.count ?? 0) === 0;
   const link = eventLink(handle);

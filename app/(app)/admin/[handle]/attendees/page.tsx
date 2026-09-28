@@ -20,7 +20,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
   const { event } = ctx;
-  const writable = canWrite(event.billing_status);
+  const writable = canWrite(event);
 
   const [{ data: members }, { data: roles }, imports, { data: findable }] = await Promise.all([
     supabase

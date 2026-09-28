@@ -45,7 +45,10 @@ export async function openBillingPortalAction(eventId: string): Promise<void> {
 export async function devActivateAction(eventId: string): Promise<void> {
   const ctx = await billingContext(eventId);
   if (process.env.NODE_ENV === "production" || stripeConfigured()) redirect(`/admin/${ctx.event.handle}/billing`);
-  await createAdminClient().from("events").update({ billing_status: "comped" }).eq("id", ctx.event.id);
+  const admin = createAdminClient();
+  await admin.from("events").update({ billing_status: "comped" }).eq("id", ctx.event.id);
+  // Comped events are unlimited, like the ones comped before tiers existed.
+  await admin.rpc("apply_event_plan", { p_event_id: ctx.event.id, p_plan: "unlimited", p_rate: null, p_guest_limit: null, p_photo_limit: null });
   revalidatePath(`/admin/${ctx.event.handle}`, "layout");
   redirect(`/admin/${ctx.event.handle}/setup`);
 }

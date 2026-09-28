@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
 import { ScanEventButton } from "@/components/ScanEventButton";
 import { authEventPreview } from "@/lib/auth/preview";
-import { getSessionUser } from "@/lib/auth/session";
+import { getPublicEvent, getSessionUser } from "@/lib/auth/session";
+import { EVENT_FULL_MESSAGE, eventIsFull } from "@/lib/billing/usage";
 import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -19,6 +20,10 @@ export default async function SignInPage(props: PageProps<"/signin">) {
 
   if (event) {
     const open = event.accessMode === "link";
+    // Past its guest limit and overflow window (migration 27): say so before
+    // anyone types their email, rather than after they've confirmed it.
+    const publicEvent = await getPublicEvent(event.handle);
+    const full = publicEvent ? await eventIsFull(publicEvent.id).catch(() => false) : false;
     return (
       <AuthShell event={event}>
         <AuthHeading>Get your photos</AuthHeading>
@@ -27,6 +32,11 @@ export default async function SignInPage(props: PageProps<"/signin">) {
             ? "Use the email you'd like your photos under. We'll send a code to confirm it's you, then you're in."
             : "This event is for its guest list. Use the email you registered with, and we'll send you a code."}
         </p>
+        {full ? (
+          <p className="kb-info mt-5" role="status">
+            {EVENT_FULL_MESSAGE} If you&apos;ve already joined, sign in as usual.
+          </p>
+        ) : null}
         <div className="mt-7">
           <SignInForm flow="join" event={event.handle} />
         </div>

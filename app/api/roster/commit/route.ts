@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   const ctx = await getEventContextById(importRow.event_id);
   if (!ctx?.isAdmin) return NextResponse.json({ error: "Import not found" }, { status: 404 });
-  if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
+  if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const report = previewReportSchema.safeParse(importRow.report);
   if (!report.success) return NextResponse.json({ error: "Import data is unreadable. Upload the file again." }, { status: 422 });

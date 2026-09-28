@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { displayNameFor } from "@/lib/auth/display-name";
 import { getEventContextById } from "@/lib/auth/session";
+import { MAX_VIDEO_BYTES } from "@/lib/billing/plans";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
-import { ACCEPTED_TYPES, resolveMimeType } from "@/lib/media/constants";
+import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
+import { ACCEPTED_TYPES, resolveMimeType, VIDEO_TOO_BIG } from "@/lib/media/constants";
 import { contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -33,11 +35,12 @@ export async function POST(request: Request) {
   // Organisers and Photographers upload anywhere; attendees only into albums
   // that invite them. RLS (can_contribute_to_album) says the same thing.
   const ctx = await getEventContextById(album.event_id);
-  const allowed = ctx && !ctx.accessClosed && (ctx.perms.upload || (album.contributor_scope === "members" && ctx.membership));
+  const allowed = ctx && !ctx.accessClosed && !ctx.paused && (ctx.perms.upload || (album.contributor_scope === "members" && ctx.membership));
   if (!ctx || !allowed) return NextResponse.json({ error: "Album not found" }, { status: 404 });
-  if (!canWrite(ctx.event.billing_status)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
+  if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
+  if (kind === "video" && byteSize > MAX_VIDEO_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
   const answer = (existing: ExistingUpload) => {
     // Already here and finished: the second copy is the bug this prevents.
     if (existing.status === "ready") return NextResponse.json({ duplicate: true, mediaId: existing.id });
@@ -82,6 +85,12 @@ export async function POST(request: Request) {
     // Two tabs dropped the same file at once and the other one won.
     const winner = await findExistingUpload(supabase, album.id, contentHash);
     if (winner) return answer(winner);
+  }
+  if (error?.code === PHOTOS_FULL) {
+    const message = ctx.perms.manage_albums
+      ? `This event has reached its limit of ${ctx.event.photo_limit ?? 0} photos. Delete some, or change the event's plan, to add more.`
+      : PHOTOGRAPHER_FULL_MESSAGE;
+    return NextResponse.json({ error: message, full: true }, { status: 409 });
   }
   if (error) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
 

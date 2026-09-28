@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/forms";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
+import { BILLING_LABEL, isPaidStatus, type BillingStatus } from "@/lib/billing/status";
 import { getPriceSummary, stripeConfigured, syncReturnedSession, type PriceSummary } from "@/lib/billing/stripe";
 import { PRICE } from "@/lib/copy/site";
 import { formatLongDate } from "@/lib/format";
@@ -21,24 +21,24 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
 
   let status = ctx.event.billing_status as BillingStatus;
   let justPaid = false;
-  if (configured && typeof search.session_id === "string" && !canWrite(status)) {
+  if (configured && typeof search.session_id === "string" && !isPaidStatus(status)) {
     justPaid = await syncReturnedSession(search.session_id, ctx.event.id).catch((error) => {
       console.error("session sync failed", error);
       return false;
     });
     if (justPaid) status = "active";
   }
-  if (typeof search.session_id === "string" && canWrite(status)) justPaid = true;
+  if (typeof search.session_id === "string" && isPaidStatus(status)) justPaid = true;
 
   let price: PriceSummary | null = null;
-  if (configured && !canWrite(status)) {
+  if (configured && !isPaidStatus(status)) {
     price = await getPriceSummary().catch((error) => {
       console.error("price lookup failed", error);
       return null;
     });
   }
 
-  const writable = canWrite(status);
+  const writable = isPaidStatus(status);
   const devActivate = !configured && process.env.NODE_ENV !== "production";
   // Apple doesn't allow an iPhone app to sell digital services except through
   // in-app purchase, or to point people at another way to pay. So inside the

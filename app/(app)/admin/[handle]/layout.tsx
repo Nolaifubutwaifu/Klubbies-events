@@ -2,6 +2,7 @@ import { AdminNav } from "@/components/AdminNav";
 import { AppHeader } from "@/components/AppHeader";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { accessHasEnded } from "@/lib/auth/session";
+import { TIERS } from "@/lib/billing/plans";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
 import { PRICE } from "@/lib/copy/site";
 import { eventAddress } from "@/lib/env";
@@ -41,9 +42,11 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
   const logoUrl = event.logo_path ? ((await signLogoMarks(supabase, [event.logo_path])).get(event.logo_path) ?? null) : null;
 
   const billing = event.billing_status as BillingStatus;
-  const writable = canWrite(billing);
+  const writable = canWrite(event);
   const plan =
-    billing === "comped"
+    event.plan === "free"
+      ? { line: "Free", hint: `Up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos` }
+      : billing === "comped"
       ? { line: "Complimentary", hint: "Nothing to pay for this event" }
       : writable
         ? { line: PRICE.line, hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }

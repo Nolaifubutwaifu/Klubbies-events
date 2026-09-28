@@ -21,7 +21,9 @@ const EXTENSION_TYPES: Record<string, string> = {
 
 export const ACCEPT_ATTRIBUTE = ".jpg,.jpeg,.png,.heic,.heif,.webp,.mp4,.mov,image/jpeg,image/png,image/heic,image/webp,video/mp4,video/quicktime";
 
+/** The largest video anyone can upload (pricing handoff §4). */
 export const LARGE_VIDEO_BYTES = 500 * 1024 * 1024;
+export const VIDEO_TOO_BIG = "Videos can be up to 500 MB. Trim it or export it smaller, then try again.";
 
 /** Browsers often report HEIC and MOV with an empty type; fall back to the extension. */
 export function resolveMimeType(filename: string, reported: string): string | null {

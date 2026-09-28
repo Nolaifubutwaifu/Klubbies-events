@@ -47,7 +47,7 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
   const supabase = await createClient();
   const faceState = await faceStateFor(supabase, ctx.event.id, ctx.userId);
 
-  if (ctx.accessClosed) {
+  if (ctx.accessClosed || ctx.paused) {
     const logo = ctx.event.logo_path
       ? ((await signLogoMarks(supabase, [ctx.event.logo_path])).get(ctx.event.logo_path) ?? null)
       : null;
@@ -62,13 +62,23 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
           logoUrl={logo}
           accentColour={ctx.event.accent_colour}
         >
-          <div className="kb-info max-w-[52ch] flex-col">
-            <strong>This gallery closed on {formatLongDate(ctx.event.access_ends_at)}.</strong>
-            <span>
-              The organiser set it to close after the event. If you still need a photo, contact
-              {ctx.event.organisation ? ` ${ctx.event.organisation}` : " the organiser"} directly.
-            </span>
-          </div>
+          {ctx.accessClosed ? (
+            <div className="kb-info max-w-[52ch] flex-col">
+              <strong>This gallery closed on {formatLongDate(ctx.event.access_ends_at)}.</strong>
+              <span>
+                The organiser set it to close after the event. If you still need a photo, contact
+                {ctx.event.organisation ? ` ${ctx.event.organisation}` : " the organiser"} directly.
+              </span>
+            </div>
+          ) : (
+            <div className="kb-info max-w-[52ch] flex-col">
+              <strong>This gallery is full for now.</strong>
+              <span>
+                We&apos;ve asked the organiser to make room, and we&apos;ll email you when it opens. Your selfie and saved
+                photos are kept.
+              </span>
+            </div>
+          )}
         </EventIntro>
       </Door>
     );

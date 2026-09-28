@@ -107,7 +107,21 @@ export async function applyCheckoutSession(session: Stripe.Checkout.Session): Pr
     .eq("id", eventId)
     .neq("billing_status", "comped");
   if (error) throw error;
+  // Until tier checkout replaces it (pricing handoff, phase 2), the one price
+  // on sale is the old unlimited event, so that is what a payment buys.
+  await setUnlimited(eventId);
   return eventId;
+}
+
+async function setUnlimited(eventId: string): Promise<void> {
+  const { error } = await createAdminClient().rpc("apply_event_plan", {
+    p_event_id: eventId,
+    p_plan: "unlimited",
+    p_rate: null,
+    p_guest_limit: null,
+    p_photo_limit: null,
+  });
+  if (error) throw error;
 }
 
 export async function applySubscription(subscription: Stripe.Subscription): Promise<string | null> {

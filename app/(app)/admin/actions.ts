@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { getEventContextById, requireUser } from "@/lib/auth/session";
+import { mediaUnits } from "@/lib/billing/plans";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
+import { getPlanUsage } from "@/lib/billing/usage";
 import type { Permission } from "@/lib/permissions";
 import { deleteEventEverywhere } from "@/lib/events/delete";
 import { canRestoreEvent, purgeAlbum, purgeMedia } from "@/lib/media/bin";
@@ -225,7 +227,7 @@ const memberSchema = z.object({
 
 export async function addMemberAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await adminContext(eventId);
-  if (!canWrite(ctx.event.billing_status)) return { error: ACTIVATE_MESSAGE };
+  if (!canWrite(ctx.event)) return { error: ACTIVATE_MESSAGE };
   const parsed = memberSchema.safeParse({
     name: text(form, "name"),
     email: text(form, "email"),
@@ -350,7 +352,7 @@ function albumInput(form: FormData) {
 
 export async function createAlbumAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await permContext(eventId, "manage_albums");
-  if (!canWrite(ctx.event.billing_status)) return { error: ACTIVATE_MESSAGE };
+  if (!canWrite(ctx.event)) return { error: ACTIVATE_MESSAGE };
   const parsed = albumInput(form);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
@@ -523,6 +525,21 @@ export async function deleteMediaAction(mediaIds: string[]): Promise<ActionState
   return { ok: true, message: `Deleted ${itemsLabel(items.map((m) => m.kind))}`, ids: items.map((m) => m.id) };
 }
 
+/**
+ * Restoring doesn't go through the database's insert check, so it is checked
+ * here: bringing these back mustn't take the event past its photo allowance.
+ */
+async function pastAllowance(
+  eventId: string,
+  items: { kind: string; status: string; duration_seconds: number | null }[],
+): Promise<string | null> {
+  const usage = await getPlanUsage(eventId);
+  if (!usage?.photoLimit) return null;
+  const adding = items.filter((m) => m.status !== "failed").reduce((sum, m) => sum + mediaUnits(m.kind, m.duration_seconds), 0);
+  if (usage.unitsUsed + adding <= usage.photoLimit) return null;
+  return `Restoring ${items.length === 1 ? "this" : "these"} would take the event past its limit of ${usage.photoLimit} photos. Delete something else first.`;
+}
+
 /** Brings binned photos back. Photos binned with their album come back with the album instead. */
 export async function restoreMediaAction(mediaIds: string[]): Promise<ActionState> {
   const ids = z.array(z.uuid()).min(1).max(500).safeParse(mediaIds);
@@ -530,7 +547,7 @@ export async function restoreMediaAction(mediaIds: string[]): Promise<ActionStat
   const admin = createAdminClient();
   const { data: rows } = await admin
     .from("media")
-    .select("id, event_id, kind, album_id, albums!media_album_id_fkey(deleted_at)")
+    .select("id, event_id, kind, status, duration_seconds, album_id, albums!media_album_id_fkey(deleted_at)")
     .in("id", ids.data)
     .not("deleted_at", "is", null);
   const items = rows ?? [];
@@ -539,6 +556,10 @@ export async function restoreMediaAction(mediaIds: string[]): Promise<ActionStat
   const contexts = await Promise.all([...new Set(items.map((m) => m.event_id))].map(adminContext));
   const restorable = items.filter((m) => !m.albums?.deleted_at);
   if (restorable.length === 0) return { error: "Restore the album these were in first" };
+  for (const ctx of contexts) {
+    const over = await pastAllowance(ctx.event.id, restorable.filter((m) => m.event_id === ctx.event.id));
+    if (over) return { error: over };
+  }
 
   const { error } = await admin.from("media").update({ deleted_at: null, deleted_by: null }).in("id", restorable.map((m) => m.id));
   if (error) return { error: "Could not restore" };
@@ -600,6 +621,13 @@ export async function restoreAlbumAction(albumId: string): Promise<ActionState> 
   const { data: album } = await admin.from("albums").select("id, event_id, title, deleted_at").eq("id", albumId).maybeSingle();
   if (!album?.deleted_at) return { error: "Album not found" };
   const ctx = await permContext(album.event_id, "manage_albums");
+  const { data: coming } = await admin
+    .from("media")
+    .select("kind, status, duration_seconds")
+    .eq("album_id", albumId)
+    .eq("deleted_at", album.deleted_at);
+  const over = await pastAllowance(ctx.event.id, coming ?? []);
+  if (over) return { error: over };
 
   const { error: mediaError } = await admin
     .from("media")

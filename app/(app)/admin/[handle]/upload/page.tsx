@@ -17,7 +17,7 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
   const recent = await listStackedAlbums(supabase, ctx.event.id, { includeDrafts: true, limit: 6 });
-  const writable = canWrite(ctx.event.billing_status);
+  const writable = canWrite(ctx.event);
 
   return (
     <main className="flex flex-col gap-6 pb-12 pt-2">
