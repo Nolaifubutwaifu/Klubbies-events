@@ -7,7 +7,9 @@ import { PageTitle, Stat } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { personName } from "@/lib/auth/display-name";
 import { accessHasEnded } from "@/lib/auth/session";
+import { overflowWindow } from "@/lib/billing/plans";
 import { canWrite } from "@/lib/billing/status";
+import { getPlanUsage } from "@/lib/billing/usage";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { formatDateTime, formatEventDates, formatLongDate, plural } from "@/lib/format";
 import { listStackedAlbums } from "@/lib/media/album-list";
@@ -96,8 +98,42 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   const link = eventLink(handle);
   const closed = accessHasEnded(event);
 
+  const usage = await getPlanUsage(event.id);
+  const { windowEnds, windowOpen } = overflowWindow(event);
+  const photosFull = Boolean(usage?.photoLimit && usage.unitsUsed >= usage.photoLimit);
+
   // What needs doing, then the numbers, then the evidence.
   const tasks = [
+    windowOpen && windowEnds
+      ? {
+          key: "overflow",
+          title: "The event is over its guest limit",
+          body: `Guests can keep joining until ${formatDateTime(windowEnds)}. ${inApp ? "After that, the guests who joined last are paused." : "Upgrade before then to keep them all."}`,
+          href: `/admin/${handle}/billing`,
+          cta: inApp ? "Status" : "Upgrade",
+          urgent: true,
+        }
+      : null,
+    usage && usage.guestsPaused > 0
+      ? {
+          key: "paused",
+          title: `${plural(usage.guestsPaused, "guest")} paused`,
+          body: `They joined after the event filled up and can't see photos. ${inApp ? "Removing guests makes room." : "Upgrade to let them in, or remove guests to make room."}`,
+          href: `/admin/${handle}/billing`,
+          cta: inApp ? "Status" : "Upgrade",
+          urgent: true,
+        }
+      : null,
+    photosFull
+      ? {
+          key: "photos-full",
+          title: "Uploads have stopped",
+          body: `The event has used all ${usage?.photoLimit?.toLocaleString("en-AU")} of its photos. ${inApp ? "Delete some to make room." : "Upgrade, or delete some to make room."}`,
+          href: `/admin/${handle}/billing`,
+          cta: inApp ? "Status" : "Upgrade",
+          urgent: true,
+        }
+      : null,
     !writable
       ? {
           key: "billing",

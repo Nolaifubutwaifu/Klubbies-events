@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { Faq } from "@/components/site/Faq";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
-import { ATTENDEE_FEATURES, FACE, FAQS, ORGANISER_FEATURES, PRICE, PRIVACY_PROMISES, STEPS, type Feature } from "@/lib/copy/site";
+import { TIER_ORDER, TIERS } from "@/lib/billing/plans";
+import { ATTENDEE_FEATURES, FACE, FAQS, ORGANISER_FEATURES, PRICE, PRICE_QUESTIONS, PRIVACY_PROMISES, STEPS, type Feature } from "@/lib/copy/site";
 
 /*
  * The public home page, for organisers. No testimonials: we have no customer
@@ -175,10 +176,12 @@ function SectionHeading({ eyebrow, title, lead, id }: { eyebrow: string; title: 
   );
 }
 
-export function Home() {
+/** Inside the iPhone app prices, the pricing section and cost questions are left out: Apple allows no payment prompts there. */
+export function Home({ inApp = false }: { inApp?: boolean }) {
+  const faqs = inApp ? FAQS.filter((item) => !PRICE_QUESTIONS.has(item.q)) : FAQS;
   return (
     <>
-      <SiteNav />
+      <SiteNav inApp={inApp} />
       <main>
         {/* Hero */}
         <section className="kb-section !pt-16 sm:!pt-24">
@@ -200,7 +203,7 @@ export function Home() {
                   How it works
                 </Link>
               </div>
-              <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.trust.join(" · ")}</p>
+              {inApp ? null : <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.trust.join(" · ")}</p>}
             </div>
             <PhoneMock />
           </div>
@@ -336,17 +339,16 @@ export function Home() {
         </section>
 
         {/* Pricing */}
+        {inApp ? null : (
         <section className="kb-section" aria-labelledby="pricing">
-          <div className="kb-wrap grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-center">
-            <SectionHeading
-              id="pricing"
-              eyebrow="Pricing"
-              title="One price per event."
-              lead="No subscription to cancel after the event, and no charge per attendee or per photo. Set up for free and pay when you activate."
-            />
-            <div className="flex flex-col gap-5 rounded-[var(--kb-r-panel)] border border-[color:var(--kb-line)] bg-white p-7 shadow-[0_24px_60px_-40px_rgb(22_24_29/0.4)]">
-              <span className="kb-eyebrow">{PRICE.unit}</span>
-              <span className="text-[52px] font-semibold leading-none tracking-[-0.03em]">{PRICE.amount}</span>
+          <div className="kb-wrap grid gap-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
+            <div className="flex flex-col gap-6">
+              <SectionHeading
+                id="pricing"
+                eyebrow="Pricing"
+                title="Free for small events. One payment for bigger ones."
+                lead="Pick a size by how many guests you expect. No subscription to cancel after the event, and every size gets every feature."
+              />
               <ul className="m-0 flex list-none flex-col p-0 text-[15px]">
                 {PRICE.includes.map((item) => (
                   <li key={item} className="flex items-center gap-2.5 border-t border-[color:var(--kb-line)] py-2.5">
@@ -357,19 +359,61 @@ export function Home() {
                   </li>
                 ))}
               </ul>
+            </div>
+            <div className="flex flex-col gap-5 rounded-[var(--kb-r-panel)] border border-[color:var(--kb-line)] bg-white p-5 shadow-[0_24px_60px_-40px_rgb(22_24_29/0.4)] sm:p-7">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px] border-collapse text-left text-[15px]">
+                  <caption className="sr-only">Prices by event size, in Australian dollars, one payment per event</caption>
+                  <thead>
+                    <tr className="text-[14px] text-[color:var(--kb-ink-3)]">
+                      <th scope="col" className="pb-3 font-medium">Size</th>
+                      <th scope="col" className="pb-3 font-medium">Guests*</th>
+                      <th scope="col" className="pb-3 font-medium">Photos and videos</th>
+                      <th scope="col" className="pb-3 text-right font-medium">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TIER_ORDER.map((tier) => (
+                      <tr key={tier} className="border-t border-[color:var(--kb-line)]">
+                        <th scope="row" className="py-3 font-semibold">
+                          {TIERS[tier].name}
+                        </th>
+                        <td className="py-3 tabular-nums">up to {TIERS[tier].guests.toLocaleString("en-AU")}</td>
+                        <td className="py-3 tabular-nums">{TIERS[tier].photos.toLocaleString("en-AU")}</td>
+                        <td className="py-3 text-right text-[17px] font-semibold tabular-nums">
+                          {TIERS[tier].price.standard ? `A$${TIERS[tier].price.standard}` : "Free"}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-[color:var(--kb-line)]">
+                      <th scope="row" className="py-3 font-semibold">
+                        Bigger
+                      </th>
+                      <td className="py-3" colSpan={2}>
+                        over {TIERS.large.guests.toLocaleString("en-AU")} guests
+                      </td>
+                      <td className="py-3 text-right">
+                        <Link href="/support">Ask us</Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
               <Link href="/start" className="btn btn-primary btn-lg no-underline">
                 Create an event
               </Link>
-              <span className="kb-caption">{PRICE.note}</span>
+              <span className="kb-caption">{PRICE.clubs}</span>
+              <span className="kb-caption">* {PRICE.footnote}</span>
             </div>
           </div>
         </section>
+        )}
 
         {/* Questions */}
         <section className="kb-section kb-sand" aria-labelledby="questions">
           <div className="kb-wrap grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <SectionHeading id="questions" eyebrow="Questions" title="Before you book the photographer." />
-            <Faq items={FAQS} />
+            <Faq items={faqs} />
           </div>
         </section>
 

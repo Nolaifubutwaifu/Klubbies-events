@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { pruneRateEvents } from "@/lib/auth/rate-limit";
 import { isMonthlyCheckHour, runBackupDrain, runBackupPurge, runMonthlyBackupCheck } from "@/lib/backup/r2";
+import { runPlanNotices } from "@/lib/billing/notices";
 import { closeOverflowWindows } from "@/lib/billing/usage";
 import { serverEnv } from "@/lib/env";
 import { runFaceJobs } from "@/lib/faces/jobs";
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
   const unfinished = await runUnfinishedSweep();
   const bin = await runBinPurge(new Date(), left(45_000));
   const overflowClosed = (await closeOverflowWindows().catch((error) => (console.error("overflow windows", error), []))).length;
+  const planNotices = await runPlanNotices().catch((error) => (console.error("plan notices", error), 0));
   const backup = await runBackupDrain(left(70_000)).catch((error) => (console.error("backup drain", error), null));
   const backupPurged = await runBackupPurge().catch((error) => (console.error("backup purge", error), 0));
   const backupCheck = isMonthlyCheckHour()
@@ -56,5 +58,5 @@ export async function GET(request: Request) {
     : null;
   const faces = await runFaceJobs({ budgetMs: left(240_000) });
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, backup, backupPurged, backupCheck, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, faces });
 }

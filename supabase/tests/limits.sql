@@ -167,11 +167,17 @@ begin
   if not exists (select 1 from public.memberships where user_id = v_guests[13] and paused_at is not null) then
     raise exception 'guest 13 should still be paused';
   end if;
+  if not exists (select 1 from public.memberships where user_id = v_guests[12] and let_in_at is not null) then
+    raise exception 'guest 12 should be marked as let in, for their email';
+  end if;
 
   -- The organiser restoring guest 3 is never refused; guest 12 goes back to waiting.
   update public.memberships set status = 'active' where user_id = v_guests[3];
   if not exists (select 1 from public.memberships where user_id = v_guests[12] and paused_at is not null) then
     raise exception 'restoring guest 3 should pause guest 12 again';
+  end if;
+  if exists (select 1 from public.memberships where user_id = v_guests[12] and let_in_at is not null) then
+    raise exception 'guest 12 is paused again and should not get a let-in email';
   end if;
 
   -- ---------------------------------------------------------------------

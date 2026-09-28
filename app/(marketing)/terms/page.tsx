@@ -90,8 +90,11 @@ export default function TermsPage() {
           title: "Payment",
           body: (
             <p>
-              Each event is paid for once, through Stripe, before uploading and adding attendees unlock. Prices include
-              GST where applicable. Refunds are covered in the <Link href="/refunds">refund policy</Link>.
+              An event is free up to the Free size&apos;s guest and photo limits. A bigger size is paid for once, through
+              Stripe, and moving up a size costs the difference between the two, or the difference plus 25% once the
+              event has run out of room. When an event is past its size, new guests can be refused and the guests who
+              joined last paused, not removed, until the organiser upgrades or makes room, as described on the billing
+              page. Prices include GST where applicable. Refunds are covered in the <Link href="/refunds">refund policy</Link>.
             </p>
           ),
         },

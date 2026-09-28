@@ -17,7 +17,8 @@ const LINKS: { key: Exclude<SiteSection, null>; href: string; label: string }[] 
  * The one nav for Home, How it works and the legal pages. Below 640px it is
  * the logo, a plain Log in link and a menu button: nothing can wrap.
  */
-export function SiteNav({ current = null }: { current?: SiteSection }) {
+export function SiteNav({ current = null, inApp = false }: { current?: SiteSection; inApp?: boolean }) {
+  const links = inApp ? LINKS.filter((link) => link.key !== "pricing") : LINKS;
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
@@ -61,7 +62,7 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
         <Brand />
 
         <nav aria-label="Main" className="ml-auto hidden items-center gap-7 sm:flex">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.key}
               href={link.href}
@@ -125,7 +126,7 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
             </button>
           </div>
           <nav aria-label="Main" className="kb-wrap mt-4 flex flex-col">
-            {[...LINKS, { key: "faq", href: "/#questions", label: "Questions" }].map((link) => (
+            {[...links, { key: "faq", href: "/#questions", label: "Questions" }].map((link) => (
               <Link
                 key={link.key}
                 href={link.href}
@@ -144,7 +145,7 @@ export function SiteNav({ current = null }: { current?: SiteSection }) {
             <Link href="/signin" className="btn btn-secondary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
               Sign in
             </Link>
-            <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.line}. No subscription.</p>
+            {inApp ? null : <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.line}. No subscription.</p>}
           </div>
         </div>
       ) : null}

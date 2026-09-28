@@ -2,141 +2,212 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { SubmitButton } from "@/components/forms";
+import { PlanMeters } from "@/components/PlanMeters";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { BILLING_LABEL, isPaidStatus, type BillingStatus } from "@/lib/billing/status";
-import { getPriceSummary, stripeConfigured, syncReturnedSession, type PriceSummary } from "@/lib/billing/stripe";
-import { PRICE } from "@/lib/copy/site";
-import { formatLongDate } from "@/lib/format";
+import { CLUB_CODES } from "@/lib/billing/club-codes";
+import { overflowWindow, planName, suggestedTier, TIERS, tierOffers, windowCeiling } from "@/lib/billing/plans";
+import { stripeConfigured, syncReturnedSession } from "@/lib/billing/stripe";
+import { getPlanUsage } from "@/lib/billing/usage";
+import { formatDateTime, formatLongDate } from "@/lib/format";
 import { isNativeAppUserAgent } from "@/lib/native-app";
+import { createClient } from "@/lib/supabase/server";
 import { devActivateAction, openBillingPortalAction, startCheckoutAction } from "../../billing-actions";
+import { ClubCodeForm, ExpectedGuestsForm } from "./BillingForms";
 
 export const metadata: Metadata = { title: "Billing" };
 
 export default async function BillingPage(props: PageProps<"/admin/[handle]/billing">) {
   const { handle } = await props.params;
   const search = await props.searchParams;
-  const ctx = await requireAdminContext(handle);
+  let ctx = await requireAdminContext(handle);
   const configured = stripeConfigured();
 
-  let status = ctx.event.billing_status as BillingStatus;
   let justPaid = false;
-  if (configured && typeof search.session_id === "string" && !isPaidStatus(status)) {
-    justPaid = await syncReturnedSession(search.session_id, ctx.event.id).catch((error) => {
+  if (configured && typeof search.session_id === "string") {
+    justPaid = await syncReturnedSession(search.session_id, ctx.event.id).catch((error: unknown) => {
       console.error("session sync failed", error);
       return false;
     });
-    if (justPaid) status = "active";
+    // The plan may have just changed: read the event again.
+    if (justPaid) ctx = await requireAdminContext(handle);
   }
-  if (typeof search.session_id === "string" && isPaidStatus(status)) justPaid = true;
+  const { event } = ctx;
 
-  let price: PriceSummary | null = null;
-  if (configured && !isPaidStatus(status)) {
-    price = await getPriceSummary().catch((error) => {
-      console.error("price lookup failed", error);
-      return null;
-    });
-  }
+  const supabase = await createClient();
+  const [usage, { data: purchases }] = await Promise.all([
+    getPlanUsage(event.id),
+    supabase
+      .from("event_purchases")
+      .select("id, kind, from_plan, to_plan, late, amount_cents, created_at")
+      .eq("event_id", event.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const writable = isPaidStatus(status);
+  const offers = tierOffers(event);
+  const suggestion = suggestedTier(event.expected_guests);
   const devActivate = !configured && process.env.NODE_ENV !== "production";
   // Apple doesn't allow an iPhone app to sell digital services except through
   // in-app purchase, or to point people at another way to pay. So inside the
-  // app this page reports the event's status and offers no payment controls.
+  // app this page reports the event's plan and offers no payment controls.
   const inApp = isNativeAppUserAgent((await headers()).get("user-agent"));
+  const rateLabel = event.plan_rate === "club" || (!event.plan_rate && event.club_code) ? "Club rate" : null;
+
+  const { windowEnds, windowOpen } = overflowWindow(event);
 
   return (
     <main className="flex max-w-[920px] flex-col gap-6 pb-12 pt-2">
-      <PageTitle kicker={ctx.event.name} title={writable ? "Billing" : "Activate the event"}>
-        {writable ? undefined : PRICE.note}
+      <PageTitle kicker={event.name} title="Plan and billing">
+        One payment per event, no subscription. Every size has face search, your branding, the share kit and a gallery
+        open for 12 months.
       </PageTitle>
 
       {search.canceled ? <div className="notice">Checkout was cancelled. Nothing was charged.</div> : null}
       {search.error === "checkout" ? <div className="notice">We couldn&apos;t open checkout. Try again in a moment.</div> : null}
       {search.error === "portal" ? <div className="notice">We couldn&apos;t open your receipts. Try again in a moment.</div> : null}
-      {!configured && !devActivate ? (
-        <div className="notice">Payments aren&apos;t configured on this deployment yet (STRIPE_SECRET_KEY and STRIPE_PRICE_ID).</div>
+      {justPaid ? (
+        <div className="notice" role="status">
+          Paid. {event.name} is now {planName(event.plan)}.{" "}
+          <Link href={`/admin/${handle}/setup`}>Continue setting up</Link>
+        </div>
       ) : null}
 
-      {writable ? (
-        <section className="soft-card flex flex-col gap-4 p-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="soft-chip">{BILLING_LABEL[status]}</span>
-            {ctx.event.paid_at ? (
-              <span className="text-[14px] text-[color:var(--ink-70)]">Paid {formatLongDate(ctx.event.paid_at)}</span>
-            ) : null}
-          </div>
-          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            {justPaid ? "Paid. The event is active." : status === "comped" ? "This event is complimentary." : "The event is active."}
-          </h2>
-          <p className="m-0 max-w-[60ch] text-[15px] text-ink-70">
-            Uploading, photographer links and attendees are unlocked. There is nothing more to pay for this event.
-          </p>
-          {inApp ? <p className="m-0 text-[14px] text-[color:var(--ink-70)]">Receipts aren&apos;t available in the iPhone app.</p> : null}
-          <div className="flex flex-wrap gap-3">
-            {justPaid ? (
-              <Link href={`/admin/${handle}/setup`} className="btn btn-primary no-underline">
-                Continue setting up
-              </Link>
-            ) : null}
-            {ctx.event.stripe_customer_id && configured && !inApp ? (
-              <form action={openBillingPortalAction.bind(null, ctx.event.id)}>
-                <SubmitButton className="btn btn-secondary" pendingText="Opening…">
-                  Receipts and invoices
-                </SubmitButton>
-              </form>
-            ) : null}
-          </div>
-        </section>
-      ) : inApp ? (
-        <section className="soft-card flex flex-col gap-3 p-6">
-          <span className="soft-chip soft-chip-muted self-start">{BILLING_LABEL[status]}</span>
-          <h2 className="text-[22px] font-semibold">{ctx.event.name} isn&apos;t active yet.</h2>
-          <p className="m-0 max-w-[60ch] text-[15px] text-ink-70">
-            Events can&apos;t be activated in the iPhone app. Once it&apos;s active, uploading and attendees unlock here too.
-          </p>
-        </section>
-      ) : (
-        <section className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-          <div className="soft-card flex flex-col gap-4 p-6">
-            <span className="kb-eyebrow">{PRICE.unit}</span>
-            <div className="text-[40px] font-semibold leading-none tracking-[-0.03em]">{price?.label ?? PRICE.amount}</div>
-            <ul className="m-0 flex list-none flex-col p-0 text-[15px]">
-              {PRICE.includes.map((item) => (
-                <li key={item} className="border-t border-[color:var(--kb-line)] py-2">
-                  {item}
-                </li>
-              ))}
-            </ul>
-            {devActivate ? (
-              <form action={devActivateAction.bind(null, ctx.event.id)}>
-                <SubmitButton className="btn btn-primary btn-lg w-full" pendingText="Activating…">
-                  Activate without payment (development)
-                </SubmitButton>
-              </form>
-            ) : (
-              <form action={startCheckoutAction.bind(null, ctx.event.id)}>
-                <SubmitButton className="btn btn-primary btn-lg w-full" pendingText="Opening secure checkout…" disabled={!configured}>
-                  Pay and activate
-                </SubmitButton>
-              </form>
-            )}
-            <span className="text-[14px] text-[color:var(--ink-55)]">
-              Payments are handled by Stripe. We never see your card details. By activating you agree to the{" "}
-              <Link href="/terms">terms</Link> and <Link href="/refunds">refund policy</Link>.
+      <section className="soft-card flex flex-col gap-5 p-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-[22px] font-semibold tracking-[-0.02em]">{planName(event.plan)}</h2>
+          {rateLabel ? <span className="soft-chip">{rateLabel}</span> : null}
+          {event.billing_status === "comped" ? <span className="soft-chip">Complimentary</span> : null}
+          {event.paid_at ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">Paid {formatLongDate(event.paid_at)}</span> : null}
+        </div>
+        {usage ? (
+          <PlanMeters
+            guestsJoined={usage.guestsJoined}
+            guestLimit={usage.guestLimit}
+            guestsPaused={usage.guestsPaused}
+            unitsUsed={usage.unitsUsed}
+            photoLimit={usage.photoLimit}
+          />
+        ) : null}
+        {windowOpen && windowEnds && event.guest_limit ? (
+          <div className="kb-info flex-col" role="status">
+            <strong>This event is over its guest limit.</strong>
+            <span>
+              Guests can keep joining until {formatDateTime(windowEnds)}, up to {windowCeiling(event.guest_limit).toLocaleString("en-AU")}.
+              {inApp ? "" : " Choose a bigger size before then to keep them all."}
             </span>
           </div>
-          <div className="flex flex-col gap-3">
-            <span className="text-[14px] font-medium">What happens next</span>
-            <ol className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-normal text-ink-70">
-              <li>1. Pay on Stripe&apos;s secure checkout page. Company cards and promo codes work.</li>
-              <li>2. You come straight back here and the event unlocks.</li>
-              <li>3. Add photographers, create albums and share the QR code.</li>
-            </ol>
-            <p className="m-0 text-[14px] text-[color:var(--ink-70)]">Need an invoice for your company? The receipt from Stripe includes your details.</p>
+        ) : null}
+        {usage && usage.guestsPaused > 0 ? (
+          <div className="kb-info flex-col" role="status">
+            <strong>
+              {usage.guestsPaused === 1 ? "1 guest is paused." : `${usage.guestsPaused} guests are paused.`}
+            </strong>
+            <span>
+              They joined after the event filled up and can&apos;t see photos yet.
+              {inApp ? "" : " Choosing a bigger size lets them all in straight away."}
+            </span>
           </div>
+        ) : null}
+        {event.plan === "unlimited" ? (
+          <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">This event has no guest or photo limit.</p>
+        ) : null}
+      </section>
+
+      {offers.length && inApp ? (
+        <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">The event&apos;s size can&apos;t be changed in the iPhone app.</p>
+      ) : null}
+
+      {offers.length && !inApp ? (
+        <section className="flex flex-col gap-4" aria-labelledby="sizes">
+          <h2 id="sizes" className="text-[18px] font-semibold">
+            {event.plan === "free" ? "Choose a size" : "Upgrade"}
+          </h2>
+          <ExpectedGuestsForm eventId={event.id} expected={event.expected_guests} />
+          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+            {offers.map((offer) => {
+              const tier = TIERS[offer.to];
+              return (
+                <div
+                  key={offer.to}
+                  className={`soft-card flex flex-col gap-3 p-5 ${suggestion === offer.to ? "outline outline-2 outline-[color:var(--kb-ember)]" : ""}`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-[17px] font-semibold">{tier.name}</span>
+                    {suggestion === offer.to ? <span className="soft-chip">Fits your guests</span> : null}
+                  </span>
+                  <span className="text-[14px] text-[color:var(--kb-ink-2)]">
+                    Up to {tier.guests.toLocaleString("en-AU")} guests · {tier.photos.toLocaleString("en-AU")} photos and videos
+                  </span>
+                  <span className="text-[32px] font-semibold leading-none tracking-[-0.03em]">A${offer.amount}</span>
+                  <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                    {offer.kind === "upgrade" ? `The difference from ${planName(offer.from)}` : "One payment for this event"}
+                    {offer.late ? ", plus 25% because the event has already run out of room" : ""}
+                    {offer.rate === "club" ? " · club rate" : ""}
+                  </span>
+                  {devActivate ? null : (
+                    <form action={startCheckoutAction.bind(null, event.id, offer.to)}>
+                      <SubmitButton className="btn btn-primary w-full" pendingText="Opening secure checkout…" disabled={!configured}>
+                        Pay A${offer.amount}
+                      </SubmitButton>
+                    </form>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
+            Up to 10% more guests than the size are included. Past that, guests can keep joining for 2 days, up to 50%
+            over, while you upgrade; upgrading after that point costs the difference plus 25%.
+            {offers[0]?.kind === "tier" ? " Have a promotion code? Enter it on the payment page." : ""}
+          </p>
+          {!event.plan_rate ? <ClubCodeForm eventId={event.id} code={event.club_code} campus={event.club_code ? (CLUB_CODES[event.club_code] ?? null) : null} /> : null}
+          {!configured && !devActivate ? (
+            <div className="notice">Payments aren&apos;t configured on this deployment yet (STRIPE_SECRET_KEY).</div>
+          ) : null}
+          <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+            Payments are handled by Stripe. We never see your card details. By paying you agree to the{" "}
+            <Link href="/terms">terms</Link> and <Link href="/refunds">refund policy</Link>.
+          </span>
         </section>
-      )}
+      ) : null}
+
+      {devActivate && event.plan !== "unlimited" ? (
+        <form action={devActivateAction.bind(null, event.id)}>
+          <SubmitButton className="btn btn-secondary" pendingText="Activating…">
+            Make unlimited without payment (development)
+          </SubmitButton>
+        </form>
+      ) : null}
+
+      {purchases?.length ? (
+        <section className="flex flex-col gap-3" aria-labelledby="payments">
+          <h2 id="payments" className="text-[16px] font-semibold">
+            Payments
+          </h2>
+          <ul className="m-0 flex list-none flex-col divide-y divide-[color:var(--kb-line)] rounded-[10px] border border-[color:var(--kb-line)] bg-white p-0">
+            {purchases.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-[15px]">
+                <span>
+                  {p.kind === "upgrade" ? `${planName(p.from_plan ?? "")} to ${planName(p.to_plan ?? "")}` : planName(p.to_plan ?? "")}
+                  {p.late ? " (late)" : ""}
+                </span>
+                <span className="text-[color:var(--kb-ink-2)]">
+                  {inApp ? "" : `A$${(p.amount_cents / 100).toFixed(2)} · `}
+                  {formatLongDate(p.created_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {event.stripe_customer_id && configured && !inApp ? (
+        <form action={openBillingPortalAction.bind(null, event.id)}>
+          <SubmitButton className="btn btn-secondary" pendingText="Opening…">
+            Receipts and invoices
+          </SubmitButton>
+        </form>
+      ) : null}
     </main>
   );
 }

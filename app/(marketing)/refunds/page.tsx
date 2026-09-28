@@ -15,8 +15,9 @@ export default function RefundsPage() {
           title: "How billing works",
           body: (
             <p>
-              Each event is a single payment, taken through Stripe when the organiser activates it. There is no
-              subscription and nothing renews. The price is shown before you pay and on the receipt and invoice.
+              Small events are free. A bigger size is a single payment for that event, taken through Stripe, and an
+              upgrade to a bigger size is another single payment for the difference. There is no subscription and
+              nothing renews. The price is shown before you pay and on the receipt and invoice.
             </p>
           ),
         },

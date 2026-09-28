@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { includedGuests, mediaUnits, TIERS, upgradePrice, windowCeiling } from "@/lib/billing/plans";
+import { normaliseClubCode } from "@/lib/billing/club-codes";
+import { includedGuests, mediaUnits, suggestedTier, TIERS, tierOffers, upgradePrice, windowCeiling } from "@/lib/billing/plans";
 
 describe("tiers", () => {
   it("match the pricing handoff", () => {
@@ -46,5 +47,59 @@ describe("upgrade prices", () => {
   it("is never a downgrade", () => {
     expect(upgradePrice("medium", "small", "club", false)).toBeNull();
     expect(upgradePrice("small", "small", "club", false)).toBeNull();
+  });
+});
+
+describe("what an event can buy", () => {
+  const base = { plan: "free", plan_rate: null, club_code: null, overflow_started_at: null };
+
+  it("offers every paid size from Free, at standard prices without a club code", () => {
+    const offers = tierOffers(base);
+    expect(offers.map((o) => [o.to, o.amount, o.kind])).toEqual([
+      ["small", 49, "tier"],
+      ["medium", 79, "tier"],
+      ["large", 149, "tier"],
+    ]);
+  });
+
+  it("uses club prices with a club code, until the first payment fixes the rate", () => {
+    expect(tierOffers({ ...base, club_code: "UQCLUBS" })[0].amount).toBe(29);
+    expect(tierOffers({ ...base, plan: "small", plan_rate: "standard", club_code: "UQCLUBS" })[0]).toMatchObject({
+      to: "medium",
+      amount: 30,
+      rate: "standard",
+      kind: "upgrade",
+    });
+  });
+
+  it("charges the late price once the window has opened", () => {
+    expect(tierOffers({ ...base, plan: "small", plan_rate: "club", overflow_started_at: "2026-10-01T00:00:00Z" })[0]).toMatchObject({
+      to: "medium",
+      amount: 38,
+      late: true,
+    });
+  });
+
+  it("gives founding clubs their A$60 Medium to Large gap", () => {
+    expect(tierOffers({ ...base, plan: "medium", plan_rate: "club" })[0]).toMatchObject({ to: "large", amount: 60 });
+  });
+
+  it("offers nothing to unlimited or custom events", () => {
+    expect(tierOffers({ ...base, plan: "unlimited" })).toEqual([]);
+    expect(tierOffers({ ...base, plan: "custom" })).toEqual([]);
+  });
+
+  it("suggests the smallest size that fits", () => {
+    expect(suggestedTier(40)).toBe("free");
+    expect(suggestedTier(151)).toBe("medium");
+    expect(suggestedTier(5000)).toBeNull();
+  });
+});
+
+describe("club codes", () => {
+  it("accept any case and spacing", () => {
+    expect(normaliseClubCode(" uqclubs ")).toBe("UQCLUBS");
+    expect(normaliseClubCode("QUT CLUBS")).toBe("QUTCLUBS");
+    expect(normaliseClubCode("FOUNDING25")).toBeNull();
   });
 });

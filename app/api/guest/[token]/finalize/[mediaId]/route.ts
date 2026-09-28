@@ -5,6 +5,7 @@ import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { recordGuestUpload, resolveGuestLink } from "@/lib/guest/links";
 import { derivativePaths, listFolder } from "@/lib/storage";
 import { kickBackup } from "@/lib/backup/r2";
+import { kickPlanNotices } from "@/lib/billing/notices";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
@@ -68,6 +69,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   await recordGuestUpload(session.linkId, byteSize);
   // The second copy in R2, once the response has gone.
   kickBackup(mediaId);
+  kickPlanNotices(media.event_id);
 
   // Face recognition, when the event has turned it on. Wrapped so it can never
   // fail the upload: a missing face job is a nuisance, a failed upload is not.

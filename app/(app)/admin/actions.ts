@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getEventContextById, requireUser } from "@/lib/auth/session";
 import { mediaUnits } from "@/lib/billing/plans";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
+import { kickPlanNotices } from "@/lib/billing/notices";
 import { getPlanUsage } from "@/lib/billing/usage";
 import type { Permission } from "@/lib/permissions";
 import { deleteEventEverywhere } from "@/lib/events/delete";
@@ -303,6 +304,8 @@ export async function removeMembersAction(eventId: string, membershipIds: string
     .update({ status: "revoked" })
     .in("id", targets.map((m) => m.id));
   if (error) return { error: "Could not remove them" };
+  // Removing a guest can let a paused one in: email them.
+  kickPlanNotices(eventId);
 
   revalidatePath(`/admin/${ctx.event.handle}/attendees`);
   return { ok: true, message: `${targets.length} removed. They can no longer open the event.` };

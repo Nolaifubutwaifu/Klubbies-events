@@ -18,24 +18,31 @@
 // sharing links, watermarking, or exact scheduled publishing times (the hourly
 // cron makes those approximate).
 
+import { TIERS } from "@/lib/billing/plans";
+
 /**
- * The price is set in Stripe (STRIPE_PRICE_ID); this is how it's described.
- * Change both together.
+ * How the tiers are described (docs/handoff-pricing-tiers.md). The numbers
+ * come from lib/billing/plans.ts; Stripe charges what the billing page asks.
+ * Never shown inside the iPhone app.
  */
 export const PRICE = {
-  amount: "A$1",
-  line: "A$1 per event",
-  unit: "one payment per event",
-  trust: ["One payment per event", "No subscription", "Unlimited photos and attendees"],
-  note: "Setting up is free. You pay once when you activate the event to upload and invite attendees.",
+  amount: "Free",
+  line: `Free for up to ${TIERS.free.guests} guests, paid sizes from A$${TIERS.small.price.standard} per event`,
+  unit: "One payment per event",
+  trust: ["Free for small events", "One payment per event", "No subscription"],
+  note: `Free for up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos, no card needed. Bigger events pay once, by size.`,
   includes: [
-    "Unlimited attendees, photographers and albums",
-    "Full quality photos and video, originals kept",
     "Face search so attendees find their own photos",
-    "QR code, printable poster and announcement email",
     "Your logo and colour on every attendee screen",
-    "Gallery open for 90 days, adjustable",
+    "QR code, printable poster and announcement email",
+    "Photographer upload links, no account needed",
+    "Full quality photos and video, originals kept",
+    "Gallery open to guests for 12 months after the event",
   ],
+  /** The asterisk under the pricing table. */
+  footnote:
+    "Up to 10% more guests than the size are included. Past that, guests can keep joining for 2 days, up to 50% over, while you upgrade. Upgrading after the event has run out of room costs the difference plus 25%.",
+  clubs: `Student club? Club prices from A$${TIERS.small.price.club} with your campus club code.`,
 } as const;
 
 export const FACE = {
@@ -159,6 +166,17 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What does it cost?",
-    a: `${PRICE.line}, paid once when you activate the event. No subscription, and no limit on photos, attendees or photographers.`,
+    a: `Free for up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos. Bigger events pay once, by size: A$${TIERS.small.price.standard} for up to ${TIERS.small.guests} guests, A$${TIERS.medium.price.standard} for up to ${TIERS.medium.guests}, A$${TIERS.large.price.standard} for up to ${TIERS.large.guests.toLocaleString("en-AU")}. Student clubs pay less with their campus club code. No subscription, and no limit on photographers.`,
+  },
+  {
+    q: "What if more guests come than I planned?",
+    a: "Up to 10% over is included. Past that, guests can keep joining for 2 days, up to 50% over, while you upgrade for the difference plus 25%. If nobody upgrades, the guests who joined last are paused, not removed, until you make room.",
+  },
+  {
+    q: "How do videos count?",
+    a: "Each started minute of video counts as 10 photos toward your event's allowance, so a 2 minute clip counts as 20. Each video can be up to 500 MB.",
   },
 ];
+
+/** Questions about money, left out of the FAQ inside the iPhone app. */
+export const PRICE_QUESTIONS = new Set(["What does it cost?", "What if more guests come than I planned?"]);

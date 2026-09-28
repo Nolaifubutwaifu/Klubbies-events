@@ -2,9 +2,8 @@ import { AdminNav } from "@/components/AdminNav";
 import { AppHeader } from "@/components/AppHeader";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { accessHasEnded } from "@/lib/auth/session";
-import { TIERS } from "@/lib/billing/plans";
+import { isTier, planName, TIERS } from "@/lib/billing/plans";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
-import { PRICE } from "@/lib/copy/site";
 import { eventAddress } from "@/lib/env";
 import { formatDate } from "@/lib/format";
 import { signLogoMarks } from "@/lib/storage";
@@ -43,13 +42,15 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
 
   const billing = event.billing_status as BillingStatus;
   const writable = canWrite(event);
-  const plan =
-    event.plan === "free"
-      ? { line: "Free", hint: `Up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos` }
-      : billing === "comped"
+  const plan = isTier(event.plan)
+    ? {
+        line: `${planName(event.plan)}${event.plan_rate === "club" ? " · club rate" : ""}`,
+        hint: `Up to ${TIERS[event.plan].guests.toLocaleString("en-AU")} guests and ${TIERS[event.plan].photos.toLocaleString("en-AU")} photos`,
+      }
+    : billing === "comped"
       ? { line: "Complimentary", hint: "Nothing to pay for this event" }
       : writable
-        ? { line: PRICE.line, hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
+        ? { line: planName(event.plan), hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
         : { line: BILLING_LABEL[billing], hint: "Activate to upload" };
 
   const status: { label: string; tone: "live" | "quiet" | "attention" } = !writable

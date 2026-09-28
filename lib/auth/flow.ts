@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { sendSignInCode } from "@/lib/email/send";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
+import { kickPlanNotices } from "@/lib/billing/notices";
 import { eventIsFull, GUESTS_FULL } from "@/lib/billing/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -103,6 +104,7 @@ export async function joinByLink(eventId: string, userId: string, email: string,
     console.error("join by link failed", error);
     return "refused";
   }
+  kickPlanNotices(eventId);
   return "joined";
 }
 
@@ -221,6 +223,7 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
       // On the guest list, but the event filled up before they first signed
       // in: they stay "not joined yet" until the organiser makes room.
       if (error?.code === GUESTS_FULL) await admin.from("memberships").update(identity).eq("id", m.id);
+      else if (!m.first_seen_at) kickPlanNotices(m.event_id);
     }),
   );
 

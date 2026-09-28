@@ -81,3 +81,56 @@ export function upgradePrice(from: Tier, to: Tier, rate: Rate, late: boolean): n
 export function tierLimits(tier: Tier): { guestLimit: number; photoLimit: number } {
   return { guestLimit: TIERS[tier].guests, photoLimit: TIERS[tier].photos };
 }
+
+export type TierOffer = {
+  from: Plan;
+  to: Tier;
+  rate: Rate;
+  /** The overflow window has opened on the current tier: the difference plus 25%. */
+  late: boolean;
+  /** A$ to pay. */
+  amount: number;
+  /** Moving off Free is a first purchase; from a paid tier it is an upgrade. */
+  kind: "tier" | "upgrade";
+};
+
+/**
+ * What the event can move to and what each costs. Free can buy any paid tier;
+ * a paid tier can move up. Unlimited and custom events have nothing to buy.
+ * The rate is the one the event paid with, else club when it has a club code.
+ */
+export function tierOffers(event: {
+  plan: string;
+  plan_rate: string | null;
+  club_code: string | null;
+  overflow_started_at: string | null;
+}): TierOffer[] {
+  if (!isTier(event.plan)) return [];
+  const from = event.plan;
+  const rate: Rate = event.plan_rate === "club" || event.plan_rate === "standard" ? event.plan_rate : event.club_code ? "club" : "standard";
+  const late = Boolean(event.overflow_started_at);
+  return TIER_ORDER.filter((to) => TIER_ORDER.indexOf(to) > TIER_ORDER.indexOf(from)).map((to) => ({
+    from,
+    to,
+    rate,
+    late,
+    amount: upgradePrice(from, to, rate, late) ?? 0,
+    kind: from === "free" ? "tier" : "upgrade",
+  }));
+}
+
+/** The smallest tier that fits an expected headcount. */
+export function suggestedTier(expectedGuests: number | null | undefined): Tier | null {
+  if (!expectedGuests) return null;
+  return TIER_ORDER.find((tier) => TIERS[tier].guests >= expectedGuests) ?? null;
+}
+
+/** When the event's overflow window closes, and whether it is open now. */
+export function overflowWindow(
+  event: { overflow_started_at: string | null; overflow_closed_at: string | null },
+  now = new Date(),
+): { windowEnds: Date | null; windowOpen: boolean } {
+  if (!event.overflow_started_at) return { windowEnds: null, windowOpen: false };
+  const windowEnds = new Date(new Date(event.overflow_started_at).getTime() + WINDOW_HOURS * 3600 * 1000);
+  return { windowEnds, windowOpen: !event.overflow_closed_at && windowEnds > now };
+}
