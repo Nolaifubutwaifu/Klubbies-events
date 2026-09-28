@@ -128,7 +128,7 @@ export const PRIVACY_PROMISES: Step[] = [
   },
   {
     title: "Stored in Australia",
-    body: "Photos, attendee details and faceprints are stored in Sydney.",
+    body: "Photos, attendee details and faceprints are stored in Sydney. A copy of each photo is kept and delivered by Cloudflare, which may be outside Australia; faceprints never leave Sydney.",
   },
   {
     title: "You can see who opened what",

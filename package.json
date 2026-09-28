@@ -14,10 +14,15 @@
     "demo": "tsx --env-file=.env.local scripts/demo.ts",
     "backfill-faces": "tsx --env-file=.env.local scripts/backfill-faces.ts",
     "dedupe-media": "tsx --env-file=.env.local scripts/dedupe-media.ts",
-    "logo-marks": "tsx --env-file=.env.local scripts/logo-marks.ts"
+    "logo-marks": "tsx --env-file=.env.local scripts/logo-marks.ts",
+    "backup-drain": "tsx --env-file=.env.local scripts/backup-drain.ts",
+    "restore-media": "tsx --env-file=.env.local scripts/restore-media.ts"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1136.0",
+    "@aws-sdk/client-s3": "^3.1141.0",
+    "@aws-sdk/lib-storage": "^3.1141.0",
+    "@aws-sdk/s3-request-presigner": "^3.1141.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "@supabase/ssr": "^0.12.7",

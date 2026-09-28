@@ -32,7 +32,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "Where data lives",
-    "Photos, attendee details and faceprints are stored in Sydney, Australia. Sign-in emails are delivered by Resend. Payments are processed by Stripe, which never shares card details with us.",
+    "Photos, attendee details and faceprints are stored in Sydney, Australia. A second copy of each photo and video, and of event logos, is kept by Cloudflare R2 as a backup, encrypted at rest, and full quality downloads and video are delivered from that copy. Cloudflare may hold it outside Australia. Selfies and faceprints are never copied: they stay in Sydney. When a photo is deleted for good, its copy at Cloudflare is deleted 30 days later. Sign-in emails are delivered by Resend. Payments are processed by Stripe, which never shares card details with us.",
   ],
   // Say the uncomfortable part plainly: we create a faceprint for everyone in
   // a photo, not only for people who opted in.

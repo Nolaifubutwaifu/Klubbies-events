@@ -1,6 +1,7 @@
 import "server-only";
 import type { Album, Media } from "@/lib/db/types";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { r2Url } from "@/lib/backup/r2";
+import { SIGNED_URL_TTL, signedUrlLifetime, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 export const ALBUM_PAGE_SIZE = 48;
@@ -218,6 +219,8 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
     ),
     isVideo ? signPaths(supabase, [media.storage_path], SIGNED_URL_TTL.video) : Promise.resolve(new Map<string, string>()),
   ]);
+  // Video plays from the R2 copy once it has one (docs/handoff-retention-backups.md).
+  const r2Video = isVideo ? await r2Url(media, signedUrlLifetime(SIGNED_URL_TTL.video)) : null;
 
   const displayPath = isVideo ? media.poster_path : (media.display_path ?? media.storage_path);
 
@@ -225,7 +228,7 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
     media,
     displayUrl: !isVideo && displayPath ? (displayUrls.get(displayPath) ?? null) : null,
     posterUrl: isVideo && media.poster_path ? (displayUrls.get(media.poster_path) ?? null) : null,
-    videoUrl: isVideo ? (videoUrls.get(media.storage_path) ?? null) : null,
+    videoUrl: isVideo ? (r2Video ?? videoUrls.get(media.storage_path) ?? null) : null,
     prevId: prev.length ? prev[prev.length - 1].id : null,
     nextId: next.length ? next[0].id : null,
     position: (beforeCount.count ?? 0) + 1,

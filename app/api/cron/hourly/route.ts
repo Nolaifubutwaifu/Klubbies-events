@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { pruneRateEvents } from "@/lib/auth/rate-limit";
+import { isMonthlyCheckHour, runBackupDrain, runBackupPurge, runMonthlyBackupCheck } from "@/lib/backup/r2";
 import { closeOverflowWindows } from "@/lib/billing/usage";
 import { serverEnv } from "@/lib/env";
 import { runFaceJobs } from "@/lib/faces/jobs";
@@ -23,7 +24,9 @@ function authorised(request: Request): boolean {
 // attendees a week before a gallery closes, clears uploads that never
 // finished within 14 days, empties anything in Recently deleted for more
 // than 30 days, and closes guest overflow windows that have run 48 hours
-// (pausing the guests who joined last). Closing itself needs no job: RLS compares
+// (pausing the guests who joined last). It copies new uploads to R2 that the
+// upload request didn't, deletes R2 copies whose 30 days are up, and on the
+// 1st of each month checks R2 for events that no longer exist. Closing itself needs no job: RLS compares
 // events.access_ends_at with now() on every read.
 // Publishing runs first so a scheduled album is live as early in the pass as
 // possible.
@@ -34,14 +37,24 @@ function authorised(request: Request): boolean {
 // and anything that errored or was throttled.
 export async function GET(request: Request) {
   if (!authorised(request)) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  // The run shares one 300 second limit, so each long job gets what is left
+  // rather than a fixed slice: face search used to assume it had 240 of it.
+  const deadline = Date.now() + 280_000;
+  const left = (cap: number) => Math.max(0, Math.min(cap, deadline - Date.now()));
+
   const scheduled = await runScheduledPublishJob();
   const removals = await runRemovalSweep();
   const accessEnding = await runAccessEndingJob();
   await prunePendingSignIns();
   const unfinished = await runUnfinishedSweep();
-  const bin = await runBinPurge();
+  const bin = await runBinPurge(new Date(), left(45_000));
   const overflowClosed = (await closeOverflowWindows().catch((error) => (console.error("overflow windows", error), []))).length;
-  const faces = await runFaceJobs();
+  const backup = await runBackupDrain(left(70_000)).catch((error) => (console.error("backup drain", error), null));
+  const backupPurged = await runBackupPurge().catch((error) => (console.error("backup purge", error), 0));
+  const backupCheck = isMonthlyCheckHour()
+    ? await runMonthlyBackupCheck().catch((error) => (console.error("monthly backup check", error), null))
+    : null;
+  const faces = await runFaceJobs({ budgetMs: left(240_000) });
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, backup, backupPurged, backupCheck, faces });
 }

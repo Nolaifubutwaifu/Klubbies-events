@@ -202,13 +202,13 @@ isOneToOne: false
                   ]
                 },"events": {
                   Row: {
-                    "overflow_closed_at": string | null,"overflow_started_at": string | null,"expected_guests": number | null,"photo_limit": number | null,"guest_limit": number | null,"plan_rate": string | null,"plan": string,"deleted_by": string | null,"deleted_at": string | null,"accent_colour": string | null,"access_ends_at": string | null,"access_mode": string,"access_notice_sent_at": string | null,"allow_removal_requests": boolean,"billing_status": string,"created_at": string,"created_by": string | null,"description": string | null,"ends_on": string | null,"grace_period_enabled": boolean,"handle": string,"id": string,"logo_path": string | null,"name": string,"organisation": string | null,"paid_at": string | null,"roster_mapping": Json | null,"starts_on": string | null,"status": string,"stripe_checkout_session_id": string | null,"stripe_customer_id": string | null,"stripe_subscription_id": string | null,"updated_at": string,"venue": string | null
+                    "logo_backed_up_path": string | null,"overflow_closed_at": string | null,"overflow_started_at": string | null,"expected_guests": number | null,"photo_limit": number | null,"guest_limit": number | null,"plan_rate": string | null,"plan": string,"deleted_by": string | null,"deleted_at": string | null,"accent_colour": string | null,"access_ends_at": string | null,"access_mode": string,"access_notice_sent_at": string | null,"allow_removal_requests": boolean,"billing_status": string,"created_at": string,"created_by": string | null,"description": string | null,"ends_on": string | null,"grace_period_enabled": boolean,"handle": string,"id": string,"logo_path": string | null,"name": string,"organisation": string | null,"paid_at": string | null,"roster_mapping": Json | null,"starts_on": string | null,"status": string,"stripe_checkout_session_id": string | null,"stripe_customer_id": string | null,"stripe_subscription_id": string | null,"updated_at": string,"venue": string | null
                   }
                   Insert: {
-                    "overflow_closed_at"?: string | null,"overflow_started_at"?: string | null,"expected_guests"?: number | null,"photo_limit"?: number | null,"guest_limit"?: number | null,"plan_rate"?: string | null,"plan"?: string,"deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle": string,"id"?: string,"logo_path"?: string | null,"name": string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
+                    "logo_backed_up_path"?: string | null,"overflow_closed_at"?: string | null,"overflow_started_at"?: string | null,"expected_guests"?: number | null,"photo_limit"?: number | null,"guest_limit"?: number | null,"plan_rate"?: string | null,"plan"?: string,"deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle": string,"id"?: string,"logo_path"?: string | null,"name": string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
                   }
                   Update: {
-                    "overflow_closed_at"?: string | null,"overflow_started_at"?: string | null,"expected_guests"?: number | null,"photo_limit"?: number | null,"guest_limit"?: number | null,"plan_rate"?: string | null,"plan"?: string,"deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle"?: string,"id"?: string,"logo_path"?: string | null,"name"?: string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
+                    "logo_backed_up_path"?: string | null,"overflow_closed_at"?: string | null,"overflow_started_at"?: string | null,"expected_guests"?: number | null,"photo_limit"?: number | null,"guest_limit"?: number | null,"plan_rate"?: string | null,"plan"?: string,"deleted_by"?: string | null,"deleted_at"?: string | null,"accent_colour"?: string | null,"access_ends_at"?: string | null,"access_mode"?: string,"access_notice_sent_at"?: string | null,"allow_removal_requests"?: boolean,"billing_status"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"ends_on"?: string | null,"grace_period_enabled"?: boolean,"handle"?: string,"id"?: string,"logo_path"?: string | null,"name"?: string,"organisation"?: string | null,"paid_at"?: string | null,"roster_mapping"?: Json | null,"starts_on"?: string | null,"status"?: string,"stripe_checkout_session_id"?: string | null,"stripe_customer_id"?: string | null,"stripe_subscription_id"?: string | null,"updated_at"?: string,"venue"?: string | null
                   }
                   Relationships: [
                     {
@@ -287,6 +287,19 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"backup_purge_queue": {
+                  Row: {
+                    "created_at": string,"due_at": string,"key": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"due_at"?: string,"key": string
+                  }
+                  Update: {
+                    "created_at"?: string,"due_at"?: string,"key"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"face_purge_queue": {
                   Row: {
                     "attempts": number,"collection_id": string,"created_at": string,"id": number,"rekognition_face_id": string
@@ -364,13 +377,13 @@ isOneToOne: false
                   ]
                 },"media": {
                   Row: {
-                    "deleted_by": string | null,"deleted_at": string | null,"album_id": string | null,"byte_size": number | null,"captured_at": string | null,"content_hash": string | null,"created_at": string,"display_path": string | null,"duration_seconds": number | null,"event_id": string,"guest_link_id": string | null,"height": number | null,"hidden_at": string | null,"id": string,"kind": string,"mime_type": string | null,"original_filename": string | null,"photographer_name": string | null,"poster_path": string | null,"sort_at": string | null,"status": string,"storage_path": string,"thumb_path": string | null,"updated_at": string,"uploaded_by": string | null,"width": number | null
+                    "backup_deferred_at": string | null,"backup_error": string | null,"backup_attempts": number,"backed_up_at": string | null,"deleted_by": string | null,"deleted_at": string | null,"album_id": string | null,"byte_size": number | null,"captured_at": string | null,"content_hash": string | null,"created_at": string,"display_path": string | null,"duration_seconds": number | null,"event_id": string,"guest_link_id": string | null,"height": number | null,"hidden_at": string | null,"id": string,"kind": string,"mime_type": string | null,"original_filename": string | null,"photographer_name": string | null,"poster_path": string | null,"sort_at": string | null,"status": string,"storage_path": string,"thumb_path": string | null,"updated_at": string,"uploaded_by": string | null,"width": number | null
                   }
                   Insert: {
-                    "deleted_by"?: string | null,"deleted_at"?: string | null,"album_id"?: string | null,"byte_size"?: number | null,"captured_at"?: string | null,"content_hash"?: string | null,"created_at"?: string,"display_path"?: string | null,"duration_seconds"?: number | null,"event_id": string,"guest_link_id"?: string | null,"height"?: number | null,"hidden_at"?: string | null,"id"?: string,"kind": string,"mime_type"?: string | null,"original_filename"?: string | null,"photographer_name"?: string | null,"poster_path"?: string | null,"sort_at"?: never,"status"?: string,"storage_path": string,"thumb_path"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                    "backup_deferred_at"?: string | null,"backup_error"?: string | null,"backup_attempts"?: number,"backed_up_at"?: string | null,"deleted_by"?: string | null,"deleted_at"?: string | null,"album_id"?: string | null,"byte_size"?: number | null,"captured_at"?: string | null,"content_hash"?: string | null,"created_at"?: string,"display_path"?: string | null,"duration_seconds"?: number | null,"event_id": string,"guest_link_id"?: string | null,"height"?: number | null,"hidden_at"?: string | null,"id"?: string,"kind": string,"mime_type"?: string | null,"original_filename"?: string | null,"photographer_name"?: string | null,"poster_path"?: string | null,"sort_at"?: never,"status"?: string,"storage_path": string,"thumb_path"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
                   Update: {
-                    "deleted_by"?: string | null,"deleted_at"?: string | null,"album_id"?: string | null,"byte_size"?: number | null,"captured_at"?: string | null,"content_hash"?: string | null,"created_at"?: string,"display_path"?: string | null,"duration_seconds"?: number | null,"event_id"?: string,"guest_link_id"?: string | null,"height"?: number | null,"hidden_at"?: string | null,"id"?: string,"kind"?: string,"mime_type"?: string | null,"original_filename"?: string | null,"photographer_name"?: string | null,"poster_path"?: string | null,"sort_at"?: never,"status"?: string,"storage_path"?: string,"thumb_path"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
+                    "backup_deferred_at"?: string | null,"backup_error"?: string | null,"backup_attempts"?: number,"backed_up_at"?: string | null,"deleted_by"?: string | null,"deleted_at"?: string | null,"album_id"?: string | null,"byte_size"?: number | null,"captured_at"?: string | null,"content_hash"?: string | null,"created_at"?: string,"display_path"?: string | null,"duration_seconds"?: number | null,"event_id"?: string,"guest_link_id"?: string | null,"height"?: number | null,"hidden_at"?: string | null,"id"?: string,"kind"?: string,"mime_type"?: string | null,"original_filename"?: string | null,"photographer_name"?: string | null,"poster_path"?: string | null,"sort_at"?: never,"status"?: string,"storage_path"?: string,"thumb_path"?: string | null,"updated_at"?: string,"uploaded_by"?: string | null,"width"?: number | null
                   }
                   Relationships: [
                     {
@@ -708,6 +721,9 @@ isOneToOne: false
           Functions: {
             "apply_event_plan":
 { Args: { "p_event_id": string, "p_plan": string, "p_rate": string | null, "p_guest_limit": number | null, "p_photo_limit": number | null }; Returns: undefined
+                           },
+            "missing_events":
+{ Args: { "p_ids": string[] }; Returns: string[]
                            },
             "close_overflow_windows":
 { Args: never; Returns: string[]

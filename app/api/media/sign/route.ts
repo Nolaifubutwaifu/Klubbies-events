@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth/session";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { r2Url } from "@/lib/backup/r2";
+import { SIGNED_URL_TTL, signedUrlLifetime, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
   // RLS decides which of the requested items this user may see.
   const { data, error } = await supabase
     .from("media")
-    .select("id, kind, storage_path, thumb_path, display_path, poster_path")
+    .select("id, kind, storage_path, thumb_path, display_path, poster_path, backed_up_at")
     .in("id", parsed.data.mediaIds);
   if (error) return NextResponse.json({ error: "Could not load media" }, { status: 500 });
 
@@ -42,6 +43,15 @@ export async function POST(request: Request) {
     const path = pathFor(m);
     const url = path ? urls.get(path) : undefined;
     if (url) result[m.id] = url;
+  }
+  // Video plays from the R2 copy once it has one: full size files are where
+  // the download bill is. RLS above already decided these rows are visible.
+  if (variant === "video") {
+    for (const m of rows) {
+      if (m.kind !== "video") continue;
+      const fromR2 = await r2Url(m, signedUrlLifetime(ttl));
+      if (fromR2) result[m.id] = fromR2;
+    }
   }
   return NextResponse.json({ urls: result, expiresIn: ttl });
 }

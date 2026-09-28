@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { signDownload } from "@/lib/storage";
+import { r2Url } from "@/lib/backup/r2";
+import { SIGNED_URL_TTL, signDownload, signedUrlLifetime } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/download">) {
@@ -12,7 +13,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const supabase = await createClient();
   const { data: media } = await supabase
     .from("media")
-    .select("id, event_id, storage_path, original_filename, albums(allow_download)")
+    .select("id, event_id, storage_path, original_filename, backed_up_at, albums(allow_download)")
     .eq("id", id)
     .maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -25,7 +26,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
 
   const ext = media.storage_path.split(".").pop() ?? "bin";
   const filename = media.original_filename || `klubbies-${media.id}.${ext}`;
-  const url = await signDownload(supabase, media.storage_path, filename);
+  // Full quality comes from the R2 copy, which costs nothing to download;
+  // anything not copied yet still comes from Supabase.
+  const url =
+    (await r2Url(media, signedUrlLifetime(SIGNED_URL_TTL.download), filename)) ??
+    (await signDownload(supabase, media.storage_path, filename));
   if (!url) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await logAccess(event, media.id, "download");
