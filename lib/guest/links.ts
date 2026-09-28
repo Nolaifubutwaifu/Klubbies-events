@@ -57,10 +57,12 @@ export async function resolveGuestLink(
   if (new Date(link.expires_at).getTime() <= Date.now()) return { state: "expired", session: null };
 
   const [{ data: event }, { data: album }] = await Promise.all([
-    admin.from("events").select("name, accent_colour, billing_status, logo_path, organisation").eq("id", link.event_id).maybeSingle(),
-    admin.from("albums").select("title, album_date").eq("id", link.album_id).maybeSingle(),
+    admin.from("events").select("name, accent_colour, billing_status, logo_path, organisation, deleted_at").eq("id", link.event_id).maybeSingle(),
+    admin.from("albums").select("title, album_date, deleted_at").eq("id", link.album_id).maybeSingle(),
   ]);
   if (!event || !album) return { state: "unknown", session: null };
+  // Deleted by the organiser, even if it could still be restored: the link is off until then.
+  if (event.deleted_at || album.deleted_at) return { state: "revoked", session: null };
   if (!["active", "past_due", "comped"].includes(event.billing_status)) return { state: "unpaid", session: null };
 
   return {

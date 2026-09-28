@@ -102,6 +102,7 @@ export default async function AlbumPage(props: Props) {
         .eq("album_id", album.id)
         .eq("status", "processing")
         .is("hidden_at", null)
+        .is("deleted_at", null)
         .limit(200);
       for (const row of pending ?? []) {
         if (row.kind === "video") videos += 1;

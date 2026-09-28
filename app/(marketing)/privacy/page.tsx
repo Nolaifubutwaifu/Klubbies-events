@@ -50,7 +50,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "Face search: how long we keep it",
-    "A faceprint made from a photo is deleted when that photo is deleted. Your selfie and the faceprint made from it are deleted when you turn face search off, when your access to the event ends, or when the organiser turns the feature off: within 24 hours in each case. When an organiser turns it off, every faceprint for that event is deleted.",
+    "A faceprint made from a photo is deleted when that photo is deleted for good. A photo an organiser deletes waits 30 days in Recently deleted, where only organisers can see it, in case it was deleted by mistake; a photo taken down because someone asked is deleted straight away. Your selfie and the faceprint made from it are deleted when you turn face search off, when your access to the event ends, or when the organiser turns the feature off: within 24 hours in each case. When an organiser turns it off, every faceprint for that event is deleted.",
   ],
   [
     "Face search: who else sees it",

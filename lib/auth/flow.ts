@@ -43,7 +43,8 @@ async function findEligibleMemberships(email: string) {
     .select("id, event_id, role, roster_name, claimed_name, status, first_seen_at, grace_ends_at, events!inner(name, handle, status)")
     .eq("roster_email", email)
     .in("status", ["pending", "active", "grace"])
-    .eq("events.status", "active");
+    .eq("events.status", "active")
+    .is("events.deleted_at", null);
   if (error) throw error;
   return (data ?? []).filter((m) => m.status !== "grace" || (m.grace_ends_at !== null && m.grace_ends_at > nowIso()));
 }
@@ -55,6 +56,7 @@ async function findJoinableEvent(handle: string) {
     .select("id, name, handle, access_mode, status")
     .eq("handle", handle.toLowerCase())
     .eq("status", "active")
+    .is("deleted_at", null)
     .maybeSingle();
   return data;
 }
@@ -65,8 +67,8 @@ async function findJoinableEvent(handle: string) {
  */
 export async function joinByLink(eventId: string, userId: string, email: string, name: string | null): Promise<boolean> {
   const admin = createAdminClient();
-  const { data: event } = await admin.from("events").select("id, access_mode, status").eq("id", eventId).maybeSingle();
-  if (!event || event.status !== "active" || event.access_mode !== "link") return false;
+  const { data: event } = await admin.from("events").select("id, access_mode, status, deleted_at").eq("id", eventId).maybeSingle();
+  if (!event || event.status !== "active" || event.deleted_at || event.access_mode !== "link") return false;
 
   const { data: existing } = await admin
     .from("memberships")

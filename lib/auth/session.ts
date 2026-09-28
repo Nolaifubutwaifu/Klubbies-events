@@ -197,6 +197,7 @@ export const getPublicEvent = cache(async (handle: string): Promise<PublicEvent 
     .select("id, name, handle, organisation, starts_on, ends_on, venue, logo_path, accent_colour, access_mode")
     .eq("handle", handle.toLowerCase())
     .eq("status", "active")
+    .is("deleted_at", null)
     .maybeSingle();
   if (!data) return null;
   return {

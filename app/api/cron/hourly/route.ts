@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { pruneRateEvents } from "@/lib/auth/rate-limit";
 import { serverEnv } from "@/lib/env";
 import { runFaceJobs } from "@/lib/faces/jobs";
+import { runBinPurge } from "@/lib/media/bin";
 import { runRemovalSweep } from "@/lib/media/removals";
 import { runScheduledPublishJob } from "@/lib/media/schedule";
 import { runUnfinishedSweep } from "@/lib/media/unfinished";
@@ -18,8 +19,9 @@ function authorised(request: Request): boolean {
 
 // Via Vercel Cron (vercel.json), hourly on the Pro plan: publishes albums whose scheduled time has
 // passed, deletes photos whose removal request nobody answered, emails
-// attendees a week before a gallery closes, and clears uploads that never
-// finished within 14 days. Closing itself needs no job: RLS compares
+// attendees a week before a gallery closes, clears uploads that never
+// finished within 14 days, and empties anything in Recently deleted for more
+// than 30 days. Closing itself needs no job: RLS compares
 // events.access_ends_at with now() on every read.
 // Publishing runs first so a scheduled album is live as early in the pass as
 // possible.
@@ -35,7 +37,8 @@ export async function GET(request: Request) {
   const accessEnding = await runAccessEndingJob();
   await prunePendingSignIns();
   const unfinished = await runUnfinishedSweep();
+  const bin = await runBinPurge();
   const faces = await runFaceJobs();
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, faces });
 }

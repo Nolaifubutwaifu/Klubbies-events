@@ -203,7 +203,10 @@ export function AlbumEditPanel({ album, closeHref, onPickCover }: { album: Album
       </form>
 
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete this album?">
-        <p className="text-[15px]">All photos and videos in “{album.title}” are permanently deleted, originals included.</p>
+        <p className="text-[15px]">
+          “{album.title}” and every photo and video in it leave the event straight away. You can restore it from
+          Recently deleted in Settings for 30 days, then it&apos;s deleted for good.
+        </p>
         <label className="field">
           Type the album name to confirm
           <input className="input" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />

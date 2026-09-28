@@ -8,15 +8,17 @@ import { getEventContextById, requireUser } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import type { Permission } from "@/lib/permissions";
 import { deleteEventEverywhere } from "@/lib/events/delete";
+import { canRestoreEvent, purgeAlbum, purgeMedia } from "@/lib/media/bin";
 import { drainFacePurgeQueue } from "@/lib/faces/purge";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { generateHandleBase } from "@/lib/roster/handle";
 import sharp from "sharp";
 import { BUCKET, LOGO_MARK_SIZE, logoMarkPath, removeObjects } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export type ActionState = { error?: string; ok?: boolean; message?: string };
+export type ActionState = { error?: string; ok?: boolean; message?: string; ids?: string[] };
 
 async function adminContext(eventId: string) {
   const ctx = await getEventContextById(eventId);
@@ -484,33 +486,89 @@ export async function setAlbumCoverImageAction(albumId: string, path: string | n
   return { ok: true, message: path ? "Cover updated" : "Cover cleared" };
 }
 
+function itemsLabel(kinds: string[]): string {
+  const n = kinds.length;
+  if (kinds.every((k) => k === "video")) return n === 1 ? "1 video" : `${n} videos`;
+  if (kinds.every((k) => k !== "video")) return n === 1 ? "1 photo" : `${n} photos`;
+  return `${n} items`;
+}
+
+/**
+ * Moves photos and videos to Recently deleted. Nothing leaves storage until
+ * the bin's 30 days are up (lib/media/bin.ts); attendees stop seeing them at
+ * once because RLS hides binned rows.
+ */
 export async function deleteMediaAction(mediaIds: string[]): Promise<ActionState> {
   const ids = z.array(z.uuid()).min(1).max(500).safeParse(mediaIds);
   if (!ids.success) return { error: "Nothing selected" };
   const supabase = await createClient();
-  const { data: rows } = await supabase
-    .from("media")
-    .select("id, event_id, album_id, storage_path, thumb_path, display_path, poster_path")
-    .in("id", ids.data);
+  const { data: rows } = await supabase.from("media").select("id, event_id, kind").in("id", ids.data);
   const items = rows ?? [];
   if (items.length === 0) return { error: "Nothing to delete" };
 
   const eventIds = [...new Set(items.map((m) => m.event_id))];
   const contexts = await Promise.all(eventIds.map(adminContext));
 
-  await removeObjects(items.flatMap((m) => [m.storage_path, m.thumb_path ?? "", m.display_path ?? "", m.poster_path ?? ""]));
-  const { error } = await supabase.from("media").delete().in("id", items.map((m) => m.id));
+  const { error } = await createAdminClient()
+    .from("media")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: contexts[0].userId })
+    .in("id", items.map((m) => m.id))
+    .is("deleted_at", null);
   if (error) return { error: "Could not delete" };
-  // Deleting the photos cascaded their media_faces rows, whose trigger queued
-  // each faceprint. Draining now keeps "the faceprint goes with the photo"
-  // true immediately rather than by the next cron pass.
-  await drainFacePurgeQueue().catch((purgeError) => console.error("face purge after delete", purgeError));
 
   for (const ctx of contexts) {
     revalidatePath(`/admin/${ctx.event.handle}`, "layout");
     revalidatePath(`/e/${ctx.event.handle}`, "layout");
   }
-  return { ok: true, message: `${items.length} deleted` };
+  return { ok: true, message: `Deleted ${itemsLabel(items.map((m) => m.kind))}`, ids: items.map((m) => m.id) };
+}
+
+/** Brings binned photos back. Photos binned with their album come back with the album instead. */
+export async function restoreMediaAction(mediaIds: string[]): Promise<ActionState> {
+  const ids = z.array(z.uuid()).min(1).max(500).safeParse(mediaIds);
+  if (!ids.success) return { error: "Nothing selected" };
+  const admin = createAdminClient();
+  const { data: rows } = await admin
+    .from("media")
+    .select("id, event_id, kind, album_id, albums!media_album_id_fkey(deleted_at)")
+    .in("id", ids.data)
+    .not("deleted_at", "is", null);
+  const items = rows ?? [];
+  if (items.length === 0) return { error: "Nothing to restore" };
+
+  const contexts = await Promise.all([...new Set(items.map((m) => m.event_id))].map(adminContext));
+  const restorable = items.filter((m) => !m.albums?.deleted_at);
+  if (restorable.length === 0) return { error: "Restore the album these were in first" };
+
+  const { error } = await admin.from("media").update({ deleted_at: null, deleted_by: null }).in("id", restorable.map((m) => m.id));
+  if (error) return { error: "Could not restore" };
+  for (const ctx of contexts) {
+    revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+    revalidatePath(`/e/${ctx.event.handle}`, "layout");
+  }
+  const skipped = items.length - restorable.length;
+  return {
+    ok: true,
+    message: `Restored ${itemsLabel(restorable.map((m) => m.kind))}${skipped ? `. ${skipped} more come back with their album` : ""}`,
+    ids: restorable.map((m) => m.id),
+  };
+}
+
+/** "Delete now" in the bin: permanent, for photos already in it. */
+export async function purgeMediaNowAction(eventId: string, mediaIds: string[]): Promise<ActionState> {
+  const ctx = await adminContext(eventId);
+  const ids = z.array(z.uuid()).min(1).max(500).safeParse(mediaIds);
+  if (!ids.success) return { error: "Nothing selected" };
+  const { data: rows } = await createAdminClient()
+    .from("media")
+    .select("id")
+    .eq("event_id", eventId)
+    .in("id", ids.data)
+    .not("deleted_at", "is", null);
+  const purged = await purgeMedia((rows ?? []).map((m) => m.id));
+  await drainFacePurgeQueue().catch((purgeError) => console.error("face purge after delete now", purgeError));
+  revalidatePath(`/admin/${ctx.event.handle}/settings/deleted`);
+  return { ok: true, message: purged === 1 ? "Deleted for good" : `${purged} deleted for good` };
 }
 
 export async function deleteAlbumAction(albumId: string, typedTitle: string): Promise<ActionState> {
@@ -522,40 +580,106 @@ export async function deleteAlbumAction(albumId: string, typedTitle: string): Pr
     return { error: `Type ${album.title} to confirm` };
   }
 
-  for (;;) {
-    const { data: batch } = await supabase
-      .from("media")
-      .select("id, storage_path, thumb_path, display_path, poster_path")
-      .eq("album_id", albumId)
-      .limit(500);
-    if (!batch || batch.length === 0) break;
-    await removeObjects(batch.flatMap((m) => [m.storage_path, m.thumb_path ?? "", m.display_path ?? "", m.poster_path ?? ""]));
-    await supabase.from("media").delete().in("id", batch.map((m) => m.id));
-  }
-  await supabase.from("albums").delete().eq("id", albumId);
-  await drainFacePurgeQueue().catch((purgeError) => console.error("face purge after album delete", purgeError));
+  // The album and every photo still in it share one timestamp, which is how
+  // restoring the album knows which photos came with it.
+  const admin = createAdminClient();
+  const stamp = { deleted_at: new Date().toISOString(), deleted_by: ctx.userId };
+  const { error: mediaError } = await admin.from("media").update(stamp).eq("album_id", albumId).is("deleted_at", null);
+  if (mediaError) return { error: "Could not delete the album" };
+  const { error } = await admin.from("albums").update(stamp).eq("id", albumId);
+  if (error) return { error: "Could not delete the album" };
 
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
-  redirect(`/admin/${ctx.event.handle}/albums`);
+  redirect(`/admin/${ctx.event.handle}/albums?deleted=${albumId}`);
+}
+
+export async function restoreAlbumAction(albumId: string): Promise<ActionState> {
+  if (!z.uuid().safeParse(albumId).success) return { error: "Album not found" };
+  const admin = createAdminClient();
+  const { data: album } = await admin.from("albums").select("id, event_id, title, deleted_at").eq("id", albumId).maybeSingle();
+  if (!album?.deleted_at) return { error: "Album not found" };
+  const ctx = await permContext(album.event_id, "manage_albums");
+
+  const { error: mediaError } = await admin
+    .from("media")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("album_id", albumId)
+    .eq("deleted_at", album.deleted_at);
+  if (mediaError) return { error: "Could not restore the album" };
+  const { error } = await admin.from("albums").update({ deleted_at: null, deleted_by: null }).eq("id", albumId);
+  if (error) return { error: "Could not restore the album" };
+
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+  revalidatePath(`/e/${ctx.event.handle}`, "layout");
+  return { ok: true, message: `Restored ${album.title}` };
+}
+
+export async function purgeAlbumNowAction(albumId: string): Promise<ActionState> {
+  if (!z.uuid().safeParse(albumId).success) return { error: "Album not found" };
+  const { data: album } = await createAdminClient().from("albums").select("id, event_id, deleted_at").eq("id", albumId).maybeSingle();
+  if (!album?.deleted_at) return { error: "Album not found" };
+  const ctx = await permContext(album.event_id, "manage_albums");
+  await purgeAlbum(albumId);
+  await drainFacePurgeQueue().catch((purgeError) => console.error("face purge after album delete now", purgeError));
+  revalidatePath(`/admin/${ctx.event.handle}/settings/deleted`);
+  return { ok: true, message: "Album deleted for good" };
 }
 
 /**
- * Deletes the whole event: photos, faceprints, attendees and the log. Only
- * someone who runs the event can, and only after typing its name.
+ * Moves the whole event to the bin. Attendees lose it at once (RLS treats a
+ * binned event as having no members); any organiser can restore it from Your
+ * events for 30 days. Only someone who runs the event can, and only after
+ * typing its name.
  */
 export async function deleteEventAction(eventId: string, _prev: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await adminContext(eventId);
   if (text(form, "confirm").toLowerCase() !== ctx.event.name.trim().toLowerCase()) {
     return { error: `Type ${ctx.event.name} to confirm` };
   }
-  try {
-    await deleteEventEverywhere(eventId);
-  } catch (error) {
+  const { error } = await createAdminClient()
+    .from("events")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: ctx.userId })
+    .eq("id", eventId);
+  if (error) {
     console.error("event delete failed", eventId, error);
     return { error: "Something went wrong and the event is still here. Try again." };
   }
   revalidatePath("/events");
-  redirect("/events");
+  revalidatePath(`/e/${ctx.event.handle}`, "layout");
+  redirect(`/events?deleted=${eventId}`);
+}
+
+export async function restoreEventAction(eventId: string): Promise<ActionState> {
+  const user = await requireUser();
+  if (!z.uuid().safeParse(eventId).success || !(await canRestoreEvent(eventId, user.id))) return { error: "Event not found" };
+  const { data: event, error } = await createAdminClient()
+    .from("events")
+    .update({ deleted_at: null, deleted_by: null })
+    .eq("id", eventId)
+    .not("deleted_at", "is", null)
+    .select("name, handle")
+    .maybeSingle();
+  if (error || !event) return { error: "Could not restore the event" };
+  revalidatePath("/events");
+  revalidatePath(`/e/${event.handle}`, "layout");
+  revalidatePath(`/admin/${event.handle}`, "layout");
+  return { ok: true, message: `Restored ${event.name}` };
+}
+
+export async function purgeEventNowAction(eventId: string): Promise<ActionState> {
+  const user = await requireUser();
+  if (!z.uuid().safeParse(eventId).success || !(await canRestoreEvent(eventId, user.id))) return { error: "Event not found" };
+  const { data: event } = await createAdminClient().from("events").select("deleted_at").eq("id", eventId).maybeSingle();
+  if (!event?.deleted_at) return { error: "Event not found" };
+  try {
+    await deleteEventEverywhere(eventId);
+  } catch (error) {
+    console.error("event delete now failed", eventId, error);
+    return { error: "Something went wrong. Try again." };
+  }
+  revalidatePath("/events");
+  return { ok: true, message: "Event deleted for good" };
 }
 
 // ---------------------------------------------------------------------------

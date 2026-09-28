@@ -1,21 +1,33 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DeletedUndo } from "@/components/DeletedUndo";
 import { EventMark } from "@/components/EventMark";
 import { SimpleHeader } from "@/components/SimpleHeader";
 import { ScanEventButton } from "@/components/ScanEventButton";
 import { PageTitle } from "@/components/ui";
 import { accessHasEnded, getProfile, listMyEvents, requireUser } from "@/lib/auth/session";
-import { formatDate, formatEventDates, plural } from "@/lib/format";
+import { formatDate, formatEventDates, formatLongDate, plural } from "@/lib/format";
+import { listBinnedEventsFor, recentlyDeleted, restorableUntil } from "@/lib/media/bin";
 import { listEventCards } from "@/lib/media/event-cards";
 import { signLogoMarks } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { DeletedEvents } from "./DeletedEvents";
 
 export const metadata: Metadata = { title: "Your events" };
 
-export default async function EventsPage() {
+export default async function EventsPage(props: PageProps<"/events">) {
   const user = await requireUser("/events");
-  const [events, profile] = await Promise.all([listMyEvents(), getProfile()]);
+  const [events, profile, binned, { deleted }] = await Promise.all([
+    listMyEvents(),
+    getProfile(),
+    listBinnedEventsFor(user.id),
+    props.searchParams,
+  ]);
+  // The Undo bar after "Delete this event", only for an event this person
+  // runs and only in the minute after it was deleted.
+  const recent = await recentlyDeleted("events", deleted);
+  const justDeleted = recent && binned.some((e) => e.id === recent.id) ? recent : null;
   const supabase = await createClient();
   const [cards, logos] = await Promise.all([
     listEventCards(supabase, events.map((e) => e.eventId), user.id),
@@ -37,7 +49,7 @@ export default async function EventsPage() {
           </div>
         </div>
 
-        {events.length === 0 ? (
+        {events.length === 0 && binned.length === 0 ? (
           <div className="soft-dashed flex max-w-[640px] flex-col items-start gap-2 p-7">
             <span className="text-[17px] font-semibold">No events yet</span>
             <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">
@@ -111,7 +123,15 @@ export default async function EventsPage() {
             })}
           </div>
         )}
+
+        {binned.length ? (
+          <DeletedEvents
+            events={binned.map((e) => ({ id: e.id, name: e.name, restoreBy: formatLongDate(restorableUntil(e.deletedAt)) }))}
+          />
+        ) : null}
       </div>
+
+      {justDeleted ? <DeletedUndo kind="event" id={justDeleted.id} name={justDeleted.name} /> : null}
     </main>
   );
 }

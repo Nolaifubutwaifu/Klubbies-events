@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
@@ -7,6 +8,7 @@ import { facesConfigured } from "@/lib/faces/client";
 import { eventFaceState } from "@/lib/faces/collections";
 import { eventLink } from "@/lib/share";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { AccessForm } from "./AccessForm";
 import { DeleteEvent } from "./DeleteEvent";
@@ -26,11 +28,25 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
     ? ((await signPaths(supabase, [event.logo_path], SIGNED_URL_TTL.display)).get(event.logo_path) ?? null)
     : null;
 
-  const [faceState, faceBackfill, { count: enrolledCount }] = await Promise.all([
+  // Binned rows are hidden from every user client, so the bin's size is read
+  // with the service role; requireAdminContext above is the check.
+  const admin = createAdminClient();
+  const [faceState, faceBackfill, { count: enrolledCount }, { count: binnedAlbums }, { count: binnedItems }] = await Promise.all([
     eventFaceState(event.id),
     backfillProgress(event.id),
     supabase.from("member_face_profiles").select("id", { count: "exact", head: true }).eq("event_id", event.id),
+    admin.from("albums").select("id", { count: "exact", head: true }).eq("event_id", event.id).not("deleted_at", "is", null),
+    admin
+      .from("media")
+      .select("id, albums!media_album_id_fkey!inner(deleted_at)", { count: "exact", head: true })
+      .eq("event_id", event.id)
+      .not("deleted_at", "is", null)
+      .is("albums.deleted_at", null),
   ]);
+  const binSummary = [
+    binnedAlbums ? (binnedAlbums === 1 ? "1 album" : `${binnedAlbums} albums`) : null,
+    binnedItems ? (binnedItems === 1 ? "1 photo or video" : `${binnedItems} photos and videos`) : null,
+  ].filter(Boolean);
   const link = eventLink(handle);
 
   return (
@@ -99,6 +115,18 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
               SVG with a transparent background works best.
             </span>
             <LogoUploader eventId={event.id} logoUrl={logoUrl} />
+          </section>
+
+          <section id="deleted" className="soft-card flex scroll-mt-6 flex-col gap-2 p-5">
+            <span className="text-[14px] font-medium">Recently deleted</span>
+            <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
+              {binSummary.length
+                ? `${binSummary.join(" and ")}. Restore anything deleted in the last 30 days.`
+                : "Nothing deleted in the last 30 days. Deleted albums, photos and videos wait here for 30 days."}
+            </p>
+            <Link href={`/admin/${handle}/settings/deleted`} className="btn btn-sm btn-secondary self-start no-underline">
+              Open Recently deleted
+            </Link>
           </section>
 
           <section className="soft-card flex flex-col gap-2 p-5">
