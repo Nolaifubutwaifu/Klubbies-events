@@ -5,6 +5,7 @@ import { isMonthlyCheckHour, runBackupDrain, runBackupPurge, runMonthlyBackupChe
 import { runPlanNotices } from "@/lib/billing/notices";
 import { closeOverflowWindows } from "@/lib/billing/usage";
 import { serverEnv } from "@/lib/env";
+import { refreshUsage } from "@/lib/usage/refresh";
 import { runFaceJobs } from "@/lib/faces/jobs";
 import { runBinPurge } from "@/lib/media/bin";
 import { runRemovalSweep } from "@/lib/media/removals";
@@ -56,7 +57,9 @@ export async function GET(request: Request) {
   const backupCheck = isMonthlyCheckHour()
     ? await runMonthlyBackupCheck().catch((error) => (console.error("monthly backup check", error), null))
     : null;
+  // Usage totals for the usage view, refreshed before face search takes the rest of the run.
+  const usageRows = await refreshUsage().catch((error) => (console.error("usage refresh", error), 0));
   const faces = await runFaceJobs({ budgetMs: left(240_000) });
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, faces });
 }

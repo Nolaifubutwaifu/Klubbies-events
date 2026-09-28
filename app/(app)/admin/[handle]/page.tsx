@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
+import { PlanMeters } from "@/components/PlanMeters";
 import { PageTitle, Stat } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { personName } from "@/lib/auth/display-name";
@@ -259,6 +260,18 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           tone={(downloads.count ?? 0) > 0 ? "good" : "plain"}
         />
       </div>
+
+      {usage && (usage.guestLimit || usage.photoLimit) ? (
+        <section className="soft-card flex flex-col gap-3 p-5" aria-label="Plan usage">
+          <PlanMeters
+            guestsJoined={usage.guestsJoined}
+            guestLimit={usage.guestLimit}
+            guestsPaused={usage.guestsPaused}
+            unitsUsed={usage.unitsUsed}
+            photoLimit={usage.photoLimit}
+          />
+        </section>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div className="flex min-w-0 flex-col gap-6">

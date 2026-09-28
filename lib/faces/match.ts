@@ -2,6 +2,7 @@ import "server-only";
 import { SearchFacesCommand } from "@aws-sdk/client-rekognition";
 import type { Json } from "@/lib/db/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countFaceCalls } from "@/lib/usage/faces";
 import { faceClient, parseExternalId } from "./client";
 import { SEARCH_MAX_FACES, SEARCH_THRESHOLD, bandFor } from "./constants";
 
@@ -162,5 +163,6 @@ export async function matchEventMedia(eventId: string, mediaIds: string[]): Prom
     if (error) throw error;
   }
 
+  await countFaceCalls(eventId, searches);
   return { searches, direction: perFace ? "per-face" : "per-reference", written: rows.length };
 }

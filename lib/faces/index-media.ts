@@ -3,6 +3,7 @@ import { DeleteFacesCommand, IndexFacesCommand, type FaceRecord } from "@aws-sdk
 import sharp from "sharp";
 import { BUCKET } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countFaceCalls } from "@/lib/usage/faces";
 import { collectionIdFor, faceClient, mediaExternalId } from "./client";
 import { FACE_FLOORS, MAX_FACES_PER_PHOTO, QUALITY_FILTER, TRANSCODE_MAX_EDGE, TRANSCODE_QUALITY } from "./constants";
 
@@ -83,6 +84,7 @@ export async function indexMedia(eventId: string, mediaId: string): Promise<Inde
     }),
   );
 
+  await countFaceCalls(eventId, 1);
   const records = indexed.FaceRecords ?? [];
   const kept = records.filter(clearsFloors);
   const dropped = records.filter((r) => !clearsFloors(r));

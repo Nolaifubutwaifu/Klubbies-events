@@ -23,6 +23,10 @@ const SECTIONS: [string, string][] = [
     "Every time an attendee views or downloads a photo or video we record which item, when, a scrambled version of the network address, and the browser. The event's organisers can see this log. We tell you because it is a record of your activity and you should know it exists.",
   ],
   [
+    "How organisers found us",
+    "If you arrive through one of our tracked links (a flyer's QR code, or the Photos by Klubbies Events line on a gallery), we remember which link in a cookie for 30 days and note it on any event you create, with your answer to \"How did you hear about us?\" if you give one. It is only ever about organisers: guests opening a gallery are not tracked, and the cookie holds nothing but the link's name.",
+  ],
+  [
     "How long galleries stay open",
     "Each event has a date after which attendees can no longer open its photos, usually 90 days after the event. We email you a week before, unless you turned those reminders off. Organisers keep access after that date.",
   ],

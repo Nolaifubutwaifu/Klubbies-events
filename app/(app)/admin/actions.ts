@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
+import { isHeardFrom, SOURCE_COOKIE, SOURCE_TAG } from "@/lib/attribution";
 import { getEventContextById, requireUser } from "@/lib/auth/session";
 import { mediaUnits } from "@/lib/billing/plans";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
@@ -90,6 +92,22 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
     p_access_mode: accessMode,
   });
   if (error || !data) return { error: "Could not create the event. Try again." };
+
+  // Where this organiser came from (pricing handoff §5.9): the tracked link
+  // they first arrived through, and their answer to "How did you hear about us?".
+  const tag = (await cookies()).get(SOURCE_COOKIE)?.value ?? "";
+  const heardFrom = text(form, "heardFrom");
+  const origin = {
+    source: SOURCE_TAG.test(tag) ? tag : null,
+    heard_from: isHeardFrom(heardFrom) ? heardFrom : null,
+  };
+  if (origin.source || origin.heard_from) {
+    await createAdminClient()
+      .from("events")
+      .update(origin)
+      .eq("id", data.id)
+      .then(({ error: originError }) => originError && console.error("could not save where the event came from", originError));
+  }
 
   redirect(`/admin/${data.handle}/setup`);
 }
