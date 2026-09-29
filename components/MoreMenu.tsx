@@ -19,6 +19,8 @@ export function MoreMenu({
   iconOnly = false,
   trigger,
   triggerClassName,
+  rootClassName = "relative inline-flex",
+  menuClassName,
 }: {
   children: ReactNode;
   label?: string;
@@ -28,6 +30,10 @@ export function MoreMenu({
   /** Custom button content (an avatar, say). `label` becomes its aria-label. */
   trigger?: ReactNode;
   triggerClassName?: string;
+  /** Leave out `relative` to position the menu against a wider ancestor. */
+  rootClassName?: string;
+  /** Replaces the default left or right placement. */
+  menuClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -56,7 +62,7 @@ export function MoreMenu({
   }, [open]);
 
   return (
-    <div ref={root} className="relative inline-flex">
+    <div ref={root} className={rootClassName}>
       <button
         ref={button}
         type="button"
@@ -82,7 +88,7 @@ export function MoreMenu({
         <div
           id={id}
           role="menu"
-          className={`kb-menu top-[calc(100%+8px)] ${align === "end" ? "right-0" : "left-0"}`}
+          className={`kb-menu top-[calc(100%+8px)] ${menuClassName ?? (align === "end" ? "right-0" : "left-0")}`}
           onClick={(ev) => {
             // Choosing anything closes the menu. A form's submit still fires.
             if ((ev.target as HTMLElement).closest("a, button")) setOpen(false);

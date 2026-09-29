@@ -32,7 +32,7 @@ export function ProfileForm({
         Email
         <input className="input" value={email} disabled />
         <span className="text-[14px] font-normal leading-normal text-ink-70">
-          This is the address your events have on file. Ask a event admin to change it.
+          This is the address your events have on file. Ask the event organiser to change it.
         </span>
       </label>
       <label className="field">

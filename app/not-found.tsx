@@ -9,7 +9,7 @@ export default function NotFound() {
         <span className="kicker">Not here</span>
         <h1 className="display text-[40px]">This page isn&apos;t available.</h1>
         <p className="text-[15px] text-ink-70">
-          It may not exist, or it belongs to a event your account isn&apos;t on. If you think you should have access, ask
+          It may not exist, or it belongs to an event your account isn&apos;t on. If you think you should have access, ask
           the organiser to check you have access.
         </p>
         <div className="flex gap-3 pt-2">
