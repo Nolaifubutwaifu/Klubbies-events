@@ -49,97 +49,117 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
   ].filter(Boolean);
   const link = eventLink(handle);
 
+  const sections = [
+    ["details", "Details"],
+    ["brand", "Logo"],
+    ["access", "Access"],
+    ["privacy", "Privacy"],
+    ["faces", "Face search"],
+    ["link", "Event link"],
+    ["deleted", "Recently deleted"],
+    ["danger", "Delete event"],
+  ] as const;
+
   return (
-    <main className="flex flex-col gap-8 pb-12 pt-2">
+    <main className="flex max-w-[820px] flex-col gap-8 pb-12 pt-2">
       <PageTitle kicker={event.name} title="Settings">
         Event details, branding, who can get in and for how long.
       </PageTitle>
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
-        <div className="flex min-w-0 flex-col gap-8">
-          <section id="brand" className="flex scroll-mt-6 flex-col gap-3">
-            <h2 className="text-[16px] font-semibold">Event details and brand</h2>
-            <SettingsForm
-              eventId={event.id}
-              name={event.name}
-              organisation={event.organisation}
-              description={event.description}
-              startsOn={event.starts_on}
-              endsOn={event.ends_on}
-              venue={event.venue}
-              accentColour={event.accent_colour}
-            />
-          </section>
+      {/* The page is long; these say what's on it and jump there. */}
+      <nav aria-label="On this page" className="-mt-2 flex flex-wrap gap-2">
+        {sections.map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="kb-jump">
+            {label}
+          </a>
+        ))}
+      </nav>
 
-          <section id="access" className="flex scroll-mt-6 flex-col gap-3">
-            <h2 className="text-[16px] font-semibold">Access</h2>
-            <AccessForm
-              eventId={event.id}
-              accessMode={event.access_mode === "guest_list" ? "guest_list" : "link"}
-              accessEndsAt={event.access_ends_at}
-              photosDeleteAt={event.photos_delete_at}
-            />
-          </section>
+      <section id="details" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Details and colour</h2>
+        <SettingsForm
+          eventId={event.id}
+          name={event.name}
+          organisation={event.organisation}
+          description={event.description}
+          startsOn={event.starts_on}
+          endsOn={event.ends_on}
+          venue={event.venue}
+          accentColour={event.accent_colour}
+        />
+      </section>
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[16px] font-semibold">Privacy</h2>
-            <PrivacySwitches eventId={event.id} initial={{ allow_removal_requests: event.allow_removal_requests }} />
-            <p className="m-0 max-w-[62ch] text-[14px] text-[color:var(--ink-70)]">
-              Whether attendees can add photos and download originals is set per album. Nothing is ever public: every
-              photo needs a signed-in attendee.
-            </p>
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[16px] font-semibold">Face search</h2>
-            <FaceRecognition
-              eventId={event.id}
-              eventName={event.name}
-              configured={facesConfigured()}
-              enabled={Boolean(faceState?.enabled)}
-              enrolledCount={enrolledCount ?? 0}
-              backfill={faceBackfill}
-            />
-          </section>
-
-          <section className="flex flex-col gap-3">
-            <h2 className="text-[16px] font-semibold">Danger zone</h2>
-            <DeleteEvent eventId={event.id} eventName={event.name} />
-          </section>
+      <section id="brand" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Logo</h2>
+        <div className="soft-card flex flex-col gap-3 p-5">
+          <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
+            Shown in the header of every attendee screen, on the join page and on the poster. A square or wide PNG or SVG
+            with a transparent background works best.
+          </span>
+          <LogoUploader eventId={event.id} logoUrl={logoUrl} />
         </div>
+      </section>
 
-        <div className="flex min-w-0 flex-col gap-4">
-          <section className="soft-card flex flex-col gap-3 p-5">
-            <span className="text-[14px] font-medium">Logo</span>
-            <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
-              Shown in the header of every attendee screen, on the join page and on the poster. A square or wide PNG or
-              SVG with a transparent background works best.
-            </span>
-            <LogoUploader eventId={event.id} logoUrl={logoUrl} />
-          </section>
+      <section id="access" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Access</h2>
+        <AccessForm
+          eventId={event.id}
+          accessMode={event.access_mode === "guest_list" ? "guest_list" : "link"}
+          accessEndsAt={event.access_ends_at}
+          photosDeleteAt={event.photos_delete_at}
+        />
+      </section>
 
-          <section id="deleted" className="soft-card flex scroll-mt-6 flex-col gap-2 p-5">
-            <span className="text-[14px] font-medium">Recently deleted</span>
-            <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-              {binSummary.length
-                ? `${binSummary.join(" and ")}. Restore anything deleted in the last 30 days.`
-                : "Nothing deleted in the last 30 days. Deleted albums, photos and videos wait here for 30 days."}
-            </p>
-            <Link href={`/admin/${handle}/settings/deleted`} className="btn btn-sm btn-secondary self-start no-underline">
-              Open Recently deleted
-            </Link>
-          </section>
+      <section id="privacy" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Privacy</h2>
+        <PrivacySwitches eventId={event.id} initial={{ allow_removal_requests: event.allow_removal_requests }} />
+        <p className="m-0 max-w-[62ch] text-[14px] text-[color:var(--ink-70)]">
+          Whether attendees can add photos and download originals is set per album. Nothing is ever public: every photo
+          needs a signed-in attendee.
+        </p>
+      </section>
 
-          <section className="soft-card flex flex-col gap-2 p-5">
-            <span className="text-[14px] font-medium">Event link</span>
-            <code className="mono break-all text-[14px] text-[color:var(--kb-ink-2)]">{link}</code>
-            <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-              It never changes, even if you rename the event, so printed QR codes keep working.
-            </p>
-            <CopyButton value={link} label="Copy link" className="btn btn-sm btn-secondary self-start" />
-          </section>
+      <section id="faces" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Face search</h2>
+        <FaceRecognition
+          eventId={event.id}
+          eventName={event.name}
+          configured={facesConfigured()}
+          enabled={Boolean(faceState?.enabled)}
+          enrolledCount={enrolledCount ?? 0}
+          backfill={faceBackfill}
+        />
+      </section>
+
+      <section id="link" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Event link</h2>
+        <div className="soft-card flex flex-col gap-2 p-5">
+          <code className="mono break-all text-[14px] text-[color:var(--kb-ink-2)]">{link}</code>
+          <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
+            It never changes, even if you rename the event, so printed QR codes keep working.
+          </p>
+          <CopyButton value={link} label="Copy link" className="btn btn-sm btn-secondary self-start" />
         </div>
-      </div>
+      </section>
+
+      <section id="deleted" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Recently deleted</h2>
+        <div className="soft-card flex flex-col gap-2 p-5">
+          <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
+            {binSummary.length
+              ? `${binSummary.join(" and ")}. Restore anything deleted in the last 30 days.`
+              : "Nothing deleted in the last 30 days. Deleted albums, photos and videos wait here for 30 days."}
+          </p>
+          <Link href={`/admin/${handle}/settings/deleted`} className="btn btn-sm btn-secondary self-start no-underline">
+            Open Recently deleted
+          </Link>
+        </div>
+      </section>
+
+      <section id="danger" className="flex scroll-mt-6 flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Delete this event</h2>
+        <DeleteEvent eventId={event.id} eventName={event.name} />
+      </section>
     </main>
   );
 }

@@ -30,6 +30,18 @@
   --kb-ember-tint: #e7ecfb; /* chip backgrounds, focus halo */
   --kb-ember-on-dark: #b3c1f6; /* accent on ink backgrounds */
 
+  /* Klubbies Events' own colour. Unlike --kb-ember it is never rewritten to
+     an event's colour, so it can fill the one primary button on organiser
+     and public screens (decision 96). White on it is 6.9:1. */
+  --kb-brand: #2b4acb;
+  --kb-brand-deep: #1f379b;
+  --kb-brand-tint: #e7ecfb;
+  /* Status: done and needs-you, for checklists and the organiser rail. */
+  --kb-ok: #1a7048; /* 5.9:1 on white */
+  --kb-ok-tint: #e2f3e9;
+  --kb-warn: #8a5300; /* 5.9:1 on white */
+  --kb-warn-tint: #fcefd6;
+
   /* Type: Geist for everything functional, Instrument Serif for display. */
   --kb-font-display: var(--font-geist), system-ui, sans-serif;
   --kb-font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
@@ -1145,5 +1157,95 @@ html:has(.theme-soft) body {
 @media (prefers-reduced-motion: reduce) {
   .soft-hint-fade {
     animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Colour for hierarchy (decision 96). Inside .kb-branded (public pages and
+   organiser screens) the primary button is Klubbies blue, so the one
+   thing to do next stands out from ink text. Attendee screens keep ink.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .kb-branded .btn-primary,
+  .kb-branded .soft-btn-primary {
+    background: var(--kb-brand);
+    border-color: var(--kb-brand);
+    color: #fff;
+  }
+  .kb-branded .btn-primary:hover:not(:disabled),
+  .kb-branded .soft-btn-primary:hover:not(:disabled) {
+    background: var(--kb-brand-deep);
+    border-color: var(--kb-brand-deep);
+  }
+  .kb-pill-brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--kb-brand-tint);
+    color: var(--kb-brand-deep);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .kb-step-number {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--kb-brand);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .kb-brand-band {
+    border-radius: var(--kb-r-panel);
+    background: var(--kb-brand-tint);
+    border: 1px solid #cdd7f7;
+  }
+  .kb-chip-ok,
+  .kb-chip-warn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 9px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .kb-chip-ok {
+    background: var(--kb-ok-tint);
+    color: var(--kb-ok);
+  }
+  .kb-chip-warn {
+    background: var(--kb-warn-tint);
+    color: var(--kb-warn);
+  }
+  .kb-ok-note {
+    padding: 12px 14px;
+    border-radius: var(--kb-r-card);
+    background: var(--kb-ok-tint);
+    color: var(--kb-ok);
+    font-weight: 500;
+  }
+  .kb-jump {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--kb-line);
+    border-radius: 8px;
+    background: var(--kb-white);
+    color: var(--kb-ink-2);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .kb-jump:hover {
+    border-color: var(--kb-brand);
+    color: var(--kb-brand-deep);
   }
 }

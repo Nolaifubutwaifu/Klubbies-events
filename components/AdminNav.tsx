@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EventMark } from "@/components/EventMark";
 
 export type AdminNavCounts = {
@@ -62,6 +62,12 @@ function Icon({ name }: { name: string }) {
       </>
     ),
     activity: <path d="M3 12h4l3-7 4 14 3-7h4" />,
+    plan: (
+      <>
+        <rect x="3" y="5.5" width="18" height="13" rx="2" />
+        <path d="M3 10h18M7 15h4" />
+      </>
+    ),
     settings: (
       <>
         <circle cx="12" cy="12" r="3" />
@@ -76,9 +82,13 @@ function Icon({ name }: { name: string }) {
   );
 }
 
+type NavLink = { href: string; label: string; icon: string; exact?: boolean; badge: number; urgent?: boolean };
+
 /**
- * The organiser's spine. A rail on desktop, a scrolling row of the same links
- * on a phone.
+ * The organiser's spine, grouped so it can be scanned: Overview, then Photos,
+ * People and Event. A rail on desktop; on a phone one Menu button naming the
+ * current screen, which opens the same grouped list. Hidden entirely while
+ * the event's required setup steps are unfinished (the layout decides).
  */
 export function AdminNav({
   handle,
@@ -89,6 +99,7 @@ export function AdminNav({
   status,
   counts,
   plan,
+  next,
 }: {
   handle: string;
   eventName: string;
@@ -99,44 +110,143 @@ export function AdminNav({
   status: { label: string; tone: "live" | "quiet" | "attention" };
   counts: AdminNavCounts;
   plan: { line: string; hint: string };
+  /** The next recommended setup step, if any are left. */
+  next: { title: string; href: string; done: number; total: number } | null;
 }) {
   const pathname = usePathname();
   const base = `/admin/${handle}`;
-  const row = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
 
-  // On a phone the links are one scrolling row; keep the current one in view.
   useEffect(() => {
-    const current = row.current?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (current && row.current && row.current.scrollWidth > row.current.clientWidth) {
-      row.current.scrollTo({ left: current.offsetLeft - 16, behavior: "instant" });
-    }
-  }, [pathname]);
+    if (!open) return;
+    const onKey = (ev: KeyboardEvent) => ev.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    panel.current?.querySelector<HTMLElement>("a")?.focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
-  const links = [
-    { href: base, label: "Overview", icon: "overview", exact: true, badge: 0 },
-    { href: `${base}/albums`, label: "Albums", icon: "albums", badge: counts.albums },
-    { href: `${base}/upload`, label: "Upload", icon: "upload", badge: 0 },
-    { href: `${base}/photographers`, label: "Photographers", icon: "photographers", badge: counts.photographers },
-    { href: `${base}/attendees`, label: "Attendees", icon: "attendees", badge: counts.attendees },
-    { href: `${base}/share`, label: "Share", icon: "share", badge: 0 },
-    ...(counts.removals > 0
-      ? [{ href: `${base}/removals`, label: "Removals", icon: "removals", badge: counts.removals, urgent: true }]
-      : []),
-    { href: `${base}/activity`, label: "Activity", icon: "activity", badge: 0 },
-    { href: `${base}/settings`, label: "Settings", icon: "settings", badge: 0 },
+  const groups: { title: string | null; links: NavLink[] }[] = [
+    { title: null, links: [{ href: base, label: "Overview", icon: "overview", exact: true, badge: 0 }] },
+    {
+      title: "Photos",
+      links: [
+        { href: `${base}/albums`, label: "Albums", icon: "albums", badge: counts.albums },
+        { href: `${base}/upload`, label: "Upload", icon: "upload", badge: 0 },
+        { href: `${base}/photographers`, label: "Photographers", icon: "photographers", badge: counts.photographers },
+      ],
+    },
+    {
+      title: "People",
+      links: [
+        { href: `${base}/attendees`, label: "Attendees", icon: "attendees", badge: counts.attendees },
+        { href: `${base}/share`, label: "Invite and share", icon: "share", badge: 0 },
+        ...(counts.removals > 0
+          ? [{ href: `${base}/removals`, label: "Removal requests", icon: "removals", badge: counts.removals, urgent: true }]
+          : []),
+      ],
+    },
+    {
+      title: "Event",
+      links: [
+        { href: `${base}/settings`, label: "Settings", icon: "settings", badge: 0 },
+        { href: `${base}/billing`, label: "Plan", icon: "plan", badge: 0 },
+        { href: `${base}/activity`, label: "Activity", icon: "activity", badge: 0 },
+      ],
+    },
   ];
+  const isActive = (link: NavLink) => (link.exact ? pathname === link.href : pathname.startsWith(link.href));
+  const current = groups.flatMap((g) => g.links).find(isActive);
+  const urgentCount = counts.removals;
 
   const toneStyle =
     status.tone === "live"
-      ? { background: "#e8f5ec", color: "#1f6b3a" }
+      ? { background: "var(--kb-ok-tint)", color: "var(--kb-ok)" }
       : status.tone === "attention"
-        ? { background: "#fef3f2", color: "#b42318" }
+        ? { background: "var(--kb-warn-tint)", color: "var(--kb-warn)" }
         : { background: "var(--kb-sand)", color: "var(--kb-ink-2)" };
+
+  const list = (
+    <div className="flex flex-col gap-4">
+      {groups.map((group) => (
+        <div key={group.title ?? "top"} className="flex flex-col gap-0.5">
+          {group.title ? <span className="px-3 pb-1 text-[14px] font-medium text-[color:var(--kb-ink-3)]">{group.title}</span> : null}
+          {group.links.map((link) => {
+            const active = isActive(link);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className="flex min-h-[44px] items-center gap-2.5 rounded-[8px] px-3 text-[15px] font-medium no-underline transition-colors lg:min-h-[40px] lg:text-[14px]"
+                style={{
+                  background: active ? "var(--kb-brand-tint)" : "transparent",
+                  color: active ? "var(--kb-brand-deep)" : "var(--kb-ink-2)",
+                }}
+              >
+                <span style={{ color: active ? "var(--kb-brand)" : "var(--kb-ink-3)" }}>
+                  <Icon name={link.icon} />
+                </span>
+                <span className="whitespace-nowrap">{link.label}</span>
+                {link.badge > 0 ? (
+                  <span
+                    className="ml-auto rounded-[6px] px-1.5 py-px text-[14px] font-medium tabular-nums"
+                    style={link.urgent ? { background: "var(--kb-warn)", color: "#fff" } : { background: "var(--kb-sand)", color: "var(--kb-ink-2)" }}
+                  >
+                    {link.badge.toLocaleString("en-AU")}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <nav aria-label="Organiser" className="lg:sticky lg:top-4 lg:self-start">
-      <div className="flex flex-col gap-1 lg:w-[232px]">
-        <div className="hidden flex-col gap-2 px-2 pb-4 pt-1 lg:flex">
+      {/* Phone: one button that says where you are. */}
+      <div className="lg:hidden">
+        <button
+          type="button"
+          className="flex min-h-[48px] w-full items-center gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-3.5 text-left"
+          aria-expanded={open}
+          aria-controls="organiser-menu"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span style={{ color: "var(--kb-brand)" }}>
+            <Icon name={current?.icon ?? "overview"} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] text-[color:var(--kb-ink-3)]">Menu</span>
+            <span className="block truncate text-[15px] font-semibold">{current?.label ?? "Overview"}</span>
+          </span>
+          {urgentCount > 0 && !open ? (
+            <span className="rounded-[6px] px-1.5 py-px text-[14px] font-medium" style={{ background: "var(--kb-warn)", color: "#fff" }}>
+              {urgentCount}
+            </span>
+          ) : null}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={open ? "rotate-180" : ""}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {open ? (
+          <div
+            ref={panel}
+            id="organiser-menu"
+            // Choosing a screen closes the menu.
+            onClick={(ev) => (ev.target as HTMLElement).closest("a") && setOpen(false)}
+            className="mt-2 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] p-2 shadow-[var(--soft-shadow-lift)]"
+          >
+            {list}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Desktop: the rail. */}
+      <div className="hidden flex-col gap-1 lg:flex lg:w-[232px]">
+        <div className="flex flex-col gap-2 px-2 pb-4 pt-1">
           <div className="flex items-center gap-2.5">
             <EventMark name={eventName} logoUrl={logoUrl} accentColour={accentColour} size={36} />
             <span className="min-w-0">
@@ -149,49 +259,27 @@ export function AdminNav({
           </span>
         </div>
 
-        <div ref={row} className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
-          {links.map((link) => {
-            const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className="flex min-h-[44px] flex-none items-center gap-2.5 rounded-[8px] px-3 text-[14px] lg:min-h-[40px] font-medium no-underline transition-colors lg:flex-auto"
-                style={{
-                  background: active ? "var(--kb-white)" : "transparent",
-                  boxShadow: active ? "inset 0 0 0 1px var(--kb-line)" : undefined,
-                  color: active ? "var(--kb-ink)" : "var(--kb-ink-2)",
-                }}
-              >
-                <span style={{ color: active ? "var(--kb-ember)" : "var(--kb-ink-3)" }}>
-                  <Icon name={link.icon} />
-                </span>
-                <span className="whitespace-nowrap">{link.label}</span>
-                {link.badge > 0 ? (
-                  <span
-                    className="ml-auto rounded-[6px] px-1.5 py-px text-[14px] font-medium tabular-nums"
-                    style={
-                      "urgent" in link && link.urgent
-                        ? { background: "#b42318", color: "#fff" }
-                        : { background: "var(--kb-sand)", color: "var(--kb-ink-2)" }
-                    }
-                  >
-                    {link.badge.toLocaleString("en-AU")}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
+        {list}
 
-        <Link
-          href={`${base}/billing`}
-          className="mt-4 hidden rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-3.5 py-3 text-ink no-underline lg:block"
-        >
-          <span className="block text-[14px] font-medium">{plan.line}</span>
-          <span className="block text-[14px] text-[color:var(--kb-ink-3)]">{plan.hint}</span>
-        </Link>
+        {next ? (
+          <Link
+            href={`${base}/setup`}
+            className="mt-4 block rounded-[var(--kb-r-card)] border border-[#cdd7f7] bg-[color:var(--kb-brand-tint)] px-3.5 py-3 text-ink no-underline"
+          >
+            <span className="block text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
+              Setup {next.done} of {next.total}
+            </span>
+            <span className="block text-[14px] text-[color:var(--kb-ink-2)]">Next: {next.title}</span>
+          </Link>
+        ) : (
+          <Link
+            href={`${base}/billing`}
+            className="mt-4 block rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-3.5 py-3 text-ink no-underline"
+          >
+            <span className="block text-[14px] font-medium">{plan.line}</span>
+            <span className="block text-[14px] text-[color:var(--kb-ink-3)]">{plan.hint}</span>
+          </Link>
+        )}
       </div>
     </nav>
   );

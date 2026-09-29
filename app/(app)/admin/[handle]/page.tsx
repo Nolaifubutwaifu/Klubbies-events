@@ -18,6 +18,8 @@ import { EXPIRE_AFTER_DAYS, STUCK_AFTER_MS } from "@/lib/media/constants";
 import { eventLink, eventQrSvg } from "@/lib/share";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { setupState } from "@/lib/events/setup";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -32,6 +34,10 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   const supabase = await createClient();
   const { event } = ctx;
   const eventId = event.id;
+  const inApp = await isNativeAppRequest();
+  const setup = await setupState(event, inApp);
+  if (!setup.requiredDone) redirect(`/admin/${handle}/setup`);
+  const nextStep = setup.recommended.find((step) => !step.done) ?? null;
 
   const [
     joined,
@@ -89,13 +95,12 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
 
   const drafts = (albumCount.count ?? 0) - (published.count ?? 0);
   const openRemovals = removals.count ?? 0;
+  const hasPhotos = (readyItems.count ?? 0) > 0;
   const stuckCount = stuck.count ?? 0;
   const stuckAlbums = [
     ...new Map((stuck.data ?? []).filter((row) => row.album_id).map((row) => [row.album_id!, row.albums?.title ?? "an album"])),
   ];
   const writable = canWrite(event);
-  const inApp = await isNativeAppRequest();
-  const firstRun = (albumCount.count ?? 0) === 0;
   const link = eventLink(handle);
   const closed = accessHasEnded(event);
 
@@ -167,7 +172,8 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           urgent: true,
         }
       : null,
-    writable && (photographerLinks.count ?? 0) === 0 && (readyItems.count ?? 0) === 0
+    // Left to the Next step card while setup steps remain.
+    !nextStep && writable && (photographerLinks.count ?? 0) === 0 && (readyItems.count ?? 0) === 0
       ? {
           key: "photographer",
           title: "No photographer link yet",
@@ -212,7 +218,8 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                 : "Guest list only."}
         </PageTitle>
         <div className="flex items-center gap-2">
-          <Link href={`/admin/${handle}/upload`} className="btn btn-primary no-underline">
+          {/* One primary button per screen: while setup steps remain, it's the Next step's. */}
+          <Link href={`/admin/${handle}/upload`} className={`btn ${nextStep ? "btn-secondary" : "btn-primary"} no-underline`}>
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
@@ -223,43 +230,54 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </div>
       </div>
 
-      {firstRun ? (
-        <div className="soft-card flex flex-wrap items-center justify-between gap-4 p-5">
-          <div>
-            <span className="kb-eyebrow">Getting started</span>
-            <div className="mt-1 text-[18px] font-semibold">Six steps, about ten minutes. Then photographers take it from there.</div>
+      {nextStep ? (
+        <section className="kb-brand-band flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6" aria-label="Next step">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
+              Next step · {setup.recommended.filter((step) => step.done).length} of {setup.recommended.length} done
+            </span>
+            <span className="text-[20px] font-semibold tracking-[-0.01em]">{nextStep.title}</span>
+            <span className="text-[15px] text-[color:var(--kb-ink-2)]">{nextStep.hint}</span>
           </div>
-          <Link href={`/admin/${handle}/setup`} className="btn btn-secondary no-underline">
-            Open the checklist
-          </Link>
-        </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href={nextStep.href} className="btn btn-primary no-underline">
+              {nextStep.cta}
+            </Link>
+            <Link href={`/admin/${handle}/setup`} className="kb-link text-[14px]">
+              All steps
+            </Link>
+          </div>
+        </section>
       ) : null}
 
-      <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
-        <Stat
-          value={(readyItems.count ?? 0).toLocaleString("en-AU")}
-          label="Photos and videos"
-          hint={stuckCount > 0 ? `${stuckCount.toLocaleString("en-AU")} unfinished` : `${plural(published.count ?? 0, "album")} live`}
-          tone={stuckCount > 0 ? "attention" : "plain"}
-        />
-        <Stat
-          value={(joined.count ?? 0).toLocaleString("en-AU")}
-          label="Attendees joined"
-          hint={event.access_mode === "guest_list" ? `of ${(onList.count ?? 0).toLocaleString("en-AU")} on the list` : "through the event link"}
-        />
-        <Stat
-          value={(findable.count ?? 0).toLocaleString("en-AU")}
-          label="Found their photos"
-          hint="added a selfie"
-          tone={(findable.count ?? 0) > 0 ? "good" : "plain"}
-        />
-        <Stat
-          value={(downloads.count ?? 0).toLocaleString("en-AU")}
-          label="Downloads"
-          hint="single photos and zips"
-          tone={(downloads.count ?? 0) > 0 ? "good" : "plain"}
-        />
-      </div>
+      {/* The numbers mean nothing before the first photo, so they wait for it. */}
+      {hasPhotos ? (
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+          <Stat
+            value={(readyItems.count ?? 0).toLocaleString("en-AU")}
+            label="Photos and videos"
+            hint={stuckCount > 0 ? `${stuckCount.toLocaleString("en-AU")} unfinished` : `${plural(published.count ?? 0, "album")} live`}
+            tone={stuckCount > 0 ? "attention" : "plain"}
+          />
+          <Stat
+            value={(joined.count ?? 0).toLocaleString("en-AU")}
+            label="Attendees joined"
+            hint={event.access_mode === "guest_list" ? `of ${(onList.count ?? 0).toLocaleString("en-AU")} on the list` : "through the event link"}
+          />
+          <Stat
+            value={(findable.count ?? 0).toLocaleString("en-AU")}
+            label="Found their photos"
+            hint="added a selfie"
+            tone={(findable.count ?? 0) > 0 ? "good" : "plain"}
+          />
+          <Stat
+            value={(downloads.count ?? 0).toLocaleString("en-AU")}
+            label="Downloads"
+            hint="single photos and zips"
+            tone={(downloads.count ?? 0) > 0 ? "good" : "plain"}
+          />
+        </div>
+      ) : null}
 
       {usage && (usage.guestLimit || usage.photoLimit) ? (
         <section className="soft-card flex flex-col gap-3 p-5" aria-label="Plan usage">
@@ -278,7 +296,11 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           <section className="soft-card flex flex-col gap-3 p-5">
             <div className="flex items-center gap-3">
               <h2 className="text-[16px] font-semibold">Needs you</h2>
-              {tasks.length ? <span className="soft-chip">{tasks.length}</span> : <span className="soft-chip soft-chip-muted">All clear</span>}
+              {tasks.length ? (
+                <span className="kb-chip-warn">{tasks.length}</span>
+              ) : (
+                <span className="kb-chip-ok">All clear</span>
+              )}
             </div>
             {tasks.length ? (
               <ul className="m-0 flex list-none flex-col p-0">
@@ -289,7 +311,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                   >
                     <span
                       className="h-[7px] w-[7px] flex-none rounded-full"
-                      style={{ background: task.urgent ? "#b42318" : "var(--kb-line-strong)" }}
+                      style={{ background: task.urgent ? "var(--kb-warn)" : "var(--kb-line-strong)" }}
                       aria-hidden
                     />
                     <span className="min-w-0 flex-1">
@@ -362,38 +384,40 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             </div>
           </section>
 
-          <section className="soft-card flex flex-col gap-3 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[16px] font-semibold">Activity</h2>
-              <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
-                Full log
-              </Link>
-            </div>
-            {activity.data?.length ? (
-              <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {activity.data.map((e) => (
-                  <li key={e.id} className="flex flex-col">
-                    <span className="text-[14px]">
-                      <strong className="font-medium">
-                        {e.memberships
-                          ? personName({
-                              displayName: e.memberships.users?.display_name,
-                              claimedName: e.memberships.claimed_name,
-                              rosterName: e.memberships.roster_name,
-                            })
-                          : "An organiser"}
-                      </strong>{" "}
-                      {e.action === "zip" ? "downloaded a zip" : e.action === "download" ? "downloaded" : "viewed"}
-                      {e.action === "zip" ? "" : ` ${e.media?.original_filename ?? "a photo"}`}
-                    </span>
-                    <span className="text-[14px] text-[color:var(--ink-55)]">{formatDateTime(e.occurred_at)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
-            )}
-          </section>
+          {hasPhotos ? (
+            <section className="soft-card flex flex-col gap-3 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[16px] font-semibold">Activity</h2>
+                <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
+                  Full log
+                </Link>
+              </div>
+              {activity.data?.length ? (
+                <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                  {activity.data.map((e) => (
+                    <li key={e.id} className="flex flex-col">
+                      <span className="text-[14px]">
+                        <strong className="font-medium">
+                          {e.memberships
+                            ? personName({
+                                displayName: e.memberships.users?.display_name,
+                                claimedName: e.memberships.claimed_name,
+                                rosterName: e.memberships.roster_name,
+                              })
+                            : "An organiser"}
+                        </strong>{" "}
+                        {e.action === "zip" ? "downloaded a zip" : e.action === "download" ? "downloaded" : "viewed"}
+                        {e.action === "zip" ? "" : ` ${e.media?.original_filename ?? "a photo"}`}
+                      </span>
+                      <span className="text-[14px] text-[color:var(--ink-55)]">{formatDateTime(e.occurred_at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
+              )}
+            </section>
+          ) : null}
         </div>
       </div>
     </main>

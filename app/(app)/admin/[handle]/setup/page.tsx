@@ -1,189 +1,156 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SetupSteps, StepTick } from "@/components/SetupSteps";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { isTier, planName, TIERS } from "@/lib/billing/plans";
-import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
-import { plural } from "@/lib/format";
+import { CLUB_CODES } from "@/lib/billing/club-codes";
+import { planName, tierOffers } from "@/lib/billing/plans";
+import { stripeConfigured, syncReturnedSession } from "@/lib/billing/stripe";
+import { setupState } from "@/lib/events/setup";
 import { isNativeAppRequest } from "@/lib/native-app-server";
-import { createClient } from "@/lib/supabase/server";
+import { ClubCodeForm } from "../billing/BillingForms";
+import { SizeStep } from "./SizeStep";
 
 export const metadata: Metadata = { title: "Set up your event" };
 
-type Step = {
-  key: string;
-  title: string;
-  hint: string;
-  done: boolean;
-  href: string;
-  cta: string;
-};
-
-function Tick({ done, index }: { done: boolean; index: number }) {
-  return (
-    <span
-      className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[14px] font-semibold"
-      style={done ? { background: "var(--kb-ember)", color: "#fff" } : { background: "var(--kb-sand)", color: "var(--kb-ink-2)" }}
-      aria-hidden
-    >
-      {done ? (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12.5l4.5 4.5L19 7" />
-        </svg>
-      ) : (
-        index
-      )}
-    </span>
-  );
-}
-
 /**
- * The setup checklist reads the event's real state, so it can be left and
- * come back to rather than trapping the organiser in a wizard.
+ * Setting up an event, in two parts. First the three steps every event needs
+ * (details and who can get in come from the create form, then the size here);
+ * until they're done the organiser menu stays hidden. Then the recommended
+ * steps, one at a time, with the next one highlighted. Both read the event's
+ * real state, so leaving and coming back picks up where things are.
  */
 export default async function SetupPage(props: PageProps<"/admin/[handle]/setup">) {
   const { handle } = await props.params;
-  const ctx = await requireAdminContext(handle);
-  const supabase = await createClient();
+  const search = await props.searchParams;
+  let ctx = await requireAdminContext(handle);
   const inApp = await isNativeAppRequest();
+  const configured = stripeConfigured();
+
+  // Back from Stripe's Checkout page: apply the payment now rather than
+  // waiting for the webhook, so the next screen already shows the new size.
+  let justPaid = false;
+  if (configured && typeof search.session_id === "string") {
+    justPaid = await syncReturnedSession(search.session_id, ctx.event.id).catch((error: unknown) => {
+      console.error("session sync failed", error);
+      return false;
+    });
+    if (justPaid) ctx = await requireAdminContext(handle);
+  }
   const { event } = ctx;
+  const state = await setupState(event, inApp);
 
-  const [{ count: onList }, { count: joined }, { count: albums }, { count: links }, { count: photographerAccounts }] = await Promise.all([
-    supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", event.id).in("status", ["pending", "active"]),
-    supabase
-      .from("memberships")
-      .select("id", { count: "exact", head: true })
-      .eq("event_id", event.id)
-      .eq("status", "active")
-      .not("user_id", "is", null)
-      .neq("role", "event_admin"),
-    supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", event.id),
-    supabase.from("album_guest_links").select("id", { count: "exact", head: true }).eq("event_id", event.id).is("revoked_at", null),
-    supabase
-      .from("memberships")
-      .select("id, event_roles!inner(key)", { count: "exact", head: true })
-      .eq("event_id", event.id)
-      .eq("event_roles.key", "photographer"),
-  ]);
+  if (!state.requiredDone) {
+    const detailsDone = state.required[0].done;
+    return (
+      <main className="flex max-w-[760px] flex-col gap-6 pb-12 pt-2">
+        <SetupSteps
+          steps={state.required.map((step) => ({
+            label: step.title,
+            state: step.done ? "done" : step.key === state.next?.key ? "current" : "todo",
+          }))}
+        />
+        {search.canceled ? <div className="notice">Checkout was cancelled. Nothing was charged.</div> : null}
+        {!detailsDone ? (
+          <>
+            <PageTitle kicker={event.name} title="Add your event's date">
+              Attendees see the date and venue on every screen.
+            </PageTitle>
+            <Link href={`/admin/${handle}/settings`} className="btn btn-primary self-start no-underline">
+              Add details
+            </Link>
+          </>
+        ) : (
+          <>
+            <PageTitle kicker={`${event.name} · Step 3 of 3`} title="Choose your event's size">
+              {inApp
+                ? "Your event starts on Free. Tell us roughly how many guests to expect, then continue."
+                : "Pick a size by how many guests you expect. Small events are free."}
+            </PageTitle>
+            <section className="soft-card p-5 sm:p-6">
+              <SizeStep eventId={event.id} expected={event.expected_guests} offers={tierOffers(event)} inApp={inApp} payable={configured} />
+            </section>
+            {!inApp && !event.plan_rate ? (
+              <ClubCodeForm
+                eventId={event.id}
+                code={event.club_code}
+                campus={event.club_code ? (CLUB_CODES[event.club_code] ?? null) : null}
+              />
+            ) : null}
+          </>
+        )}
+      </main>
+    );
+  }
 
-  const guestList = event.access_mode === "guest_list";
-  const billing = event.billing_status as BillingStatus;
-  const paid = canWrite(event);
-  const photographers = (links ?? 0) + (photographerAccounts ?? 0);
-  const attendees = joined ?? 0;
-  const steps: Step[] = [
-    {
-      key: "details",
-      title: "Event details",
-      hint: event.starts_on ? "Name, dates and venue are set" : "Add the date and venue attendees will see",
-      done: Boolean(event.starts_on),
-      href: `/admin/${handle}/settings`,
-      cta: event.starts_on ? "Edit" : "Add details",
-    },
-    {
-      key: "pay",
-      title: "Event size",
-      hint: isTier(event.plan)
-        ? `${planName(event.plan)}: up to ${TIERS[event.plan].guests.toLocaleString("en-AU")} guests and ${TIERS[event.plan].photos.toLocaleString("en-AU")} photos`
-        : paid
-          ? BILLING_LABEL[billing]
-          : inApp
-            ? "Not active yet"
-            : "One payment unlocks uploading and attendees",
-      // Free is a real choice; saying how many guests to expect is what makes it one.
-      done: event.plan !== "free" || Boolean(event.expected_guests),
-      href: `/admin/${handle}/billing`,
-      cta: inApp ? "View" : event.plan === "free" ? "Choose" : "View",
-    },
-    {
-      key: "brand",
-      title: "Logo and brand colour",
-      hint: event.logo_path ? "Your logo is on every attendee screen" : "Attendees should see your brand, not ours",
-      done: Boolean(event.logo_path),
-      href: `/admin/${handle}/settings#brand`,
-      cta: event.logo_path ? "Change" : "Add your logo",
-    },
-    guestList
-      ? {
-          key: "access",
-          title: "Import the guest list",
-          hint: (onList ?? 0) > 1 ? `${(onList ?? 0).toLocaleString("en-AU")} on the list` : "Guest list only: nobody else can get in",
-          done: (onList ?? 0) > 1,
-          href: `/admin/${handle}/attendees`,
-          cta: (onList ?? 0) > 1 ? "View list" : "Import",
-        }
-      : {
-          key: "access",
-          title: "Choose who can get in",
-          hint: "Anyone with the event link who confirms their email",
-          done: true,
-          href: `/admin/${handle}/settings#access`,
-          cta: "Change",
-        },
-    {
-      key: "album",
-      title: "Create an album",
-      hint: (albums ?? 0) > 0 ? plural(albums ?? 0, "album") : "One per part of the event: keynote, drinks, headshots",
-      done: (albums ?? 0) > 0,
-      href: `/admin/${handle}/upload`,
-      cta: "New album",
-    },
-    {
-      key: "photographer",
-      title: "Add your photographers",
-      hint: photographers > 0 ? `${plural(photographers, "photographer")} can upload` : "Each gets an upload link. No account needed",
-      done: photographers > 0,
-      href: `/admin/${handle}/photographers`,
-      cta: photographers > 0 ? "Manage" : "Add photographer",
-    },
-    {
-      key: "share",
-      title: "Share the link and QR code",
-      hint: attendees > 0 ? `${plural(attendees, "attendee")} joined` : "For the closing slide, table cards and the follow-up email",
-      done: attendees > 0,
-      href: `/admin/${handle}/share`,
-      cta: "Open share kit",
-    },
-  ];
-
-  const doneCount = steps.filter((s) => s.done).length;
-  const next = steps.find((s) => !s.done);
+  const recommendedDone = state.recommended.filter((step) => step.done).length;
+  const next = state.recommended.find((step) => !step.done) ?? null;
 
   return (
-    <main className="flex max-w-[860px] flex-col gap-6 pb-12 pt-2">
-      <PageTitle kicker={event.name} title="Set up your event">
-        About ten minutes. Come back any time: this list reads what&apos;s actually done.
+    <main className="flex max-w-[760px] flex-col gap-6 pb-12 pt-2">
+      {justPaid ? (
+        <div className="kb-ok-note" role="status">
+          Paid. {event.name} is now {planName(event.plan)}.
+        </div>
+      ) : null}
+      <PageTitle kicker={event.name} title={next ? "Get your event ready" : "Your event is ready"}>
+        {next
+          ? "The essentials are done. These make the event good, in the order worth doing them."
+          : "Everything's in place. Photos will appear for attendees as soon as albums are published."}
       </PageTitle>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-[14px]">
           <span className="font-medium">
-            {doneCount} of {steps.length} done
+            {recommendedDone} of {state.recommended.length} done
           </span>
-          {next ? <span className="text-[color:var(--ink-55)]">Next: {next.title}</span> : <span>All set</span>}
+          {next ? <span className="text-[color:var(--kb-ink-2)]">Next: {next.title}</span> : <span>All done</span>}
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--kb-sand)]">
-          <div className="h-full rounded-full bg-[color:var(--kb-ember)]" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+        <div className="h-2 overflow-hidden rounded-full bg-[color:var(--kb-sand)]">
+          <div className="h-full rounded-full bg-[color:var(--kb-ok)]" style={{ width: `${(recommendedDone / state.recommended.length) * 100}%` }} />
         </div>
       </div>
 
-      <ol className="soft-card m-0 flex list-none flex-col p-0">
-        {steps.map((step, index) => (
-          <li key={step.key} className={`flex flex-wrap items-center gap-4 p-4 ${index > 0 ? "border-t border-[color:var(--kb-line)]" : ""}`}>
-            <Tick done={step.done} index={index + 1} />
-            <span className="min-w-[200px] flex-1">
-              <span className="block text-[15px] font-medium">{step.title}</span>
-              <span className="block text-[14px] text-[color:var(--ink-70)]">{step.hint}</span>
-            </span>
-            <Link
-              href={step.href}
-              className={`btn btn-sm no-underline ${next?.key === step.key ? "btn-primary" : "btn-secondary"}`}
+      <ol className="m-0 flex list-none flex-col gap-3 p-0">
+        {state.recommended.map((step, index) => {
+          const isNext = next?.key === step.key;
+          return (
+            <li
+              key={step.key}
+              className={`flex flex-wrap items-center gap-4 rounded-[var(--kb-r-card)] border bg-[color:var(--kb-white)] p-4 ${
+                isNext ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"
+              }`}
             >
-              {step.cta}
-            </Link>
-          </li>
-        ))}
+              <StepTick done={step.done} next={isNext} index={index + 1} />
+              <span className="min-w-[200px] flex-1">
+                <span className={`block text-[15px] font-medium ${step.done ? "text-[color:var(--kb-ink-2)]" : ""}`}>{step.title}</span>
+                <span className="block text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
+              </span>
+              <Link href={step.href} className={`btn btn-sm no-underline ${isNext ? "btn-primary" : "btn-secondary"}`}>
+                {step.cta}
+              </Link>
+            </li>
+          );
+        })}
       </ol>
+
+      <details className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] p-4">
+        <summary className="cursor-pointer text-[15px] font-medium">Done: details, who can get in and size</summary>
+        <ul className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
+          {state.required.map((step) => (
+            <li key={step.key} className="flex flex-wrap items-center gap-3">
+              <StepTick done next={false} index={0} />
+              <span className="min-w-[180px] flex-1">
+                <span className="block text-[15px] font-medium">{step.title}</span>
+                <span className="block text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
+              </span>
+              <Link href={step.key === "size" ? `/admin/${handle}/billing` : step.href} className="btn btn-sm btn-secondary no-underline">
+                {step.cta}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </details>
 
       <Link href={`/admin/${handle}`} className="kb-link self-start">
         Go to the overview

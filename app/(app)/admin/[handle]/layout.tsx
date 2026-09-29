@@ -6,6 +6,7 @@ import { accessHasEnded } from "@/lib/auth/session";
 import { isTier, planName, retentionNotice, TIERS } from "@/lib/billing/plans";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
 import { eventAddress } from "@/lib/env";
+import { setupState } from "@/lib/events/setup";
 import { formatDate, formatLongDate } from "@/lib/format";
 import { signLogoMarks } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -65,10 +66,25 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
         ? { label: "Live", tone: "live" }
         : { label: "Ready, nothing published", tone: "quiet" };
 
+  const setup = await setupState(event, inApp);
+
+  // Until details, who can get in and size are done, the organiser sees only
+  // the setup screens: no menu, nothing to wander off to (decision 102).
+  if (!setup.requiredDone) {
+    return (
+      <div className="kb-branded flex flex-1 flex-col" style={eventToneStyle(event.accent_colour)}>
+        <AppHeader ctx={ctx} area="organiser" />
+        <div className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col px-4 pt-6 sm:px-6">{props.children}</div>
+      </div>
+    );
+  }
+
+  const nextStep = setup.recommended.find((step) => !step.done) ?? null;
+
   return (
-    <div className="flex flex-1 flex-col" style={eventToneStyle(event.accent_colour)}>
+    <div className="kb-branded flex flex-1 flex-col" style={eventToneStyle(event.accent_colour)}>
       <AppHeader ctx={ctx} area="organiser" />
-      <div className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col gap-2 px-4 pt-4 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:pt-6">
+      <div className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col gap-3 px-4 pt-4 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:pt-6">
         <AdminNav
           handle={handle}
           eventName={event.name}
@@ -83,6 +99,16 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
             removals: removals.count ?? 0,
           }}
           plan={plan}
+          next={
+            nextStep
+              ? {
+                  title: nextStep.title,
+                  href: nextStep.href,
+                  done: setup.recommended.filter((step) => step.done).length,
+                  total: setup.recommended.length,
+                }
+              : null
+          }
         />
         <div className="min-w-0 flex-1">
           {retention ? (

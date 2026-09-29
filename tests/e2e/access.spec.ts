@@ -54,6 +54,23 @@ test("member sees only their event", async ({ page, context, request }) => {
   expect(Object.keys(urls)).toEqual([world.eventA.mediaId]);
 });
 
+test("member can download a photo; nobody else can", async ({ context, request }) => {
+  await signIn(context, request, world.memberEmail, "Mara Lindqvist");
+  const own = await context.request.get(`/api/media/${world.eventA.mediaId}/download`, { maxRedirects: 0 });
+  expect(own.status()).toBe(303);
+  const other = await context.request.get(`/api/media/${world.eventB.mediaId}/download`, { maxRedirects: 0 });
+  expect(other.status()).toBe(404);
+});
+
+test("the phone tab bar still works on a short page", async ({ page, context, request }) => {
+  // The site footer once sat on top of the fixed tab bar whenever a page was
+  // short enough to bring it into view, so Saved could not be left.
+  await signIn(context, request, world.memberEmail, "Mara Lindqvist");
+  await page.goto(`/e/${world.eventA.handle}/saved`);
+  await page.locator("nav[data-tabbar]").getByRole("link", { name: "Photos", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/e/${world.eventA.handle}$`));
+});
+
 test("removed attendee loses access and can't rejoin through the link", async ({ page, context, request }) => {
   await signIn(context, request, world.memberEmail, "Mara Lindqvist");
   await page.goto(`/e/${world.eventA.handle}`);

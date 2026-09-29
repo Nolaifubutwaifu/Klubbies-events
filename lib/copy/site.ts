@@ -41,7 +41,7 @@ export const PRICE = {
   ],
   /** The asterisk under the pricing table. */
   footnote:
-    "Up to 10% more guests than the size are included. Past that, guests can keep joining for 2 days, up to 50% over, while you upgrade. Upgrading after the event has run out of room costs the difference plus 25%.",
+    "Each size includes 10% extra guests. If more turn up, they can keep joining for 2 days (up to 50% extra) while you move up a size. Moving up once that has started costs 25% more.",
   clubs: `Student club? Club prices from A$${TIERS.small.price.club} with your campus club code.`,
 } as const;
 
@@ -143,40 +143,63 @@ export const PRIVACY_PROMISES: Step[] = [
   },
 ];
 
-export const FAQS: { q: string; a: string }[] = [
+export type FaqGroup = "Getting started" | "Photos and privacy" | "Pricing";
+
+export const FAQS: { q: string; a: string; group: FaqGroup }[] = [
   {
     q: "Do attendees need to download an app?",
+    group: "Getting started",
     a: "No. The gallery works in any phone or laptop browser. There is an iPhone app for people who prefer it, and the QR code works either way.",
   },
   {
     q: "Do photographers need an account?",
+    group: "Getting started",
     a: "No. You create an upload link for each photographer and send it to them. It works in any browser and expires on the date you choose.",
   },
   {
     q: "Who can see the photos?",
+    group: "Photos and privacy",
     a: "Only people who confirm their email through your event link, or, in guest-list mode, only the addresses on your list. Nothing is ever public or indexed by search engines.",
   },
   {
     q: "How long do attendees have access?",
+    group: "Photos and privacy",
     a: "12 months after the event, on every size, including Free. You can close the gallery earlier in the event's settings. After 12 months the photos are deleted, unless you keep the event for another year; you're emailed 30 and 7 days before.",
   },
   {
     q: "How does face search handle consent?",
+    group: "Photos and privacy",
     a: "Every attendee sees a notice that faces are analysed before they see any photos. Being findable is separate and optional: only attendees who add their own selfie are matched, and only they see the results.",
   },
   {
     q: "What does it cost?",
+    group: "Pricing",
     a: `Free for up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos. Bigger events pay once, by size: A$${TIERS.small.price.standard} for up to ${TIERS.small.guests} guests, A$${TIERS.medium.price.standard} for up to ${TIERS.medium.guests}, A$${TIERS.large.price.standard} for up to ${TIERS.large.guests.toLocaleString("en-AU")}. Student clubs pay less with their campus club code. No subscription, and no limit on photographers.`,
   },
   {
     q: "What if more guests come than I planned?",
-    a: "Up to 10% over is included. Past that, guests can keep joining for 2 days, up to 50% over, while you upgrade for the difference plus 25%. If nobody upgrades, the guests who joined last are paused, not removed, until you make room.",
+    group: "Pricing",
+    a: "Each size includes 10% extra guests. If more turn up, they can keep joining for 2 days (up to 50% extra) while you move up a size, which then costs 25% more than moving up beforehand. If you don't, the guests who joined last are paused, not removed, until you make room.",
   },
   {
     q: "How do videos count?",
+    group: "Pricing",
     a: "Each started minute of video counts as 10 photos toward your event's allowance, so a 2 minute clip counts as 20. Each video can be up to 500 MB.",
   },
 ];
 
 /** Questions about money, left out of the FAQ inside the iPhone app. */
 export const PRICE_QUESTIONS = new Set(["What does it cost?", "What if more guests come than I planned?"]);
+
+/** The four questions the home page answers; the rest live on /faq. */
+export const HOME_QUESTIONS = [
+  "Do attendees need to download an app?",
+  "Who can see the photos?",
+  "How does face search handle consent?",
+  "What does it cost?",
+];
+
+export const ORGANISERS = {
+  title: "Branded, private and easy to run.",
+  lead: "Whether it is a 60-person meetup or a 2,000-person conference.",
+} as const;

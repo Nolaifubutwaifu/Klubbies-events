@@ -13,7 +13,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const supabase = await createClient();
   const { data: media } = await supabase
     .from("media")
-    .select("id, event_id, storage_path, original_filename, backed_up_at, albums(allow_download)")
+    .select("id, event_id, storage_path, original_filename, backed_up_at, albums!media_album_id_fkey(allow_download)")
     .eq("id", id)
     .maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -82,7 +82,7 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
             <h2 className="text-[16px] font-semibold">Announcement email</h2>
             <div className="flex gap-2">
               <CopyButton value={subject} label="Copy subject" className="btn btn-sm btn-secondary" />
-              <CopyButton value={email} label="Copy email" className="btn btn-sm btn-primary" />
+              <CopyButton value={email} label="Copy email" className="btn btn-sm btn-secondary" />
             </div>
           </div>
           <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">

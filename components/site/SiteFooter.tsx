@@ -6,7 +6,9 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Product",
     links: [
       { href: "/#how", label: "How it works" },
-      { href: "/#pricing", label: "Pricing" },
+      { href: "/features", label: "Features" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/faq", label: "FAQ" },
       { href: "/signin", label: "Sign in" },
       { href: "/start", label: "Create an event" },
     ],
@@ -23,8 +25,12 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 ];
 
 /** One footer for every public page. */
-export function SiteFooter() {
+export function SiteFooter({ inApp = false }: { inApp?: boolean }) {
   const support = process.env.SUPPORT_EMAIL;
+  // No pricing inside the iPhone app (Apple allows no payment prompts there).
+  const columns = inApp
+    ? COLUMNS.map((column) => ({ ...column, links: column.links.filter((link) => link.href !== "/pricing") }))
+    : COLUMNS;
   return (
     <footer className="border-t border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
       <div className="kb-wrap grid grid-cols-2 gap-x-6 gap-y-10 py-14 sm:grid-cols-4">
@@ -32,7 +38,7 @@ export function SiteFooter() {
           <Brand />
           <p className="mt-3 max-w-[28ch] text-[14px] text-[color:var(--kb-ink-2)]">Private photo galleries for corporate events and meetups.</p>
         </div>
-        {COLUMNS.map((column) => (
+        {columns.map((column) => (
           <div key={column.title}>
             <h2 className="text-[14px] font-semibold text-[color:var(--kb-ink)]">{column.title}</h2>
             <ul className="m-0 mt-2 flex list-none flex-col p-0">

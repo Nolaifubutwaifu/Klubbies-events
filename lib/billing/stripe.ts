@@ -60,8 +60,14 @@ function offerLabel(offer: TierOffer): string {
  * apply; everything else is charged the amount lib/billing/plans.ts works out.
  * Promotion codes are off for upgrades from a paid tier.
  */
-export async function createCheckoutSession(event: EventRecord, email: string, offer: TierOffer): Promise<string> {
-  const billingUrl = `${appUrl()}/admin/${event.handle}/billing`;
+export async function createCheckoutSession(
+  event: EventRecord,
+  email: string,
+  offer: TierOffer,
+  /** The organiser screen Stripe sends them back to: the setup steps or the billing page. */
+  returnTo: "billing" | "setup" = "billing",
+): Promise<string> {
+  const billingUrl = `${appUrl()}/admin/${event.handle}/${returnTo}`;
   const metadata = {
     event_id: event.id,
     event_handle: event.handle,

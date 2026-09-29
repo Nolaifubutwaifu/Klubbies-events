@@ -79,8 +79,7 @@ export function LegalPage({
           </aside>
 
           <article>
-            <span className="soft-chip">Plain English</span>
-            <h1 className="mt-4 font-[family-name:var(--kb-font-display)] text-[40px] font-bold leading-[1.05] sm:text-[56px]">{title}</h1>
+            <h1 className="font-[family-name:var(--kb-font-display)] text-[40px] font-bold leading-[1.05] sm:text-[56px]">{title}</h1>
             <p className="mt-3 text-[15px] text-[color:var(--kb-ink-3)]">
               Last updated {updated} · About {minutes} {minutes === 1 ? "minute" : "minutes"} to read
             </p>

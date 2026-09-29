@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Create an event" };
 export default async function NewEventPage() {
   await requireUser("/admin/new");
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="kb-branded flex flex-1 flex-col">
       <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
         <div className="mx-auto flex min-h-[60px] w-full max-w-[1320px] items-center justify-between gap-4 px-4 sm:px-6">
           <Brand href="/events" />

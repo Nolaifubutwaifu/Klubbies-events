@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
 import { EventMark } from "@/components/EventMark";
+import { EventSwitcher } from "@/components/EventSwitcher";
 import { HeaderNav } from "@/components/HeaderNav";
 import { BrandTile } from "@/components/ui";
 import { displayNameFor } from "@/lib/auth/display-name";
@@ -49,8 +50,8 @@ export async function AppHeader({
 
   return (
     <>
-      <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
-        <div className="mx-auto flex min-h-[60px] w-full max-w-[1320px] items-center gap-3 px-4 sm:px-6">
+      <header className="relative z-30 border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
+        <div className="relative mx-auto flex min-h-[60px] w-full max-w-[1320px] items-center gap-3 px-4 sm:px-6">
           <Link href="/events" aria-label="Your events" className="hidden flex-none sm:block">
             <BrandTile size={26} />
           </Link>
@@ -65,6 +66,7 @@ export async function AppHeader({
               {dates ? <span className="block truncate text-[14px] leading-tight text-[color:var(--kb-ink-3)]">{dates}</span> : null}
             </span>
           </Link>
+          <EventSwitcher currentEventId={event.id} area={area} />
 
           {links.length ? <HeaderNav links={links} /> : null}
 
@@ -72,7 +74,8 @@ export async function AppHeader({
             {perms.manage_albums ? (
               area === "organiser" ? (
                 <Link href={`/e/${event.handle}`} className="btn btn-sm btn-secondary no-underline">
-                  Attendee view
+                  <span className="sm:hidden">Gallery</span>
+                  <span className="hidden sm:inline">Attendee view</span>
                 </Link>
               ) : (
                 <Link href={`/admin/${event.handle}`} className="btn btn-sm btn-secondary no-underline">
