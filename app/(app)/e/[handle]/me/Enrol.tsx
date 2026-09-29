@@ -32,7 +32,22 @@ export function Enrol({ eventId }: { eventId: string }) {
   const [selfie, setSelfie] = useState<File | null>(null);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
-  const input = useRef<HTMLInputElement>(null);
+  const camera = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLInputElement>(null);
+
+  async function pick(ev: React.ChangeEvent<HTMLInputElement>) {
+    const file = ev.target.files?.[0];
+    ev.target.value = "";
+    if (!file) return;
+    const jpeg = await toJpeg(file);
+    if (!jpeg) {
+      setMessage("We could not read that photo. Try a different one.");
+      return;
+    }
+    setSelfie(jpeg);
+    setPreview(URL.createObjectURL(jpeg));
+    setMessage("");
+  }
 
   return (
     <div className="soft-card flex max-w-[56ch] flex-col gap-3 p-5">
@@ -54,28 +69,18 @@ export function Enrol({ eventId }: { eventId: string }) {
             "Selfie"
           )}
         </span>
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          capture="user"
-          className="hidden"
-          onChange={async (ev) => {
-            const file = ev.target.files?.[0];
-            if (!file) return;
-            const jpeg = await toJpeg(file);
-            if (!jpeg) {
-              setMessage("We could not read that photo. Try a different one.");
-              return;
-            }
-            setSelfie(jpeg);
-            setPreview(URL.createObjectURL(jpeg));
-            setMessage("");
-          }}
-        />
-        <button type="button" className="btn btn-secondary" onClick={() => input.current?.click()}>
-          {selfie ? "Use a different photo" : "Take or choose a selfie"}
-        </button>
+        {/* Two inputs: one opens the front camera, the other the photo
+            library. A single input with `capture` gives phones no choice. */}
+        <input ref={camera} type="file" accept="image/*" capture="user" className="hidden" onChange={pick} />
+        <input ref={library} type="file" accept="image/*" className="hidden" onChange={pick} />
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-secondary" onClick={() => camera.current?.click()}>
+            {selfie ? "Take another" : "Take a selfie"}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => library.current?.click()}>
+            Choose from your photos
+          </button>
+        </div>
       </div>
 
       <label className="flex cursor-pointer items-start gap-3 text-[15px]">

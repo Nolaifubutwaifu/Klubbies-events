@@ -51,7 +51,8 @@ export function MemberTabBar({ handle, facesEnabled = false }: { handle: string;
       icon: <path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.4 12 20 12 20Z" />,
     },
     {
-      href: "/account",
+      // Carries the event along, so this bar looks the same on the profile.
+      href: `/account?event=${encodeURIComponent(handle)}`,
       label: "You",
       match: (p) => p.startsWith("/account"),
       icon: (

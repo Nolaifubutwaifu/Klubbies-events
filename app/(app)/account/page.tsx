@@ -22,8 +22,9 @@ function initials(name: string): string {
   return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export default async function AccountPage() {
+export default async function AccountPage(props: PageProps<"/account">) {
   await requireUser("/account");
+  const { event: from } = await props.searchParams;
   const [profile, user, events] = await Promise.all([getProfile(), getSessionUser(), listMyEvents()]);
   if (!profile || !user) return null;
 
@@ -37,6 +38,8 @@ export default async function AccountPage() {
   // Set when the person saves a password from this page.
   const hasPassword = user.user_metadata?.has_password === true;
   const name = profile.display_name ?? profile.email;
+  // The phone tab bar belongs to the event you came from ("You" carries it).
+  const tabEvent = events.find((event) => event.handle === from) ?? events[0] ?? null;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -141,7 +144,7 @@ export default async function AccountPage() {
         </div>
       </div>
 
-      {events[0] ? <MemberTabBar handle={events[0].handle} /> : null}
+      {tabEvent ? <MemberTabBar handle={tabEvent.handle} facesEnabled={tabEvent.facesEnabled} /> : null}
     </main>
   );
 }

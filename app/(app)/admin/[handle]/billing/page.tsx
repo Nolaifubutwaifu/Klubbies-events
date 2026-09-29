@@ -146,9 +146,11 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
                   </span>
                   <span className="text-[32px] font-semibold leading-none tracking-[-0.03em]">A${offer.amount}</span>
                   <span className="text-[14px] text-[color:var(--kb-ink-3)]">
-                    {offer.kind === "upgrade" ? `The difference from ${planName(offer.from)}` : "One payment for this event"}
-                    {offer.late ? ", plus 25% because the event has already run out of room" : ""}
-                    {offer.rate === "club" ? " · club rate" : ""}
+                    {offer.kind === "upgrade"
+                      ? `You've already paid for ${planName(offer.from)}, so you only pay the extra`
+                      : "One payment for this event"}
+                    {offer.late ? ", plus 25% because the event has already run out of room" : ""}.
+                    {offer.rate === "club" ? " Club rate." : ""}
                   </span>
                   {devActivate ? null : (
                     <form action={startCheckoutAction.bind(null, event.id, offer.to)}>
@@ -162,8 +164,8 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             })}
           </div>
           <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-            Up to 10% more guests than the size are included. Past that, guests can keep joining for 2 days, up to 50%
-            over, while you upgrade; upgrading after that point costs the difference plus 25%.
+            Each size includes 10% extra guests. If more turn up, they can keep joining for 2 days (up to 50% extra)
+            while you upgrade. Upgrades bought once that has started cost 25% more.
             {offers[0]?.kind === "tier" ? " Have a promotion code? Enter it on the payment page." : ""}
           </p>
           {!event.plan_rate ? <ClubCodeForm eventId={event.id} code={event.club_code} campus={event.club_code ? (CLUB_CODES[event.club_code] ?? null) : null} /> : null}
