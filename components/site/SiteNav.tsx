@@ -5,16 +5,17 @@ import { Brand } from "@/components/ui";
 import { PRICE } from "@/lib/copy/site";
 import { useEffect, useRef, useState } from "react";
 
-export type SiteSection = "how" | "pricing" | "privacy" | null;
+export type SiteSection = "how" | "features" | "pricing" | "faq" | "privacy" | null;
 
 const LINKS: { key: Exclude<SiteSection, null>; href: string; label: string }[] = [
   { key: "how", href: "/#how", label: "How it works" },
-  { key: "pricing", href: "/#pricing", label: "Pricing" },
-  { key: "privacy", href: "/privacy", label: "Privacy" },
+  { key: "features", href: "/features", label: "Features" },
+  { key: "pricing", href: "/pricing", label: "Pricing" },
+  { key: "faq", href: "/faq", label: "FAQ" },
 ];
 
 /**
- * The one nav for Home, How it works and the legal pages. Below 640px it is
+ * The one nav for Home, Features, Pricing, FAQ and the legal pages. Below 640px it is
  * the logo, a plain Log in link and a menu button: nothing can wrap.
  */
 export function SiteNav({ current = null, inApp = false }: { current?: SiteSection; inApp?: boolean }) {
@@ -61,7 +62,7 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
       <div className="kb-wrap flex h-16 items-center gap-3 sm:h-20">
         <Brand />
 
-        <nav aria-label="Main" className="ml-auto hidden items-center gap-7 sm:flex">
+        <nav aria-label="Main" className="ml-auto hidden items-center gap-7 lg:flex">
           {links.map((link) => (
             <Link
               key={link.key}
@@ -86,7 +87,7 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
           </span>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 sm:hidden">
+        <div className="ml-auto flex items-center gap-2 lg:hidden">
           <Link href="/signin" className="flex min-h-[44px] items-center px-2 text-[15px] font-medium text-[color:var(--kb-ink)] no-underline">
             Sign in
           </Link>
@@ -113,7 +114,7 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
           role="dialog"
           aria-modal="true"
           aria-label="Menu"
-          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] sm:hidden"
+          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] lg:hidden"
         >
           <div className="kb-wrap flex h-16 flex-none items-center">
             <span onClick={() => setOpen(false)}>
@@ -126,7 +127,7 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
             </button>
           </div>
           <nav aria-label="Main" className="kb-wrap mt-4 flex flex-col">
-            {[...links, { key: "faq", href: "/#questions", label: "Questions" }].map((link) => (
+            {[...links, { key: "privacy", href: "/privacy", label: "Privacy" }].map((link) => (
               <Link
                 key={link.key}
                 href={link.href}
