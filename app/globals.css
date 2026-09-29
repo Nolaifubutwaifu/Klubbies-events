@@ -1206,4 +1206,46 @@ html:has(.theme-soft) body {
     background: var(--kb-brand-tint);
     border: 1px solid #cdd7f7;
   }
+  .kb-chip-ok,
+  .kb-chip-warn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 9px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .kb-chip-ok {
+    background: var(--kb-ok-tint);
+    color: var(--kb-ok);
+  }
+  .kb-chip-warn {
+    background: var(--kb-warn-tint);
+    color: var(--kb-warn);
+  }
+  .kb-ok-note {
+    padding: 12px 14px;
+    border-radius: var(--kb-r-card);
+    background: var(--kb-ok-tint);
+    color: var(--kb-ok);
+    font-weight: 500;
+  }
+  .kb-jump {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--kb-line);
+    border-radius: 8px;
+    background: var(--kb-white);
+    color: var(--kb-ink-2);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .kb-jump:hover {
+    border-color: var(--kb-brand);
+    color: var(--kb-brand-deep);
+  }
 }

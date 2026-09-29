@@ -118,7 +118,10 @@ export function SettingsForm({
           <span className="soft-chip">Your photos</span>
           <span className="text-[14px] font-medium text-[color:var(--kb-ember)] underline underline-offset-4">See all 23</span>
           <input type="checkbox" checked readOnly tabIndex={-1} />
-          <span className="btn btn-primary btn-sm">Download all</span>
+          {/* Attendee screens keep ink buttons; the organiser side's blue isn't theirs. */}
+          <span className="btn btn-primary btn-sm" style={{ background: "var(--kb-ink)", borderColor: "var(--kb-ink)" }}>
+            Download all
+          </span>
         </div>
       </div>
 

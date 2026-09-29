@@ -74,7 +74,8 @@ export async function AppHeader({
             {perms.manage_albums ? (
               area === "organiser" ? (
                 <Link href={`/e/${event.handle}`} className="btn btn-sm btn-secondary no-underline">
-                  Attendee view
+                  <span className="sm:hidden">Gallery</span>
+                  <span className="hidden sm:inline">Attendee view</span>
                 </Link>
               ) : (
                 <Link href={`/admin/${event.handle}`} className="btn btn-sm btn-secondary no-underline">

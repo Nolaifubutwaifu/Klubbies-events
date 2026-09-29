@@ -57,6 +57,36 @@ export async function startKeepYearAction(eventId: string): Promise<void> {
 export type BillingFormState = { error?: string; message?: string; ok?: boolean };
 
 /**
+ * The size step of setup: how many guests to expect (required, so choosing
+ * Free is a real choice), then Free, or a paid size on Stripe's Checkout page
+ * which comes back to the setup steps. Paid sizes are never offered inside
+ * the iPhone app.
+ */
+export async function chooseSizeAction(eventId: string, _prev: BillingFormState, form: FormData): Promise<BillingFormState> {
+  const ctx = await billingContext(eventId);
+  const setup = `/admin/${ctx.event.handle}/setup`;
+  const expected = z.coerce.number().int().min(1).max(100000).safeParse(form.get("expected"));
+  if (!expected.success) return { error: "Enter about how many guests you expect" };
+  await createAdminClient().from("events").update({ expected_guests: expected.data }).eq("id", ctx.event.id);
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+
+  const tier = String(form.get("tier") ?? "free");
+  if (tier === "free" || !isTier(tier)) redirect(setup);
+  if (isNativeAppUserAgent((await headers()).get("user-agent"))) redirect(setup);
+  const offer = tierOffers(ctx.event).find((o) => o.to === tier);
+  if (!offer) redirect(setup);
+  const profile = await getProfile();
+  let url: string;
+  try {
+    url = await createCheckoutSession(ctx.event, profile?.email ?? "", offer, "setup");
+  } catch (error) {
+    console.error("checkout failed", error);
+    return { error: "We couldn't open checkout. Try again in a moment." };
+  }
+  redirect(url);
+}
+
+/**
  * A campus club code switches the event to club prices, until its first
  * payment fixes the rate for good.
  */
