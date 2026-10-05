@@ -37,6 +37,28 @@ async function send(to: string, subject: string, element: React.ReactElement): P
   if (error) throw new Error(`Resend: ${error.name}: ${error.message}`);
 }
 
+export type ContactMessage = { from: string; name?: string; event?: string; topic: string; body: string; userAgent: string };
+
+/** The support page's contact form, to the support inbox. Replying answers the sender. */
+export async function sendContactMessage(to: string, message: ContactMessage): Promise<void> {
+  const oneLine = (value: string) => value.replace(/[\r\n]+/g, " ").slice(0, 120);
+  const subject = `[Contact form] ${message.topic}: ${oneLine(message.name || message.from)}`;
+  const text = [
+    `From: ${message.name ? `${message.name} <${message.from}>` : message.from}`,
+    `Topic: ${message.topic}`,
+    `Event: ${message.event || "-"}`,
+    `Device: ${message.userAgent || "-"}`,
+    "",
+    message.body,
+  ].join("\n");
+  if (process.env.EMAIL_DRY_RUN === "1") {
+    console.info(`[email dry run] "${subject}" → ${to}\n${text}`);
+    return;
+  }
+  const { error } = await resend().emails.send({ from: serverEnv().EMAIL_FROM, replyTo: message.from, to, subject, text });
+  if (error) throw new Error(`Resend: ${error.name}: ${error.message}`);
+}
+
 export function sendSignInCode(to: string, props: SignInCodeProps) {
   return send(to, `${props.code} is your Klubbies Events code`, <SignInCode {...props} />);
 }

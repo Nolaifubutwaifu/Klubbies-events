@@ -6,6 +6,8 @@ export const LIMITS = {
   codeRequestPerEmail: { bucket: "request_code:email", limit: 5, windowSeconds: 3600 },
   codeRequestPerIp: { bucket: "request_code:ip", limit: 20, windowSeconds: 3600 },
   verifyPerIp: { bucket: "verify_code:ip", limit: 60, windowSeconds: 3600 },
+  contactPerIp: { bucket: "contact:ip", limit: 5, windowSeconds: 3600 },
+  contactPerEmail: { bucket: "contact:email", limit: 5, windowSeconds: 3600 },
 } as const;
 
 type Limit = (typeof LIMITS)[keyof typeof LIMITS];

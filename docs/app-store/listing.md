@@ -124,6 +124,6 @@ To review: tap "Use a password instead" on the sign-in screen and use the demo a
 ## Before you submit
 
 - `SUPABASE_SERVICE_ROLE_KEY` set in Vercel, so the live site can sign people in.
-- `support@klubbies.app` receives email (it's on the support page and every legal page).
+- `support@klubbies.app` receives email (the support page's contact form sends to it, and every email's Reply-To is it).
 - APNs variables set in Vercel if you want notifications at launch (see `ios/README.md`, step 5).
 - The reviewer account above works on a phone, not just on the Mac.

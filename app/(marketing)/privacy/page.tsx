@@ -74,7 +74,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "Your choices and rights",
-    "You can change your name and email preferences on your profile and turn face search off per event. Under the Australian Privacy Principles you can ask for a copy of the personal information we hold about you and ask us to correct it. To do that, to complain, or with any other question, email us at the address on the support page. If you are not happy with our answer you can contact the Office of the Australian Information Commissioner at oaic.gov.au.",
+    "You can change your name and email preferences on your profile and turn face search off per event. Under the Australian Privacy Principles you can ask for a copy of the personal information we hold about you and ask us to correct it. To do that, to complain, or with any other question, use the contact form on the support page. If you are not happy with our answer you can contact the Office of the Australian Information Commissioner at oaic.gov.au.",
   ],
 ];
 

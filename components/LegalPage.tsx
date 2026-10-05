@@ -9,9 +9,10 @@ export { supportEmail };
 
 export function ContactLine() {
   const email = supportEmail();
+  // The address itself stays off the site: scrapers harvest it for spam.
   return email ? (
     <>
-      email <a href={`mailto:${email}`}>{email}</a>
+      use the <Link href="/support#contact">contact form</Link>
     </>
   ) : (
     <>reply to your Stripe receipt</>

@@ -26,7 +26,6 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 
 /** One footer for every public page. */
 export function SiteFooter({ inApp = false }: { inApp?: boolean }) {
-  const support = process.env.SUPPORT_EMAIL;
   // No pricing inside the iPhone app (Apple allows no payment prompts there).
   const columns = inApp
     ? COLUMNS.map((column) => ({ ...column, links: column.links.filter((link) => link.href !== "/pricing") }))
@@ -55,13 +54,11 @@ export function SiteFooter({ inApp = false }: { inApp?: boolean }) {
         <div>
           <h2 className="text-[14px] font-semibold text-[color:var(--kb-ink)]">Contact</h2>
           <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0 pt-2.5 text-[14px] text-[color:var(--kb-ink-2)]">
-            {support ? (
-              <li>
-                <a href={`mailto:${support}`} className="text-[color:var(--kb-ink-2)]">
-                  {support}
-                </a>
-              </li>
-            ) : null}
+            <li>
+              <Link href="/support#contact" className="text-[color:var(--kb-ink-2)]">
+                Contact us
+              </Link>
+            </li>
             <li>Data stored in Sydney, Australia</li>
           </ul>
         </div>

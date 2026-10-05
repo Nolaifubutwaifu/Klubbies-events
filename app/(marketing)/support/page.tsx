@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ContactLine, LegalPage } from "@/components/LegalPage";
+import { ContactLine, LegalPage, supportEmail } from "@/components/LegalPage";
+import { ContactForm } from "./ContactForm";
 
 export const metadata: Metadata = { title: "Support" };
 
@@ -17,7 +18,16 @@ export default function SupportPage() {
       sections={[
         {
           title: "Get help",
-          body: (
+          body: supportEmail() ? (
+            <>
+              <p>
+                For anything about Klubbies Events, on the website or in the iPhone app, use the form below. Tell us the
+                event&apos;s name and what you were trying to do. We reply within two working days, and within 24 hours to a
+                report of objectionable content.
+              </p>
+              <ContactForm />
+            </>
+          ) : (
             <p>
               For anything about Klubbies Events, on the website or in the iPhone app, <ContactLine />. Tell us the
               event&apos;s name and what you were trying to do. We reply within two working days, and within 24 hours to a report of
