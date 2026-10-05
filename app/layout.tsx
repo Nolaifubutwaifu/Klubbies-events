@@ -40,7 +40,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
+    // The iPhone app adds "kb-splash" here before React loads, while its
+    // loading screen is up (ios/KlubbiesEvents/WebViewController.swift).
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
       <body className="min-h-dvh flex flex-col">{children}</body>
     </html>
   );

@@ -10,6 +10,8 @@ final class WebViewController: UIViewController {
     private var webView: WKWebView!
     private let progressBar = UIProgressView(progressViewStyle: .bar)
     private let offlineView = OfflineView()
+    /// The animated loading screen, until the first page has loaded.
+    private var splash: SplashView? = SplashView()
     private var progressObservation: NSKeyValueObservation?
     private let photoSaver = PhotoSaver()
     private let scanBridge = ScanBridge()
@@ -78,11 +80,46 @@ final class WebViewController: UIViewController {
             self.progressBar.isHidden = progress >= 1
         }
 
+        // Over everything until the first page is ready. While it's up, pages
+        // hold their entrance animation (html.kb-splash, app/globals.css).
+        if let splash {
+            splash.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(splash)
+            NSLayoutConstraint.activate([
+                splash.topAnchor.constraint(equalTo: view.topAnchor),
+                splash.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                splash.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                splash.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            ])
+            webView.configuration.userContentController.addUserScript(WKUserScript(
+                source: "document.documentElement.classList.add('kb-splash')",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            ))
+            // Never longer than this, whatever the network is doing.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in self?.hideSplash() }
+        }
+
         NotificationCenter.default.addObserver(self, selector: #selector(openFromNotification(_:)), name: .klubbiesOpenURL, object: nil)
         // Opened by tapping a notification: go straight to what it was about.
         let first = PushManager.shared.pendingURL ?? AppConfig.startURL
         PushManager.shared.pendingURL = nil
         webView.load(URLRequest(url: first))
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        splash?.play()
+    }
+
+    /// Fades the loading screen and lets the page play its entrance.
+    private func hideSplash() {
+        guard let splash else { return }
+        self.splash = nil
+        webView.configuration.userContentController.removeAllUserScripts()
+        splash.dismiss { [weak self] in
+            self?.webView.evaluateJavaScript("document.documentElement.classList.remove('kb-splash')")
+        }
     }
 
     @objc private func openFromNotification(_ note: Notification) {
@@ -169,6 +206,10 @@ extension WebViewController: WKNavigationDelegate {
         // Frames inside a page (Stripe's card field, embedded video) load as they are.
         if let frame = action.targetFrame, !frame.isMainFrame { return decisionHandler(.allow) }
         if scheme == "about" || scheme == "blob" || scheme == "data" { return decisionHandler(.allow) }
+        if let website = AppConfig.browserURL(for: url) {
+            decisionHandler(.cancel)
+            return openOutside(website)
+        }
         if AppConfig.isAppURL(url) { return decisionHandler(.allow) }
 
         decisionHandler(.cancel)
@@ -194,6 +235,7 @@ extension WebViewController: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         offlineView.isHidden = true
+        hideSplash()
         sendPushTokenIfNeeded()
     }
 
@@ -216,6 +258,7 @@ extension WebViewController: WKNavigationDelegate {
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
         if nsError.domain == "WebKitErrorDomain" && nsError.code == 102 { return }
         offlineView.isHidden = false
+        hideSplash()
     }
 }
 

@@ -6,6 +6,8 @@ import { ScanEventButton } from "@/components/ScanEventButton";
 import { authEventPreview } from "@/lib/auth/preview";
 import { getPublicEvent, getSessionUser } from "@/lib/auth/session";
 import { EVENT_FULL_MESSAGE, eventIsFull } from "@/lib/billing/usage";
+import { isNativeAppRequest } from "@/lib/native-app-server";
+import { AppLanding } from "./AppLanding";
 import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -49,15 +51,25 @@ export default async function SignInPage(props: PageProps<"/signin">) {
     );
   }
 
+  // The app opens on a screen of buttons; "Sign in with email" comes here.
+  const inApp = await isNativeAppRequest();
+  if (inApp && params.with !== "email") return <AppLanding />;
+
   return (
     <AuthShell
       topLink={
-        <>
-          <span className="hidden sm:inline">Organising an event? </span>
-          <Link href="/start" className="font-medium">
-            Create one
+        inApp ? (
+          <Link href="/signin" className="font-medium">
+            Back
           </Link>
-        </>
+        ) : (
+          <>
+            <span className="hidden sm:inline">Organising an event? </span>
+            <Link href="/start" className="font-medium">
+              Create one
+            </Link>
+          </>
+        )
       }
     >
       <AuthHeading>Sign in</AuthHeading>
@@ -66,7 +78,7 @@ export default async function SignInPage(props: PageProps<"/signin">) {
         code, so there&rsquo;s no password to remember.
       </p>
       <div className="mt-7 flex flex-col gap-3">
-        <ScanEventButton />
+        {inApp ? null : <ScanEventButton />}
         <SignInForm flow="member" />
         <p className="m-0 text-center text-[15px] text-[color:var(--kb-ink-2)]">
           New here and organising an event?{" "}

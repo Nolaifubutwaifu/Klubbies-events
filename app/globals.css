@@ -1249,3 +1249,33 @@ html:has(.theme-soft) body {
     color: var(--kb-brand-deep);
   }
 }
+
+/* The app's sign-in screen rises in after the native loading screen fades. */
+@keyframes kb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.kb-rise {
+  animation: kb-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.kb-rise-2 {
+  animation-delay: 90ms;
+}
+.kb-rise-3 {
+  animation-delay: 180ms;
+}
+/* Set by the app while its loading screen is up; removed as it fades. */
+html.kb-splash .kb-rise {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kb-rise {
+    animation: none;
+  }
+}
