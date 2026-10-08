@@ -131,13 +131,11 @@ export function RosterImport({ eventId }: { eventId: string }) {
 
   return (
     <>
+      {/* The drop area holds one real button (choose a file) and the paste
+          option, instead of being a button with another button inside it. */}
       <div
         className="dropzone px-4 py-6"
         data-active={dragging}
-        role="button"
-        tabIndex={0}
-        onClick={() => input.current?.click()}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && input.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -145,7 +143,9 @@ export function RosterImport({ eventId }: { eventId: string }) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <span className="text-[16px] font-semibold">{busy && !preview ? "Reading the file…" : "Choose the guest list file"}</span>
+        <button type="button" className="btn btn-secondary" onClick={() => input.current?.click()} disabled={busy && !preview}>
+          {busy && !preview ? "Reading the file…" : "Choose the guest list file"}
+        </button>
         <span className="text-[14px] text-[color:var(--ink-70)]">
           CSV or Excel export from Eventbrite, Humanitix, Luma or a spreadsheet.
           <span className="hidden [@media(pointer:fine)]:inline"> Or drop it here.</span>
@@ -153,10 +153,7 @@ export function RosterImport({ eventId }: { eventId: string }) {
         <button
           type="button"
           className="btn btn-ghost text-[14px]"
-          onClick={(e) => {
-            e.stopPropagation();
-            setPasteOpen(true);
-          }}
+          onClick={() => setPasteOpen(true)}
         >
           Paste a list instead
         </button>

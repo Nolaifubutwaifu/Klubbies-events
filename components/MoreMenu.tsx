@@ -58,7 +58,7 @@ export function MoreMenu({
 
   useEffect(() => {
     if (!open) return;
-    const first = root.current?.querySelector<HTMLElement>("[role=menu] a, [role=menu] button");
+    const first = menu.current?.querySelector<HTMLElement>("a, button");
     first?.focus();
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") {
@@ -69,11 +69,19 @@ export function MoreMenu({
     const onPointer = (ev: PointerEvent) => {
       if (!root.current?.contains(ev.target as Node)) setOpen(false);
     };
+    // A disclosure, not an ARIA menu: Tab moves through the items as usual,
+    // and tabbing out of it closes it.
+    const onFocusOut = (ev: FocusEvent) => {
+      if (ev.relatedTarget && !root.current?.contains(ev.relatedTarget as Node)) setOpen(false);
+    };
+    const node = root.current;
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPointer);
+    node?.addEventListener("focusout", onFocusOut);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onPointer);
+      node?.removeEventListener("focusout", onFocusOut);
     };
   }, [open]);
 
@@ -83,7 +91,6 @@ export function MoreMenu({
         ref={button}
         type="button"
         className={triggerClassName ?? (iconOnly ? "kb-icon-btn" : "btn btn-ghost")}
-        aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={id}
         aria-label={iconOnly || trigger ? label : undefined}
@@ -104,7 +111,6 @@ export function MoreMenu({
         <div
           ref={menu}
           id={id}
-          role="menu"
           className={`kb-menu top-[calc(100%+8px)] ${menuClassName ?? (align === "end" ? "right-0" : "left-0")}`}
           onClick={(ev) => {
             // Choosing anything closes the menu. A form's submit still fires.
@@ -120,7 +126,7 @@ export function MoreMenu({
 
 export function MoreLink({ href, children, danger = false }: { href: string; children: ReactNode; danger?: boolean }) {
   return (
-    <Link href={href} role="menuitem" className="kb-menu-item" data-danger={danger || undefined}>
+    <Link href={href} className="kb-menu-item" data-danger={danger || undefined}>
       {children}
     </Link>
   );
@@ -142,7 +148,7 @@ export function MoreButton({
   return (
     <button
       type={type}
-      role="menuitem"
+     
       className="kb-menu-item"
       data-danger={danger || undefined}
       onClick={onClick}

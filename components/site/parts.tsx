@@ -74,7 +74,8 @@ export function FeatureIcon({ icon }: { icon: Feature["icon"] }) {
 /** The attendee's "Your photos" screen, drawn at phone size. */
 export function PhoneMock() {
   return (
-    <div className="relative mx-auto w-[300px] rounded-[40px] border border-[color:var(--kb-line-strong)] bg-[#16181d] p-2.5 shadow-[0_40px_80px_-40px_rgb(22_24_29/0.55)]">
+    // A picture of the app, not the app: screen readers skip it.
+    <div aria-hidden className="relative mx-auto w-[300px] rounded-[40px] border border-[color:var(--kb-line-strong)] bg-[#16181d] p-2.5 shadow-[0_40px_80px_-40px_rgb(22_24_29/0.55)]">
       <div className="overflow-hidden rounded-[31px] bg-[color:var(--kb-cream)]">
         <div className="flex items-center gap-2 border-b border-[color:var(--kb-line)] bg-white px-4 pb-3 pt-7">
           <span className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0e7490] text-[14px] font-semibold text-white">PS</span>
@@ -137,7 +138,7 @@ export function PosterMock() {
     "1111111011001011011",
   ];
   return (
-    <div className="mx-auto flex aspect-[210/297] w-full max-w-[340px] flex-col rounded-[6px] border border-[color:var(--kb-line)] bg-white p-7 shadow-[0_30px_60px_-35px_rgb(22_24_29/0.45)]">
+    <div aria-hidden className="mx-auto flex aspect-[210/297] w-full max-w-[340px] flex-col rounded-[6px] border border-[color:var(--kb-line)] bg-white p-7 shadow-[0_30px_60px_-35px_rgb(22_24_29/0.45)]">
       <span className="text-[14px] font-medium uppercase tracking-[0.12em] text-[#0e7490]">Your photos from</span>
       <span className="serif mt-1 text-[34px]">Product Summit 2026</span>
       <span className="text-[14px] text-[color:var(--kb-ink-3)]">14 November · Brisbane</span>

@@ -172,7 +172,7 @@ export function AlbumActions({
     const from = primaryIsDownload && !canShareFiles ? 1 : 0;
     for (let i = from; i < parts; i++) {
       menuItems.push(
-        <a key={`zip${i}`} href={zipHref(i)} role="menuitem" className="kb-menu-item">
+        <a key={`zip${i}`} href={zipHref(i)} className="kb-menu-item">
           {parts > 1 ? `Download part ${i + 1} of ${parts}` : "Download all"}
         </a>,
       );
