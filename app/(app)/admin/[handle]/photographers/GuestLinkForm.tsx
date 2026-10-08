@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
-import { createGuestLinkAction, type GuestLinkState } from "@/app/(app)/admin/guest-actions";
+import type { ActionState } from "@/app/(app)/admin/actions";
+import { createGuestLinkAction, emailGuestLinkAction, type GuestLinkState } from "@/app/(app)/admin/guest-actions";
 
 // Said in words, not with strikethrough: a struck-out line is hard to read
 // and screen readers announce it as something the link can do.
@@ -35,6 +36,9 @@ export function GuestLinkForm({
   const [state, action] = useActionState<GuestLinkState, FormData>(createGuestLinkAction.bind(null, eventId), {});
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState<{ url: string; svg: string } | null>(null);
+  const [mailTo, setMailTo] = useState("");
+  const [mailed, setMailed] = useState<{ ok?: boolean; text: string } | null>(null);
+  const [mailing, setMailing] = useState(false);
 
   // The link is shown once, so give every way to hand it over: copy, the
   // phone's share sheet, and a QR the photographer can scan off this screen.
@@ -134,6 +138,30 @@ export function GuestLinkForm({
               </button>
             ) : null}
           </div>
+          <form
+            className="flex flex-wrap items-end gap-2"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!state.url) return;
+              setMailing(true);
+              const res: ActionState = await emailGuestLinkAction(eventId, state.url, mailTo).catch(() => ({ error: "Couldn't send it. Copy the link instead." }));
+              setMailed(res.error ? { text: res.error } : { ok: true, text: res.message ?? "Sent" });
+              setMailing(false);
+            }}
+          >
+            <label className="field min-w-[220px] flex-1">
+              Or email it to the photographer
+              <input className="input" type="email" value={mailTo} onChange={(e) => setMailTo(e.target.value)} placeholder="name@example.com" required />
+            </label>
+            <button type="submit" className="btn btn-secondary" disabled={mailing}>
+              {mailing ? "Sending…" : "Email the link"}
+            </button>
+            {mailed ? (
+              <span className={mailed.ok ? "w-full text-[14px] text-[color:var(--kb-ink-2)]" : "kb-error w-full"} role="status">
+                {mailed.text}
+              </span>
+            ) : null}
+          </form>
           {qr?.url === state.url ? (
             <div className="flex flex-wrap items-center gap-3">
               <span
