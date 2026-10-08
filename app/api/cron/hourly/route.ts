@@ -12,6 +12,7 @@ import { runBinPurge } from "@/lib/media/bin";
 import { runRemovalSweep } from "@/lib/media/removals";
 import { runScheduledPublishJob } from "@/lib/media/schedule";
 import { runUnfinishedSweep } from "@/lib/media/unfinished";
+import { runVideoPreviewBackfill } from "@/lib/media/video-previews";
 import { prunePendingSignIns, runAccessEndingJob } from "@/lib/notify";
 
 export const maxDuration = 300;
@@ -64,7 +65,9 @@ export async function GET(request: Request) {
   const usageRows = await refreshUsage().catch((error) => (console.error("usage refresh", error), 0));
   // After the usage refresh, so an event's saved totals are its last before its photos go.
   const retention = await runRetentionJob(left(40_000)).catch((error) => (console.error("retention", error), null));
+  // Posters, sizes and lengths for videos the uploader's browser couldn't read.
+  const videoPreviews = await runVideoPreviewBackfill(left(60_000)).catch((error) => (console.error("video previews", error), 0));
   const faces = await runFaceJobs({ budgetMs: left(240_000) });
   await pruneRateEvents();
-  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, retention, faces });
+  return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, retention, videoPreviews, faces });
 }
