@@ -2,7 +2,9 @@ import { includedGuests } from "@/lib/billing/plans";
 
 function Meter({ label, used, limit, note }: { label: string; used: number; limit: number | null; note?: string }) {
   const share = limit ? Math.min(1, used / limit) : 0;
-  const tone = limit && used >= limit ? "var(--kb-ink)" : "var(--kb-ember)";
+  // Amber from 80%, red at the limit: the bar used to look the same at 87%
+  // as at 5%, then turn calm ink when uploads had already stopped.
+  const tone = !limit ? "var(--kb-ember)" : share >= 1 ? "#b42318" : share >= 0.8 ? "#b54708" : "var(--kb-ember)";
   return (
     <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
       <span className="flex items-baseline justify-between gap-3 text-[14px]">
@@ -22,6 +24,11 @@ function Meter({ label, used, limit, note }: { label: string; used: number; limi
           aria-valuenow={Math.min(used, limit)}
         >
           <span className="block h-full rounded-full" style={{ width: `${share * 100}%`, background: tone }} />
+        </span>
+      ) : null}
+      {limit && share >= 0.8 ? (
+        <span className="text-[14px] font-medium" style={{ color: tone }}>
+          {share >= 1 ? "Full: new uploads are refused." : `${(limit - used).toLocaleString("en-AU")} left.`}
         </span>
       ) : null}
       {note ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">{note}</span> : null}
@@ -57,10 +64,10 @@ export function PlanMeters({
     <div className="flex flex-wrap gap-6">
       <Meter label="Guests" used={guestsJoined} limit={guestLimit} note={guestNote} />
       <Meter
-        label="Photos"
+        label="Photo allowance"
         used={unitsUsed}
         limit={photoLimit}
-        note={photoLimit ? "Each started minute of video counts as 10" : "No photo limit"}
+        note={photoLimit ? "A photo counts as 1. Each started minute of video counts as 10." : "No photo limit"}
       />
     </div>
   );

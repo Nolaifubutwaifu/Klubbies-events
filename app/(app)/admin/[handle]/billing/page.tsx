@@ -119,8 +119,19 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
         ) : null}
       </section>
 
+      {/* No sizes or prices in the app (Apple 3.1.1), but not a dead end
+          either: what the organiser can do from here is make room. */}
       {offers.length && inApp ? (
-        <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">The event&apos;s size can&apos;t be changed in the iPhone app.</p>
+        <section className="kb-info flex-col">
+          <strong>Making room</strong>
+          <span>
+            Videos use the most of the allowance. Remove uploads that didn&apos;t finish and clips you don&apos;t need from
+            each album; removed files stop counting straight away. The event&apos;s size can&apos;t be changed in the iPhone app.
+          </span>
+          <Link href={`/admin/${event.handle}/albums`} className="kb-link self-start">
+            Go to albums
+          </Link>
+        </section>
       ) : null}
 
       {offers.length && !inApp ? (
