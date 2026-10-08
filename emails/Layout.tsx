@@ -25,11 +25,11 @@ export function EmailLayout({ preview, children }: { preview: string; children: 
               expecting this email you can ignore it.
             </Text>
             <Text style={{ fontSize: 14, color: "#6b6e76", margin: "8px 0 0", lineHeight: 1.5 }}>
-              <Link href={`${site}/?src=credit-email`} style={{ color: "#6b6e76" }}>
+              <Link href={`${site}/?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
                 Photos by Klubbies Events
               </Link>
               {" · "}
-              <Link href={`${site}/start?src=credit-email`} style={{ color: "#6b6e76" }}>
+              <Link href={`${site}/start?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
                 Run your own event
               </Link>
             </Text>
@@ -41,6 +41,8 @@ export function EmailLayout({ preview, children }: { preview: string; children: 
 }
 
 export const emailStyles = {
+  /** Inline links: underlined and dark enough (7:1), not told apart by colour alone. */
+  link: { color: "#1f379b", textDecoration: "underline" },
   kicker: { fontSize: 14, fontWeight: 600, color: "#2b4acb", margin: 0 },
   heading: { fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "8px 0 12px" },
   body: { fontSize: 16, lineHeight: 1.6, color: "#4a4d55", margin: "0 0 16px" },

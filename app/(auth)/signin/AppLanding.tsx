@@ -27,11 +27,11 @@ export function AppLanding() {
         </h1>
         <p className="kb-rise kb-rise-2 m-0 mt-4 text-[15px] leading-[1.5] text-[color:var(--kb-ink-2)]">
           By continuing, you agree to our{" "}
-          <Link href="/terms" className="font-semibold text-[color:var(--kb-brand)] no-underline">
+          <Link href="/terms" className="font-semibold text-[color:var(--kb-brand)] underline">
             Terms
           </Link>{" "}
           and{" "}
-          <Link href="/privacy" className="font-semibold text-[color:var(--kb-brand)] no-underline">
+          <Link href="/privacy" className="font-semibold text-[color:var(--kb-brand)] underline">
             Privacy Policy
           </Link>
           .

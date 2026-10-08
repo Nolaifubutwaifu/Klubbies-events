@@ -24,7 +24,7 @@ export default function AlbumPublished({ name, eventName, albumTitle, albumMeta,
         See the photos
       </Link>
       <Text style={{ ...emailStyles.body, fontSize: 14, marginTop: 24 }}>
-        Don&apos;t want these? <Link href={unsubscribeUrl}>Turn off new album emails</Link>.
+        Don&apos;t want these? <Link href={unsubscribeUrl} style={emailStyles.link}>Turn off new album emails</Link>.
       </Text>
     </EmailLayout>
   );
