@@ -4,6 +4,9 @@ import { getEventContextById } from "@/lib/auth/session";
 import { eventFacesEnabled } from "@/lib/faces/collections";
 import { kickBackup } from "@/lib/backup/r2";
 import { kickPlanNotices } from "@/lib/billing/notices";
+import { mediaUnits } from "@/lib/billing/plans";
+import { PHOTOS_FULL } from "@/lib/billing/usage";
+import { formatDuration } from "@/lib/format";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { derivativePaths, listFolder } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -60,6 +63,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
       poster_path: objects.has("poster.jpg") ? paths.poster : null,
     })
     .eq("id", id);
+  if (error?.code === PHOTOS_FULL) {
+    // The real length came in over what's left of the allowance (migration 34).
+    await supabase.from("media").update({ status: "failed" }).eq("id", id);
+    const length = durationSeconds ? formatDuration(durationSeconds) : "this video";
+    return NextResponse.json(
+      {
+        error: `This video (${length}) counts as ${mediaUnits("video", durationSeconds)} photos, more than this event has left. Trim it, or remove other files first.`,
+      },
+      { status: 409 },
+    );
+  }
   if (error) return NextResponse.json({ error: "Could not finish the upload" }, { status: 500 });
 
   // The second copy in R2, once the response has gone.

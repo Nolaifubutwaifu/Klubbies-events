@@ -376,7 +376,7 @@ export function Viewer({
 
       <div className="flex flex-none px-2 pb-6 pt-3">
         <Action
-          label={saved ? "Saved" : "Save"}
+          label={saved ? "Favourited" : "Favourite"}
           pressed={saved}
           active={saved}
           filled={saved}

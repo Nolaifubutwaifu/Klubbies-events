@@ -67,7 +67,7 @@ export function PlanMeters({
         label="Photo allowance"
         used={unitsUsed}
         limit={photoLimit}
-        note={photoLimit ? "A photo counts as 1. Each started minute of video counts as 10." : "No photo limit"}
+        note={photoLimit ? "A photo counts as 1. Video counts 1 per 6 seconds, so a minute counts as 10." : "No photo limit"}
       />
     </div>
   );

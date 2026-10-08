@@ -10,7 +10,7 @@ export type PlanUsage = {
   photoLimit: number | null;
   guestsJoined: number;
   guestsPaused: number;
-  /** Photos used, with each started minute of video counted as 10. */
+  /** Photos used, with video counted 1 per started 6 seconds. */
   unitsUsed: number;
   joinState: JoinState;
   overflowStartedAt: string | null;

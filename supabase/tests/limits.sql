@@ -76,7 +76,7 @@ begin
     raise exception 'a video fitted into five photos of room';
   exception when sqlstate 'KB001' then null;
   end;
-  if private.media_units('video', 61) <> 20 or private.media_units('video', 60) <> 10 or private.media_units('video', null) <> 10 then
+  if private.media_units('video', 4) <> 1 or private.media_units('video', 61) <> 11 or private.media_units('video', 60) <> 10 or private.media_units('video', null) <> 10 then
     raise exception 'a video should count 10 per started minute';
   end if;
 
