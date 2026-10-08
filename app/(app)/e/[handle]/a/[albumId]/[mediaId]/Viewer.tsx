@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from
 import { decideFaceMatchAction } from "@/app/(app)/face-actions";
 import { requestRemovalAction } from "@/app/(app)/removal-actions";
 import { toggleFavouriteAction } from "@/app/(app)/e/[handle]/actions";
+import { nativeSaveToPhotos, socialInAppBrowser } from "@/lib/native-app";
 
 type Current = {
   id: string;
@@ -24,6 +25,16 @@ type Current = {
 
 const SWIPED_KEY = "kb-swiped";
 const subscribeNever = () => () => {};
+
+/** "app" inside the iPhone app, a social app's name in its browser, else "web". */
+function downloadEnv(): string {
+  if (nativeSaveToPhotos()) return "app";
+  return socialInAppBrowser(navigator.userAgent) ?? "web";
+}
+
+function megabytes(bytes: number | null | undefined): string {
+  return bytes ? ` (${Math.max(1, Math.round(bytes / 1_000_000))} MB)` : "";
+}
 /** Whether this browser has swiped in the viewer before, so the hint can stop. */
 function hasSwiped(): boolean {
   try {
@@ -125,13 +136,46 @@ export function Viewer({
   const router = useRouter();
   const touchX = useRef<number | null>(null);
   const [saved, setSaved] = useState(favourited);
-  const [sheet, setSheet] = useState<"none" | "removal" | "more">("none");
+  const [sheet, setSheet] = useState<"none" | "removal" | "more" | "social">("none");
+  const env = useSyncExternalStore(subscribeNever, downloadEnv, () => "web");
+  const [saving, setSaving] = useState(false);
   const swiped = useSyncExternalStore(subscribeNever, hasSwiped, () => true);
   const stripRef = useRef<HTMLDivElement>(null);
   const [asked, setAsked] = useState(alreadyAsked);
   const [matched, setMatched] = useState(faceMatchId);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+
+  // Confirmations fade; the sheet-free viewer shouldn't keep a pill up.
+  useEffect(() => {
+    if (!message || saving) return;
+    const timer = setTimeout(() => setMessage(""), 4000);
+    return () => clearTimeout(timer);
+  }, [message, saving]);
+
+  /**
+   * In the iPhone app a download link would open a blank Safari sheet on the
+   * storage host, so the app saves the file into Photos itself instead.
+   */
+  async function saveToPhotos() {
+    const native = nativeSaveToPhotos();
+    if (!native || saving) return;
+    const noun = current.kind === "video" ? "video" : "photo";
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/media/${current.id}/download?as=json`);
+      const body: { url?: string; bytes?: number | null; error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) throw new Error(body.error ?? "Couldn't get the file. Try again.");
+      setMessage(`Saving ${noun} to Photos${megabytes(body.bytes)}…`);
+      const result = (await native.postMessage({ urls: [body.url] })) as { saved?: number } | null;
+      setMessage(result?.saved ? `Saved to Photos` : `Couldn't save this ${noun}. Check your connection and try again.`);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      setMessage(/photos access|Couldn't get/i.test(text) ? text : `Couldn't save this ${noun}. Try again.`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const prevHref = prevId ? `${itemHrefBase}/${prevId}` : null;
   const nextHref = nextId ? `${itemHrefBase}/${nextId}` : null;
@@ -196,7 +240,7 @@ export function Viewer({
           <div className="text-[14px] text-white/[0.68]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
             {current.takenAt ? ` · ${current.takenAt}` : ""}
-            {current.photographer ? ` · Photo: ${current.photographer}` : ""}
+            {current.photographer ? ` · By ${current.photographer}` : ""}
           </div>
         </div>
         {/* Keeps the title centred; More lives in the bottom bar. */}
@@ -232,14 +276,14 @@ export function Viewer({
           <div className="text-white/70">This item can&apos;t be previewed.</div>
         )}
         {prevHref ? (
-          <Link href={prevHref} replace scroll={false} className={`${round} left-2.5`} aria-label="Previous photo">
+          <Link href={prevHref} replace scroll={false} className={`${round} left-2.5`} aria-label="Previous">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
               <path d="M14 6l-6 6 6 6" />
             </svg>
           </Link>
         ) : null}
         {nextHref ? (
-          <Link href={nextHref} replace scroll={false} className={`${round} right-2.5`} aria-label="Next photo">
+          <Link href={nextHref} replace scroll={false} className={`${round} right-2.5`} aria-label="Next">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
               <path d="M10 6l6 6-6 6" />
             </svg>
@@ -294,7 +338,11 @@ export function Viewer({
           <path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.4 12 20 12 20Z" />
         </Action>
         {canDownload ? (
-          <Action label="Download" href={`/api/media/${current.id}/download`}>
+          <Action
+            label={saving ? "Saving…" : "Download"}
+            href={env === "web" ? `/api/media/${current.id}/download` : undefined}
+            onClick={env === "app" ? saveToPhotos : env !== "web" ? () => setSheet("social") : undefined}
+          >
             <path d="M12 4v11M7 11l5 5 5-5" />
             <path d="M5 20h14" />
           </Action>
@@ -359,7 +407,7 @@ export function Viewer({
                 </button>
               ) : null}
           </div>
-          <h2 className="text-[18px] font-semibold">About this photo</h2>
+          <h2 className="text-[18px] font-semibold">About this {current.kind === "video" ? "video" : "photo"}</h2>
           <dl className="m-0 mt-3 grid gap-x-5 gap-y-2.5" style={{ gridTemplateColumns: "auto 1fr" }}>
             {details.map((d) => (
               <div key={d.label} className="contents">
@@ -374,6 +422,37 @@ export function Viewer({
           <button type="button" className="btn btn-secondary mt-4 w-full" onClick={() => setSheet("none")}>
             Close
           </button>
+        </div>
+      ) : null}
+
+      {sheet === "social" ? (
+        <div className={`${SHEET} px-5 pb-6 pt-4.5`}>
+          <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color:var(--kb-line-strong)]" />
+          <h2 className="soft-display text-[21px]">{env} can&apos;t save files</h2>
+          <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
+            You&apos;re in {env}&apos;s own browser, which ignores downloads. Tap the ••• menu at the top of the screen and choose
+            Open in browser (or Open in Safari), then download from there. Copy the link if you&apos;d rather paste it yourself.
+          </p>
+          <div className="mt-4 flex gap-2.5">
+            <button type="button" className="btn btn-secondary flex-1" onClick={() => setSheet("none")}>
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary flex-1"
+              onClick={async () => {
+                setSheet("none");
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  setMessage("Link copied. Paste it into Safari or Chrome.");
+                } catch {
+                  setMessage("Couldn't copy the link.");
+                }
+              }}
+            >
+              Copy link
+            </button>
+          </div>
         </div>
       ) : null}
 

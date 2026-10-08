@@ -14,6 +14,20 @@ export function isNativeAppUserAgent(userAgent: string | null | undefined): bool
   return Boolean(userAgent?.includes(NATIVE_APP_TOKEN));
 }
 
+/**
+ * Instagram, Facebook, TikTok and Snapchat open links in their own browser,
+ * which can't save files: a download there just does nothing. Pages say so
+ * and point people to a real browser instead.
+ */
+export function socialInAppBrowser(userAgent: string | null | undefined): string | null {
+  if (!userAgent) return null;
+  if (/Instagram/i.test(userAgent)) return "Instagram";
+  if (/FBAN|FBAV|FB_IAB|FBIOS/.test(userAgent)) return "Facebook";
+  if (/musical_ly|TikTok|BytedanceWebview/i.test(userAgent)) return "TikTok";
+  if (/Snapchat/i.test(userAgent)) return "Snapchat";
+  return null;
+}
+
 type ReplyHandler = { postMessage(body: unknown): Promise<unknown> };
 
 /** The app's Save to Photos handler, or null in a normal browser. */

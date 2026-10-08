@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
 import { r2Url } from "@/lib/backup/r2";
-import { SIGNED_URL_TTL, signDownload, signedUrlLifetime } from "@/lib/storage";
+import { SIGNED_URL_TTL, signDownload, signedUrlLifetime, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/download">) {
@@ -13,7 +13,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const supabase = await createClient();
   const { data: media } = await supabase
     .from("media")
-    .select("id, event_id, storage_path, original_filename, backed_up_at, albums!media_album_id_fkey(allow_download)")
+    .select("id, event_id, kind, storage_path, display_path, original_filename, mime_type, byte_size, backed_up_at, albums!media_album_id_fkey(allow_download)")
     .eq("id", id)
     .maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -34,5 +34,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   if (!url) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await logAccess(event, media.id, "download");
+  // The iPhone app saves into Photos itself, so it asks for the address
+  // rather than following a redirect to a storage host it can't download.
+  if (new URL(request.url).searchParams.get("as") === "json") {
+    // The shipped app names saved photos .jpg or .png, so a HEIC original
+    // goes as its full-size display copy, which Photos reads either way.
+    const photosReadable = media.kind === "video" || /^image\/(jpeg|png)$/.test(media.mime_type ?? "");
+    const saveUrl =
+      photosReadable || !media.display_path
+        ? url
+        : (await signPaths(supabase, [media.display_path], SIGNED_URL_TTL.display)).get(media.display_path) ?? url;
+    return NextResponse.json({ url: saveUrl, filename, kind: media.kind, bytes: media.byte_size });
+  }
   return NextResponse.redirect(url, { status: 303 });
 }

@@ -84,12 +84,14 @@ export function AlbumActions({
         const res = await fetch("/api/media/sign", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ mediaIds: batch, variant: "display" }),
+          // The app saves the real files, videos included; the share sheet
+          // takes images only, so it keeps the display copies.
+          body: JSON.stringify({ mediaIds: batch, variant: native ? "original" : "display" }),
         });
         const { urls }: { urls: Record<string, string> } = await res.json();
         if (native) {
           const batchUrls = batch.map((id) => urls[id]).filter((url): url is string => Boolean(url));
-          setProgress(`Saving ${Math.min(i + SHARE_BATCH, mediaIds.length)} of ${mediaIds.length}…`);
+          setProgress(`Saving ${Math.min(i + SHARE_BATCH, mediaIds.length)} of ${mediaIds.length}… keep the app open`);
           const result = (await native.postMessage({ urls: batchUrls })) as { saved?: number };
           saved += result?.saved ?? 0;
           continue;
@@ -106,7 +108,13 @@ export function AlbumActions({
         setProgress(`Saving ${files.length} photos…`);
         await navigator.share({ files, title: "Klubbies Events" });
       }
-      setProgress(native ? `Saved ${saved} to Photos` : "Done");
+      setProgress(
+        native
+          ? saved === mediaIds.length
+            ? `Saved all ${saved} to Photos`
+            : `Saved ${saved} of ${mediaIds.length} to Photos. The rest couldn't be saved; try Download all on a computer.`
+          : "Done",
+      );
     } catch (shareError) {
       const message = shareError instanceof Error ? shareError.message : String(shareError);
       if (/photos access/i.test(message)) setError(message);
