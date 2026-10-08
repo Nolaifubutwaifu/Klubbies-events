@@ -255,7 +255,9 @@ export function Viewer({
         {current.kind === "video" && current.videoUrl ? (
           <video
             key={current.id}
-            src={current.videoUrl}
+            // Without a poster, starting at 0.1s makes iOS paint the first
+            // frame instead of a black box.
+            src={current.posterUrl ? current.videoUrl : `${current.videoUrl}#t=0.1`}
             poster={current.posterUrl ?? undefined}
             controls
             playsInline

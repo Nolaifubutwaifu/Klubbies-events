@@ -26,7 +26,11 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
         <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (
         <span className="flex h-full w-full items-center justify-center bg-neutral-400 p-2 text-center text-[14px] text-ink">
-          {item.status === "ready" ? "No preview" : item.original_filename || "Not finished"}
+          {item.status !== "ready"
+            ? item.original_filename || "Not finished"
+            : item.kind === "video"
+              ? `${item.original_filename ?? "Video"} · tap to play`
+              : "No preview"}
         </span>
       )}
       {item.kind === "video" ? (
