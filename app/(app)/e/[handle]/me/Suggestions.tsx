@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { decideFaceMatchAction } from "@/app/(app)/face-actions";
 import type { Suggestion } from "@/lib/faces/queries";
 
@@ -40,23 +40,77 @@ export function Suggestions({
   const [decided, decide] = useOptimistic<string[], string>([], (state, id) => [...state, id]);
   const [, startTransition] = useTransition();
   const [error, setError] = useState("");
-  // The card leaves at once; if the answer didn't save, it comes back and
-  // this says why, instead of reappearing next visit with no explanation.
-  const answer = (suggestion: Suggestion, verdict: "confirm" | "reject") =>
+  // The last answer waits a few seconds before it's saved, so a mis-tap can
+  // be undone. Undoing a saved "Yes" would leave a wrong reference face.
+  const [held, setHeld] = useState<{ suggestion: Suggestion; verdict: "confirm" | "reject" } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const save = (suggestion: Suggestion, verdict: "confirm" | "reject") =>
     startTransition(async () => {
       setError("");
       decide(suggestion.matchId);
       for (const id of suggestion.matchIds) {
         const res = await decideFaceMatchAction(id, verdict).catch(() => ({ error: "offline" }));
+        // The card comes back and this says why, instead of it reappearing
+        // next visit with no explanation.
         if (res && "error" in res && res.error) {
           setError("Couldn't save that answer. Check your connection and try again.");
           return;
         }
       }
     });
-  const remaining = suggestions.filter((s) => !decided.includes(s.matchId));
 
-  if (remaining.length === 0) return null;
+  // The ref is the source of truth (timers and unmount read it); the state
+  // only drives what's on screen.
+  const heldRef = useRef(held);
+  const hold = (next: typeof held) => {
+    heldRef.current = next;
+    setHeld(next);
+  };
+
+  const flush = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const current = heldRef.current;
+    hold(null);
+    if (current) save(current.suggestion, current.verdict);
+  };
+
+  const answer = (suggestion: Suggestion, verdict: "confirm" | "reject") => {
+    flush();
+    hold({ suggestion, verdict });
+    timer.current = setTimeout(flush, 6000);
+  };
+
+  // Leaving the page saves whatever is still held.
+  useEffect(
+    () => () => {
+      const pending = heldRef.current;
+      if (pending) for (const id of pending.suggestion.matchIds) void decideFaceMatchAction(id, pending.verdict).catch(() => undefined);
+    },
+    [],
+  );
+
+  const remaining = suggestions.filter((s) => !decided.includes(s.matchId) && s.matchId !== held?.suggestion.matchId);
+
+  const undoBar = held ? (
+    <p className="m-0 flex flex-wrap items-center gap-3 text-[14px]" role="status">
+      {held.verdict === "confirm" ? "Marked as you." : "Marked as not you."}
+      <button
+        type="button"
+        className="kb-link"
+        onClick={() => {
+          if (timer.current) clearTimeout(timer.current);
+          timer.current = null;
+          hold(null);
+        }}
+      >
+        Undo
+      </button>
+    </p>
+  ) : null;
+
+  if (remaining.length === 0) return held || error ? <section className="flex flex-col gap-2">{undoBar}{error ? <p className="kb-error m-0" role="alert">{error}</p> : null}</section> : null;
 
   return (
     <section className="flex flex-col gap-3">
@@ -69,6 +123,7 @@ export function Suggestions({
             : ""}
         </p>
       </div>
+      {undoBar}
       {error ? (
         <p className="kb-error m-0" role="alert">
           {error}
