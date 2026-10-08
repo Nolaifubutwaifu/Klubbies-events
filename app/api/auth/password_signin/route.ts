@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
+import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
 import { normaliseEmail } from "@/lib/roster/email";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -39,7 +41,12 @@ export async function POST(request: Request) {
   const wanted = parsed.data.event?.toLowerCase();
   // An event's own link always goes back to that event: if they aren't in it
   // yet, its page offers to join (link mode) or explains the guest list.
-  const redirectTo = wanted
+  const cookieStore = await cookies();
+  const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
+  cookieStore.delete(NEXT_COOKIE);
+  const redirectTo = next
+    ? next
+    : wanted
     ? `/e/${wanted}`
     : accepted.length === 1
         ? `/e/${accepted[0].events.handle}`

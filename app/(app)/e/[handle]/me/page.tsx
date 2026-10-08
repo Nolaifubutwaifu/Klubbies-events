@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
+import { ZipParts } from "@/components/ZipParts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -139,9 +140,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                           Still looking through {progress.remaining.toLocaleString("en-AU")} more
                         </span>
                       ) : null}
-                      <a href={`/api/events/${ctx.event.id}/me/zip`} className="btn btn-primary no-underline" download>
-                        Download all
-                      </a>
+                      <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} className="btn btn-primary no-underline" />
                     </span>
                   </div>
 

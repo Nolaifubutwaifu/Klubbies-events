@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import Link from "next/link";
+import { ZipParts } from "@/components/ZipParts";
 import { plural } from "@/lib/format";
 
 type State = "not_enrolled" | "looking" | "matched" | "no_matches" | "failed";
@@ -14,14 +15,12 @@ export function YourPhotosCard({
   state,
   count,
   previews,
-  zipParts,
 }: {
   handle: string;
   eventId: string;
   state: State;
   count: number;
   previews: { id: string; albumId: string | null; url: string | null }[];
-  zipParts: number;
 }) {
   const meHref = `/e/${handle}/me`;
 
@@ -34,9 +33,7 @@ export function YourPhotosCard({
             <h2 className="serif mt-1 text-[34px]">{plural(count, "photo")} of you</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href={`/api/events/${eventId}/me/zip`} className="btn btn-secondary no-underline" download>
-              {zipParts > 1 ? "Download (part 1)" : "Download all"}
-            </a>
+            <ZipParts href={`/api/events/${eventId}/me/zip`} count={count} />
             <Link href={meHref} className="btn btn-primary no-underline">
               See all
             </Link>

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { PART_SIZE, safeFilename, zipResponse } from "@/lib/media/zip";
+import { PART_SIZE, safeFilename, UNAVAILABLE, zipError, zipResponse } from "@/lib/media/zip";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 800;
@@ -14,11 +13,11 @@ export const maxDuration = 800;
  */
 export async function GET(request: Request, ctx: RouteContext<"/api/events/[id]/me/zip">) {
   const { id } = await ctx.params;
-  if (!z.uuid().safeParse(id).success) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!z.uuid().safeParse(id).success) return zipError(request, UNAVAILABLE, 404);
   const part = Math.max(0, Number(new URL(request.url).searchParams.get("part") ?? 0));
 
   const event = await getEventContextById(id);
-  if (!event || event.accessClosed) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!event || event.accessClosed) return zipError(request, UNAVAILABLE, 404);
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -28,7 +27,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/events/[id]/
     .eq("state", "confirmed")
     .order("media_id")
     .range(part * PART_SIZE, (part + 1) * PART_SIZE - 1);
-  if (error) return NextResponse.json({ error: "Could not load your photos" }, { status: 500 });
+  if (error) return zipError(request, "Could not load your photos", 500);
 
   const seen = new Set<string>();
   const media = (data ?? [])
@@ -40,7 +39,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/events/[id]/
       seen.add(key);
       return true;
     });
-  if (!media.length) return NextResponse.json({ error: "Nothing to download" }, { status: 404 });
+  if (!media.length) return zipError(request, "Nothing to download", 404);
 
   await logAccess(event, null, "zip");
   const title = safeFilename(event.event.name, "event");
