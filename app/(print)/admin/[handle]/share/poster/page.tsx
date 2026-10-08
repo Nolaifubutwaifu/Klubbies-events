@@ -4,7 +4,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { formatEventDates } from "@/lib/format";
 import { eventLink, eventQrSvg } from "@/lib/share";
-import { signLogoMarks } from "@/lib/storage";
+import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { readableAccent } from "@/lib/theme";
 
@@ -21,9 +21,9 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
   const accent = readableAccent(event.accent_colour);
   const [qr, logos] = await Promise.all([
     eventQrSvg(handle),
-    event.logo_path ? signLogoMarks(await createClient(), [event.logo_path]) : Promise.resolve(new Map<string, string>()),
+    // The full logo, not the 96px badge: it prints about 190px tall at 300dpi.
+    event.logo_path ? signPaths(await createClient(), [event.logo_path], SIGNED_URL_TTL.display) : Promise.resolve(new Map<string, string>()),
   ]);
-  // The poster wants the full logo, not the 96px badge.
   const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
   const meta = [formatEventDates(event.starts_on, event.ends_on), event.venue].filter(Boolean).join(" · ");
   const link = eventLink(handle).replace(/^https?:\/\//, "");

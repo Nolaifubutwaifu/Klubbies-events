@@ -302,7 +302,9 @@ export default async function AlbumPage(props: Props) {
       ) : null}
 
       <AlbumGrid
-        key={`${items.length}-${album.cover_media_id ?? album.cover_path ?? ""}`}
+        // Keyed on the album, not the item count: a delete changes the count,
+        // which remounted the grid and took the 10 second Undo with it.
+        key={`${album.id}-${album.cover_media_id ?? album.cover_path ?? ""}`}
         albumId={album.id}
         hrefBase={albumHref}
         initialItems={items}

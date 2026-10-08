@@ -25,7 +25,8 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
     .eq("event_id", ctx.event.id)
     .order("occurred_at", { ascending: false })
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  if (action) query = query.eq("action", action);
+  if (action === "download") query = query.in("action", ["download", "zip"]);
+  else if (action) query = query.eq("action", action);
   const { data } = await query;
   const rows = (data ?? []).slice(0, PAGE_SIZE);
   const hasMore = (data?.length ?? 0) > PAGE_SIZE;
@@ -48,7 +49,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
         <p className="m-0 max-w-[70ch]">
           If a photo from your event turns up somewhere it shouldn&apos;t, this is how you find out who opened or
           downloaded it, and when. It&apos;s also the quickest way to see whether an album actually reached people
-          after you published it, and which attendees have never opened anything.
+          after you published it.
         </p>
         <p className="m-0 max-w-[70ch] text-[color:var(--ink-70)]">
           Only people who can run the event see this page. The privacy policy tells attendees the log exists.
@@ -100,6 +101,8 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
                   <td>
                     {e.media?.album_id ? (
                       <Link href={`/e/${handle}/a/${e.media.album_id}/${e.media.id}`}>{e.media.original_filename ?? "Open"}</Link>
+                    ) : e.action === "zip" ? (
+                      <span>A zip of photos</span>
                     ) : (
                       <span className="text-[color:var(--ink-55)]">Deleted item</span>
                     )}

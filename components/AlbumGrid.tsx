@@ -96,6 +96,13 @@ export function AlbumGrid({
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
+  // A refresh (after a delete or an upload) brings a new first page. Take it
+  // in without remounting, so the Undo bar survives the refresh.
+  const [lastInitial, setLastInitial] = useState(initialItems);
+  if (initialItems !== lastInitial) {
+    setLastInitial(initialItems);
+    setItems(initialItems);
+  }
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [page, setPage] = useState(0);
   const [selecting, setSelecting] = useState(selectMode);
