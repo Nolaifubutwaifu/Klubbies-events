@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getEventContextById } from "@/lib/auth/session";
+import { getEventContextById, getProfile } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
+import { sendPhotographerLink } from "@/lib/email/send";
 import { appUrl } from "@/lib/env";
+import { formatLongDate } from "@/lib/format";
+import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { hashToken, newGuestToken } from "@/lib/guest/links";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "./actions";
@@ -74,4 +77,42 @@ export async function revokeGuestLinkAction(linkId: string): Promise<ActionState
 
   revalidatePath(`/admin/${ctx.event.handle}/photographers`);
   return { ok: true, message: "Link revoked. It stops working straight away." };
+}
+
+/**
+ * Emails a just-made photographer link. The link is checked against this
+ * event's own links by its hash first, so this can't be used to send any
+ * other address through our mail.
+ */
+export async function emailGuestLinkAction(eventId: string, url: string, rawEmail: string): Promise<ActionState> {
+  const ctx = await getEventContextById(eventId);
+  if (!ctx?.perms.manage_albums) return { error: "Not authorised" };
+  const email = normaliseEmail(rawEmail);
+  if (!isValidEmail(email)) return { error: "Enter the photographer's email" };
+
+  const token = url.startsWith(`${appUrl()}/g/`) ? url.slice(`${appUrl()}/g/`.length) : "";
+  if (!token) return { error: "That link isn't from this event" };
+  const supabase = await createClient();
+  const { data: link } = await supabase
+    .from("album_guest_links")
+    .select("expires_at, revoked_at, albums(title)")
+    .eq("event_id", eventId)
+    .eq("token_hash", await hashToken(token))
+    .maybeSingle();
+  if (!link || link.revoked_at) return { error: "That link isn't from this event" };
+
+  const profile = await getProfile();
+  try {
+    await sendPhotographerLink(email, {
+      eventName: ctx.event.name,
+      albumTitle: link.albums?.title ?? "the event album",
+      organiser: ctx.event.organisation || profile?.display_name || "The organiser",
+      url,
+      expiresOn: formatLongDate(link.expires_at),
+    });
+  } catch (error) {
+    console.error("photographer link email failed", error);
+    return { error: "Couldn't send it. Copy the link instead." };
+  }
+  return { ok: true, message: `Sent to ${email}` };
 }

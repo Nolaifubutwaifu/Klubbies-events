@@ -5,6 +5,7 @@ import AlbumPublished, { type AlbumPublishedProps } from "@/emails/AlbumPublishe
 import AccessEnding, { type AccessEndingProps } from "@/emails/AccessEnding";
 import DeletionWarning, { type DeletionWarningProps } from "@/emails/DeletionWarning";
 import LetIn, { type LetInProps } from "@/emails/LetIn";
+import PhotographerLink, { type PhotographerLinkProps } from "@/emails/PhotographerLink";
 import PlanNotice, { type PlanNoticeProps } from "@/emails/PlanNotice";
 import SignInCode, { type SignInCodeProps } from "@/emails/SignInCode";
 import { serverEnv } from "@/lib/env";
@@ -126,4 +127,8 @@ export async function sendBatch(messages: BatchMessage[]): Promise<void> {
     const { error } = await resend().batch.send(prepared.slice(i, i + 100));
     if (error) throw new Error(`Resend batch: ${error.name}: ${error.message}`);
   }
+}
+
+export function sendPhotographerLink(to: string, props: PhotographerLinkProps) {
+  return send(to, `Your upload link for ${props.eventName}`, <PhotographerLink {...props} />);
 }

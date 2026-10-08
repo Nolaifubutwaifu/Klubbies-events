@@ -145,6 +145,8 @@ export function Viewer({
   const router = useRouter();
   const touchX = useRef<number | null>(null);
   const root = useRef<HTMLElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
   const [saved, setSaved] = useState(favourited);
   const [sheet, setSheet] = useState<"none" | "removal" | "more" | "social">("none");
   const env = useSyncExternalStore(subscribeNever, downloadEnv, () => "web");
@@ -214,6 +216,17 @@ export function Viewer({
     }
     return () => changed.forEach((el) => (el.inert = false));
   }, []);
+
+  // A sheet takes focus when it opens and gives it back when it closes.
+  useEffect(() => {
+    if (sheet === "none") {
+      opener.current?.focus();
+      opener.current = null;
+      return;
+    }
+    opener.current ??= document.activeElement as HTMLElement | null;
+    sheetRef.current?.querySelector<HTMLElement>("button, a")?.focus();
+  }, [sheet]);
 
   // Keep the current thumbnail in view as you move through the night.
   useEffect(() => {
@@ -409,7 +422,7 @@ export function Viewer({
       ) : null}
 
       {sheet === "more" ? (
-        <div className={`${SHEET} p-5 pb-6`}>
+        <div ref={sheetRef} role="dialog" aria-modal="true" aria-label={`About this ${current.kind === "video" ? "video" : "photo"}`} className={`${SHEET} p-5 pb-6`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color:var(--kb-line-strong)] sm:hidden" />
           {/* Getting a face match wrong has to be one tap to correct,
               wherever you are when you notice. */}
@@ -472,7 +485,7 @@ export function Viewer({
       ) : null}
 
       {sheet === "social" ? (
-        <div className={`${SHEET} px-5 pb-6 pt-4.5`}>
+        <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Saving files" className={`${SHEET} px-5 pb-6 pt-4.5`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color:var(--kb-line-strong)]" />
           <h2 className="soft-display text-[21px]">{env} can&apos;t save files</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
@@ -503,7 +516,7 @@ export function Viewer({
       ) : null}
 
       {sheet === "removal" ? (
-        <div className={`${SHEET} px-5 pb-6 pt-4.5`}>
+        <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Request removal" className={`${SHEET} px-5 pb-6 pt-4.5`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color-mix(in_srgb,var(--color-text)_18%,transparent)]" />
           <h2 className="soft-display text-[21px]">{asked ? "Already on its way down." : "Take this one down?"}</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">

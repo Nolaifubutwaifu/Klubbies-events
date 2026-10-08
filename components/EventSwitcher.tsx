@@ -39,7 +39,7 @@ export async function EventSwitcher({ currentEventId, area }: { currentEventId: 
             <Link
               key={event.membershipId}
               href={href}
-              role="menuitem"
+             
               aria-current={current ? "page" : undefined}
               className={`kb-menu-item !min-h-[52px] !py-1.5 ${current ? "!bg-[color:var(--kb-sand)]" : ""}`}
             >
@@ -58,10 +58,10 @@ export async function EventSwitcher({ currentEventId, area }: { currentEventId: 
         })}
       </div>
       <MoreSeparator />
-      <Link href="/events" role="menuitem" className="kb-menu-item">
+      <Link href="/events" className="kb-menu-item">
         All your events
       </Link>
-      <Link href="/admin/new" role="menuitem" className="kb-menu-item">
+      <Link href="/admin/new" className="kb-menu-item">
         Create an event
       </Link>
     </MoreMenu>

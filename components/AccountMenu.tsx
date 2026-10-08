@@ -38,13 +38,13 @@ export function AccountMenu({ name, avatarUrl = null }: { name: string; avatarUr
       <MoreLink href="/admin/new">Create an event</MoreLink>
       <MoreSeparator />
       <form action="/api/auth/signout" method="post">
-        <button type="submit" role="menuitem" className="kb-menu-item">
+        <button type="submit" className="kb-menu-item">
           Sign out
         </button>
       </form>
       <form action="/api/auth/signout" method="post">
         <input type="hidden" name="scope" value="global" />
-        <button type="submit" role="menuitem" className="kb-menu-item">
+        <button type="submit" className="kb-menu-item">
           Sign out of all devices
         </button>
       </form>

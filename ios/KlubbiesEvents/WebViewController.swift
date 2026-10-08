@@ -33,6 +33,13 @@ final class WebViewController: UIViewController {
     /// Where each download in flight is being written.
     fileprivate var downloads: [ObjectIdentifier: URL] = [:]
     private let busyBridge = BusyBridge()
+    /// The banner shown while a download runs, so a zip that takes minutes on
+    /// venue Wi-Fi doesn't look like a tap that did nothing.
+    fileprivate let downloadBanner = DownloadBanner()
+    fileprivate var downloadProgress: [ObjectIdentifier: NSKeyValueObservation] = [:]
+    /// Where each download came from, so a second tap on the same link while
+    /// the first is still going is ignored rather than started twice.
+    fileprivate var downloadSources: [ObjectIdentifier: URL] = [:]
     private var refreshControl: UIRefreshControl?
     /// True while the page is uploading. A reload would end every upload in
     /// flight, so pull to refresh is off and a crashed page isn't reloaded
@@ -370,12 +377,30 @@ extension WebViewController: WKDownloadDelegate {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let destination = folder.appendingPathComponent(suggestedFilename)
-        downloads[ObjectIdentifier(download)] = destination
+        let key = ObjectIdentifier(download)
+        if let source = download.originalRequest?.url, downloadSources.values.contains(source) {
+            completionHandler(nil) // already downloading this one
+            return
+        }
+        downloads[key] = destination
+        downloadSources[key] = download.originalRequest?.url
+        downloadBanner.show(in: view, name: suggestedFilename) { download.cancel() }
+        downloadProgress[key] = download.progress.observe(\.fractionCompleted, options: [.new]) { [weak self] progress, _ in
+            DispatchQueue.main.async { self?.downloadBanner.update(progress: progress) }
+        }
         completionHandler(destination)
     }
 
+    fileprivate func endDownload(_ download: WKDownload) -> URL? {
+        let key = ObjectIdentifier(download)
+        downloadProgress.removeValue(forKey: key)?.invalidate()
+        downloadSources.removeValue(forKey: key)
+        if downloadProgress.isEmpty { downloadBanner.hide() }
+        return downloads.removeValue(forKey: key)
+    }
+
     func downloadDidFinish(_ download: WKDownload) {
-        guard let file = downloads.removeValue(forKey: ObjectIdentifier(download)) else { return }
+        guard let file = endDownload(download) else { return }
         // Photos and videos go where people look for them: the Photos app.
         // Zips and spreadsheets go to the share sheet, where Save to Files is.
         guard PhotoSaver.isMedia(file) else { return share(fileAt: file) }
@@ -396,8 +421,13 @@ extension WebViewController: WKDownloadDelegate {
     }
 
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
-        downloads.removeValue(forKey: ObjectIdentifier(download))
-        let alert = UIAlertController(title: "Download failed", message: error.localizedDescription, preferredStyle: .alert)
+        _ = endDownload(download)
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return } // they tapped Cancel
+        let message = nsError.domain == NSURLErrorDomain && [NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost, NSURLErrorTimedOut].contains(nsError.code)
+            ? "The connection dropped. Try again when you have signal or Wi-Fi."
+            : "It couldn't be downloaded. Try again in a moment."
+        let alert = UIAlertController(title: "Download failed", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
@@ -410,5 +440,80 @@ final class BusyBridge: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         let busy = (message.body as? [String: Any])?["busy"] as? Bool ?? false
         onChange?(busy)
+    }
+}
+
+/// A slim banner above the home indicator: what's downloading, how far, Cancel.
+final class DownloadBanner: UIView {
+    private let label = UILabel()
+    private let bar = UIProgressView(progressViewStyle: .default)
+    private let cancelButton = UIButton(type: .system)
+    private var onCancel: (() -> Void)?
+
+    init() {
+        super.init(frame: .zero)
+        backgroundColor = AppConfig.ink
+        layer.cornerRadius = 14
+        translatesAutoresizingMaskIntoConstraints = false
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.lineBreakMode = .byTruncatingMiddle
+        bar.progressTintColor = AppConfig.dot
+        bar.trackTintColor = UIColor.white.withAlphaComponent(0.2)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.setTitleColor(.white, for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 15, weight: .semibold)
+        cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
+        let text = UIStackView(arrangedSubviews: [label, bar])
+        text.axis = .vertical
+        text.spacing = 8
+        let row = UIStackView(arrangedSubviews: [text, cancelButton])
+        row.spacing = 12
+        row.alignment = .center
+        row.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(row)
+        NSLayoutConstraint.activate([
+            row.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            row.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
+            row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            row.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            cancelButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            cancelButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+        ])
+        isAccessibilityElement = false
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    func show(in host: UIView, name: String, onCancel: @escaping () -> Void) {
+        self.onCancel = onCancel
+        label.text = "Downloading \(name)"
+        bar.setProgress(0, animated: false)
+        guard superview == nil else { return }
+        host.addSubview(self)
+        NSLayoutConstraint.activate([
+            leadingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            trailingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            bottomAnchor.constraint(equalTo: host.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+        ])
+        UIAccessibility.post(notification: .announcement, argument: label.text)
+    }
+
+    func update(progress: Progress) {
+        bar.setProgress(Float(progress.fractionCompleted), animated: true)
+        if progress.totalUnitCount > 0 {
+            let done = ByteCountFormatter.string(fromByteCount: progress.completedUnitCount, countStyle: .file)
+            let total = ByteCountFormatter.string(fromByteCount: progress.totalUnitCount, countStyle: .file)
+            accessibilityValue = "\(done) of \(total)"
+        }
+    }
+
+    func hide() {
+        removeFromSuperview()
+    }
+
+    @objc private func cancelTapped() {
+        onCancel?()
+        hide()
     }
 }
