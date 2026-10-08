@@ -46,7 +46,7 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
       ) : null}
       {item.status !== "ready" ? (
         <span className="absolute inset-x-1.5 top-1.5 rounded-full bg-[color-mix(in_srgb,var(--color-accent)_14%,white)] px-2 py-0.5 text-center text-[14px] font-bold text-accent-800">
-          {item.status === "failed" ? "Failed" : "Processing"}
+          {item.status === "failed" ? "Didn't finish" : "Processing"}
         </span>
       ) : null}
     </>

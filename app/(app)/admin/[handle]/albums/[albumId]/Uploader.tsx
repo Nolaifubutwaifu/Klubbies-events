@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, type DragEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
 import { useUploadQueue } from "@/app/(app)/UploadProvider";
 import { ACCEPT_ATTRIBUTE } from "@/lib/media/constants";
 import { EMPTY_SNAPSHOT } from "@/lib/media/upload-queue";
@@ -29,6 +29,17 @@ export function Uploader({ albumId }: { albumId: string }) {
   const failed = jobs.filter((j) => j.status === "failed");
   const busy = jobs.some((j) => j.status !== "done" && j.status !== "failed");
 
+  // Closing the tab mid-upload loses the files still going; the browser asks first.
+  useEffect(() => {
+    if (!busy) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy]);
+
+  // Failures first, so they can't scroll out of the window of recent rows.
+  const shown = [...failed, ...jobs.filter((j) => j.status !== "failed").slice(-40)];
+
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(false);
@@ -53,7 +64,8 @@ export function Uploader({ albumId }: { albumId: string }) {
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
         >
-          <span className="soft-display text-[16px]">Drop files, or choose from your phone</span>
+          <span className="soft-display text-[16px]">Choose photos and videos</span>
+          <span className="hidden text-[14px] text-[color:var(--ink-70)] [@media(pointer:fine)]:inline">or drop them here</span>
           <span className="text-[14px] text-[color:var(--ink-70)]">JPG, PNG, HEIC, WebP, MP4, MOV · originals kept at full quality</span>
           <input
             ref={input}
@@ -98,11 +110,16 @@ export function Uploader({ albumId }: { albumId: string }) {
         <div className="h-[10px] bg-neutral-300">
           <div className="h-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
         </div>
+        {failed.length > 1 && !busy ? (
+          <button type="button" className="btn btn-secondary self-start" onClick={() => queue.retryFailed()}>
+            Retry all {failed.length} failed
+          </button>
+        ) : null}
         <div className="soft-card">
           {jobs.length === 0 ? (
             <p className="m-0 p-3 text-[14px] text-[color:var(--ink-70)]">Files you choose show up here with their status.</p>
           ) : (
-            jobs.slice(-40).map((job) => (
+            shown.map((job) => (
               <div key={job.key} className="flex items-center justify-between gap-3 border-b border-divider px-3 py-[10px] last:border-b-0">
                 <span className="flex min-w-0 items-center gap-3">
                   {job.previewUrl ? (
@@ -111,12 +128,15 @@ export function Uploader({ albumId }: { albumId: string }) {
                   ) : (
                     <span className="h-7 w-7 flex-none bg-neutral-400" />
                   )}
-                  <span className="truncate text-[14px]">{job.name}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate text-[14px]">{job.name}</span>
+                    {job.status === "failed" && job.error ? <span className="kb-error">{job.error}</span> : null}
+                  </span>
                 </span>
                 <span className="flex flex-none items-center gap-2">
                   <span
                     className="text-[14px] font-bold tracking-[0.06em]"
-                    style={{ color: job.status === "failed" ? "var(--color-accent)" : "var(--color-neutral-700)" }}
+                    style={{ color: job.status === "failed" ? "#b42318" : "var(--color-neutral-700)" }}
                   >
                     {job.status === "done"
                       ? job.note
@@ -129,7 +149,12 @@ export function Uploader({ albumId }: { albumId: string }) {
                           : job.status.toUpperCase()}
                   </span>
                   {job.status === "failed" ? (
-                    <button type="button" className="btn btn-secondary text-[14px]" onClick={() => queue.retry(job.key)}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary text-[14px]"
+                      aria-label={`Retry ${job.name}`}
+                      onClick={() => queue.retry(job.key)}
+                    >
                       Retry
                     </button>
                   ) : null}
