@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { displayNameFor } from "@/lib/auth/display-name";
 import { getEventContextById } from "@/lib/auth/session";
-import { MAX_VIDEO_BYTES } from "@/lib/billing/plans";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
-import { ACCEPTED_TYPES, resolveMimeType, VIDEO_TOO_BIG } from "@/lib/media/constants";
+import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
 import { contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
   if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
-  if (kind === "video" && byteSize > MAX_VIDEO_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
+  if (byteSize > UPLOAD_MAX_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
   const answer = (existing: ExistingUpload) => {
     // Already here and finished: the second copy is the bug this prevents.
     if (existing.status === "ready") return NextResponse.json({ duplicate: true, mediaId: existing.id });
