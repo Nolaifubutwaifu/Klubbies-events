@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { LIMITS, hitRateLimit } from "@/lib/auth/rate-limit";
+import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { clientFingerprint } from "@/lib/auth/request";
 import { normaliseEmail } from "@/lib/roster/email";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,9 +19,10 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: GENERIC }, { status: 400 });
 
   const { ip } = await clientFingerprint();
-  if (await hitRateLimit(LIMITS.verifyPerIp, ip)) return NextResponse.json({ error: GENERIC }, { status: 429 });
+  if (await hitRateLimit(LIMITS.verifyPerIp, ip)) return NextResponse.json({ error: RATE_LIMITED }, { status: 429 });
 
   const email = normaliseEmail(parsed.data.email);
+  if (await hitRateLimit(LIMITS.passwordPerEmail, email)) return NextResponse.json({ error: RATE_LIMITED }, { status: 429 });
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
   if (error || !data.user) return NextResponse.json({ error: GENERIC }, { status: 400 });

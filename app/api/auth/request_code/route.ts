@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { NEUTRAL_MESSAGE, SIGNIN_COOKIE, processCodeRequest, requestCodeSchema } from "@/lib/auth/flow";
+import { NEUTRAL_MESSAGE, SIGNIN_COOKIE, codeRequestLimit, processCodeRequest, requestCodeSchema } from "@/lib/auth/flow";
 import { clientFingerprint } from "@/lib/auth/request";
 import { normaliseEmail } from "@/lib/roster/email";
 
@@ -11,12 +11,14 @@ export async function POST(request: Request) {
   }
 
   const { ip } = await clientFingerprint();
+  const limited = await codeRequestLimit(parsed.data.email, ip);
+  if (limited) return NextResponse.json({ error: limited }, { status: 429 });
 
   // Roster lookup, code generation and email all happen after the response,
   // so every request gets the same answer in the same time.
   after(async () => {
     try {
-      await processCodeRequest(parsed.data, ip);
+      await processCodeRequest(parsed.data);
     } catch (error) {
       console.error("request_code failed", error);
     }
