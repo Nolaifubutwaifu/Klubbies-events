@@ -77,3 +77,10 @@ export function nativeScanner(): PostHandler | null {
   const handlers = (window as unknown as { webkit?: { messageHandlers?: Record<string, PostHandler> } }).webkit?.messageHandlers;
   return handlers?.klubbiesEventsScan ?? null;
 }
+
+/** Tells the app the page is uploading, so it won't reload it (pull to refresh). */
+export function tellAppBusy(busy: boolean): void {
+  if (typeof window === "undefined") return;
+  const handlers = (window as unknown as { webkit?: { messageHandlers?: Record<string, PostHandler> } }).webkit?.messageHandlers;
+  handlers?.klubbiesBusy?.postMessage({ busy });
+}

@@ -14,6 +14,14 @@ final class WebViewController: UIViewController {
     private var splash: SplashView? = SplashView()
     private var progressObservation: NSKeyValueObservation?
     private var loadingObservation: NSKeyValueObservation?
+    private var themeObservation: NSKeyValueObservation?
+    /// Follows the page's theme-color, so the photo viewer's near-black runs
+    /// under the status bar and home indicator instead of two paper bands.
+    private var pageIsDark = false {
+        didSet { if pageIsDark != oldValue { setNeedsStatusBarAppearanceUpdate() } }
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle { pageIsDark ? .lightContent : .darkContent }
     /// Shows the progress bar once a load has run past `slowLoadDelay`.
     private var showProgressLater: DispatchWorkItem?
     /// Quick loads finish before this and never show the bar, so moving
@@ -24,6 +32,14 @@ final class WebViewController: UIViewController {
     private let scanBridge = ScanBridge()
     /// Where each download in flight is being written.
     fileprivate var downloads: [ObjectIdentifier: URL] = [:]
+    private let busyBridge = BusyBridge()
+    private var refreshControl: UIRefreshControl?
+    /// True while the page is uploading. A reload would end every upload in
+    /// flight, so pull to refresh is off and a crashed page isn't reloaded
+    /// behind the person's back.
+    private var pageIsBusy = false {
+        didSet { webView?.scrollView.refreshControl = pageIsBusy ? nil : refreshControl }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -38,6 +54,8 @@ final class WebViewController: UIViewController {
         config.userContentController.addScriptMessageHandler(PushManager.shared, contentWorld: .page, name: "klubbiesPush")
         config.userContentController.add(scanBridge, contentWorld: .page, name: "klubbiesEventsScan")
         scanBridge.onScanRequested = { [weak self] in self?.presentScanner() }
+        config.userContentController.add(busyBridge, contentWorld: .page, name: "klubbiesBusy")
+        busyBridge.onChange = { [weak self] busy in self?.pageIsBusy = busy }
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -54,6 +72,7 @@ final class WebViewController: UIViewController {
         let refresh = UIRefreshControl()
         refresh.addTarget(self, action: #selector(pullToRefresh(_:)), for: .valueChanged)
         webView.scrollView.refreshControl = refresh
+        refreshControl = refresh
 
         progressBar.progressTintColor = AppConfig.accent
         progressBar.trackTintColor = .clear
@@ -85,6 +104,15 @@ final class WebViewController: UIViewController {
             guard let self else { return }
             let progress = Float(webView.estimatedProgress)
             self.progressBar.setProgress(progress, animated: !self.progressBar.isHidden && progress > self.progressBar.progress)
+        }
+        themeObservation = webView.observe(\.themeColor, options: [.new]) { [weak self] webView, _ in
+            guard let self else { return }
+            let colour = webView.themeColor ?? AppConfig.background
+            self.view.backgroundColor = colour
+            webView.underPageBackgroundColor = colour
+            var white: CGFloat = 1
+            colour.getWhite(&white, alpha: nil)
+            self.pageIsDark = white < 0.5
         }
         loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
             guard let self else { return }
@@ -273,7 +301,18 @@ extension WebViewController: WKNavigationDelegate {
 
     /// iOS can kill a web page in the background to save memory; bring it back.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        webView.reload()
+        guard pageIsBusy else {
+            webView.reload()
+            return
+        }
+        pageIsBusy = false
+        let alert = UIAlertController(
+            title: "Upload interrupted",
+            message: "iPhone closed the page to save memory. Reopen the album and add the files again: anything already uploaded is kept.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Reopen", style: .default) { _ in webView.reload() })
+        present(alert, animated: true)
     }
 
     private func showOfflineIfNeeded(_ error: Error) {
@@ -361,5 +400,15 @@ extension WebViewController: WKDownloadDelegate {
         let alert = UIAlertController(title: "Download failed", message: error.localizedDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+}
+
+/// The page says when it's uploading: `klubbiesBusy.postMessage({ busy })`.
+final class BusyBridge: NSObject, WKScriptMessageHandler {
+    var onChange: ((Bool) -> Void)?
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        let busy = (message.body as? [String: Any])?["busy"] as? Bool ?? false
+        onChange?(busy)
     }
 }

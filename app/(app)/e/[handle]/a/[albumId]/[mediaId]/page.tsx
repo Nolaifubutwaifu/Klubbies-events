@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { getEventContext } from "@/lib/auth/session";
@@ -11,6 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Viewer } from "./Viewer";
 
 export const metadata: Metadata = { title: "Viewer" };
+// The viewer's near-black, so the browser bar (and the iPhone app's safe
+// areas) match it instead of framing the photo in paper white.
+export const viewport: Viewport = { themeColor: "#14100f" };
 
 export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumId]/[mediaId]">) {
   const { handle, albumId, mediaId } = await props.params;
