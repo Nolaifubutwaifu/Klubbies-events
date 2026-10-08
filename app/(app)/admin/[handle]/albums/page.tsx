@@ -66,7 +66,7 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
         </div>
       </div>
 
-      {canWrite(ctx.event) ? null : <BillingGate handle={handle} action="create albums" />}
+      {canWrite(ctx.event) ? null : <BillingGate handle={handle} action="create albums" deletedAt={ctx.event.photos_deleted_at} />}
 
       {albums.length ? (
         <AlbumManager eventId={ctx.event.id} handle={handle} albums={albums} stats={stats} />

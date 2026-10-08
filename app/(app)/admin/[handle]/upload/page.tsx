@@ -27,7 +27,7 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
           : "One album per part of the event works best: keynote, breakout sessions, drinks, headshots. Name it, choose when attendees see it, then upload. It keeps going in the background."}
       </PageTitle>
 
-      {writable ? null : <BillingGate handle={handle} action="upload photos" />}
+      {writable ? null : <BillingGate handle={handle} action="upload photos" deletedAt={ctx.event.photos_deleted_at} />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         {writable ? (

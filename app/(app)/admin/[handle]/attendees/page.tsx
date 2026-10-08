@@ -83,7 +83,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
             <AddMemberForm eventId={event.id} />
           </>
         ) : (
-          <BillingGate handle={handle} action="add attendees" />
+          <BillingGate handle={handle} action="add attendees" deletedAt={ctx.event.photos_deleted_at} />
         )}
         <div className="flex flex-col gap-3">
           <Stat

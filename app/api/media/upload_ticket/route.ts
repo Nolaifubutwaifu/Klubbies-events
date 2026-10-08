@@ -5,8 +5,9 @@ import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
 import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
-import { contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
+import { BINNED_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -84,6 +85,9 @@ export async function POST(request: Request) {
     // Two tabs dropped the same file at once and the other one won.
     const winner = await findExistingUpload(supabase, album.id, contentHash);
     if (winner) return answer(winner);
+    // Or it's in Recently deleted, which this user's client can't see.
+    const binned = await findExistingUpload(createAdminClient(), album.id, contentHash);
+    if (binned?.binned) return NextResponse.json({ error: BINNED_MESSAGE }, { status: 409 });
   }
   if (error?.code === PHOTOS_FULL) {
     const message = ctx.perms.manage_albums

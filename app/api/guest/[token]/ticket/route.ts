@@ -3,7 +3,7 @@ import { z } from "zod";
 import { resolveGuestLink } from "@/lib/guest/links";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
 import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
-import { contentHashSchema, findExistingUpload, isUniqueViolation } from "@/lib/media/dedupe";
+import { BINNED_GUEST_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -48,6 +48,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   // stuck row only if it came in on their own link, because finalize checks
   // that; anything else already in the album is simply already there.
   const existing = await findExistingUpload(admin, session.albumId, parsed.data.contentHash);
+  // A removed photo isn't "done": say so rather than report it as uploaded.
+  if (existing?.binned) return NextResponse.json({ error: BINNED_GUEST_MESSAGE }, { status: 409 });
   if (existing && (existing.status === "ready" || existing.guestLinkId !== session.linkId)) {
     return NextResponse.json({ duplicate: true });
   }
