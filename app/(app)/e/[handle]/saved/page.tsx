@@ -76,7 +76,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
             <div className="soft-dashed mt-8 flex max-w-[640px] flex-col items-start gap-3 p-7">
               <h2 className="text-[18px] font-semibold">Nothing saved yet</h2>
               <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
-                Open any photo and tap Save. It turns up here at full quality, ready to download.
+                Open any photo and tap Favourite. It turns up here at full quality, ready to download.
               </p>
               <Link href={`/e/${handle}`} className="btn btn-primary no-underline">
                 Browse the albums

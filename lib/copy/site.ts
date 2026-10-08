@@ -185,7 +185,7 @@ export const FAQS: { q: string; a: string; group: FaqGroup }[] = [
   {
     q: "How do videos count?",
     group: "Pricing",
-    a: `Each started minute of video counts as 10 photos toward your event's allowance, so a 2 minute clip counts as 20. Each file can be up to ${UPLOAD_MAX_MB} MB.`,
+    a: `Video counts by length toward your event's allowance: 1 photo per 6 seconds, so a 5 second clip counts as 1, a minute as 10 and a 2 minute clip as 20. Each file can be up to ${UPLOAD_MAX_MB} MB.`,
   },
 ];
 

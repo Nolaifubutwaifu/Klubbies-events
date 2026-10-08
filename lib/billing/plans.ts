@@ -35,8 +35,9 @@ export const WINDOW_HOURS = 48;
 /** Upgrading after the window has opened costs the difference plus 25%. */
 export const LATE_SURCHARGE = 0.25;
 
-/** Each started minute of video counts as this many photos. */
+/** Each started minute of video counts as this many photos (1 per started 6 seconds). */
 export const VIDEO_UNITS_PER_MINUTE = 10;
+export const VIDEO_SECONDS_PER_UNIT = 60 / VIDEO_UNITS_PER_MINUTE;
 /** The largest video anyone can upload, in bytes. */
 export const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
 
@@ -60,10 +61,10 @@ export function windowCeiling(limit: number): number {
   return Math.floor(limit * (1 + WINDOW_OVER));
 }
 
-/** Photos a file uses up: 1 for a photo, 10 per started minute of video. */
+/** Photos a file uses up: 1 for a photo, 1 per started 6 seconds of video (migration 34). */
 export function mediaUnits(kind: string, durationSeconds: number | null | undefined): number {
   if (kind !== "video") return 1;
-  return VIDEO_UNITS_PER_MINUTE * Math.max(1, Math.ceil((durationSeconds ?? 60) / 60));
+  return Math.max(1, Math.ceil((durationSeconds ?? 60) / VIDEO_SECONDS_PER_UNIT));
 }
 
 /**

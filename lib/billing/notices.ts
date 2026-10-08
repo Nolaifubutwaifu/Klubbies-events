@@ -127,7 +127,7 @@ export async function checkPlanNotices(eventId: string, now = new Date()): Promi
         subject: `${event.name} is nearly out of photos`,
         heading: "Your event is nearly out of photos",
         paragraphs: [
-          `${event.name} has used ${usage.unitsUsed.toLocaleString("en-AU")} of its ${photoLimit.toLocaleString("en-AU")} photos. Each started minute of video counts as 10.`,
+          `${event.name} has used ${usage.unitsUsed.toLocaleString("en-AU")} of its ${photoLimit.toLocaleString("en-AU")} photos. Video counts 1 per 6 seconds, so a minute counts as 10.`,
           "Upgrade now to keep uploading without a break.",
         ],
       });

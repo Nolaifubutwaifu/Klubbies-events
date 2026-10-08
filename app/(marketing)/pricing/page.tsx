@@ -121,7 +121,7 @@ export default async function PricingPage() {
               <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
                 <h3 className="kb-h3">Videos</h3>
                 <p className="kb-body m-0 mt-2">
-                  Each started minute of video counts as 10 photos, so a 2 minute clip counts as 20.
+                  Video counts by length: a minute counts as 10 photos and a 5 second clip as 1.
                 </p>
               </div>
             </div>

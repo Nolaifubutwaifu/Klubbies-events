@@ -161,7 +161,7 @@ export function AlbumGrid({
     const parts = [at ? `${noun} ${at} of ${total} in ${albumTitle}` : `${noun} in ${albumTitle}`];
     if (item.kind === "video" && item.duration_seconds) parts.push(duration(item.duration_seconds));
     if (item.id === coverMediaId) parts.push("cover");
-    if (saved.has(item.id)) parts.push("saved");
+    if (saved.has(item.id)) parts.push("favourite");
     if (item.status === "failed") parts.push("didn't finish uploading");
     else if (item.status !== "ready") parts.push("still processing");
     return parts.join(", ");
@@ -206,14 +206,14 @@ export function AlbumGrid({
                 const res = await favouriteManyAction(selectedIds);
                 if (res.error) return setMessage(res.error);
                 setSaved((current) => new Set([...current, ...selectedIds]));
-                setMessage(`Saved ${res.saved} to your favourites.`);
+                setMessage(`Added ${res.saved} to your favourites.`);
                 setSelected(new Set());
                 setSelecting(false);
                 router.refresh();
               })
             }
           >
-            Save
+            Favourite
           </button>
 
           {canDownload ? (

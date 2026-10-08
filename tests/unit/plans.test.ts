@@ -21,9 +21,13 @@ describe("tiers", () => {
 describe("videos", () => {
   it("count 10 photos per started minute", () => {
     expect(mediaUnits("photo", null)).toBe(1);
-    expect(mediaUnits("video", 30)).toBe(10);
+    expect(mediaUnits("video", 4)).toBe(1);
+    expect(mediaUnits("video", 6)).toBe(1);
+    expect(mediaUnits("video", 6.5)).toBe(2);
+    expect(mediaUnits("video", 30)).toBe(5);
     expect(mediaUnits("video", 60)).toBe(10);
-    expect(mediaUnits("video", 61)).toBe(20);
+    expect(mediaUnits("video", 120)).toBe(20);
+    expect(mediaUnits("video", null)).toBe(10);
     expect(mediaUnits("video", null)).toBe(10);
   });
 });
