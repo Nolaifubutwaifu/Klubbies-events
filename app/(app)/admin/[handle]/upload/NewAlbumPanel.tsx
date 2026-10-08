@@ -11,19 +11,28 @@ function tomorrowMorning(): string {
   return `${isoToBrisbaneInput(new Date(Date.now() + 24 * 3600 * 1000).toISOString()).slice(0, 10)}T09:00`;
 }
 
-export function NewAlbumPanel({ eventId, defaultDate }: { eventId: string; defaultDate: string | null }) {
+export function NewAlbumPanel({
+  eventId,
+  defaultDate,
+  autoFocus = true,
+}: {
+  eventId: string;
+  defaultDate: string | null;
+  /** Off when the event already has albums: the keyboard shouldn't jump up for a form they may not want. */
+  autoFocus?: boolean;
+}) {
   const [state, action] = useActionState<ActionState, FormData>(createAlbumAction.bind(null, eventId), {});
   const [when, setWhen] = useState<"now" | "later">("now");
   const [publishAt, setPublishAt] = useState(tomorrowMorning);
 
   return (
     <form action={action} className="soft-card flex flex-col gap-5 p-5 sm:p-6">
-      <h2 className="text-[18px] font-semibold">Album details</h2>
+      <h2 className="text-[18px] font-semibold">New album</h2>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         <label className="field">
           Album name
-          <input className="input" name="title" placeholder="Keynote, Networking drinks, Headshots" required maxLength={160} autoFocus />
+          <input className="input" name="title" placeholder="Keynote, Networking drinks, Headshots" required maxLength={160} autoFocus={autoFocus} />
         </label>
         <label className="field">
           Date (optional)

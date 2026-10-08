@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Where a screen's secondary actions live. The screen shows its one or two
@@ -37,8 +37,24 @@ export function MoreMenu({
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const id = useId();
+
+  // Flip to the other side when the preferred one would run off a narrow
+  // screen (the album menu opened 60pt past the left edge on a phone).
+  useLayoutEffect(() => {
+    const panel = menu.current;
+    if (!open || !panel || menuClassName) return;
+    const rect = panel.getBoundingClientRect();
+    if (rect.left < 8) {
+      panel.style.left = "0";
+      panel.style.right = "auto";
+    } else if (rect.right > window.innerWidth - 8) {
+      panel.style.right = "0";
+      panel.style.left = "auto";
+    }
+  }, [open, menuClassName]);
 
   useEffect(() => {
     if (!open) return;
@@ -86,6 +102,7 @@ export function MoreMenu({
       </button>
       {open ? (
         <div
+          ref={menu}
           id={id}
           role="menu"
           className={`kb-menu top-[calc(100%+8px)] ${menuClassName ?? (align === "end" ? "right-0" : "left-0")}`}
