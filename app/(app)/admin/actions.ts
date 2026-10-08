@@ -440,6 +440,28 @@ export async function updateAlbumAction(albumId: string, _prev: ActionState, for
   return { ok: true, message: "Saved" };
 }
 
+/**
+ * "Publish all drafts" (the morning after): every draft with at least one
+ * finished file goes live, through the same path as one at a time. Scheduled
+ * drafts are left to their schedule.
+ */
+export async function publishAllDraftsAction(eventId: string): Promise<void> {
+  const ctx = await permContext(eventId, "manage_albums");
+  const supabase = await createClient();
+  const { data: drafts } = await supabase
+    .from("albums")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("status", "draft")
+    .is("publish_at", null)
+    .is("deleted_at", null);
+  for (const album of drafts ?? []) {
+    // Empty drafts refuse with a message; publishing the rest still goes on.
+    await setAlbumPublishedAction(album.id, true);
+  }
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+}
+
 export async function setAlbumPublishedAction(albumId: string, published: boolean): Promise<ActionState> {
   const supabase = await createClient();
   const { data: album } = await supabase.from("albums").select("id, event_id, published_at").eq("id", albumId).maybeSingle();
