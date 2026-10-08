@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { enrolStatusAction } from "@/app/(app)/face-actions";
 
 /**
@@ -11,13 +11,19 @@ import { enrolStatusAction } from "@/app/(app)/face-actions";
  */
 export function LookingNow({ eventId }: { eventId: string }) {
   const router = useRouter();
+  const [offline, setOffline] = useState(false);
 
   useEffect(() => {
     let stopped = false;
+    let failures = 0;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
-      const { status } = await enrolStatusAction(eventId).catch(() => ({ status: "pending" as const }));
+      const result = await enrolStatusAction(eventId).catch(() => null);
       if (stopped) return;
+      // Two failed checks in a row: say so instead of "checking" forever.
+      failures = result ? 0 : failures + 1;
+      setOffline(failures >= 2);
+      const status = result?.status ?? "pending";
       if (status !== "pending") {
         router.refresh();
         return;
@@ -34,7 +40,7 @@ export function LookingNow({ eventId }: { eventId: string }) {
   return (
     <span className="flex items-center gap-2 text-[14px] font-medium text-[color:var(--kb-ink-3)]" role="status">
       <span className="kb-pulse" aria-hidden />
-      Checking for matches
+      {offline ? "Lost connection, still trying…" : "Checking for matches"}
     </span>
   );
 }

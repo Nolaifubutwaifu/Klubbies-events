@@ -16,6 +16,7 @@ import { MEMBER_NOTICE } from "@/lib/faces/copy";
 export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: string }) {
   const [acked, setAcked] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
   if (acked) return null;
 
   return (
@@ -40,13 +41,20 @@ export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: strin
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
-            const res = await acknowledgeFaceNoticeAction(eventId);
-            if (!res.error) setAcked(true);
+            const res = await acknowledgeFaceNoticeAction(eventId).catch(() => ({ error: "offline" }));
+            // On a bad connection this used to just re-enable the button.
+            if (res.error) setError("Couldn't save that. Check your connection and try again.");
+            else setAcked(true);
           })
         }
       >
         {pending ? "Saving…" : MEMBER_NOTICE.tickbox}
       </button>
+      {error ? (
+        <p className="kb-error m-0" role="alert">
+          {error}
+        </p>
+      ) : null}
     </section>
   );
 }

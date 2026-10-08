@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { decideFaceMatchAction } from "@/app/(app)/face-actions";
 import type { Suggestion } from "@/lib/faces/queries";
 
@@ -39,6 +39,21 @@ export function Suggestions({
 }) {
   const [decided, decide] = useOptimistic<string[], string>([], (state, id) => [...state, id]);
   const [, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  // The card leaves at once; if the answer didn't save, it comes back and
+  // this says why, instead of reappearing next visit with no explanation.
+  const answer = (suggestion: Suggestion, verdict: "confirm" | "reject") =>
+    startTransition(async () => {
+      setError("");
+      decide(suggestion.matchId);
+      for (const id of suggestion.matchIds) {
+        const res = await decideFaceMatchAction(id, verdict).catch(() => ({ error: "offline" }));
+        if (res && "error" in res && res.error) {
+          setError("Couldn't save that answer. Check your connection and try again.");
+          return;
+        }
+      }
+    });
   const remaining = suggestions.filter((s) => !decided.includes(s.matchId));
 
   if (remaining.length === 0) return null;
@@ -54,6 +69,11 @@ export function Suggestions({
             : ""}
         </p>
       </div>
+      {error ? (
+        <p className="kb-error m-0" role="alert">
+          {error}
+        </p>
+      ) : null}
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6">
         {remaining.map((suggestion) => (
           <div key={suggestion.matchId} className="soft-card flex w-[188px] flex-none flex-col gap-2 p-3">
@@ -69,24 +89,14 @@ export function Suggestions({
               <button
                 type="button"
                 className="btn btn-ghost flex-1 !px-2"
-                onClick={() =>
-                  startTransition(async () => {
-                    decide(suggestion.matchId);
-                    for (const id of suggestion.matchIds) await decideFaceMatchAction(id, "confirm");
-                  })
-                }
+                onClick={() => answer(suggestion, "confirm")}
               >
                 Yes
               </button>
               <button
                 type="button"
                 className="btn btn-ghost flex-1 !px-2"
-                onClick={() =>
-                  startTransition(async () => {
-                    decide(suggestion.matchId);
-                    for (const id of suggestion.matchIds) await decideFaceMatchAction(id, "reject");
-                  })
-                }
+                onClick={() => answer(suggestion, "reject")}
               >
                 Not me
               </button>
