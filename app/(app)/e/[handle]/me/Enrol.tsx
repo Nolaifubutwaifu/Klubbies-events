@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { enrolFaceAction, withdrawFaceConsentAction } from "@/app/(app)/face-actions";
 import { MEMBER_CONSENT } from "@/lib/faces/copy";
@@ -26,7 +27,7 @@ async function toJpeg(file: File): Promise<File | null> {
   return new File([blob], "selfie.jpg", { type: "image/jpeg" });
 }
 
-export function Enrol({ eventId }: { eventId: string }) {
+export function Enrol({ eventId, backHref }: { eventId: string; backHref?: string }) {
   const [consented, setConsented] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<File | null>(null);
@@ -93,9 +94,10 @@ export function Enrol({ eventId }: { eventId: string }) {
         <span>{MEMBER_CONSENT.tickbox}</span>
       </label>
 
+      <div className="flex flex-wrap items-center gap-3">
       <button
         type="button"
-        className="btn btn-primary self-start"
+        className="btn btn-primary"
         disabled={!consented || !selfie || pending}
         onClick={() =>
           startTransition(async () => {
@@ -107,6 +109,22 @@ export function Enrol({ eventId }: { eventId: string }) {
       >
         {pending ? "Setting up…" : "Find my photos"}
       </button>
+        {/* It's optional, so leaving is a plain choice, not a hunt for the back button. */}
+        {backHref ? (
+          <Link href={backHref} className="btn btn-ghost no-underline">
+            Not now
+          </Link>
+        ) : null}
+      </div>
+      {!pending && (!selfie || !consented) ? (
+        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
+          {!selfie && !consented
+            ? "Add a selfie and tick the box to continue."
+            : !selfie
+              ? "Add a selfie to continue."
+              : "Tick the box to continue."}
+        </p>
+      ) : null}
       {message ? (
         <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]" role="status">
           {message}

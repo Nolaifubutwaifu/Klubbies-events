@@ -1,6 +1,6 @@
 import { Upload } from "tus-js-client";
 import { contentHash } from "@/lib/media/content-hash";
-import { LARGE_VIDEO_BYTES, resolveMimeType } from "@/lib/media/constants";
+import { UPLOAD_MAX_BYTES, VIDEO_TOO_BIG, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseUrl } from "@/lib/supabase/config";
@@ -56,7 +56,7 @@ const RESUMABLE_ENDPOINT = `${supabaseUrl.replace(".supabase.co", ".storage.supa
 
 function friendlyError(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return "This file is larger than your storage plan allows per file.";
+  if (/413|too large|maximum allowed size/i.test(text)) return VIDEO_TOO_BIG;
   if (/401|403|jwt|unauthor/i.test(text)) return "Your session expired. Refresh the page and retry.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
@@ -94,8 +94,8 @@ export class UploadQueue {
         rejected.push(file.name);
         continue;
       }
-      if (mimeType.startsWith("video/") && file.size > LARGE_VIDEO_BYTES) {
-        warnings.push(`${file.name} is over 500 MB, so it wasn't added. Videos can be up to 500 MB.`);
+      if (file.size > UPLOAD_MAX_BYTES) {
+        warnings.push(tooBigWarning(file.name));
         continue;
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
@@ -108,8 +108,14 @@ export class UploadQueue {
   retry(key: string) {
     const job = this.jobs.get(key);
     if (!job || job.status !== "failed") return;
-    this.patch(job, { status: "queued", error: undefined });
+    // A ticket from a stalled upload may have expired. A fresh one carries on
+    // in the same row (matched by content), so nothing is uploaded twice.
+    this.patch(job, { status: "queued", error: undefined, ticket: job.originalDone ? job.ticket : undefined });
     this.pump();
+  }
+
+  retryFailed() {
+    for (const job of this.jobs.values()) if (job.status === "failed") this.retry(job.key);
   }
 
   private emit() {
@@ -253,6 +259,16 @@ export class UploadQueue {
       this.patch(job, { status: "done" });
     } catch (error) {
       this.patch(job, { status: "failed", error: friendlyError(error) });
+      // Tell the server, so the row stops showing as "processing" to guests
+      // and stops counting against the allowance. Upload again revives it.
+      if (job.ticket && !job.ticket.duplicate) {
+        void fetch(`/api/media/${job.ticket.mediaId}/finalize`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ width: null, height: null, durationSeconds: null, capturedAt: null, failed: true }),
+          keepalive: true,
+        }).catch(() => undefined);
+      }
     }
   }
 }

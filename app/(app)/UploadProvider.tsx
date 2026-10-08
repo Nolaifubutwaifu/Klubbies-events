@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { EMPTY_SNAPSHOT, UploadQueue, type JobView } from "@/lib/media/upload-queue";
+import { tellAppBusy } from "@/lib/native-app";
 
 // One queue per album, kept above the page so uploads keep running while the
 // member moves around the app.
@@ -11,6 +12,7 @@ type Registry = {
   queues: Map<string, UploadQueue>;
   listeners: Set<() => void>;
   snapshot: readonly JobView[];
+  busy: boolean;
 };
 
 const UploadContext = createContext<{
@@ -20,12 +22,17 @@ const UploadContext = createContext<{
 
 export function UploadProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const registry = useRef<Registry>({ queues: new Map(), listeners: new Set(), snapshot: EMPTY_SNAPSHOT });
+  const registry = useRef<Registry>({ queues: new Map(), listeners: new Set(), snapshot: EMPTY_SNAPSHOT, busy: false });
 
   const recompute = () => {
     const all: JobView[] = [];
     for (const queue of registry.current.queues.values()) all.push(...queue.getSnapshot());
     registry.current.snapshot = all;
+    const busy = all.some((job) => job.status !== "done" && job.status !== "failed");
+    if (busy !== registry.current.busy) {
+      registry.current.busy = busy;
+      tellAppBusy(busy);
+    }
     for (const listener of registry.current.listeners) listener();
   };
 

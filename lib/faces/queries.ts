@@ -309,3 +309,37 @@ export async function countPhotosOfYou(supabase: UserClient, eventId: string): P
   if ((count ?? 0) > rows.length) return count ?? rows.length;
   return new Set(rows.map((row) => dupeKey(row.media))).size;
 }
+
+/**
+ * The viewer's sequence when it's opened from Your photos: the caller's own
+ * matches, in the order that page shows them (albums newest first, photos
+ * newest first inside each), so swiping stays on photos of them. RLS limits
+ * face_matches to the caller's own profile, as in listPhotosOfYou.
+ */
+export async function photosOfYouSequence(
+  supabase: UserClient,
+  eventId: string,
+): Promise<{ mediaId: string; albumId: string; kind: string; thumbPath: string | null }[]> {
+  const { data, error } = await supabase
+    .from("face_matches")
+    .select("media_id, media!inner(id, album_id, kind, status, sort_at, thumb_path, poster_path, content_hash, original_filename, byte_size)")
+    .eq("event_id", eventId)
+    .eq("state", "confirmed")
+    .order("sort_at", { ascending: false, referencedTable: "media" })
+    .limit(1000);
+  if (error) throw error;
+
+  const seen = new Set<string>();
+  const byAlbum = new Map<string, { mediaId: string; albumId: string; kind: string; thumbPath: string | null }[]>();
+  for (const row of data ?? []) {
+    const m = row.media;
+    if (!m.album_id || m.status !== "ready") continue;
+    const key = dupeKey(m);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const list = byAlbum.get(m.album_id) ?? [];
+    list.push({ mediaId: m.id, albumId: m.album_id, kind: m.kind, thumbPath: m.thumb_path ?? m.poster_path });
+    byAlbum.set(m.album_id, list);
+  }
+  return [...byAlbum.values()].flat();
+}

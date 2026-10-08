@@ -33,8 +33,9 @@ async function warn(event: { id: string; name: string; handle: string; photos_de
     eventName: event.name,
     deletesOn: formatLongDate(event.photos_delete_at),
     daysLeft,
-    // Signed-in organisers download each album as a zip from these.
-    albums: (albums ?? []).map((a) => ({ title: a.title, url: `${appUrl()}/api/albums/${a.id}/zip` })),
+    // Each goes to the export page, which lists every part of every album
+    // (a zip stops at 150 files) and signs the organiser in first if needed.
+    albums: (albums ?? []).map((a) => ({ title: a.title, url: `${appUrl()}/admin/${event.handle}/export#album-${a.id}` })),
     billingUrl: `${appUrl()}/admin/${event.handle}/billing#keep`,
   };
   for (const email of await organiserEmails(event.id)) {

@@ -21,19 +21,25 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
 
   return (
     <main className="flex flex-col gap-6 pb-12 pt-2">
-      <PageTitle kicker={ctx.event.name} title="New album">
-        One album per part of the event works best: keynote, breakout sessions, drinks, headshots. Name it, choose when
-        attendees see it, then upload. It keeps going in the background.
+      <PageTitle kicker={ctx.event.name} title={recent.length ? "Upload" : "New album"}>
+        {recent.length
+          ? "Add to an album you have, or start a new one. Uploads keep going in the background."
+          : "One album per part of the event works best: keynote, breakout sessions, drinks, headshots. Name it, choose when attendees see it, then upload. It keeps going in the background."}
       </PageTitle>
 
-      {writable ? null : <BillingGate handle={handle} action="upload photos" />}
+      {writable ? null : <BillingGate handle={handle} action="upload photos" deletedAt={ctx.event.photos_deleted_at} />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        {writable ? <NewAlbumPanel eventId={ctx.event.id} defaultDate={ctx.event.starts_on} /> : <div />}
+        {writable ? (
+          <NewAlbumPanel eventId={ctx.event.id} defaultDate={ctx.event.starts_on} autoFocus={recent.length === 0} />
+        ) : (
+          <div />
+        )}
 
-        <div className="flex flex-col gap-5">
+        {/* On a phone the albums you have come first: most uploads go into one. */}
+        <div className={`flex flex-col gap-5 ${recent.length ? "max-lg:order-first" : ""}`}>
           <section className="soft-card flex flex-col gap-3 p-5">
-            <h2 className="text-[16px] font-semibold">Or add to an existing album</h2>
+            <h2 className="text-[16px] font-semibold">{recent.length ? "Add to an album" : "Or add to an existing album"}</h2>
             {recent.length ? (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {recent.map((album) => (

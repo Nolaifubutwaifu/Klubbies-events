@@ -103,13 +103,24 @@ export async function preparePhoto(file: File, mimeType: string): Promise<Prepar
 
 function waitFor(el: HTMLVideoElement, ev: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(`timeout waiting for ${event}`)), timeoutMs);
+    const timer = window.setTimeout(() => reject(new Error(`timeout waiting for ${ev}`)), timeoutMs);
     el.addEventListener(ev, () => (window.clearTimeout(timer), resolve()), { once: true });
     el.addEventListener("error", () => (window.clearTimeout(timer), reject(new Error("video decode failed"))), { once: true });
   });
 }
 
-export async function prepareVideo(file: File): Promise<Prepared> {
+// Decoding several 4K videos at once is where phones gave up: 10 of 13
+// iPhone clips in one album came through with no poster, size or length.
+// Videos are prepared one at a time; photos are unaffected.
+let videoTurn: Promise<unknown> = Promise.resolve();
+
+export function prepareVideo(file: File): Promise<Prepared> {
+  const run = videoTurn.then(() => prepareVideoNow(file));
+  videoTurn = run.catch(() => undefined);
+  return run;
+}
+
+async function prepareVideoNow(file: File): Promise<Prepared> {
   const url = URL.createObjectURL(file);
   const video = document.createElement("video");
   video.muted = true;
@@ -117,13 +128,21 @@ export async function prepareVideo(file: File): Promise<Prepared> {
   video.preload = "auto";
   video.src = url;
   let durationSeconds: number | null = null;
+  let width: number | null = null;
+  let height: number | null = null;
   try {
-    await waitFor(video, "loadeddata", 20000);
+    // Length and size arrive with the metadata, before any frame is decoded,
+    // so they're kept even when the picture can't be read.
+    await waitFor(video, "loadedmetadata", 15000);
     durationSeconds = Number.isFinite(video.duration) ? video.duration : null;
+    width = video.videoWidth || null;
+    height = video.videoHeight || null;
+
+    if (video.readyState < 2) await waitFor(video, "loadeddata", 15000);
     video.currentTime = Math.min(1, (durationSeconds ?? 0) / 2);
     await waitFor(video, "seeked", 10000);
-    const width = video.videoWidth;
-    const height = video.videoHeight;
+    width = video.videoWidth || width;
+    height = video.videoHeight || height;
     if (!width || !height) return { ...EMPTY, durationSeconds };
     const [poster, thumb] = await Promise.all([
       encode(video, width, height, displayScale(width, height), "image/jpeg", 0.85),
@@ -131,8 +150,9 @@ export async function prepareVideo(file: File): Promise<Prepared> {
     ]);
     return { ...EMPTY, width, height, durationSeconds, poster, thumb };
   } catch {
-    // Some codecs (e.g. HEVC .mov in Chrome) can't be decoded; upload anyway.
-    return { ...EMPTY, durationSeconds };
+    // Some codecs (e.g. HEVC .mov in Chrome) can't be decoded; upload anyway,
+    // with whatever the metadata gave.
+    return { ...EMPTY, width, height, durationSeconds };
   } finally {
     video.removeAttribute("src");
     video.load();

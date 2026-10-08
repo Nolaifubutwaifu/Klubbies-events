@@ -166,6 +166,8 @@ export function NotificationToggles({
 
   return (
     <div className="mt-3 flex flex-col gap-3">
+      {/* These are email settings; the iPhone switch above only adds the app. */}
+      <span className="text-[14px] font-medium">Email me when</span>
       {items.map(([key, label]) => (
         <label key={key} className="flex cursor-pointer items-center gap-3 text-[14px]">
           <input

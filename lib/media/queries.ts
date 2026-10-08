@@ -1,4 +1,5 @@
 import "server-only";
+import { STUCK_AFTER_MS } from "@/lib/media/constants";
 import type { Album, Media } from "@/lib/db/types";
 import { r2Url } from "@/lib/backup/r2";
 import { SIGNED_URL_TTL, signedUrlLifetime, signPaths } from "@/lib/storage";
@@ -108,7 +109,7 @@ export async function listAlbumMedia(
   if (opts.onlyIds && opts.onlyIds.length === 0) return { items: [], hasMore: false };
   let query = supabase
     .from("media")
-    .select("id, kind, width, height, duration_seconds, status, original_filename, thumb_path, poster_path")
+    .select("id, kind, width, height, duration_seconds, status, original_filename, thumb_path, poster_path, updated_at")
     .eq("album_id", albumId)
     .order("sort_at", { ascending: true })
     .order("id", { ascending: true })
@@ -136,7 +137,9 @@ export async function listAlbumMedia(
         width: m.width,
         height: m.height,
         duration_seconds: m.duration_seconds,
-        status: m.status,
+        // An upload that hasn't moved in an hour has stopped; calling it
+        // "Processing" for two weeks told the organiser to wait for nothing.
+        status: m.status === "processing" && Date.parse(m.updated_at) < Date.now() - STUCK_AFTER_MS ? "failed" : m.status,
         original_filename: m.original_filename,
         thumbUrl: path ? (urls.get(path) ?? null) : null,
       };

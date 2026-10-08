@@ -60,11 +60,14 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     supabase.from("albums").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "published"),
     // What attendees can actually open: finished files.
     supabase.from("media").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "ready"),
+    // Attendees' downloads only: the team checking its own gallery isn't
+    // proof anyone got their photos.
     supabase
       .from("access_events")
-      .select("id", { count: "exact", head: true })
+      .select("id, memberships!inner(role)", { count: "exact", head: true })
       .eq("event_id", eventId)
-      .in("action", ["download", "zip"]),
+      .in("action", ["download", "zip"])
+      .neq("memberships.role", "event_admin"),
     supabase.from("media_removal_requests").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "open"),
     supabase
       .from("media")
@@ -205,6 +208,47 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
       : null,
   ].filter((task): task is NonNullable<typeof task> => task !== null);
 
+  // Once photos are live the setup nag steps back: what matters now is what's
+  // broken (failed uploads, a full allowance), so Needs you comes first.
+  const live = (published.count ?? 0) > 0;
+  const needsYou = (
+    <section className="soft-card flex flex-col gap-3 p-5">
+      <div className="flex items-center gap-3">
+        <h2 className="text-[16px] font-semibold">Needs you</h2>
+        {tasks.length ? (
+          <span className="kb-chip-warn">{tasks.length}</span>
+        ) : (
+          <span className="kb-chip-ok">All clear</span>
+        )}
+      </div>
+      {tasks.length ? (
+        <ul className="m-0 flex list-none flex-col p-0">
+          {tasks.map((task, index) => (
+            <li
+              key={task.key}
+              className={`flex flex-wrap items-center gap-3 py-3 ${index > 0 ? "border-t border-[color:var(--kb-line)]" : ""}`}
+            >
+              <span
+                className="h-[7px] w-[7px] flex-none rounded-full"
+                style={{ background: task.urgent ? "var(--kb-warn)" : "var(--kb-line-strong)" }}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-medium">{task.title}</span>
+                <span className="block text-[14px] text-[color:var(--ink-70)]">{task.body}</span>
+              </span>
+              <Link href={task.href} className="btn btn-sm btn-secondary no-underline">
+                {task.cta}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="m-0 text-[14px] text-[color:var(--ink-70)]">Nothing waiting on you.</p>
+      )}
+    </section>
+  );
+
   return (
     <main className="flex flex-col gap-6 pb-12 pt-2">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -219,7 +263,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </PageTitle>
         <div className="flex items-center gap-2">
           {/* One primary button per screen: while setup steps remain, it's the Next step's. */}
-          <Link href={`/admin/${handle}/upload`} className={`btn ${nextStep ? "btn-secondary" : "btn-primary"} no-underline`}>
+          <Link href={`/admin/${handle}/upload`} className={`btn ${nextStep && !live ? "btn-secondary" : "btn-primary"} no-underline`}>
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
@@ -230,7 +274,15 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </div>
       </div>
 
-      {nextStep ? (
+      {live && tasks.length ? needsYou : null}
+
+      {nextStep && live ? (
+        <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
+          Setup {setup.recommended.filter((step) => step.done).length} of {setup.recommended.length} done · Next:{" "}
+          <Link href={nextStep.href}>{nextStep.title}</Link> ·{" "}
+          <Link href={`/admin/${handle}/setup`}>All steps</Link>
+        </p>
+      ) : nextStep ? (
         <section className="kb-brand-band flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6" aria-label="Next step">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
@@ -259,8 +311,10 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             hint={stuckCount > 0 ? `${stuckCount.toLocaleString("en-AU")} unfinished` : `${plural(published.count ?? 0, "album")} live`}
             tone={stuckCount > 0 ? "attention" : "plain"}
           />
+          {/* Guests as the plan counts them, so this matches the meter below;
+              the organiser team is left out. */}
           <Stat
-            value={(joined.count ?? 0).toLocaleString("en-AU")}
+            value={(usage?.guestsJoined ?? joined.count ?? 0).toLocaleString("en-AU")}
             label="Attendees joined"
             hint={event.access_mode === "guest_list" ? `of ${(onList.count ?? 0).toLocaleString("en-AU")} on the list` : "through the event link"}
           />
@@ -273,7 +327,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           <Stat
             value={(downloads.count ?? 0).toLocaleString("en-AU")}
             label="Downloads"
-            hint="single photos and zips"
+            hint="by attendees, single files and zips"
             tone={(downloads.count ?? 0) > 0 ? "good" : "plain"}
           />
         </div>
@@ -293,41 +347,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <section className="soft-card flex flex-col gap-3 p-5">
-            <div className="flex items-center gap-3">
-              <h2 className="text-[16px] font-semibold">Needs you</h2>
-              {tasks.length ? (
-                <span className="kb-chip-warn">{tasks.length}</span>
-              ) : (
-                <span className="kb-chip-ok">All clear</span>
-              )}
-            </div>
-            {tasks.length ? (
-              <ul className="m-0 flex list-none flex-col p-0">
-                {tasks.map((task, index) => (
-                  <li
-                    key={task.key}
-                    className={`flex flex-wrap items-center gap-3 py-3 ${index > 0 ? "border-t border-[color:var(--kb-line)]" : ""}`}
-                  >
-                    <span
-                      className="h-[7px] w-[7px] flex-none rounded-full"
-                      style={{ background: task.urgent ? "var(--kb-warn)" : "var(--kb-line-strong)" }}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[14px] font-medium">{task.title}</span>
-                      <span className="block text-[14px] text-[color:var(--ink-70)]">{task.body}</span>
-                    </span>
-                    <Link href={task.href} className="btn btn-sm btn-secondary no-underline">
-                      {task.cta}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">Nothing waiting on you.</p>
-            )}
-          </section>
+          {live && tasks.length ? null : needsYou}
 
           <section className="soft-card flex flex-col gap-4 p-5">
             <div className="flex items-center justify-between gap-3">

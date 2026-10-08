@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { displayNameFor } from "@/lib/auth/display-name";
 import { getEventContextById } from "@/lib/auth/session";
-import { MAX_VIDEO_BYTES } from "@/lib/billing/plans";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
-import { ACCEPTED_TYPES, resolveMimeType, VIDEO_TOO_BIG } from "@/lib/media/constants";
-import { contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
+import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
+import { BINNED_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
-  if (kind === "video" && byteSize > MAX_VIDEO_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
+  if (byteSize > UPLOAD_MAX_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
   const answer = (existing: ExistingUpload) => {
     // Already here and finished: the second copy is the bug this prevents.
     if (existing.status === "ready") return NextResponse.json({ duplicate: true, mediaId: existing.id });
@@ -85,6 +85,9 @@ export async function POST(request: Request) {
     // Two tabs dropped the same file at once and the other one won.
     const winner = await findExistingUpload(supabase, album.id, contentHash);
     if (winner) return answer(winner);
+    // Or it's in Recently deleted, which this user's client can't see.
+    const binned = await findExistingUpload(createAdminClient(), album.id, contentHash);
+    if (binned?.binned) return NextResponse.json({ error: BINNED_MESSAGE }, { status: 409 });
   }
   if (error?.code === PHOTOS_FULL) {
     const message = ctx.perms.manage_albums

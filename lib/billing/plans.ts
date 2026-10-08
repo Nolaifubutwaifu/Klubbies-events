@@ -104,8 +104,12 @@ export function tierOffers(event: {
   plan_rate: string | null;
   club_code: string | null;
   overflow_started_at: string | null;
+  photos_deleted_at?: string | null;
 }): TierOffer[] {
   if (!isTier(event.plan)) return [];
+  // After the 12 month deletion nothing new can go in, so a bigger size
+  // would be paid for and unlock nothing.
+  if (event.photos_deleted_at) return [];
   const from = event.plan;
   const rate: Rate = event.plan_rate === "club" || event.plan_rate === "standard" ? event.plan_rate : event.club_code ? "club" : "standard";
   const late = Boolean(event.overflow_started_at);

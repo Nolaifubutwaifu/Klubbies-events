@@ -11,7 +11,6 @@ import { getEventContext } from "@/lib/auth/session";
 import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/queries";
 import { formatDate, formatEventDates, plural } from "@/lib/format";
 import { listStackedAlbums, type StackedAlbum } from "@/lib/media/album-list";
-import { PART_SIZE } from "@/lib/media/zip";
 import { signLogoMarks } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -101,7 +100,6 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
             }
             count={matchCount}
             previews={previewItems.map((item) => ({ id: item.mediaId, albumId: item.albumId, url: item.thumbUrl }))}
-            zipParts={Math.max(1, Math.ceil(matchCount / PART_SIZE))}
             eventId={event.id}
           />
         </div>

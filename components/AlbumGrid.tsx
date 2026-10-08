@@ -26,7 +26,11 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
         <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (
         <span className="flex h-full w-full items-center justify-center bg-neutral-400 p-2 text-center text-[14px] text-ink">
-          {item.status === "ready" ? "No preview" : item.original_filename || "Not finished"}
+          {item.status !== "ready"
+            ? item.original_filename || "Not finished"
+            : item.kind === "video"
+              ? `${item.original_filename ?? "Video"} · tap to play`
+              : "No preview"}
         </span>
       )}
       {item.kind === "video" ? (
@@ -46,7 +50,7 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
       ) : null}
       {item.status !== "ready" ? (
         <span className="absolute inset-x-1.5 top-1.5 rounded-full bg-[color-mix(in_srgb,var(--color-accent)_14%,white)] px-2 py-0.5 text-center text-[14px] font-bold text-accent-800">
-          {item.status === "failed" ? "Failed" : "Processing"}
+          {item.status === "failed" ? "Didn't finish" : "Processing"}
         </span>
       ) : null}
     </>
@@ -92,6 +96,13 @@ export function AlbumGrid({
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
+  // A refresh (after a delete or an upload) brings a new first page. Take it
+  // in without remounting, so the Undo bar survives the refresh.
+  const [lastInitial, setLastInitial] = useState(initialItems);
+  if (initialItems !== lastInitial) {
+    setLastInitial(initialItems);
+    setItems(initialItems);
+  }
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [page, setPage] = useState(0);
   const [selecting, setSelecting] = useState(selectMode);

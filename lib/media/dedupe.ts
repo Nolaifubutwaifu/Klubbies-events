@@ -10,7 +10,11 @@ export const contentHashSchema = z
   .nullish()
   .transform((value) => value ?? null);
 
-export type ExistingUpload = { id: string; status: string; storagePath: string; guestLinkId: string | null };
+export type ExistingUpload = { id: string; status: string; storagePath: string; guestLinkId: string | null; binned: boolean };
+
+/** Said when the same file is already in the album's Recently deleted. */
+export const BINNED_MESSAGE = "This photo is in Recently deleted. Restore it from Settings, Recently deleted, instead of uploading it again.";
+export const BINNED_GUEST_MESSAGE = "The organiser removed this photo from the album, so it wasn't added again.";
 
 /**
  * The row this album already has for this exact file, if any.
@@ -27,13 +31,13 @@ export async function findExistingUpload(
   if (!contentHash) return null;
   const { data } = await client
     .from("media")
-    .select("id, status, storage_path, guest_link_id")
+    .select("id, status, storage_path, guest_link_id, deleted_at")
     .eq("album_id", albumId)
     .eq("content_hash", contentHash)
     .limit(1)
     .maybeSingle();
   return data
-    ? { id: data.id, status: data.status, storagePath: data.storage_path, guestLinkId: data.guest_link_id }
+    ? { id: data.id, status: data.status, storagePath: data.storage_path, guestLinkId: data.guest_link_id, binned: Boolean(data.deleted_at) }
     : null;
 }
 

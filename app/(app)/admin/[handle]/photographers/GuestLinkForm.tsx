@@ -4,10 +4,12 @@ import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import { createGuestLinkAction, type GuestLinkState } from "@/app/(app)/admin/guest-actions";
 
+// Said in words, not with strikethrough: a struck-out line is hard to read
+// and screen readers announce it as something the link can do.
 const CAN = [
-  { yes: true, text: "Upload full resolution photos and videos into that album" },
-  { yes: false, text: "See other albums, attendees or anything else in the event" },
-  { yes: false, text: "Delete or download what's already there" },
+  { yes: true, text: "Can upload full resolution photos and videos into that album" },
+  { yes: false, text: "Can't see other albums, attendees or anything else in the event" },
+  { yes: false, text: "Can't delete or download what's already there" },
 ];
 
 function Tick({ yes }: { yes: boolean }) {
@@ -70,7 +72,7 @@ export function GuestLinkForm({
                     <span className="mt-0.5 flex-none" style={{ color: row.yes ? "#1f6b3a" : "#b42318" }}>
                       <Tick yes={row.yes} />
                     </span>
-                    <span style={row.yes ? undefined : { textDecoration: "line-through", opacity: 0.85 }}>{row.text}</span>
+                    <span>{row.text}</span>
                   </li>
                 ))}
               </ul>

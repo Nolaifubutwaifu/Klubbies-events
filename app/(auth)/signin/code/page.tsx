@@ -39,7 +39,7 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
       </p>
 
       <div className="mt-7">
-        <CodeForm restartHref={restartHref} event={event} />
+        <CodeForm event={event} />
       </div>
 
       <AuthNote>

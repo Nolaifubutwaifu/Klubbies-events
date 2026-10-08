@@ -1,19 +1,55 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Supabase mints eight digits for this project, so there are eight boxes. */
 const LENGTH = 8;
+const RESEND_COOLDOWN_S = 30;
 
-export function CodeForm({ restartHref, event }: { restartHref: string; event?: string }) {
+export function CodeForm({ event }: { event?: string }) {
   const router = useRouter();
   const [digits, setDigits] = useState<string[]>(() => Array(LENGTH).fill(""));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [resent, setResent] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+  const [refocus, setRefocus] = useState(0);
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const code = digits.join("");
+
+  // After a wrong code, focus goes back to the first box once the boxes are
+  // editable again, so the phone keyboard stays open.
+  useEffect(() => {
+    if (refocus && !pending) boxes.current[0]?.focus();
+  }, [refocus, pending]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  async function resend() {
+    setError("");
+    setResent("");
+    setCooldown(RESEND_COOLDOWN_S);
+    try {
+      const res = await fetch("/api/auth/resend_code", { method: "POST" });
+      const body: { error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(body.error ?? "That didn't work. Try again.");
+        setCooldown(0);
+        return;
+      }
+      setResent("Sent again. Use the newest email.");
+      setDigits(Array(LENGTH).fill(""));
+      setRefocus((n) => n + 1);
+    } catch {
+      setError("You seem to be offline. Try again.");
+      setCooldown(0);
+    }
+  }
 
   async function submit(value: string) {
     setPending(true);
@@ -31,7 +67,7 @@ export function CodeForm({ restartHref, event }: { restartHref: string; event?: 
         // Clear and go back to the first box: retyping beats hunting for the
         // wrong digit.
         setDigits(Array(LENGTH).fill(""));
-        boxes.current[0]?.focus();
+        setRefocus((n) => n + 1);
         return;
       }
       router.replace(body.redirectTo);
@@ -100,7 +136,8 @@ export function CodeForm({ restartHref, event }: { restartHref: string; event?: 
             autoComplete={index === 0 ? "one-time-code" : "off"}
             aria-label={`Digit ${index + 1} of ${LENGTH}`}
             autoFocus={index === 0}
-            disabled={pending}
+            readOnly={pending}
+            aria-busy={pending}
             className="mono h-[54px] w-full min-w-0 max-w-[46px] rounded-[8px] bg-white text-center text-[22px] font-medium text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:!border-[color:var(--kb-ember)] focus-visible:shadow-[0_0_0_3px_var(--kb-ember-tint)]"
             style={{ border: `1.5px solid ${digit ? "var(--kb-ink)" : "var(--kb-line-input)"}` }}
           />
@@ -112,6 +149,9 @@ export function CodeForm({ restartHref, event }: { restartHref: string; event?: 
           {error}
         </p>
       ) : null}
+      <p className="kb-help m-0 text-center empty:hidden" role="status">
+        {resent}
+      </p>
 
       {/* The boxes submit themselves once they're full; this is for anyone who
           gets there another way. */}
@@ -119,9 +159,9 @@ export function CodeForm({ restartHref, event }: { restartHref: string; event?: 
         {pending ? "Checking…" : "Continue"}
       </button>
 
-      <Link href={restartHref} className="kb-link self-center">
-        Send a new code
-      </Link>
+      <button type="button" className="kb-link self-center" onClick={resend} disabled={cooldown > 0}>
+        {cooldown > 0 ? `Send a new code (${cooldown}s)` : "Send a new code"}
+      </button>
     </form>
   );
 }

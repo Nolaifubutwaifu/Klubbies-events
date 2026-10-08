@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { CODE_REJECTED, SIGNIN_COOKIE, verifyCode, verifyCodeSchema } from "@/lib/auth/flow";
-import { LIMITS, hitRateLimit } from "@/lib/auth/rate-limit";
+import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
+import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
 
 export async function POST(request: Request) {
@@ -19,12 +20,17 @@ export async function POST(request: Request) {
 
   const { ip } = await clientFingerprint();
   if (await hitRateLimit(LIMITS.verifyPerIp, ip)) {
-    return NextResponse.json({ error: CODE_REJECTED }, { status: 400 });
+    return NextResponse.json({ error: RATE_LIMITED }, { status: 429 });
   }
 
   const result = await verifyCode(email, parsed.data.code, parsed.data.event);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   cookieStore.delete(SIGNIN_COOKIE);
-  return NextResponse.json({ ok: true, redirectTo: result.redirectTo });
+  // A page that sent them here to sign in wins, except for a new organiser,
+  // who has an event to set up first.
+  const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
+  cookieStore.delete(NEXT_COOKIE);
+  const redirectTo = next && result.redirectTo !== "/admin/new" ? next : result.redirectTo;
+  return NextResponse.json({ ok: true, redirectTo });
 }

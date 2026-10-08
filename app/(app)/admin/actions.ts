@@ -15,6 +15,7 @@ import type { Permission } from "@/lib/permissions";
 import { deleteEventEverywhere } from "@/lib/events/delete";
 import { canRestoreEvent, purgeAlbum, purgeMedia } from "@/lib/media/bin";
 import { drainFacePurgeQueue } from "@/lib/faces/purge";
+import { brisbaneInputToIso } from "@/lib/format";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { generateHandleBase } from "@/lib/roster/handle";
@@ -382,6 +383,16 @@ export async function createAlbumAction(eventId: string, _prev: ActionState, for
   const parsed = albumInput(form);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
+  // A go-live time is part of making the album in the design, not a later
+  // errand, so the same form can set it. Checked first, so a bad time doesn't
+  // leave a half-made album behind.
+  const publishInput = text(form, "publishAt");
+  const publishAt = publishInput ? brisbaneInputToIso(publishInput) : null;
+  if (publishInput && !publishAt) return { error: "That go-live time didn't make sense" };
+  if (publishAt && new Date(publishAt).getTime() <= Date.now()) {
+    return { error: "That go-live time has already passed. Pick a later one, or publish straight away." };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("albums")
@@ -395,20 +406,11 @@ export async function createAlbumAction(eventId: string, _prev: ActionState, for
       visibility: parsed.data.visibility,
       contributor_scope: parsed.data.contributorScope,
       created_by: ctx.userId,
+      publish_at: publishAt,
     })
     .select("id")
     .single();
   if (error || !data) return { error: "Could not create the album" };
-
-  // A go-live time is part of making the album in the design, not a later
-  // errand, so the same form can set it.
-  const publishAt = text(form, "publishAt");
-  if (publishAt) {
-    const when = new Date(publishAt);
-    if (!Number.isNaN(when.getTime()) && when.getTime() > Date.now()) {
-      await supabase.from("albums").update({ publish_at: when.toISOString() }).eq("id", data.id);
-    }
-  }
 
   // Straight into the uploader: an album with nothing in it is a dead end.
   redirect(`/e/${ctx.event.handle}/a/${data.id}?add=1`);
@@ -798,8 +800,8 @@ export async function setAlbumHiddenAction(albumId: string, hidden: boolean): Pr
 }
 
 /**
- * Queues a draft to publish itself. The hourly cron does the publishing, so a
- * time in the past goes live on the next pass rather than immediately.
+ * Queues a draft to publish itself. `publishAt` is a `datetime-local` value,
+ * read as Brisbane time. The hourly cron does the publishing.
  */
 export async function scheduleAlbumAction(albumId: string, publishAt: string | null): Promise<ActionState> {
   const supabase = await createClient();
@@ -810,9 +812,9 @@ export async function scheduleAlbumAction(albumId: string, publishAt: string | n
 
   let when: string | null = null;
   if (publishAt) {
-    const parsed = new Date(publishAt);
-    if (Number.isNaN(parsed.getTime())) return { error: "That date didn't make sense" };
-    when = parsed.toISOString();
+    when = brisbaneInputToIso(publishAt);
+    if (!when) return { error: "That date didn't make sense" };
+    if (new Date(when).getTime() <= Date.now()) return { error: "That time has already passed. Pick a later one." };
   }
 
   const { error } = await supabase.from("albums").update({ publish_at: when }).eq("id", albumId);

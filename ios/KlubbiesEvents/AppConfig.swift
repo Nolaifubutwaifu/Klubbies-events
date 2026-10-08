@@ -26,6 +26,15 @@ enum AppConfig {
         return hosts
     }()
 
+    /// Signed links to stored photos and videos (the R2 copy, or Supabase
+    /// Storage). A tap that lands on one is a download, not a page to show in
+    /// a Safari sheet, which would sit blank while a 30 MB video loads.
+    static func isStorageURL(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https", let host = url.host?.lowercased() else { return false }
+        if host.hasSuffix(".r2.cloudflarestorage.com") { return true }
+        return host.hasSuffix(".supabase.co") && url.path.hasPrefix("/storage/v1/object/")
+    }
+
     /// Added to the user agent so the site knows it is inside the app
     /// (lib/native-app.ts on the web side). Keep the two in step. Klubbies'
     /// own app sends "KlubbiesApp/"; the two must never overlap.

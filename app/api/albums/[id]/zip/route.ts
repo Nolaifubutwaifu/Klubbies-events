@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { PART_SIZE, safeFilename, zipResponse } from "@/lib/media/zip";
+import { PART_SIZE, safeFilename, UNAVAILABLE, zipError, zipResponse } from "@/lib/media/zip";
 import { createClient } from "@/lib/supabase/server";
 
 // Pro's ceiling. A part of full quality photos and video is slow to stream on
@@ -11,7 +10,7 @@ export const maxDuration = 800;
 
 export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/zip">) {
   const { id } = await ctx.params;
-  if (!z.uuid().safeParse(id).success) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!z.uuid().safeParse(id).success) return zipError(request, UNAVAILABLE, 404);
   const params = new URL(request.url).searchParams;
   const part = Math.max(0, Number(params.get("part") ?? 0));
   // "Download these" on the Saved screen asks for a specific handful rather
@@ -24,12 +23,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
 
   const supabase = await createClient();
   const { data: album } = await supabase.from("albums").select("id, event_id, title, allow_download").eq("id", id).maybeSingle();
-  if (!album) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!album) return zipError(request, UNAVAILABLE, 404);
 
   const event = await getEventContextById(album.event_id);
-  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!event) return zipError(request, UNAVAILABLE, 404);
   if (!album.allow_download && !event.perms.manage_albums) {
-    return NextResponse.json({ error: "Downloads are turned off for this album" }, { status: 403 });
+    return zipError(request, "Downloads are turned off for this album", 403);
   }
 
   let query = supabase
@@ -41,7 +40,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
     .order("id", { ascending: true });
   query = only.length ? query.in("id", only) : query.range(part * PART_SIZE, (part + 1) * PART_SIZE - 1);
   const { data: media } = await query;
-  if (!media?.length) return NextResponse.json({ error: "Nothing to download" }, { status: 404 });
+  if (!media?.length) return zipError(request, "Nothing to download", 404);
 
   await logAccess(event, null, "zip");
 

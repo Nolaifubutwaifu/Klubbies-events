@@ -68,7 +68,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
             <div>
               <span className="kb-eyebrow">{ctx.event.name}</span>
               <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Saved</h1>
-              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">Photos you saved from this event, ready to download.</p>
+              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">Your favourites and downloads from this event.</p>
             </div>
           </div>
 

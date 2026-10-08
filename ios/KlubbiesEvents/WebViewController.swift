@@ -13,10 +13,33 @@ final class WebViewController: UIViewController {
     /// The animated loading screen, until the first page has loaded.
     private var splash: SplashView? = SplashView()
     private var progressObservation: NSKeyValueObservation?
+    private var loadingObservation: NSKeyValueObservation?
+    private var themeObservation: NSKeyValueObservation?
+    /// Follows the page's theme-color, so the photo viewer's near-black runs
+    /// under the status bar and home indicator instead of two paper bands.
+    private var pageIsDark = false {
+        didSet { if pageIsDark != oldValue { setNeedsStatusBarAppearanceUpdate() } }
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle { pageIsDark ? .lightContent : .darkContent }
+    /// Shows the progress bar once a load has run past `slowLoadDelay`.
+    private var showProgressLater: DispatchWorkItem?
+    /// Quick loads finish before this and never show the bar, so moving
+    /// between pages feels like an app, not a website. Slow ones (bad signal
+    /// at a venue) still show that something is happening.
+    private static let slowLoadDelay: TimeInterval = 0.5
     private let photoSaver = PhotoSaver()
     private let scanBridge = ScanBridge()
     /// Where each download in flight is being written.
     fileprivate var downloads: [ObjectIdentifier: URL] = [:]
+    private let busyBridge = BusyBridge()
+    private var refreshControl: UIRefreshControl?
+    /// True while the page is uploading. A reload would end every upload in
+    /// flight, so pull to refresh is off and a crashed page isn't reloaded
+    /// behind the person's back.
+    private var pageIsBusy = false {
+        didSet { webView?.scrollView.refreshControl = pageIsBusy ? nil : refreshControl }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,6 +54,8 @@ final class WebViewController: UIViewController {
         config.userContentController.addScriptMessageHandler(PushManager.shared, contentWorld: .page, name: "klubbiesPush")
         config.userContentController.add(scanBridge, contentWorld: .page, name: "klubbiesEventsScan")
         scanBridge.onScanRequested = { [weak self] in self?.presentScanner() }
+        config.userContentController.add(busyBridge, contentWorld: .page, name: "klubbiesBusy")
+        busyBridge.onChange = { [weak self] busy in self?.pageIsBusy = busy }
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -47,9 +72,11 @@ final class WebViewController: UIViewController {
         let refresh = UIRefreshControl()
         refresh.addTarget(self, action: #selector(pullToRefresh(_:)), for: .valueChanged)
         webView.scrollView.refreshControl = refresh
+        refreshControl = refresh
 
         progressBar.progressTintColor = AppConfig.accent
         progressBar.trackTintColor = .clear
+        progressBar.isHidden = true
         offlineView.isHidden = true
         offlineView.onRetry = { [weak self] in self?.retry() }
 
@@ -76,8 +103,32 @@ final class WebViewController: UIViewController {
         progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] webView, _ in
             guard let self else { return }
             let progress = Float(webView.estimatedProgress)
-            self.progressBar.setProgress(progress, animated: progress > self.progressBar.progress)
-            self.progressBar.isHidden = progress >= 1
+            self.progressBar.setProgress(progress, animated: !self.progressBar.isHidden && progress > self.progressBar.progress)
+        }
+        themeObservation = webView.observe(\.themeColor, options: [.new]) { [weak self] webView, _ in
+            guard let self else { return }
+            let colour = webView.themeColor ?? AppConfig.background
+            self.view.backgroundColor = colour
+            webView.underPageBackgroundColor = colour
+            var white: CGFloat = 1
+            colour.getWhite(&white, alpha: nil)
+            self.pageIsDark = white < 0.5
+        }
+        loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
+            guard let self else { return }
+            self.showProgressLater?.cancel()
+            self.showProgressLater = nil
+            guard webView.isLoading else {
+                self.progressBar.isHidden = true
+                return
+            }
+            let show = DispatchWorkItem { [weak self] in
+                guard let self, self.webView.isLoading else { return }
+                self.progressBar.setProgress(Float(self.webView.estimatedProgress), animated: false)
+                self.progressBar.isHidden = false
+            }
+            self.showProgressLater = show
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.slowLoadDelay, execute: show)
         }
 
         // Over everything until the first page is ready. While it's up, pages
@@ -211,6 +262,7 @@ extension WebViewController: WKNavigationDelegate {
             return openOutside(website)
         }
         if AppConfig.isAppURL(url) { return decisionHandler(.allow) }
+        if AppConfig.isStorageURL(url) { return decisionHandler(.download) }
 
         decisionHandler(.cancel)
         openOutside(url)
@@ -249,7 +301,18 @@ extension WebViewController: WKNavigationDelegate {
 
     /// iOS can kill a web page in the background to save memory; bring it back.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        webView.reload()
+        guard pageIsBusy else {
+            webView.reload()
+            return
+        }
+        pageIsBusy = false
+        let alert = UIAlertController(
+            title: "Upload interrupted",
+            message: "iPhone closed the page to save memory. Reopen the album and add the files again: anything already uploaded is kept.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Reopen", style: .default) { _ in webView.reload() })
+        present(alert, animated: true)
     }
 
     private func showOfflineIfNeeded(_ error: Error) {
@@ -296,21 +359,40 @@ extension WebViewController: WKUIDelegate {
     }
 }
 
-// MARK: - Downloads (album zips, roster exports)
+// MARK: - Downloads (album zips, roster exports, single photos and videos)
 
 extension WebViewController: WKDownloadDelegate {
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Downloads", isDirectory: true)
+        // A folder per download, so a second tap on the same zip can't delete
+        // the file the first one is still writing.
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Downloads", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let destination = folder.appendingPathComponent(suggestedFilename)
-        try? FileManager.default.removeItem(at: destination)
         downloads[ObjectIdentifier(download)] = destination
         completionHandler(destination)
     }
 
     func downloadDidFinish(_ download: WKDownload) {
         guard let file = downloads.removeValue(forKey: ObjectIdentifier(download)) else { return }
-        share(fileAt: file)
+        // Photos and videos go where people look for them: the Photos app.
+        // Zips and spreadsheets go to the share sheet, where Save to Files is.
+        guard PhotoSaver.isMedia(file) else { return share(fileAt: file) }
+        Task { @MainActor in
+            let message: String
+            do {
+                try await PhotoSaver.saveFile(at: file)
+                message = "Saved to Photos"
+            } catch PhotoSaver.SaveError.noAccess {
+                message = PhotoSaver.noAccessMessage
+            } catch {
+                return share(fileAt: file)
+            }
+            let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        }
     }
 
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
@@ -318,5 +400,15 @@ extension WebViewController: WKDownloadDelegate {
         let alert = UIAlertController(title: "Download failed", message: error.localizedDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+}
+
+/// The page says when it's uploading: `klubbiesBusy.postMessage({ busy })`.
+final class BusyBridge: NSObject, WKScriptMessageHandler {
+    var onChange: ((Bool) -> Void)?
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        let busy = (message.body as? [String: Any])?["busy"] as? Bool ?? false
+        onChange?(busy)
     }
 }

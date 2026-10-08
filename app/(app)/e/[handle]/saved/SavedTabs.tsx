@@ -41,8 +41,9 @@ export function SavedTabs({
   groups: SavedGroup[];
   downloads: DownloadedItem[];
 }) {
-  const [tab, setTab] = useState<"favourites" | "downloads">("favourites");
   const favouriteCount = groups.reduce((sum, group) => sum + group.items.length, 0);
+  // Open on whichever list has something in it.
+  const [tab, setTab] = useState<"favourites" | "downloads">(favouriteCount === 0 && downloads.length ? "downloads" : "favourites");
 
   const downloadGroups = downloads.reduce<Map<string, DownloadedItem[]>>((map, item) => {
     const key = item.albumId ?? "none";
@@ -71,7 +72,11 @@ export function SavedTabs({
         ))}
       </div>
 
-      {tab === "favourites" ? (
+      {tab === "favourites" && favouriteCount === 0 ? (
+        <p className="mt-6 text-[15px] text-[color:var(--ink-70)]">
+          Nothing here yet. Tap the heart on any photo to keep it in this list.
+        </p>
+      ) : tab === "favourites" ? (
         <div className="mt-6 flex flex-col gap-8">
           {groups.map((group) => (
             <section key={group.albumId}>

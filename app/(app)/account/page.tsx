@@ -133,9 +133,10 @@ export default async function AccountPage(props: PageProps<"/account">) {
             </div>
 
             <p className="m-0 text-[14px] leading-normal text-[color:var(--ink-70)]">
-              For a copy of everything shared with you, use Download in each album, or{" "}
+              To keep everything shared with you, open each album and use Save to Photos (on a computer, Download all). Need
+              help?{" "}
               <Link href="/support" className="kb-link">
-                contact us
+                Contact us
               </Link>
               .
             </p>

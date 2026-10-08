@@ -181,10 +181,19 @@
 				CODE_SIGN_ENTITLEMENTS = KlubbiesEvents.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = W72QQ83AYR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Klubbies Events";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Klubbies Events uses the camera to scan an event's QR code, to take a selfie so it can find you in the event's photos, and to take a photo to upload.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Klubbies Events uses the microphone when you record a video to upload to an event.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Klubbies Events saves event photos to your library when you tap Save to Photos.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Klubbies Events lets you pick photos and videos from your library to upload to an event, or a selfie to find your photos.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -206,10 +215,19 @@
 				CODE_SIGN_ENTITLEMENTS = KlubbiesEvents.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = W72QQ83AYR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Klubbies Events";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Klubbies Events uses the camera to scan an event's QR code, to take a selfie so it can find you in the event's photos, and to take a photo to upload.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Klubbies Events uses the microphone when you record a video to upload to an event.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Klubbies Events saves event photos to your library when you tap Save to Photos.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Klubbies Events lets you pick photos and videos from your library to upload to an event, or a selfie to find your photos.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

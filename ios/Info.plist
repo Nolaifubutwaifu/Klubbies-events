@@ -2,35 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>Klubbies Events</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.photography</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Klubbies Events uses the camera to scan an event's QR code, to take a selfie so it can find you in the event's photos, and to take a photo to upload.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Klubbies Events uses the microphone when you record a video to upload to an event.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Klubbies Events lets you pick photos and videos from your library to upload to an event, or a selfie to find your photos.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Klubbies Events saves event photos to your library when you tap Save to Photos.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
 	</dict>
-	<key>UIUserInterfaceStyle</key>
-	<string>Light</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
 </dict>
 </plist>

@@ -17,6 +17,7 @@ import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { personName } from "@/lib/auth/display-name";
+import { stuckCutoffIso } from "@/lib/media/constants";
 
 type Props = PageProps<"/e/[handle]/a/[albumId]">;
 
@@ -101,6 +102,9 @@ export default async function AlbumPage(props: Props) {
         .select("kind")
         .eq("album_id", album.id)
         .eq("status", "processing")
+        // Only uploads still moving: one that stopped isn't coming in "2 to 5
+        // minutes", and the organiser is told attendees can't see it.
+        .gt("updated_at", stuckCutoffIso())
         .is("hidden_at", null)
         .is("deleted_at", null)
         .limit(200);
@@ -298,7 +302,9 @@ export default async function AlbumPage(props: Props) {
       ) : null}
 
       <AlbumGrid
-        key={`${items.length}-${album.cover_media_id ?? album.cover_path ?? ""}`}
+        // Keyed on the album, not the item count: a delete changes the count,
+        // which remounted the grid and took the 10 second Undo with it.
+        key={`${album.id}-${album.cover_media_id ?? album.cover_path ?? ""}`}
         albumId={album.id}
         hrefBase={albumHref}
         initialItems={items}

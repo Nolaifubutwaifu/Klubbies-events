@@ -23,15 +23,22 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
   const ctx = await requireAdminContext(handle);
   const supabase = await createClient();
 
-  const { data: requests } = await supabase
-    .from("media_removal_requests")
-    .select("id, media_id, status, requested_at, auto_delete_at, resolved_at, requested_by")
-    .eq("event_id", ctx.event.id)
-    .order("status", { ascending: true })
-    .order("requested_at", { ascending: false })
-    .limit(30);
+  // Every open request, then the latest settled ones. Ordering by the status
+  // text put "confirmed" before "open", so after 30 settled requests new ones
+  // fell off the page and auto-deleted unseen.
+  const select = "id, media_id, status, requested_at, auto_delete_at, resolved_at, requested_by";
+  const [{ data: openRows }, { data: settledRows }] = await Promise.all([
+    supabase.from("media_removal_requests").select(select).eq("event_id", ctx.event.id).eq("status", "open").order("requested_at", { ascending: true }),
+    supabase
+      .from("media_removal_requests")
+      .select(select)
+      .eq("event_id", ctx.event.id)
+      .neq("status", "open")
+      .order("requested_at", { ascending: false })
+      .limit(30),
+  ]);
 
-  const rows = requests ?? [];
+  const rows = [...(openRows ?? []), ...(settledRows ?? [])];
   const mediaIds = rows.map((r) => r.media_id);
   const askerIds = [...new Set(rows.map((r) => r.requested_by).filter((id): id is string => Boolean(id)))];
 

@@ -7,7 +7,7 @@ import { eventIsFull, GUESTS_FULL } from "@/lib/billing/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { namesLooselyMatch } from "./names";
-import { LIMITS, hitRateLimit } from "./rate-limit";
+import { LIMITS, RATE_LIMITED, hitRateLimit } from "./rate-limit";
 
 export const SIGNIN_COOKIE = "kb_signin";
 export const CODE_TTL_MS = 10 * 60 * 1000;
@@ -123,15 +123,9 @@ async function issueOtp(email: string): Promise<string> {
  * Does the real work of a code request. Callers run it after the response
  * has been sent, so neither timing nor status reveals roster membership.
  */
-export async function processCodeRequest(input: RequestCodeInput, ip: string): Promise<void> {
+export async function processCodeRequest(input: RequestCodeInput): Promise<void> {
   const email = normaliseEmail(input.email);
   if (!isValidEmail(email)) return;
-
-  const [emailLimited, ipLimited] = await Promise.all([
-    hitRateLimit(LIMITS.codeRequestPerEmail, email),
-    hitRateLimit(LIMITS.codeRequestPerIp, ip),
-  ]);
-  if (emailLimited || ipLimited) return;
 
   let eventName: string | null = null;
   let eventId: string | null = null;
@@ -170,6 +164,40 @@ export async function processCodeRequest(input: RequestCodeInput, ip: string): P
 
   await sendSignInCode(email, { code, name: input.fullName, eventName });
 }
+
+/**
+ * Checked before answering, so a limited caller hears why instead of waiting
+ * for a code that never comes. The limits apply to every address alike, so
+ * the answer says nothing about who is on a guest list.
+ */
+export async function codeRequestLimit(rawEmail: string, ip: string): Promise<string | null> {
+  const email = normaliseEmail(rawEmail);
+  if (await hitRateLimit(LIMITS.codeRequestPerIp, ip)) return RATE_LIMITED;
+  if (await hitRateLimit(LIMITS.codeRequestPerEmail, email)) return EMAIL_LIMITED;
+  return null;
+}
+
+/**
+ * "Send a new code" from the code screen: repeats the request that's waiting
+ * for this address, with the name and event it was made with.
+ */
+export async function resendCode(rawEmail: string): Promise<void> {
+  const email = normaliseEmail(rawEmail);
+  const admin = createAdminClient();
+  const { data: pending } = await admin.from("pending_sign_ins").select("claimed_name, flow, event_id").eq("email", email).maybeSingle();
+  // No waiting request means the first one didn't qualify, and neither would this.
+  if (!pending) return;
+  let event: string | undefined;
+  if (pending.event_id) {
+    const { data } = await admin.from("events").select("handle").eq("id", pending.event_id).maybeSingle();
+    event = data?.handle ?? undefined;
+  }
+  const flow = requestCodeSchema.shape.flow.safeParse(pending.flow);
+  await processCodeRequest({ fullName: pending.claimed_name ?? "", email, flow: flow.success ? flow.data : "member", event });
+}
+
+export const EMAIL_LIMITED =
+  "You've asked for a few codes already. Use the newest email (check spam too), or wait a few minutes and try again.";
 
 export type VerifyResult = { ok: true; redirectTo: string } | { ok: false; error: string };
 

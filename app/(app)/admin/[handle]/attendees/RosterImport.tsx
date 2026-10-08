@@ -145,8 +145,11 @@ export function RosterImport({ eventId }: { eventId: string }) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <span className="text-[16px] font-semibold">{busy && !preview ? "Reading the file…" : "Drop the guest list"}</span>
-        <span className="text-[14px] text-[color:var(--ink-70)]">CSV or Excel export from Eventbrite, Humanitix, Luma or a spreadsheet.</span>
+        <span className="text-[16px] font-semibold">{busy && !preview ? "Reading the file…" : "Choose the guest list file"}</span>
+        <span className="text-[14px] text-[color:var(--ink-70)]">
+          CSV or Excel export from Eventbrite, Humanitix, Luma or a spreadsheet.
+          <span className="hidden [@media(pointer:fine)]:inline"> Or drop it here.</span>
+        </span>
         <button
           type="button"
           className="btn btn-ghost text-[14px]"

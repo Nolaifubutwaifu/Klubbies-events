@@ -84,7 +84,7 @@ export function CreateEventForm({ appUrl }: { appUrl: string }) {
               name="organisation"
               value={organisation}
               onChange={(e) => setOrganisation(e.target.value)}
-              placeholder="Company or organisation"
+              placeholder="Your name, club or company"
               maxLength={160}
             />
           </label>

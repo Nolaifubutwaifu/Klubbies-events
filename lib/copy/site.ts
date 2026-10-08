@@ -19,6 +19,7 @@
 // cron makes those approximate).
 
 import { TIERS } from "@/lib/billing/plans";
+import { UPLOAD_MAX_MB } from "@/lib/media/constants";
 
 /**
  * How the tiers are described (docs/handoff-pricing-tiers.md). The numbers
@@ -184,7 +185,7 @@ export const FAQS: { q: string; a: string; group: FaqGroup }[] = [
   {
     q: "How do videos count?",
     group: "Pricing",
-    a: "Each started minute of video counts as 10 photos toward your event's allowance, so a 2 minute clip counts as 20. Each video can be up to 500 MB.",
+    a: `Each started minute of video counts as 10 photos toward your event's allowance, so a 2 minute clip counts as 20. Each file can be up to ${UPLOAD_MAX_MB} MB.`,
   },
 ];
 
