@@ -115,6 +115,8 @@ export function Viewer({
   canAskRemoval,
   alreadyAsked,
   faceMatchId,
+  itemHrefs,
+  countNoun,
 }: {
   albumHref: string;
   albumTitle: string;
@@ -132,6 +134,10 @@ export function Viewer({
   alreadyAsked: boolean;
   /** Set when face recognition has matched the viewer to this photo. */
   faceMatchId: string | null;
+  /** Where each neighbour opens, when the sequence spans albums (Your photos). */
+  itemHrefs?: Record<string, string>;
+  /** "photos of you" in the counter, when the sequence isn't the album. */
+  countNoun?: string;
 }) {
   const router = useRouter();
   const touchX = useRef<number | null>(null);
@@ -177,8 +183,9 @@ export function Viewer({
     }
   }
 
-  const prevHref = prevId ? `${itemHrefBase}/${prevId}` : null;
-  const nextHref = nextId ? `${itemHrefBase}/${nextId}` : null;
+  const hrefFor = (id: string) => itemHrefs?.[id] ?? `${itemHrefBase}/${id}`;
+  const prevHref = prevId ? hrefFor(prevId) : null;
+  const nextHref = nextId ? hrefFor(nextId) : null;
 
   useEffect(() => {
     if (prevHref) router.prefetch(prevHref);
@@ -239,6 +246,7 @@ export function Viewer({
           <div className="truncate text-[14px] font-bold text-white">{albumTitle}</div>
           <div className="text-[14px] text-white/[0.68]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
+            {countNoun ? ` ${countNoun}` : ""}
             {current.takenAt ? ` · ${current.takenAt}` : ""}
             {current.photographer ? ` · By ${current.photographer}` : ""}
           </div>
@@ -309,7 +317,7 @@ export function Viewer({
           return (
             <Link
               key={item.id}
-              href={`${itemHrefBase}/${item.id}`}
+              href={hrefFor(item.id)}
               replace
               scroll={false}
               aria-current={here ? "true" : undefined}

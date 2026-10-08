@@ -45,7 +45,7 @@ export function YourPhotosCard({
           {previews.map((item) => (
             <Link
               key={item.id}
-              href={item.albumId ? `/e/${handle}/a/${item.albumId}/${item.id}` : meHref}
+              href={item.albumId ? `/e/${handle}/a/${item.albumId}/${item.id}?from=me` : meHref}
               className="soft-tile aspect-[4/5] w-[112px] flex-none sm:w-[148px]"
               aria-label="Open photo"
             >

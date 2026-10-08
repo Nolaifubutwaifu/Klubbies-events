@@ -94,7 +94,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
           </div>
 
           {/* Not enrolled: the pitch and the consent screen. */}
-          {!state.profile ? <Enrol eventId={ctx.event.id} /> : null}
+          {!state.profile ? <Enrol eventId={ctx.event.id} backHref={`/e/${handle}`} /> : null}
 
           {/* The selfie was unusable. Say so rather than leaving them waiting. */}
           {state.profile?.status === "failed" ? (
@@ -167,7 +167,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                         {group.items.map((item) => (
                           <Link
                             key={item.matchId}
-                            href={`/e/${handle}/a/${group.albumId}/${item.mediaId}`}
+                            href={`/e/${handle}/a/${group.albumId}/${item.mediaId}?from=me`}
                             className="soft-tile block aspect-square no-underline"
                             aria-label={`Photo of you from ${group.albumTitle}`}
                           >
