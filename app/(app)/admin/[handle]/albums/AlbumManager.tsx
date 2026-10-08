@@ -11,16 +11,8 @@ import {
   setAlbumOrderAction,
   setAlbumPublishedAction,
 } from "@/app/(app)/admin/actions";
-import { formatDate, formatLongDate } from "@/lib/format";
+import { formatDate, formatDateTime, isoToBrisbaneInput } from "@/lib/format";
 import type { StackedAlbum } from "@/lib/media/album-list";
-
-/** Local datetime string for an <input type="datetime-local">. */
-function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 /** The conventional six-dot drag grip. */
 function GripIcon() {
@@ -255,7 +247,7 @@ export function AlbumManager({
                     .join(" · ")}
                 </span>
                 {album.publishAt ? (
-                  <span className="block text-[14px] text-accent-700">Goes live {formatLongDate(album.publishAt)}</span>
+                  <span className="block text-[14px] text-accent-700">Goes live {formatDateTime(album.publishAt)}</span>
                 ) : null}
               </span>
 
@@ -289,7 +281,7 @@ export function AlbumManager({
                       disabled={pending}
                       onClick={() => {
                         setScheduling(scheduling === album.id ? null : album.id);
-                        setWhen(toLocalInput(album.publishAt));
+                        setWhen(isoToBrisbaneInput(album.publishAt));
                       }}
                     >
                       {album.publishAt ? "Reschedule" : "Schedule"}

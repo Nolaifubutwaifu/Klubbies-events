@@ -88,3 +88,25 @@ export function formatEventDates(startsOn: string | null | undefined, endsOn: st
   if (sameYear) return `${formatDayMonth(start)} – ${formatDate(end)}`;
   return `${formatDate(start)} – ${formatDate(end)}`;
 }
+
+/**
+ * A `datetime-local` value ("2026-10-09T09:00") read as Brisbane time, the
+ * zone every date in the app is shown in. Values that already carry an
+ * offset are kept as they are. Returns null for anything unreadable.
+ */
+export function brisbaneInputToIso(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const zoned = /(Z|[+-]\d{2}:?\d{2})$/.test(trimmed)
+    ? trimmed
+    : `${trimmed.length === 16 ? `${trimmed}:00` : trimmed}+10:00`;
+  const when = new Date(zoned);
+  return Number.isNaN(when.getTime()) ? null : when.toISOString();
+}
+
+/** The reverse: an instant as a Brisbane `datetime-local` value. */
+export function isoToBrisbaneInput(iso: string | null): string {
+  if (!iso) return "";
+  const when = new Date(new Date(iso).getTime() + 10 * 3600 * 1000);
+  return when.toISOString().slice(0, 16);
+}

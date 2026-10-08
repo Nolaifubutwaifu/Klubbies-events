@@ -3,13 +3,12 @@
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import { createAlbumAction, type ActionState } from "@/app/(app)/admin/actions";
+import { isoToBrisbaneInput } from "@/lib/format";
 
 /** Tomorrow at 9am: the usual "photos are ready" moment after an event. */
 function tomorrowMorning(): string {
-  const when = new Date();
-  when.setDate(when.getDate() + 1);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}T09:00`;
+  // Tomorrow in Brisbane, where the server reads the time.
+  return `${isoToBrisbaneInput(new Date(Date.now() + 24 * 3600 * 1000).toISOString()).slice(0, 10)}T09:00`;
 }
 
 export function NewAlbumPanel({ eventId, defaultDate }: { eventId: string; defaultDate: string | null }) {
