@@ -1,4 +1,5 @@
 import Photos
+import UniformTypeIdentifiers
 import WebKit
 
 /// The site's "Save to Photos" inside the app. The page posts a batch of
@@ -16,7 +17,7 @@ final class PhotoSaver: NSObject, WKScriptMessageHandlerWithReply {
             return (nil, "Nothing to save")
         }
         guard await Self.canAddToPhotos() else {
-            return (nil, "Klubbies Events needs Photos access to save. Turn it on in Settings, Klubbies Events, Photos.")
+            return (nil, Self.noAccessMessage)
         }
 
         var saved = 0
@@ -33,6 +34,27 @@ final class PhotoSaver: NSObject, WKScriptMessageHandlerWithReply {
         return (["saved": saved, "failed": failed], nil)
     }
 
+    enum SaveError: Error { case noAccess }
+
+    static let noAccessMessage = "Klubbies Events needs Photos access to save. Turn it on in Settings, Klubbies Events, Photos."
+
+    /// Whether a downloaded file is something the Photos app takes.
+    static func isMedia(_ file: URL) -> Bool {
+        guard let type = UTType(filenameExtension: file.pathExtension.lowercased()) else { return false }
+        return type.conforms(to: .image) || type.conforms(to: .movie)
+    }
+
+    /// Adds a file that's already on disk (a finished download) to Photos.
+    static func saveFile(at file: URL) async throws {
+        guard await canAddToPhotos() else { throw SaveError.noAccess }
+        let isVideo = UTType(filenameExtension: file.pathExtension.lowercased())?.conforms(to: .movie) ?? false
+        try await PHPhotoLibrary.shared().performChanges {
+            let options = PHAssetResourceCreationOptions()
+            options.shouldMoveFile = false
+            PHAssetCreationRequest.forAsset().addResource(with: isVideo ? .video : .photo, fileURL: file, options: options)
+        }
+    }
+
     private static func canAddToPhotos() async -> Bool {
         switch PHPhotoLibrary.authorizationStatus(for: .addOnly) {
         case .authorized, .limited: return true
@@ -47,7 +69,11 @@ final class PhotoSaver: NSObject, WKScriptMessageHandlerWithReply {
         let (downloaded, response) = try await URLSession.shared.download(from: url)
         let mime = response.mimeType ?? "image/jpeg"
         let isVideo = mime.hasPrefix("video/")
-        let ext = isVideo ? (mime.contains("quicktime") ? "mov" : "mp4") : (mime.contains("png") ? "png" : mime.contains("webp") ? "webp" : "jpg")
+        // The type's own extension (heic, mov, png…), falling back to the
+        // name the server gave it.
+        let ext = UTType(mimeType: mime)?.preferredFilenameExtension
+            ?? response.suggestedFilename.map { ($0 as NSString).pathExtension }.flatMap { $0.isEmpty ? nil : $0 }
+            ?? (isVideo ? "mov" : "jpg")
 
         // Photos works out the file type from the extension.
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension(ext)

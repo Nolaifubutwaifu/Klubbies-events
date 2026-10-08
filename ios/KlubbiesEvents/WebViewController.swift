@@ -13,6 +13,13 @@ final class WebViewController: UIViewController {
     /// The animated loading screen, until the first page has loaded.
     private var splash: SplashView? = SplashView()
     private var progressObservation: NSKeyValueObservation?
+    private var loadingObservation: NSKeyValueObservation?
+    /// Shows the progress bar once a load has run past `slowLoadDelay`.
+    private var showProgressLater: DispatchWorkItem?
+    /// Quick loads finish before this and never show the bar, so moving
+    /// between pages feels like an app, not a website. Slow ones (bad signal
+    /// at a venue) still show that something is happening.
+    private static let slowLoadDelay: TimeInterval = 0.5
     private let photoSaver = PhotoSaver()
     private let scanBridge = ScanBridge()
     /// Where each download in flight is being written.
@@ -50,6 +57,7 @@ final class WebViewController: UIViewController {
 
         progressBar.progressTintColor = AppConfig.accent
         progressBar.trackTintColor = .clear
+        progressBar.isHidden = true
         offlineView.isHidden = true
         offlineView.onRetry = { [weak self] in self?.retry() }
 
@@ -76,8 +84,23 @@ final class WebViewController: UIViewController {
         progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] webView, _ in
             guard let self else { return }
             let progress = Float(webView.estimatedProgress)
-            self.progressBar.setProgress(progress, animated: progress > self.progressBar.progress)
-            self.progressBar.isHidden = progress >= 1
+            self.progressBar.setProgress(progress, animated: !self.progressBar.isHidden && progress > self.progressBar.progress)
+        }
+        loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
+            guard let self else { return }
+            self.showProgressLater?.cancel()
+            self.showProgressLater = nil
+            guard webView.isLoading else {
+                self.progressBar.isHidden = true
+                return
+            }
+            let show = DispatchWorkItem { [weak self] in
+                guard let self, self.webView.isLoading else { return }
+                self.progressBar.setProgress(Float(self.webView.estimatedProgress), animated: false)
+                self.progressBar.isHidden = false
+            }
+            self.showProgressLater = show
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.slowLoadDelay, execute: show)
         }
 
         // Over everything until the first page is ready. While it's up, pages
@@ -211,6 +234,7 @@ extension WebViewController: WKNavigationDelegate {
             return openOutside(website)
         }
         if AppConfig.isAppURL(url) { return decisionHandler(.allow) }
+        if AppConfig.isStorageURL(url) { return decisionHandler(.download) }
 
         decisionHandler(.cancel)
         openOutside(url)
@@ -296,21 +320,40 @@ extension WebViewController: WKUIDelegate {
     }
 }
 
-// MARK: - Downloads (album zips, roster exports)
+// MARK: - Downloads (album zips, roster exports, single photos and videos)
 
 extension WebViewController: WKDownloadDelegate {
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Downloads", isDirectory: true)
+        // A folder per download, so a second tap on the same zip can't delete
+        // the file the first one is still writing.
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Downloads", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let destination = folder.appendingPathComponent(suggestedFilename)
-        try? FileManager.default.removeItem(at: destination)
         downloads[ObjectIdentifier(download)] = destination
         completionHandler(destination)
     }
 
     func downloadDidFinish(_ download: WKDownload) {
         guard let file = downloads.removeValue(forKey: ObjectIdentifier(download)) else { return }
-        share(fileAt: file)
+        // Photos and videos go where people look for them: the Photos app.
+        // Zips and spreadsheets go to the share sheet, where Save to Files is.
+        guard PhotoSaver.isMedia(file) else { return share(fileAt: file) }
+        Task { @MainActor in
+            let message: String
+            do {
+                try await PhotoSaver.saveFile(at: file)
+                message = "Saved to Photos"
+            } catch PhotoSaver.SaveError.noAccess {
+                message = PhotoSaver.noAccessMessage
+            } catch {
+                return share(fileAt: file)
+            }
+            let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        }
     }
 
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
