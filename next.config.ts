@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
   // (lib/media/video-previews.ts): keep it out of the bundle and ship the file.
   serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
-    "/api/cron/hourly": ["./node_modules/ffmpeg-static/ffmpeg", "./node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg"],
+    // The real file under .pnpm: the node_modules/ffmpeg-static symlink made
+    // Vercel reject the function package.
+    "/api/cron/hourly": ["./node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg"],
   },
 };
 
