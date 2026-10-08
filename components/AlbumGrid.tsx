@@ -42,7 +42,7 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
         <span className="absolute left-1.5 top-1.5 rounded-full bg-ink px-2 py-0.5 text-[14px] font-bold text-white">Cover</span>
       ) : null}
       {saved ? (
-        <span className="absolute bottom-1.5 right-1.5 text-white drop-shadow" aria-label="Saved">
+        <span className="absolute bottom-1.5 right-1.5 text-white drop-shadow" aria-hidden>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden>
             <path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.4 12 20 12 20Z" />
           </svg>
@@ -153,10 +153,18 @@ export function AlbumGrid({
   const total = photoCount + videoCount;
   // Screen readers hear "Photo 3 of 110 in Bobbies Pics", not "link".
   const positionById = new Map(items.map((item, i) => [item.id, i + 1]));
+  // Everything the tile shows by sight, said in words: length, cover, saved,
+  // selected, and an upload that isn't finished.
   const labelFor = (item: GridItem) => {
     const noun = item.kind === "video" ? "Video" : "Photo";
     const at = positionById.get(item.id);
-    return at ? `${noun} ${at} of ${total} in ${albumTitle}` : `${noun} in ${albumTitle}`;
+    const parts = [at ? `${noun} ${at} of ${total} in ${albumTitle}` : `${noun} in ${albumTitle}`];
+    if (item.kind === "video" && item.duration_seconds) parts.push(duration(item.duration_seconds));
+    if (item.id === coverMediaId) parts.push("cover");
+    if (saved.has(item.id)) parts.push("saved");
+    if (item.status === "failed") parts.push("didn't finish uploading");
+    else if (item.status !== "ready") parts.push("still processing");
+    return parts.join(", ");
   };
 
   const loadMore = () =>
@@ -283,7 +291,9 @@ export function AlbumGrid({
           <button type="button" className="btn btn-secondary btn-sm ml-auto" onClick={() => setSelecting(true)}>
             Select photos
           </button>
-          {message ? <span className="w-full text-[14px] text-[color:var(--ink-70)]">{message}</span> : null}
+          <span className="w-full text-[14px] text-[color:var(--ink-70)] empty:hidden" role="status">
+            {message}
+          </span>
         </div>
       )}
 
@@ -300,8 +310,13 @@ export function AlbumGrid({
               onClick={() => toggle(item.id)}
               aria-pressed={selected.has(item.id)}
               aria-label={labelFor(item)}
-              className="relative block aspect-square overflow-hidden rounded-[10px] border-0 bg-bg p-0"
-              style={{ outline: selected.has(item.id) ? "3px solid var(--color-accent)" : undefined, outlineOffset: -3 }}
+              // The selection ring sits on a layer above the photo, so the
+              // focus ring stays the global one instead of being overridden.
+              className={`relative block aspect-square overflow-hidden rounded-[10px] border-0 bg-bg p-0 ${
+                selected.has(item.id)
+                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[10px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
+                  : ""
+              }`}
             >
               <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />
             </button>

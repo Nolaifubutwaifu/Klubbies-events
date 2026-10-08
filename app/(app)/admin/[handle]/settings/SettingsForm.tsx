@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
-import { ACCENT_SWATCHES, eventToneStyle } from "@/lib/theme";
+import { ACCENT_SWATCHES, eventToneStyle, SWATCH_NAMES } from "@/lib/theme";
 import { updateEventAction, type ActionState } from "../../actions";
 
 export function SettingsForm({
@@ -70,33 +70,48 @@ export function SettingsForm({
           any colour, and light colours are darkened until text on white is readable.
         </span>
         <input type="hidden" name="accentColour" value={accent} />
-        <div className="flex flex-wrap items-center gap-2">
-          {ACCENT_SWATCHES.map((swatch) => (
+        {/* A named radio group: arrow keys move between colours and the
+            choice is announced, rather than ten buttons read as hex codes. */}
+        <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brand colour">
+          {ACCENT_SWATCHES.map((swatch, i) => {
+            const chosen = accent.toLowerCase() === swatch;
+            const focusable = chosen || (!ACCENT_SWATCHES.includes(accent.toLowerCase()) && i === 0);
+            return (
             <button
               key={swatch}
               type="button"
-              aria-label={`Use ${swatch}`}
-              aria-pressed={accent.toLowerCase() === swatch}
+              role="radio"
+              aria-checked={chosen}
+              aria-label={SWATCH_NAMES[swatch] ?? swatch}
+              tabIndex={focusable ? 0 : -1}
               onClick={() => setAccent(swatch)}
-              className="relative h-8 w-8 cursor-pointer rounded-full border-0 outline-offset-2"
-              style={{
-                background: swatch,
-                outline: accent.toLowerCase() === swatch ? "2px solid var(--kb-ink)" : "none",
+              onKeyDown={(e) => {
+                const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+                if (!step) return;
+                e.preventDefault();
+                const next = ACCENT_SWATCHES[(i + step + ACCENT_SWATCHES.length) % ACCENT_SWATCHES.length];
+                setAccent(next);
+                (e.currentTarget.parentElement?.children[(i + step + ACCENT_SWATCHES.length) % ACCENT_SWATCHES.length] as HTMLElement | undefined)?.focus();
               }}
+              className={`relative h-8 w-8 cursor-pointer rounded-full border-0 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 ${
+                chosen ? "shadow-[0_0_0_2px_#fff,0_0_0_4px_var(--kb-ink)]" : ""
+              }`}
+              style={{ background: swatch }}
             >
-              {accent.toLowerCase() === swatch ? (
+              {chosen ? (
                 <svg viewBox="0 0 24 24" aria-hidden className="absolute inset-0 m-auto h-4 w-4" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
               ) : null}
             </button>
-          ))}
+            );
+          })}
           <label className="flex items-center gap-2 text-[14px]">
             <input
               type="color"
               value={accent || "#2b4acb"}
               onChange={(e) => setAccent(e.target.value)}
-              className="h-8 w-8 cursor-pointer rounded-[6px] border border-[color:var(--kb-line)] bg-transparent p-0"
+              className="h-8 w-8 cursor-pointer rounded-[6px] border border-[color:var(--kb-line)] bg-transparent p-0 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
               aria-label="Pick a custom colour"
             />
             <input

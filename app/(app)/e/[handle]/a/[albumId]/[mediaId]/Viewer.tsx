@@ -57,9 +57,12 @@ function Action({
   active = false,
   quiet = false,
   filled = false,
+  pressed,
   children,
 }: {
   label: string;
+  /** For toggles (Save): announced as on or off. */
+  pressed?: boolean;
   onClick?: () => void;
   href?: string;
   active?: boolean;
@@ -93,7 +96,7 @@ function Action({
       {inner}
     </a>
   ) : (
-    <button type="button" onClick={onClick} className={className} style={{ color: colour }}>
+    <button type="button" onClick={onClick} className={className} style={{ color: colour }} aria-pressed={pressed}>
       {inner}
     </button>
   );
@@ -357,6 +360,7 @@ export function Viewer({
       <div className="flex flex-none px-2 pb-6 pt-3">
         <Action
           label={saved ? "Saved" : "Save"}
+          pressed={saved}
           active={saved}
           filled={saved}
           onClick={() => {

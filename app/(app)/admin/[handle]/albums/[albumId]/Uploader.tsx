@@ -107,7 +107,7 @@ export function Uploader({ albumId }: { albumId: string }) {
           </span>
           <span className="text-[14px] text-[color:var(--ink-70)]">{jobs.length ? `${pct}%` : ""}</span>
         </div>
-        <div className="h-[10px] bg-neutral-300">
+        <div className="h-[10px] bg-neutral-300" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
           <div className="h-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
         </div>
         {failed.length > 1 && !busy ? (
@@ -164,7 +164,7 @@ export function Uploader({ albumId }: { albumId: string }) {
           )}
         </div>
         {jobs.length ? (
-          <span className="text-[14px] text-[color:var(--ink-70)]">
+          <span className="text-[14px] text-[color:var(--ink-70)]" role="status">
             {done} of {jobs.length} ready{failed.length ? ` · ${failed.length} failed` : ""}
           </span>
         ) : null}

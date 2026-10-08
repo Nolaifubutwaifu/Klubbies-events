@@ -28,17 +28,18 @@ export function UploadTray() {
   const done = jobs.filter((j) => j.status === "done").length;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 w-[300px] max-w-[92vw] border-2 border-ink bg-bg shadow-lg">
+    // Above the attendee tab bar on a phone, so it never covers the tabs.
+    <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-4 z-40 w-[300px] max-w-[92vw] border-2 border-ink bg-bg shadow-lg md:bottom-4">
       <div className="flex items-center justify-between px-3 pt-3 text-[14px] font-semibold">
         <span>
           Uploading {busy.length} {busy.length === 1 ? "file" : "files"}
         </span>
         <span>{pct}%</span>
       </div>
-      <div className="mx-3 mt-2 h-[8px] bg-neutral-300">
+      <div className="mx-3 mt-2 h-[8px] bg-neutral-300" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
         <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
-      <p className="m-0 px-3 py-2 text-[14px] leading-normal text-ink-70">
+      <p className="m-0 px-3 py-2 text-[14px] leading-normal text-ink-70" role="status">
         {done} of {jobs.length} done{failed.length ? ` · ${failed.length} failed` : ""}. Keep this tab open until it
         finishes; you can browse other pages.
       </p>

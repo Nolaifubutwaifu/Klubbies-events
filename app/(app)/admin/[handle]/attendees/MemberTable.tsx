@@ -128,7 +128,7 @@ export function MemberTable({
           ))}
         </div>
         <input
-          className="input w-full max-w-[280px] text-[14px]"
+          className="input w-full sm:max-w-[280px]"
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -184,7 +184,8 @@ export function MemberTable({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto">
+      {/* Wider than a phone: the scroller takes focus so the keyboard can reach it. */}
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Attendee list">
         <table className="table min-w-[760px]">
           <thead>
             <tr>
