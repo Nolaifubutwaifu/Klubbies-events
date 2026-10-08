@@ -17,7 +17,7 @@ import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { personName } from "@/lib/auth/display-name";
-import { STUCK_AFTER_MS } from "@/lib/media/constants";
+import { stuckCutoffIso } from "@/lib/media/constants";
 
 type Props = PageProps<"/e/[handle]/a/[albumId]">;
 
@@ -104,7 +104,7 @@ export default async function AlbumPage(props: Props) {
         .eq("status", "processing")
         // Only uploads still moving: one that stopped isn't coming in "2 to 5
         // minutes", and the organiser is told attendees can't see it.
-        .gt("updated_at", new Date(Date.now() - STUCK_AFTER_MS).toISOString())
+        .gt("updated_at", stuckCutoffIso())
         .is("hidden_at", null)
         .is("deleted_at", null)
         .limit(200);

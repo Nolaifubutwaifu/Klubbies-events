@@ -52,3 +52,8 @@ export function resolveMimeType(filename: string, reported: string): string | nu
 export const STUCK_AFTER_MS = 60 * 60 * 1000;
 /** After this long nobody is coming back for it, and the cron clears it. */
 export const EXPIRE_AFTER_DAYS = 14;
+
+/** Rows last touched before this are stalled uploads, not slow ones. */
+export function stuckCutoffIso(): string {
+  return new Date(Date.now() - STUCK_AFTER_MS).toISOString();
+}
