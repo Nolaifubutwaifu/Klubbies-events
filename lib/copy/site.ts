@@ -93,7 +93,7 @@ export const ORGANISER_FEATURES: Feature[] = [
   {
     icon: "brand",
     title: "Your brand, not ours",
-    body: "Your logo, your colour and your event name on every attendee screen and email.",
+    body: "Your logo, your colour and your event name on every attendee screen, the join page and the poster.",
   },
   {
     icon: "lock",

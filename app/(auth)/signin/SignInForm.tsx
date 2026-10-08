@@ -116,7 +116,8 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
         {submitLabel}
       </button>
 
-      {flow !== "create" ? (
+      {/* Someone joining from an event's link has no password yet. */}
+      {flow === "member" ? (
         <button
           type="button"
           className="kb-link self-center"

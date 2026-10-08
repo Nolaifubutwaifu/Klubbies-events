@@ -218,7 +218,9 @@ export function AlbumGrid({
 
           {canDownload ? (
             <a
-              href={`/api/albums/${albumId}/zip?only=${selectedIds.join(",")}`}
+              // No href with nothing selected, so Enter can't start a
+              // download of the whole album's first part.
+              href={selected.size ? `/api/albums/${albumId}/zip?only=${selectedIds.join(",")}` : undefined}
               aria-disabled={!selected.size}
               className={`flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline ${
                 selected.size ? "" : "pointer-events-none opacity-50"

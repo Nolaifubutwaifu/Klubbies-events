@@ -261,6 +261,9 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
 
   if (pending.flow === "create") return { ok: true, redirectTo: "/admin/new" };
   if (joinedHandle) return { ok: true, redirectTo: `/e/${joinedHandle}` };
+  // A join that was refused (the event filled up, or they were removed) goes
+  // to the event anyway, whose page explains why, instead of an empty list.
+  if (pending.flow === "join" && eventHandle) return { ok: true, redirectTo: `/e/${eventHandle.toLowerCase()}` };
   // Someone who came in through an event's own link goes back to that event,
   // but only if they are actually on its list.
   const wanted = eventHandle?.toLowerCase();

@@ -60,7 +60,10 @@ export async function sendContactMessage(to: string, message: ContactMessage): P
 }
 
 export function sendSignInCode(to: string, props: SignInCodeProps) {
-  return send(to, `${props.code} is your Klubbies Events code`, <SignInCode {...props} />);
+  // Named after the event when there is one: a first-time guest knows the
+  // event, not us, and an unknown sender looks like phishing.
+  const subject = props.eventName ? `${props.code} is your code for ${props.eventName}` : `${props.code} is your Klubbies Events code`;
+  return send(to, subject, <SignInCode {...props} />);
 }
 
 /** About the organiser's own event and its limits: service email, no unsubscribe. */

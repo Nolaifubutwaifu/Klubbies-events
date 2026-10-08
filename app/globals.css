@@ -13,6 +13,7 @@
   /* Surfaces */
   --kb-cream: #f7f7f5; /* paper: page background, theme colour */
   --kb-sand: #efefec; /* mist: alternate sections, info boxes, placeholders */
+  --kb-mist: var(--kb-sand); /* used by a few components but never defined */
   --kb-white: #ffffff; /* cards, inputs */
   --kb-line: #e4e4df; /* borders, dividers */
   --kb-line-strong: #c9c9c2; /* secondary button borders */

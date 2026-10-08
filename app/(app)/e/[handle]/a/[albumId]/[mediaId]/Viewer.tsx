@@ -225,6 +225,10 @@ export function Viewer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Arrows on a focused video seek it; with a modifier they're the
+      // browser's. Neither should change the photo.
+      if (e.defaultPrevented || e.altKey || e.metaKey || e.ctrlKey) return;
+      if (e.target instanceof HTMLElement && e.target.closest("video, [role=dialog]") && e.key !== "Escape") return;
       if (e.key === "Escape" && sheet !== "none") return setSheet("none");
       if (e.key === "ArrowLeft" && prevHref) router.replace(prevHref, { scroll: false });
       if (e.key === "ArrowRight" && nextHref) router.replace(nextHref, { scroll: false });

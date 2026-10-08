@@ -15,6 +15,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
   const part = Math.max(0, Number(params.get("part") ?? 0));
   // "Download these" on the Saved screen asks for a specific handful rather
   // than the whole album, so the zip is just their favourites.
+  // "only=" with nothing in it means nothing, not the whole album.
+  if (params.has("only") && !params.get("only")) return zipError(request, "Nothing selected", 400);
   const only = (params.get("only") ?? "")
     .split(",")
     .map((value) => value.trim())
