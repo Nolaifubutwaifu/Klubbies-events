@@ -13,6 +13,7 @@
   /* Surfaces */
   --kb-cream: #f7f7f5; /* paper: page background, theme colour */
   --kb-sand: #efefec; /* mist: alternate sections, info boxes, placeholders */
+  --kb-mist: var(--kb-sand); /* used by a few components but never defined */
   --kb-white: #ffffff; /* cards, inputs */
   --kb-line: #e4e4df; /* borders, dividers */
   --kb-line-strong: #c9c9c2; /* secondary button borders */
@@ -22,7 +23,7 @@
   /* Ink */
   --kb-ink: #16181d; /* headings, primary buttons */
   --kb-ink-2: #4a4d55; /* body text */
-  --kb-ink-3: #6b6e76; /* captions, 4.9:1 on white */
+  --kb-ink-3: #66696f; /* captions, 4.8:1 on sand, 5.5:1 on white */
 
   /* Accent (the event's colour, else this blue) */
   --kb-ember: #2b4acb; /* links, active nav, chips, 6.9:1 on white */
@@ -1176,9 +1177,29 @@ html:has(.theme-soft) body {
 .soft-hint-fade {
   animation: soft-hint-fade 4s ease-out forwards;
 }
+/* Fading isn't motion, so under reduced motion the hint still goes away:
+   it just disappears at once after the same 4 seconds. */
 @media (prefers-reduced-motion: reduce) {
   .soft-hint-fade {
-    animation: none;
+    animation: soft-hint-fade 0.01ms linear 4s forwards;
+  }
+}
+
+/* Touch screens: 44px targets everywhere (the masterfile's rule), and form
+   fields at 16px so iOS doesn't zoom the page into them and leave it zoomed. */
+@media (pointer: coarse) {
+  .kb-icon-btn,
+  .kb-menu-item,
+  .kb-jump {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .input,
+  .soft-input,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
 

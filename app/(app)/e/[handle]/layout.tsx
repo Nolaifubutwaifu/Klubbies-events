@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { CreditLine } from "@/components/event/CreditLine";
@@ -68,9 +69,13 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
             <div className="kb-info max-w-[52ch] flex-col">
               <strong>This gallery closed on {formatLongDate(ctx.event.access_ends_at)}.</strong>
               <span>
-                The organiser set it to close after the event. If you still need a photo, contact
-                {ctx.event.organisation ? ` ${ctx.event.organisation}` : " the organiser"} directly.
+                The organiser set it to close after the event. Your selfie and face data were deleted when it closed. If
+                you still need a photo, ask {ctx.event.organisation ? ctx.event.organisation : "the organiser"}: we can pass
+                your message on (mention the event name).
               </span>
+              <Link href="/support#contact" className="kb-link self-start">
+                Ask the organiser through us
+              </Link>
             </div>
           ) : (
             <div className="kb-info max-w-[52ch] flex-col">

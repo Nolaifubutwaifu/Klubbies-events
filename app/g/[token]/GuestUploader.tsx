@@ -82,13 +82,20 @@ export function GuestUploader({ token }: { token: string }) {
             </span>
             <span className="text-[14px] text-[color:var(--ink-70)]">{pct}%</span>
           </div>
-          <div className="h-[8px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text)_8%,transparent)]">
+          <div
+            className="h-[8px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text)_8%,transparent)]"
+            role="progressbar"
+            aria-label="Upload progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pct}
+          >
             <div
               className="h-full rounded-full transition-[width]"
               style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--color-accent-600), var(--color-accent-800))" }}
             />
           </div>
-          <span className="text-[14px] text-[color:var(--ink-70)]">
+          <span className="text-[14px] text-[color:var(--ink-70)]" role="status">
             {done} of {jobs.length} done{failed.length ? ` · ${failed.length} failed` : ""}
             {busy ? " · keep this tab open" : ""}
           </span>

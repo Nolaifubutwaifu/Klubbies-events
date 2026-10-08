@@ -16,7 +16,8 @@
     "dedupe-media": "tsx --env-file=.env.local scripts/dedupe-media.ts",
     "logo-marks": "tsx --env-file=.env.local scripts/logo-marks.ts",
     "backup-drain": "tsx --env-file=.env.local scripts/backup-drain.ts",
-    "restore-media": "tsx --env-file=.env.local scripts/restore-media.ts"
+    "restore-media": "tsx --env-file=.env.local scripts/restore-media.ts",
+    "video-previews": "tsx --conditions=react-server --env-file=.env.local scripts/video-previews.ts"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1136.0",
@@ -29,6 +30,7 @@
     "@supabase/supabase-js": "^2.116.0",
     "archiver": "^8.0.0",
     "exifr": "^7.1.3",
+    "ffmpeg-static": "5.2.0",
     "heic2any": "^0.0.4",
     "next": "16.3.5",
     "qrcode": "^1.5.4",

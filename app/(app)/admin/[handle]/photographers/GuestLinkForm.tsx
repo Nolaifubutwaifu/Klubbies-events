@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import Link from "next/link";
+import { useActionState, useEffect, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import { createGuestLinkAction, type GuestLinkState } from "@/app/(app)/admin/guest-actions";
 
@@ -22,15 +23,32 @@ function Tick({ yes }: { yes: boolean }) {
 
 export function GuestLinkForm({
   eventId,
+  handle,
   albums,
   defaultExpiry,
 }: {
   eventId: string;
+  handle: string;
   albums: { id: string; title: string; status: string }[];
   defaultExpiry: string;
 }) {
   const [state, action] = useActionState<GuestLinkState, FormData>(createGuestLinkAction.bind(null, eventId), {});
   const [copied, setCopied] = useState(false);
+  const [qr, setQr] = useState<{ url: string; svg: string } | null>(null);
+
+  // The link is shown once, so give every way to hand it over: copy, the
+  // phone's share sheet, and a QR the photographer can scan off this screen.
+  useEffect(() => {
+    const url = state.url;
+    if (!url) return;
+    let live = true;
+    void import("qrcode")
+      .then((QRCode) => QRCode.toString(url, { type: "svg", errorCorrectionLevel: "M", margin: 2 }))
+      .then((svg) => live && setQr({ url, svg }));
+    return () => {
+      live = false;
+    };
+  }, [state.url]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -38,8 +56,11 @@ export function GuestLinkForm({
         <h2 className="text-[16px] font-semibold">Add a photographer</h2>
 
         {albums.length === 0 ? (
-          <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-            Create an album first. Each photographer link uploads into one album.
+          <p className="m-0 flex flex-wrap items-center gap-3 text-[14px] text-[color:var(--ink-70)]">
+            Each photographer link uploads into one album, so make one first.
+            <Link href={`/admin/${handle}/upload`} className="btn btn-secondary btn-sm no-underline">
+              New album
+            </Link>
           </p>
         ) : (
           <>
@@ -103,7 +124,29 @@ export function GuestLinkForm({
             >
               {copied ? "Copied" : "Copy"}
             </button>
+            {typeof navigator !== "undefined" && "share" in navigator ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => void navigator.share({ title: "Your upload link", url: state.url }).catch(() => undefined)}
+              >
+                Send
+              </button>
+            ) : null}
           </div>
+          {qr?.url === state.url ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className="block h-[132px] w-[132px] flex-none rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:h-full [&>svg]:w-full"
+                role="img"
+                aria-label="QR code of the upload link"
+                dangerouslySetInnerHTML={{ __html: qr.svg }}
+              />
+              <span className="max-w-[36ch] text-[14px] text-[color:var(--ink-70)]">
+                Or let the photographer scan this with their phone camera.
+              </span>
+            </div>
+          ) : null}
           <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
             Upload only. Revoke it any time. We store a fingerprint of the link, not the link itself, so it can&apos;t be
             shown again; make a new one if it gets lost.

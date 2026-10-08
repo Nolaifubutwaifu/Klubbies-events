@@ -69,7 +69,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
       {rows.length === 0 ? (
         <p className="soft-card p-6 text-[14px] text-[color:var(--ink-70)]">Nothing logged yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Activity log">
           <table className="table min-w-[640px]">
             <thead>
               <tr>

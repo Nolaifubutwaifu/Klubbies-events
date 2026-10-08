@@ -22,7 +22,7 @@ export async function EventSwitcher({ currentEventId, area }: { currentEventId: 
       // list starts at the screen's left edge instead of running off the right.
       rootClassName="inline-flex"
       menuClassName="left-3 sm:left-auto"
-      triggerClassName="kb-icon-btn !h-9 !w-9 flex-none"
+      triggerClassName="kb-icon-btn flex-none"
       trigger={
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />

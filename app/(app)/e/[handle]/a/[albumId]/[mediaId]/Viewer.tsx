@@ -57,9 +57,12 @@ function Action({
   active = false,
   quiet = false,
   filled = false,
+  pressed,
   children,
 }: {
   label: string;
+  /** For toggles (Save): announced as on or off. */
+  pressed?: boolean;
   onClick?: () => void;
   href?: string;
   active?: boolean;
@@ -93,7 +96,7 @@ function Action({
       {inner}
     </a>
   ) : (
-    <button type="button" onClick={onClick} className={className} style={{ color: colour }}>
+    <button type="button" onClick={onClick} className={className} style={{ color: colour }} aria-pressed={pressed}>
       {inner}
     </button>
   );
@@ -222,6 +225,10 @@ export function Viewer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Arrows on a focused video seek it; with a modifier they're the
+      // browser's. Neither should change the photo.
+      if (e.defaultPrevented || e.altKey || e.metaKey || e.ctrlKey) return;
+      if (e.target instanceof HTMLElement && e.target.closest("video, [role=dialog]") && e.key !== "Escape") return;
       if (e.key === "Escape" && sheet !== "none") return setSheet("none");
       if (e.key === "ArrowLeft" && prevHref) router.replace(prevHref, { scroll: false });
       if (e.key === "ArrowRight" && nextHref) router.replace(nextHref, { scroll: false });
@@ -357,12 +364,20 @@ export function Viewer({
       <div className="flex flex-none px-2 pb-6 pt-3">
         <Action
           label={saved ? "Saved" : "Save"}
+          pressed={saved}
           active={saved}
           filled={saved}
           onClick={() => {
             const next = !saved;
             setSaved(next);
-            startTransition(async () => setSaved((await toggleFavouriteAction(current.id)).favourited));
+            startTransition(async () => {
+              try {
+                setSaved((await toggleFavouriteAction(current.id)).favourited);
+              } catch {
+                setSaved(!next);
+                setMessage("Couldn't save that. Check your connection and try again.");
+              }
+            });
           }}
         >
           <path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.4 12 20 12 20Z" />

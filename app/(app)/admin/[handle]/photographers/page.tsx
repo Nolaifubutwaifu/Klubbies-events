@@ -46,7 +46,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
       .neq("status", "hidden")
       .order("album_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(40),
+      .limit(500),
   ]);
 
   const albumTitle = new Map((albums ?? []).map((a) => [a.id, a.title]));
@@ -62,7 +62,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
       {!canWrite(ctx.event) ? <BillingGate handle={handle} action="add photographers" deletedAt={ctx.event.photos_deleted_at} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <GuestLinkForm eventId={ctx.event.id} albums={albums ?? []} defaultExpiry={defaultExpiry} />
+        <GuestLinkForm eventId={ctx.event.id} handle={handle} albums={albums ?? []} defaultExpiry={defaultExpiry} />
 
         <div className="flex flex-col gap-6">
           <section className="soft-card flex flex-col gap-4 p-5">

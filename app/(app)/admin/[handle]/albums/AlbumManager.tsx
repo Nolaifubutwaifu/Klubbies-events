@@ -160,7 +160,8 @@ export function AlbumManager({
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="soft-display text-[19px]">Manage albums</h2>
         <span className="text-[14px] text-[color:var(--ink-70)]">
-          Drag to reorder: the top one is what attendees see first. Hiding keeps the files.
+          The top one is what attendees see first: drag the grip, or use Move up and Move down in each album&apos;s menu.
+          Hiding keeps the files.
         </span>
         {message ? <span className="soft-chip ml-auto">{message}</span> : null}
       </div>
@@ -276,6 +277,18 @@ export function AlbumManager({
                 ) : null}
                 <MoreMenu iconOnly label={`More for ${album.title}`}>
                   <MoreLink href={`/e/${handle}/a/${album.id}`}>Open album</MoreLink>
+                  {/* Dragging doesn't work with a finger in Safari, so moving
+                      is also a menu choice (WCAG 2.5.7). */}
+                  {index > 0 ? (
+                    <MoreButton disabled={pending} onClick={() => nudge(album.id, -1)}>
+                      Move up
+                    </MoreButton>
+                  ) : null}
+                  {index < order.length - 1 ? (
+                    <MoreButton disabled={pending} onClick={() => nudge(album.id, 1)}>
+                      Move down
+                    </MoreButton>
+                  ) : null}
                   {album.status === "draft" ? (
                     <MoreButton
                       disabled={pending}

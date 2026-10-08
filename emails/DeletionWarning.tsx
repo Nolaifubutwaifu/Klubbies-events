@@ -26,7 +26,7 @@ export default function DeletionWarning({ eventName, deletesOn, daysLeft, albums
         <Text style={emailStyles.body}>
           {albums.map((album) => (
             <span key={album.url}>
-              <Link href={album.url}>{album.title}</Link>
+              <Link href={album.url} style={emailStyles.link}>{album.title}</Link>
               <br />
             </span>
           ))}

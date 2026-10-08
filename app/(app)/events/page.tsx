@@ -64,9 +64,11 @@ export default async function EventsPage(props: PageProps<"/events">) {
               const closed = !event.isAdmin && accessHasEnded({ access_ends_at: event.accessEndsAt });
               const logoUrl = event.logoPath ? (logos.get(event.logoPath) ?? null) : null;
               return (
+                // Organisers open their event's admin, where an unfinished
+                // setup is waiting; the gallery is one tap away from there.
                 <Link
                   key={event.membershipId}
-                  href={`/e/${event.handle}`}
+                  href={event.isAdmin ? `/admin/${event.handle}` : `/e/${event.handle}`}
                   className="group flex flex-col gap-3 text-ink no-underline"
                   aria-label={`${event.name}${card?.itemCount ? `, ${plural(card.itemCount, "photo")}` : ""}`}
                 >

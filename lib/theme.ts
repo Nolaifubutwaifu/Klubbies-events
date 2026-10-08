@@ -19,6 +19,20 @@ export const ACCENT_SWATCHES = [
   "#16181d",
 ];
 
+/** What a screen reader says for each swatch, instead of a hex code. */
+export const SWATCH_NAMES: Record<string, string> = {
+  "#2b4acb": "Klubbies blue",
+  "#0f62fe": "Bright blue",
+  "#0e7490": "Teal",
+  "#047857": "Green",
+  "#4d7c0f": "Olive",
+  "#b45309": "Amber",
+  "#c2410c": "Orange",
+  "#be123c": "Red",
+  "#7e22ce": "Purple",
+  "#16181d": "Ink",
+};
+
 type Rgb = [number, number, number];
 
 function clamp(value: number): number {

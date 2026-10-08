@@ -1,3 +1,5 @@
+import { publishAllDraftsAction } from "@/app/(app)/admin/actions";
+import { SubmitButton } from "@/components/forms";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
@@ -52,9 +54,16 @@ export default async function AdminAlbumsPage(props: PageProps<"/admin/[handle]/
     <main className="flex flex-col gap-6 pb-12 pt-2">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageTitle kicker={ctx.event.name} title="Albums">
-          {albums.length ? `${summary}. Drag to reorder what attendees see first.` : "Nothing here yet."}
+          {albums.length ? `${summary}.` : "Nothing here yet."}
         </PageTitle>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {drafts > 1 ? (
+            <form action={publishAllDraftsAction.bind(null, ctx.event.id)}>
+              <SubmitButton className="btn btn-secondary" pendingText="Publishing…">
+                Publish all {drafts} drafts
+              </SubmitButton>
+            </form>
+          ) : null}
           <Link href={`/admin/${handle}/upload`} className="btn btn-primary">
             New album
           </Link>

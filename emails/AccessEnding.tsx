@@ -23,7 +23,7 @@ export default function AccessEnding({ name, eventName, endsOn, eventUrl, unsubs
         Open the gallery
       </Link>
       <Text style={{ ...emailStyles.body, fontSize: 14, marginTop: 24 }}>
-        Don&apos;t want reminders like this? <Link href={unsubscribeUrl}>Turn them off</Link>.
+        Don&apos;t want reminders like this? <Link href={unsubscribeUrl} style={emailStyles.link}>Turn them off</Link>.
       </Text>
     </EmailLayout>
   );
