@@ -141,6 +141,7 @@ export function Viewer({
 }) {
   const router = useRouter();
   const touchX = useRef<number | null>(null);
+  const root = useRef<HTMLElement>(null);
   const [saved, setSaved] = useState(favourited);
   const [sheet, setSheet] = useState<"none" | "removal" | "more" | "social">("none");
   const env = useSyncExternalStore(subscribeNever, downloadEnv, () => "web");
@@ -192,6 +193,25 @@ export function Viewer({
     if (nextHref) router.prefetch(nextHref);
   }, [router, prevHref, nextHref]);
 
+  // The viewer covers the page, so the header, tab bar and footer behind it
+  // shouldn't take focus or be read out (WCAG 2.4.11). Everything outside the
+  // viewer's own branch is inert while it's open.
+  useEffect(() => {
+    const changed: HTMLElement[] = [];
+    let node: HTMLElement | null = root.current;
+    while (node && node !== document.body) {
+      const parent: HTMLElement | null = node.parentElement;
+      for (const sibling of Array.from(parent?.children ?? [])) {
+        if (sibling !== node && sibling instanceof HTMLElement && !sibling.inert) {
+          sibling.inert = true;
+          changed.push(sibling);
+        }
+      }
+      node = parent;
+    }
+    return () => changed.forEach((el) => (el.inert = false));
+  }, []);
+
   // Keep the current thumbnail in view as you move through the night.
   useEffect(() => {
     stripRef.current
@@ -231,7 +251,7 @@ export function Viewer({
   return (
     // The one screen that leaves the cream behind: a photo is easier to read
     // against near-black, and nothing else on this page competes with it.
-    <main className="relative flex h-full min-h-0 flex-1 flex-col bg-[#14100f]">
+    <main ref={root} className="relative flex h-full min-h-0 flex-1 flex-col bg-[#14100f]">
       <div className="flex flex-none items-center gap-3 px-3.5 pb-2.5 pt-3.5 sm:px-6">
         <Link
           href={albumHref}
@@ -427,7 +447,8 @@ export function Viewer({
             ))}
           </dl>
           <p className="m-0 mt-3 text-[15px] text-[color:var(--kb-ink-2)]">
-            Only people the organiser let into this event can open it. Views and downloads are logged.
+            Only people the organiser let into this event can open it. The organiser can see who opened and downloaded
+            each photo.
           </p>
           <button type="button" className="btn btn-secondary mt-4 w-full" onClick={() => setSheet("none")}>
             Close

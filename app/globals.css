@@ -176,9 +176,12 @@
   :focus {
     outline: none;
   }
+  /* Two tone, so it passes 3:1 on paper and on the near-black viewer alike:
+     the brand ring with a white halo outside it. */
   :focus-visible {
     outline: 2px solid var(--kb-ember);
     outline-offset: 2px;
+    box-shadow: 0 0 0 6px #fff;
   }
 
   ::selection {
