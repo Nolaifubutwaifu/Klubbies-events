@@ -26,10 +26,10 @@ export function PhoneNotifications() {
         <br />
         <span className="text-[color:var(--ink-70)]">
           {on
-            ? "On. You get one for everything ticked below."
+            ? "On. Everything ticked below also comes to this iPhone."
             : state.permission === "denied"
               ? "Off in iPhone Settings for Klubbies Events."
-              : "Get a notification for everything ticked below."}
+              : "Off. Turn on to get everything ticked below on this iPhone too."}
         </span>
       </span>
       {on ? (

@@ -27,7 +27,9 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
     `Confirm your email with the code we send, then take a quick selfie to see every photo you're in. You can download them at full quality.`,
     event.access_ends_at ? `The gallery is open until ${formatLongDate(event.access_ends_at)}.` : null,
     ``,
-    event.organisation ? `The ${event.organisation} team` : `The organisers`,
+    // Hosts are often a person ("Max"), so the sign-off is the name as typed,
+    // not "The Max team".
+    event.organisation ? event.organisation : `The organisers`,
   ]
     .filter((line) => line !== null)
     .join("\n");

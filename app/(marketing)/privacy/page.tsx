@@ -24,7 +24,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "How organisers found us",
-    "If you arrive through one of our tracked links (a flyer's QR code, or the Photos by Klubbies Events line on a gallery), we remember which link in a cookie for 30 days and note it on any event you create, with your answer to \"How did you hear about us?\" if you give one. It is only ever about organisers: guests opening a gallery are not tracked, and the cookie holds nothing but the link's name.",
+    "If you arrive through one of our tracked links (a flyer's QR code, or the Gallery by Klubbies Events line on a gallery), we remember which link in a cookie for 30 days and note it on any event you create, with your answer to \"How did you hear about us?\" if you give one. It is only ever about organisers: guests opening a gallery are not tracked, and the cookie holds nothing but the link's name.",
   ],
   [
     "How long galleries stay open",

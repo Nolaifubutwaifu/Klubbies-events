@@ -46,8 +46,10 @@ export function LogoUploader({ eventId, logoUrl }: { eventId: string; logoUrl: s
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
         <img src={logoUrl} alt="Event logo" className="max-h-[60%] max-w-[60%] object-contain" />
       ) : null}
-      <span className="text-[15px] font-medium text-ink-70">{busy ? "Uploading…" : logoUrl ? "Replace logo" : "Drop your logo"}</span>
-      <span className="text-[14px] text-[color:var(--ink-70)]">PNG or SVG, at least 400px</span>
+      <span className="text-[15px] font-medium text-ink-70">{busy ? "Uploading…" : logoUrl ? "Replace logo" : "Choose your logo"}</span>
+      <span className="text-[14px] text-[color:var(--ink-70)]">
+        PNG or SVG, at least 400px<span className="hidden [@media(pointer:fine)]:inline">. Or drop it here.</span>
+      </span>
       {error ? <span className="notice">{error}</span> : null}
       <input ref={input} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
     </div>

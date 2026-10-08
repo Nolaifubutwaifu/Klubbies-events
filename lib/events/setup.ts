@@ -94,7 +94,7 @@ export const setupState = cache(async (event: EventRow, inApp: boolean): Promise
     {
       key: "brand",
       title: "Add your logo and colour",
-      hint: event.logo_path ? "Your logo is on every attendee screen" : "Attendees see your brand on every screen, not ours",
+      hint: event.logo_path ? "Your logo is on every attendee screen" : "Your logo and colour on the event's pages",
       done: Boolean(event.logo_path),
       href: `/admin/${handle}/settings#brand`,
       cta: event.logo_path ? "Change" : "Add your logo",

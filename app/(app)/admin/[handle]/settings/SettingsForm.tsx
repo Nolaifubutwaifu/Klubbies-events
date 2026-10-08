@@ -36,7 +36,7 @@ export function SettingsForm({
       </label>
       <label className="field">
         Hosted by
-        <input className="input" name="organisation" defaultValue={organisation ?? ""} maxLength={160} placeholder="Company or organisation" />
+        <input className="input" name="organisation" defaultValue={organisation ?? ""} maxLength={160} placeholder="Your name, club or company" />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="field">
