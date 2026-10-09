@@ -46,129 +46,120 @@ export function Uploader({ albumId }: { albumId: string }) {
     addFiles(e.dataTransfer.files);
   };
 
+  const statusLabel = (job: (typeof jobs)[number]) =>
+    job.status === "done"
+      ? (job.note ?? "Ready")
+      : job.status === "uploading"
+          ? `${Math.floor((job.uploaded / Math.max(1, job.size)) * 100)}%`
+          : job.status === "queued"
+            ? "Waiting"
+            : job.status === "preparing"
+              ? "Preparing"
+              : "Finishing";
+
+  // One centred column: the choose button first, then progress and the files.
+  // It used to be two stretched columns with a square grey bar and shouted
+  // status labels, which looked unlike the rest of the app.
   return (
-    <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-      <div className="flex flex-col gap-3">
-        <span className="soft-display text-[18px]">Add photos and videos</span>
-        <div
-          className="dropzone px-4 py-8"
-          data-active={dragging}
-          role="button"
-          tabIndex={0}
-          onClick={() => input.current?.click()}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && input.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
+    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4" data-upload-panel>
+      <div
+        className="dropzone gap-3 px-5 py-8"
+        data-active={dragging}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+      >
+        <span className="text-[18px] font-semibold">Add photos and videos</span>
+        <button type="button" className="btn btn-primary" onClick={() => input.current?.click()}>
+          Choose files
+        </button>
+        <span className="hidden text-[14px] text-[color:var(--kb-ink-3)] [@media(pointer:fine)]:inline">or drop them here</span>
+        <span className="text-[14px] text-[color:var(--kb-ink-3)]">JPG, PNG, HEIC, WebP, MP4 and MOV. Originals kept at full quality.</span>
+        <input
+          ref={input}
+          type="file"
+          multiple
+          accept={ACCEPT_ATTRIBUTE}
+          className="hidden"
+          onChange={(e) => {
+            addFiles(e.target.files);
+            e.target.value = "";
           }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-        >
-          <span className="soft-display text-[16px]">Choose photos and videos</span>
-          <span className="hidden text-[14px] text-[color:var(--ink-70)] [@media(pointer:fine)]:inline">or drop them here</span>
-          <span className="text-[14px] text-[color:var(--ink-70)]">JPG, PNG, HEIC, WebP, MP4, MOV · originals kept at full quality</span>
-          <input
-            ref={input}
-            type="file"
-            multiple
-            accept={ACCEPT_ATTRIBUTE}
-            className="hidden"
-            onChange={(e) => {
-              addFiles(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-2 soft-card p-4">
-          <span className="text-[14px] font-semibold">You can keep working while this runs.</span>
-          <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
-            Uploads continue as you move around the app, and a progress box follows you. Leave this tab open until it
-            finishes; if your connection drops, each file picks up where it left off.
-          </span>
-        </div>
-        {rejected.length ? <div className="notice">Skipped {rejected.join(", ")}: only photos and videos can be uploaded.</div> : null}
-        {warnings.map((w) => (
-          <div key={w} className="notice">
-            {w}
-          </div>
-        ))}
+        />
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-[14px] font-semibold">
-            {jobs.length === 0
-              ? "Nothing queued yet"
-              : busy
+      {rejected.length ? <div className="notice">Skipped {rejected.join(", ")}: only photos and videos can be uploaded.</div> : null}
+      {warnings.map((w) => (
+        <div key={w} className="notice">
+          {w}
+        </div>
+      ))}
+
+      {jobs.length ? (
+        <section className="soft-card flex flex-col gap-3 p-4 sm:p-5" aria-label="Uploads">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[15px] font-semibold">
+              {busy
                 ? `Uploading ${jobs.length} ${jobs.length === 1 ? "file" : "files"}`
                 : failed.length
                   ? "Some files need another go"
                   : "Upload complete"}
+            </span>
+            <span className="text-[14px] tabular-nums text-[color:var(--kb-ink-2)]">{pct}%</span>
+          </div>
+          <div
+            className="h-2 overflow-hidden rounded-full bg-[color:var(--kb-sand)]"
+            role="progressbar"
+            aria-label="Upload progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pct}
+          >
+            <div className="h-full rounded-full bg-[color:var(--kb-ember)] transition-[width]" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-[14px] text-[color:var(--kb-ink-2)]" role="status">
+            {done} of {jobs.length} ready{failed.length ? ` · ${failed.length} didn't upload` : ""}
+            {busy ? " · keep this page open, you can move around the app" : ""}
           </span>
-          <span className="text-[14px] text-[color:var(--ink-70)]">{jobs.length ? `${pct}%` : ""}</span>
-        </div>
-        <div className="h-[10px] bg-neutral-300" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-          <div className="h-full bg-accent transition-[width]" style={{ width: `${pct}%` }} />
-        </div>
-        {failed.length > 1 && !busy ? (
-          <button type="button" className="btn btn-secondary self-start" onClick={() => queue.retryFailed()}>
-            Retry all {failed.length} failed
-          </button>
-        ) : null}
-        <div className="soft-card">
-          {jobs.length === 0 ? (
-            <p className="m-0 p-3 text-[14px] text-[color:var(--ink-70)]">Files you choose show up here with their status.</p>
-          ) : (
-            shown.map((job) => (
-              <div key={job.key} className="flex items-center justify-between gap-3 border-b border-divider px-3 py-[10px] last:border-b-0">
-                <span className="flex min-w-0 items-center gap-3">
-                  {job.previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- local object URL
-                    <img src={job.previewUrl} alt="" className="h-7 w-7 flex-none object-cover" />
-                  ) : (
-                    <span className="h-7 w-7 flex-none bg-neutral-400" />
-                  )}
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-[14px]">{job.name}</span>
-                    {job.status === "failed" && job.error ? <span className="kb-error">{job.error}</span> : null}
-                  </span>
+          {failed.length > 1 && !busy ? (
+            <button type="button" className="btn btn-secondary self-start" onClick={() => queue.retryFailed()}>
+              Retry all {failed.length}
+            </button>
+          ) : null}
+          <ul className="m-0 flex list-none flex-col p-0">
+            {shown.map((job) => (
+              <li key={job.key} className="flex items-center gap-3 border-t border-[color:var(--kb-line)] py-2.5 first:border-t-0">
+                {job.previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- local object URL
+                  <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[8px] object-cover" />
+                ) : (
+                  <span className="h-10 w-10 flex-none rounded-[8px] bg-[color:var(--kb-sand)]" />
+                )}
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[14px]">{job.name}</span>
+                  {job.status === "failed" && job.error ? <span className="kb-error">{job.error}</span> : null}
                 </span>
-                <span className="flex flex-none items-center gap-2">
+                {job.status === "failed" ? null : (
                   <span
-                    className="text-[14px] font-bold tracking-[0.06em]"
-                    style={{ color: job.status === "failed" ? "#b42318" : "var(--color-neutral-700)" }}
+                    className="flex-none text-[14px] font-medium tabular-nums"
+                    style={{ color: job.status === "done" ? "#1f6b3a" : "var(--kb-ink-2)" }}
                   >
-                    {job.status === "done"
-                      ? job.note
-                        ? job.note.toUpperCase()
-                        : "READY"
-                      : job.status === "failed"
-                        ? "FAILED"
-                        : job.status === "uploading"
-                          ? `${Math.floor((job.uploaded / Math.max(1, job.size)) * 100)}%`
-                          : job.status.toUpperCase()}
+                    {statusLabel(job)}
                   </span>
-                  {job.status === "failed" ? (
-                    <button
-                      type="button"
-                      className="btn btn-secondary text-[14px]"
-                      aria-label={`Retry ${job.name}`}
-                      onClick={() => queue.retry(job.key)}
-                    >
-                      Retry
-                    </button>
-                  ) : null}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-        {jobs.length ? (
-          <span className="text-[14px] text-[color:var(--ink-70)]" role="status">
-            {done} of {jobs.length} ready{failed.length ? ` · ${failed.length} failed` : ""}
-          </span>
-        ) : null}
-      </div>
+                )}
+                {job.status === "failed" ? (
+                  <button type="button" className="btn btn-secondary btn-sm" aria-label={`Retry ${job.name}`} onClick={() => queue.retry(job.key)}>
+                    Retry
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

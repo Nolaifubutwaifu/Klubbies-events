@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
+import { Disclosure } from "@/components/Disclosure";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import type { ActionState } from "@/app/(app)/admin/actions";
 import { createGuestLinkAction, emailGuestLinkAction, type GuestLinkState } from "@/app/(app)/admin/guest-actions";
@@ -89,9 +90,8 @@ export function GuestLinkForm({
               <input className="input" name="expiresOn" type="date" defaultValue={defaultExpiry} required />
             </label>
 
-            <div className="rounded-[var(--kb-r-card)] bg-[color:var(--kb-cream)] p-4">
-              <span className="block text-[14px] font-medium">What the link can do</span>
-              <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0">
+            <Disclosure title="What the link can do" className="rounded-[var(--kb-r-card)] bg-[color:var(--kb-cream)]">
+              <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
                 {CAN.map((row) => (
                   <li key={row.text} className="flex items-start gap-2 text-[14px]">
                     <span className="mt-0.5 flex-none" style={{ color: row.yes ? "#1f6b3a" : "#b42318" }}>
@@ -101,7 +101,7 @@ export function GuestLinkForm({
                   </li>
                 ))}
               </ul>
-            </div>
+            </Disclosure>
 
             <FormMessage state={state} />
             <SubmitButton className="btn btn-primary self-start" pendingText="Making the link…">
