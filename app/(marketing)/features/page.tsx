@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FeatureIcon, PosterMock, SectionHeading } from "@/components/site/parts";
+import { ClosingCta, FeatureIcon, PosterMock, SectionHeading } from "@/components/site/parts";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { ATTENDEE_FEATURES, ORGANISER_FEATURES, ORGANISERS, PRIVACY_PROMISES } from "@/lib/copy/site";
@@ -83,14 +83,16 @@ export default async function FeaturesPage() {
           </div>
         </section>
 
-        <section className="kb-section">
-          <div className="kb-wrap flex flex-col items-start gap-6">
-            <h2 className="kb-h2 max-w-[18ch]">Ready when your photographer is.</h2>
-            <Link href="/start" className="btn btn-primary btn-lg no-underline">
-              Create an event
-            </Link>
-          </div>
-        </section>
+        <ClosingCta
+          title="Ready when your photographer is."
+          lead="Set the event up today, hand out the upload links, and the photos land in the right albums as the night goes on."
+          points={[
+            "Ten minutes to set up, no app for anyone to install",
+            "Photographers upload full resolution through their own link",
+            "Attendees find their own photos with one selfie",
+          ]}
+          secondary={{ href: "/how-it-works", label: "See how it works" }}
+        />
       </main>
       <SiteFooter inApp={inApp} />
     </>

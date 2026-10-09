@@ -171,3 +171,56 @@ export function SectionHeading({ eyebrow, title, lead, id }: { eyebrow: string; 
   );
 }
 
+
+/**
+ * The closing call to action on Features and How it works: a filled band with
+ * a short case, the two next steps and a strip of gallery tiles, so it reads
+ * as a finished section rather than a heading floating on white.
+ */
+export function ClosingCta({
+  title,
+  lead,
+  points,
+  secondary,
+}: {
+  title: string;
+  lead: string;
+  points: string[];
+  secondary: { href: string; label: string };
+}) {
+  return (
+    <section className="kb-section">
+      <div className="kb-wrap">
+        <div className="kb-brand-band grid items-center gap-8 overflow-hidden p-6 sm:p-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="flex flex-col gap-5">
+            <h2 className="kb-h2 max-w-[18ch]">{title}</h2>
+            <p className="kb-lead m-0 max-w-[48ch]">{lead}</p>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {points.map((point) => (
+                <li key={point} className="flex items-start gap-2.5 text-[15px] text-[color:var(--kb-ink)]">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--kb-brand)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-none" aria-hidden>
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-3 pt-1">
+              <a href="/start" className="btn btn-primary btn-lg no-underline">
+                Create an event
+              </a>
+              <a href={secondary.href} className="btn btn-secondary btn-lg no-underline">
+                {secondary.label}
+              </a>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5" aria-hidden>
+            {Array.from({ length: 6 }, (_, i) => (
+              <Tile key={i} index={i + 2} className={`aspect-square ${i === 0 ? "col-span-2 row-span-2 !aspect-auto" : ""}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
