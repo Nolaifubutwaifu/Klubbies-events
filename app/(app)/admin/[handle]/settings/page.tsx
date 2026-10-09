@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Disclosure } from "@/components/Disclosure";
+import { OpenFromHash } from "@/components/OpenFromHash";
 import { CopyButton } from "@/components/CopyButton";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
@@ -49,34 +51,18 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
   ].filter(Boolean);
   const link = eventLink(handle);
 
-  const sections = [
-    ["details", "Details"],
-    ["brand", "Logo"],
-    ["access", "Access"],
-    ["privacy", "Privacy"],
-    ["faces", "Face search"],
-    ["link", "Event link"],
-    ["deleted", "Recently deleted"],
-    ["danger", "Delete event"],
-  ] as const;
-
   return (
     <main className="flex max-w-[820px] flex-col gap-8 pb-12 pt-2">
       <PageTitle kicker={event.name} title="Settings">
         Event details, branding, who can get in and for how long.
       </PageTitle>
 
-      {/* The page is long; these say what's on it and jump there. */}
-      <nav aria-label="On this page" className="-mt-2 flex flex-wrap gap-2">
-        {sections.map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="kb-jump">
-            {label}
-          </a>
-        ))}
-      </nav>
+      {/* Each group folds away, so the page is a short list to pick from.
+          A link to #access (from Attendees, say) opens that group. */}
+      <OpenFromHash />
+      <div className="flex flex-col border-t border-[color:var(--kb-line)]">
 
-      <section id="details" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Details and colour</h2>
+      <Disclosure id="details" title="Details and colour" hint="Name, dates, venue and brand colour" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <SettingsForm
           eventId={event.id}
           name={event.name}
@@ -87,10 +73,9 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
           venue={event.venue}
           accentColour={event.accent_colour}
         />
-      </section>
+      </Disclosure>
 
-      <section id="brand" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Logo</h2>
+      <Disclosure id="brand" title="Logo" hint="Shown on every attendee screen and the poster" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <div className="soft-card flex flex-col gap-3 p-5">
           <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
             Shown in the header of every attendee screen, on the join page and on the poster. A square or wide PNG or SVG
@@ -98,29 +83,26 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
           </span>
           <LogoUploader eventId={event.id} logoUrl={logoUrl} />
         </div>
-      </section>
+      </Disclosure>
 
-      <section id="access" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Access</h2>
+      <Disclosure id="access" title="Access" hint="Who can get in, and until when" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <AccessForm
           eventId={event.id}
           accessMode={event.access_mode === "guest_list" ? "guest_list" : "link"}
           accessEndsAt={event.access_ends_at}
           photosDeleteAt={event.photos_delete_at}
         />
-      </section>
+      </Disclosure>
 
-      <section id="privacy" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Privacy</h2>
+      <Disclosure id="privacy" title="Privacy" hint="Removal requests" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <PrivacySwitches eventId={event.id} initial={{ allow_removal_requests: event.allow_removal_requests }} />
         <p className="m-0 max-w-[62ch] text-[14px] text-[color:var(--ink-70)]">
           Whether attendees can add photos and download originals is set per album. Nothing is ever public: every photo
           needs a signed-in attendee.
         </p>
-      </section>
+      </Disclosure>
 
-      <section id="faces" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Face search</h2>
+      <Disclosure id="faces" title="Face search" hint="Let attendees find the photos they're in" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <FaceRecognition
           eventId={event.id}
           eventName={event.name}
@@ -129,10 +111,9 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
           enrolledCount={enrolledCount ?? 0}
           backfill={faceBackfill}
         />
-      </section>
+      </Disclosure>
 
-      <section id="link" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Event link</h2>
+      <Disclosure id="link" title="Event link" hint="The link and QR code never change" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <div className="soft-card flex flex-col gap-2 p-5">
           <code className="mono break-all text-[14px] text-[color:var(--kb-ink-2)]">{link}</code>
           <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
@@ -140,10 +121,9 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
           </p>
           <CopyButton value={link} label="Copy link" className="btn btn-sm btn-secondary self-start" />
         </div>
-      </section>
+      </Disclosure>
 
-      <section id="deleted" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Recently deleted</h2>
+      <Disclosure id="deleted" title="Recently deleted" hint="Restore anything from the last 30 days" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <div className="soft-card flex flex-col gap-2 p-5">
           <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
             {binSummary.length
@@ -154,12 +134,12 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
             Open Recently deleted
           </Link>
         </div>
-      </section>
+      </Disclosure>
 
-      <section id="danger" className="flex scroll-mt-6 flex-col gap-3">
-        <h2 className="text-[18px] font-semibold">Delete this event</h2>
+      <Disclosure id="danger" title="Delete this event" flush className="scroll-mt-6 border-b border-[color:var(--kb-line)]">
         <DeleteEvent eventId={event.id} eventName={event.name} />
-      </section>
+      </Disclosure>
+      </div>
     </main>
   );
 }
