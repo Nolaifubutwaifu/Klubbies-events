@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
+import { Disclosure } from "@/components/Disclosure";
 import { PlanMeters } from "@/components/PlanMeters";
 import { PageTitle, Stat } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
@@ -404,14 +405,12 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             </div>
           </section>
 
+          {/* Folded away by default: useful now and then, not every visit. */}
           {hasPhotos ? (
-            <section className="soft-card flex flex-col gap-3 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-[16px] font-semibold">Activity</h2>
-                <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
-                  Full log
-                </Link>
-              </div>
+            <Disclosure title="Activity" hint="Who opened and downloaded what, most recent first">
+              <Link href={`/admin/${handle}/activity`} className="self-start text-[14px] font-medium">
+                Full log
+              </Link>
               {activity.data?.length ? (
                 <ul className="m-0 flex list-none flex-col gap-3 p-0">
                   {activity.data.map((e) => (
@@ -436,7 +435,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
               ) : (
                 <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
               )}
-            </section>
+            </Disclosure>
           ) : null}
         </div>
       </div>

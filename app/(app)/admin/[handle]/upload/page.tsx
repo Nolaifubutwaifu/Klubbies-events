@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BillingGate } from "@/components/BillingGate";
+import { Disclosure } from "@/components/Disclosure";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
@@ -68,13 +69,12 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
             )}
           </section>
 
-          <section className="kb-info flex-col">
-            <span className="block text-[14px] font-semibold">What uploads well</span>
-            <p className="m-0 text-[14px]">
+          <Disclosure title="What uploads well">
+            <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
               JPG, HEIC, PNG, WebP, MP4 and MOV at full resolution. We keep the original and make the web versions
               ourselves. Photographers without an account upload through their own link from Photographers.
             </p>
-          </section>
+          </Disclosure>
         </div>
       </div>
     </main>

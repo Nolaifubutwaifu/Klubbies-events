@@ -3,7 +3,10 @@ import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { formatEventDates, formatLongDate } from "@/lib/format";
+import { ANNOUNCEMENT_LIMIT, announcementStatus, canSendAnnouncements } from "@/lib/events/announcements";
+import { formatDateTime, formatEventDates, formatLongDate } from "@/lib/format";
+import { isNativeAppRequest } from "@/lib/native-app-server";
+import { AnnouncementComposer } from "./AnnouncementComposer";
 import { eventLink, eventQrSvg } from "@/lib/share";
 
 export const metadata: Metadata = { title: "Share" };
@@ -15,6 +18,7 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
   const link = eventLink(handle);
   const qr = await eventQrSvg(handle);
   const dates = formatEventDates(event.starts_on, event.ends_on);
+  const [announce, inApp] = await Promise.all([announcementStatus(event.id), isNativeAppRequest()]);
 
   const subject = `Your photos from ${event.name}`;
   const email = [
@@ -79,24 +83,17 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
           </div>
         </section>
 
-        <section className="soft-card flex flex-col gap-3 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[16px] font-semibold">Announcement email</h2>
-            <div className="flex gap-2">
-              <CopyButton value={subject} label="Copy subject" className="btn btn-sm btn-secondary" />
-              <CopyButton value={email} label="Copy email" className="btn btn-sm btn-secondary" />
-            </div>
-          </div>
-          <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-            Send it from your own address or your ticketing tool, so it comes from someone attendees know.
-          </p>
-          <div className="rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-4">
-            <p className="m-0 text-[14px] font-medium">Subject: {subject}</p>
-            <pre className="m-0 mt-3 whitespace-pre-wrap font-[family-name:var(--kb-font-body)] text-[14px] leading-relaxed text-[color:var(--kb-ink-2)]">
-              {email}
-            </pre>
-          </div>
-        </section>
+        <AnnouncementComposer
+          eventId={event.id}
+          handle={handle}
+          initialSubject={subject}
+          initialBody={email}
+          canSend={canSendAnnouncements(event)}
+          inApp={inApp}
+          recipientCount={announce.recipientCount}
+          sendsLeft={Math.max(0, ANNOUNCEMENT_LIMIT - announce.sent.length)}
+          sent={announce.sent.map((item) => ({ ...item, when: formatDateTime(item.sent_at) }))}
+        />
       </div>
     </main>
   );

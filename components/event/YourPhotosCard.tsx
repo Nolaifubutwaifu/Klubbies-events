@@ -69,7 +69,7 @@ export function YourPhotosCard({
   const copy: Record<Exclude<State, "matched">, { title: string; body: string; cta: string }> = {
     not_enrolled: {
       title: "Find the photos you're in",
-      body: "Take a selfie and we'll show you every photo you appear in. Only you see the results, it's optional, and you can delete your face data any time.",
+      body: "Add a selfie and we'll find every photo you're in. Only you see them.",
       cta: "Find my photos",
     },
     looking: {

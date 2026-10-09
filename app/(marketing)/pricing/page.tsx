@@ -35,8 +35,8 @@ export default async function PricingPage() {
             <span className="kb-eyebrow">Pricing</span>
             <h1 className="kb-h1 max-w-[18ch]">One payment per event. Free for small ones.</h1>
             <p className="kb-lead m-0 max-w-[56ch]">
-              Pick a size by how many guests you expect. No subscription to cancel afterwards, and every size gets every
-              feature.
+              Pick a size by how many guests you expect. No subscription to cancel afterwards, and every size gets the
+              full gallery.
             </p>
           </div>
         </section>
@@ -117,6 +117,13 @@ export default async function PricingPage() {
               <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
                 <h3 className="kb-h3">Student clubs</h3>
                 <p className="kb-body m-0 mt-2">{PRICE.clubs} Enter it when you choose your event&apos;s size.</p>
+              </div>
+              <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
+                <h3 className="kb-h3">Announcement email, sent for you</h3>
+                <p className="kb-body m-0 mt-2">
+                  Every size gets a ready-made announcement to copy. On paid sizes we send it to every guest for you, with
+                  your name on it and your own words.
+                </p>
               </div>
               <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
                 <h3 className="kb-h3">Videos</h3>

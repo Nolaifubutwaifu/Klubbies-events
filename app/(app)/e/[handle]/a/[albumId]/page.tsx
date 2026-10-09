@@ -277,7 +277,7 @@ export default async function AlbumPage(props: Props) {
       <ProcessingBanner photos={processingPhotos} videos={processingVideos} />
 
       {adding ? (
-        <div className="border-b border-[color:var(--kb-line)] p-4 sm:p-6">
+        <div className="border-b border-[color:var(--kb-line)] px-4 py-5 sm:px-6 sm:py-8">
           <Uploader albumId={album.id} />
         </div>
       ) : null}

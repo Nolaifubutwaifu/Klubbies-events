@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import AlbumPublished, { type AlbumPublishedProps } from "@/emails/AlbumPublished";
 import AccessEnding, { type AccessEndingProps } from "@/emails/AccessEnding";
 import DeletionWarning, { type DeletionWarningProps } from "@/emails/DeletionWarning";
+import EventAnnouncement, { type EventAnnouncementProps } from "@/emails/EventAnnouncement";
 import LetIn, { type LetInProps } from "@/emails/LetIn";
 import PhotographerLink, { type PhotographerLinkProps } from "@/emails/PhotographerLink";
 import PlanNotice, { type PlanNoticeProps } from "@/emails/PlanNotice";
@@ -131,4 +132,41 @@ export async function sendBatch(messages: BatchMessage[]): Promise<void> {
 
 export function sendPhotographerLink(to: string, props: PhotographerLinkProps) {
   return send(to, `Your upload link for ${props.eventName}`, <PhotographerLink {...props} />);
+}
+
+/**
+ * The organiser's announcement to their guests, in batches of 100. It comes
+ * from our address with the organiser's name on it, and replies go to them.
+ */
+export async function sendAnnouncements(
+  messages: { to: string; subject: string; props: EventAnnouncementProps }[],
+  organiserEmail: string | null,
+): Promise<void> {
+  if (messages.length === 0) return;
+  if (process.env.EMAIL_DRY_RUN === "1") {
+    console.info(`[email dry run] announcement to ${messages.length}: "${messages[0].subject}"`);
+    return;
+  }
+  const env = serverEnv();
+  const address = env.EMAIL_FROM.match(/<([^>]+)>/)?.[1] ?? env.EMAIL_FROM;
+  const prepared = await Promise.all(
+    messages.map(async (message) => {
+      const element = <EventAnnouncement {...message.props} />;
+      const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+      const sender = message.props.organiser.replace(/["<>]/g, "").slice(0, 60);
+      return {
+        from: `${sender} via Klubbies Events <${address}>`,
+        ...(organiserEmail ? { replyTo: organiserEmail } : replyTo()),
+        to: message.to,
+        subject: message.subject,
+        html,
+        text,
+        headers: { "List-Unsubscribe": `<${message.props.unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      };
+    }),
+  );
+  for (let i = 0; i < prepared.length; i += 100) {
+    const { error } = await resend().batch.send(prepared.slice(i, i + 100));
+    if (error) throw new Error(`Resend batch: ${error.name}: ${error.message}`);
+  }
 }

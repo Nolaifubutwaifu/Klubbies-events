@@ -39,7 +39,7 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                 <Link href="/start" className="btn btn-primary btn-lg no-underline">
                   Create an event
                 </Link>
-                <Link href="/#how" className="btn btn-secondary btn-lg no-underline">
+                <Link href="/how-it-works" className="btn btn-secondary btn-lg no-underline">
                   How it works
                 </Link>
               </div>
@@ -74,9 +74,14 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                 </li>
               ))}
             </ol>
-            <Link href="/features" className="kb-link self-start">
-              See everything organisers get
-            </Link>
+            <div className="flex flex-wrap gap-5">
+              <Link href="/how-it-works" className="kb-link">
+                See the full walkthrough
+              </Link>
+              <Link href="/features" className="kb-link">
+                See everything organisers get
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -126,7 +131,7 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                   </h2>
                   <p className="kb-lead m-0">
                     Bigger events pay once, from A${TIERS.small.price.standard}. No subscription, and every size gets
-                    every feature.
+                    the full gallery.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">

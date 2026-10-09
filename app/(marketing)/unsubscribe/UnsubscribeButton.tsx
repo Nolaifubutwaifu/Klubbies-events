@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import type { NotifyKind } from "@/lib/notify";
-import { unsubscribeAction } from "./actions";
+import { optOutOfAnnouncementsAction, unsubscribeAction } from "./actions";
 
 export function UnsubscribeButton({
   userId,
@@ -24,6 +24,20 @@ export function UnsubscribeButton({
       onClick={() => startTransition(() => unsubscribeAction(userId, kind, token))}
     >
       {pending ? "Saving…" : label}
+    </button>
+  );
+}
+
+export function AnnouncementOptOutButton({ eventId, email, token }: { eventId: string; email: string; token: string }) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <button
+      type="button"
+      className="btn btn-primary btn-lg self-start"
+      disabled={pending}
+      onClick={() => startTransition(() => optOutOfAnnouncementsAction(eventId, email, token))}
+    >
+      {pending ? "Saving…" : "Stop these emails"}
     </button>
   );
 }

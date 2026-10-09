@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { enrolFaceAction, withdrawFaceConsentAction } from "@/app/(app)/face-actions";
+import { Dialog } from "@/components/Dialog";
 import { MEMBER_CONSENT } from "@/lib/faces/copy";
 
 /**
@@ -29,6 +30,7 @@ async function toJpeg(file: File): Promise<File | null> {
 
 export function Enrol({ eventId, backHref }: { eventId: string; backHref?: string }) {
   const [consented, setConsented] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<File | null>(null);
   const [message, setMessage] = useState("");
@@ -52,14 +54,29 @@ export function Enrol({ eventId, backHref }: { eventId: string; backHref?: strin
 
   return (
     <div className="soft-card flex max-w-[56ch] flex-col gap-3 p-5">
+      {/* Plain and short up front; the full explanation is one tap away
+          and must be read the same way before anyone ticks the box. */}
       <span className="text-[20px] font-semibold">{MEMBER_CONSENT.title}</span>
-      <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.lead}</p>
-      <p className="m-0 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.what}</p>
-      <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">
-        {MEMBER_CONSENT.points.map((point) => (
-          <li key={point}>{point}</li>
-        ))}
-      </ul>
+      <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
+        Add a selfie and we&apos;ll find every photo you&apos;re in. Only you see them.
+      </p>
+      <button type="button" className="kb-link self-start text-[15px]" onClick={() => setDetailsOpen(true)}>
+        How it works and your privacy
+      </button>
+      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} title="How finding your photos works">
+        <p className="m-0 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.lead}</p>
+        <p className="m-0 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.what}</p>
+        <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">
+          {MEMBER_CONSENT.points.map((point) => (
+            <li key={point}>{point}</li>
+          ))}
+        </ul>
+        <div className="dialog-actions">
+          <button type="button" className="btn btn-primary" onClick={() => setDetailsOpen(false)}>
+            Got it
+          </button>
+        </div>
+      </Dialog>
 
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex h-[76px] w-[76px] flex-none items-center justify-center overflow-hidden rounded-full border border-[color:var(--kb-line)] bg-[color:var(--kb-sand)] text-[14px] font-medium text-[color:var(--kb-ink-3)]">

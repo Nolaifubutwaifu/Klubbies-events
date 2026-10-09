@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 export type SiteSection = "how" | "features" | "pricing" | "faq" | "privacy" | null;
 
 const LINKS: { key: Exclude<SiteSection, null>; href: string; label: string }[] = [
-  { key: "how", href: "/#how", label: "How it works" },
+  { key: "how", href: "/how-it-works", label: "How it works" },
   { key: "features", href: "/features", label: "Features" },
   { key: "pricing", href: "/pricing", label: "Pricing" },
   { key: "faq", href: "/faq", label: "FAQ" },

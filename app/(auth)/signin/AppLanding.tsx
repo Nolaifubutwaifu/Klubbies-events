@@ -47,7 +47,7 @@ export function AppLanding() {
           <Link href="/start" className="flex min-h-[44px] items-center text-[color:var(--kb-ink-2)] no-underline">
             Create an event
           </Link>
-          <a href={`${appUrl()}/?view=browser#how`} className="flex min-h-[44px] items-center font-semibold text-[color:var(--kb-brand)] no-underline">
+          <a href={`${appUrl()}/how-it-works?view=browser`} className="flex min-h-[44px] items-center font-semibold text-[color:var(--kb-brand)] no-underline">
             How it works
           </a>
         </div>

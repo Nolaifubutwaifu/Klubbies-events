@@ -1,3 +1,4 @@
+import { Disclosure } from "@/components/Disclosure";
 import type { Metadata } from "next";
 import { BillingGate } from "@/components/BillingGate";
 import { EmptyState, PageTitle } from "@/components/ui";
@@ -55,8 +56,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
   return (
     <main className="flex flex-col gap-6 pb-12 pt-2">
       <PageTitle kicker={ctx.event.name} title="Photographers">
-        Each photographer gets their own upload link. No account and no app: they open it in a browser, drop the
-        files, and every photo is credited to them.
+        Each photographer gets their own upload link. No account, no app, and every photo is credited to them.
       </PageTitle>
 
       {!canWrite(ctx.event) ? <BillingGate handle={handle} action="add photographers" deletedAt={ctx.event.photos_deleted_at} /> : null}
@@ -104,8 +104,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
             )}
           </section>
 
-          <section className="soft-card flex flex-col gap-3 p-5">
-            <span className="block text-[14px] font-medium">What the photographer sees</span>
+          <Disclosure title="What the photographer sees" hint="A preview of their upload page">
             <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
               Your event&apos;s name and logo, the album, and one drop zone. Uploads resume if the connection drops, and
               duplicates are skipped. Photographers with an account can instead be added as Photographer on the
@@ -118,7 +117,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
                 Drop photos and videos here
               </span>
             </div>
-          </section>
+          </Disclosure>
         </div>
       </div>
     </main>

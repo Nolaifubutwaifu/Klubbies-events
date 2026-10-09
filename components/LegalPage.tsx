@@ -64,13 +64,14 @@ export async function LegalPage({
       <main className="kb-wrap flex-1 py-12 sm:py-16">
         <div className="grid items-start gap-10 lg:grid-cols-[280px_minmax(0,720px)] lg:gap-16">
           <aside className="lg:sticky lg:top-6">
-            <nav aria-label="Legal documents" className="flex rounded-full bg-[color:var(--kb-sand)] p-1">
+            {/* Two by two in the 280px column: four in a row squashed the labels. */}
+            <nav aria-label="Legal documents" className="grid grid-cols-4 gap-1 rounded-[22px] bg-[color:var(--kb-sand)] p-1 lg:grid-cols-2">
               {DOCS.map((d) => (
                 <Link
                   key={d.key}
                   href={d.href}
                   aria-current={d.key === doc ? "page" : undefined}
-                  className={`flex min-h-[44px] flex-1 items-center justify-center rounded-full text-[15px] font-bold no-underline ${
+                  className={`flex min-h-[44px] items-center justify-center rounded-full px-2 text-[15px] font-bold no-underline ${
                     d.key === doc ? "bg-white text-[color:var(--kb-ink)] shadow-sm" : "text-[color:var(--kb-ink-2)]"
                   }`}
                 >
