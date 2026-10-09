@@ -86,10 +86,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
             <div>
               <span className="kb-eyebrow">{ctx.event.name}</span>
               <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Your photos</h1>
-              <p className="mt-2 max-w-[52ch] text-[16px] text-[color:var(--kb-ink-2)]">
-                Only you see this page. Nobody can search this event&rsquo;s photos for a person, including the
-                organiser.
-              </p>
+              <p className="mt-2 max-w-[52ch] text-[16px] text-[color:var(--kb-ink-2)]">Only you see this page.</p>
             </div>
           </div>
 
