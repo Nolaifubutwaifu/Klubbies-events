@@ -18,7 +18,7 @@ const MAX_LINKS = 5;
 
 const schema = z.object({
   email: z.email("Enter the email we should reply to.").max(320),
-  name: z.string().trim().max(200).optional(),
+  name: z.string().trim().min(1, "Enter your name").max(200),
   event: z.string().trim().max(200).optional(),
   topic: z.enum(CONTACT_TOPICS.map((t) => t.value) as [string, ...string[]]),
   message: z.string().trim().min(10, "Tell us a little more, at least a sentence.").max(5000, "Keep it under 5,000 characters."),
@@ -46,7 +46,7 @@ export async function sendContactAction(_prev: ContactState, formData: FormData)
 
   const parsed = schema.safeParse({
     email: values.email.trim(),
-    name: values.name || undefined,
+    name: values.name,
     event: values.event || undefined,
     topic: values.topic,
     message: values.message,

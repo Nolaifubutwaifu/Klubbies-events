@@ -31,9 +31,9 @@ export function ContactForm() {
       </label>
       <label className="flex flex-col gap-1 text-[15px] font-semibold">
         <span>
-          Your name <span className="font-normal text-[color:var(--kb-ink-3)]">(optional)</span>
+          Your name
         </span>
-        <input className="input" name="name" maxLength={200} autoComplete="name" defaultValue={values?.name} />
+        <input className="input" name="name" required maxLength={200} autoComplete="name" defaultValue={values?.name} />
       </label>
       <label className="flex flex-col gap-1 text-[15px] font-semibold">
         <span>
