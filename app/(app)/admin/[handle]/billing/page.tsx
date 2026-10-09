@@ -6,7 +6,7 @@ import { PlanMeters } from "@/components/PlanMeters";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { CLUB_CODES } from "@/lib/billing/club-codes";
-import { KEEP_YEAR_AUD, overflowWindow, planName, suggestedTier, TIERS, tierOffers, windowCeiling } from "@/lib/billing/plans";
+import { KEEP_YEAR_AUD, overflowWindow, planName, suggestedTier, TIERS, tierOffers } from "@/lib/billing/plans";
 import { stripeConfigured, syncReturnedSession } from "@/lib/billing/stripe";
 import { getPlanUsage } from "@/lib/billing/usage";
 import { formatDateTime, formatLongDate } from "@/lib/format";
@@ -98,7 +98,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
           <div className="kb-info flex-col" role="status">
             <strong>This event is over its guest limit.</strong>
             <span>
-              Guests can keep joining until {formatDateTime(windowEnds)}, up to {windowCeiling(event.guest_limit).toLocaleString("en-AU")}.
+              Guests can keep joining for now, until {formatDateTime(windowEnds)} at the latest.
               {inApp ? "" : " Choose a bigger size before then to keep them all."}
             </span>
           </div>
@@ -160,7 +160,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
                     {offer.kind === "upgrade"
                       ? `You've already paid for ${planName(offer.from)}, so you only pay the extra`
                       : "One payment for this event"}
-                    {offer.late ? ", plus 25% because the event has already run out of room" : ""}.
+                    {offer.late ? ", plus a surcharge because the event has already run out of room" : ""}.
                     {offer.rate === "club" ? " Club rate." : ""}
                   </span>
                   {devActivate ? null : (
@@ -175,8 +175,9 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             })}
           </div>
           <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-            Each size includes 10% extra guests. If more turn up, they can keep joining for 2 days (up to 50% extra)
-            while you upgrade. Upgrades bought once that has started cost 25% more.
+            If more guests turn up than your size allows, they can usually keep joining for a short while, and at some
+            point we may pause new guests until you upgrade. Upgrading after that point costs more; the price is shown
+            before you pay.
             {offers[0]?.kind === "tier" ? " Have a promotion code? Enter it on the payment page." : ""}
           </p>
           {!event.plan_rate ? <ClubCodeForm eventId={event.id} code={event.club_code} campus={event.club_code ? (CLUB_CODES[event.club_code] ?? null) : null} /> : null}

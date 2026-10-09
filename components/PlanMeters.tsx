@@ -1,4 +1,3 @@
-import { includedGuests } from "@/lib/billing/plans";
 
 function Meter({ label, used, limit, note }: { label: string; used: number; limit: number | null; note?: string }) {
   const share = limit ? Math.min(1, used / limit) : 0;
@@ -55,7 +54,7 @@ export function PlanMeters({
   photoLimit: number | null;
 }) {
   const guestNote = [
-    guestLimit ? `Up to ${includedGuests(guestLimit).toLocaleString("en-AU")} can join (10% over is included)` : "No guest limit",
+    guestLimit ? "If more join, we may pause the newest until you make room." : "No guest limit",
     guestsPaused ? `${guestsPaused} paused` : null,
   ]
     .filter(Boolean)

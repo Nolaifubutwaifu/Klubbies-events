@@ -4,7 +4,7 @@ import { sendLetIn, sendPlanNotice } from "@/lib/email/send";
 import { appUrl } from "@/lib/env";
 import { formatDateTime } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { includedGuests, overflowWindow, TIERS, tierOffers, windowCeiling } from "./plans";
+import { overflowWindow, TIERS, tierOffers } from "./plans";
 import { getPlanUsage } from "./usage";
 
 /**
@@ -63,29 +63,28 @@ export async function checkPlanNotices(eventId: string, now = new Date()): Promi
   const limit = usage.guestLimit;
   const { windowEnds, windowOpen } = overflowWindow(event, now);
   if (limit) {
-    const included = includedGuests(limit);
     if (!event.overflow_started_at && usage.guestsJoined >= Math.ceil(limit * NEARLY)) {
       notices.push({
         column: "guests_nearly_full_notified_at",
         subject: `${event.name} is nearly full`,
         heading: "Your event is nearly full",
         paragraphs: [
-          `${usage.guestsJoined} of ${limit} guests have joined ${event.name}. Up to ${included} can join before it runs out of room.`,
+          `${usage.guestsJoined} of ${limit} guests have joined ${event.name}. It will run out of room soon.`,
           "Upgrade now and you pay only the difference between the two sizes.",
         ],
       });
     }
     if (windowOpen && windowEnds) {
       const window = [
-        `Guests can keep joining for 48 hours, until ${formatDateTime(windowEnds)}, up to ${windowCeiling(limit)}. Upgrade before then to keep them all.`,
-        `If nobody upgrades, the guests who joined after the first ${included} are paused until you do. They keep their account and selfie.`,
-        "Because the event has run out of room, upgrading now costs the difference plus 25%:",
+        `Guests can keep joining for now, until ${formatDateTime(windowEnds)} at the latest. Upgrade before then to keep them all.`,
+        "If nobody upgrades, the guests who joined last are paused until you do. They keep their account and selfie.",
+        "Because the event has run out of room, upgrading now costs a little more:",
       ];
       notices.push({
         column: "overflow_open_notified_at",
         subject: `${event.name} is over its guest limit`,
         heading: "Your event is over its guest limit",
-        paragraphs: [`${usage.guestsJoined} guests have joined ${event.name}, past its ${limit} and the 10% included.`, ...window],
+        paragraphs: [`${usage.guestsJoined} guests have joined ${event.name}, past its limit of ${limit}.`, ...window],
       });
       if (event.overflow_open_notified_at && event.overflow_started_at && now.getTime() - new Date(event.overflow_started_at).getTime() >= REMINDER_AFTER_HOURS * 3600 * 1000) {
         notices.push({

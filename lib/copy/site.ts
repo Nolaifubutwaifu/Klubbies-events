@@ -42,7 +42,7 @@ export const PRICE = {
   ],
   /** The asterisk under the pricing table. */
   footnote:
-    "Each size includes 10% extra guests. If more turn up, they can keep joining for 2 days (up to 50% extra) while you move up a size. Moving up once that has started costs 25% more.",
+    "If more people turn up than your size allows, they can usually keep joining for a short while, and at some point we may pause new guests until you move up a size. Moving up after that point costs more.",
   clubs: `Student club? Club prices from A$${TIERS.small.price.club} with your campus club code.`,
 } as const;
 
@@ -180,7 +180,7 @@ export const FAQS: { q: string; a: string; group: FaqGroup }[] = [
   {
     q: "What if more guests come than I planned?",
     group: "Pricing",
-    a: "Each size includes 10% extra guests. If more turn up, they can keep joining for 2 days (up to 50% extra) while you move up a size, which then costs 25% more than moving up beforehand. If you don't, the guests who joined last are paused, not removed, until you make room.",
+    a: "Choose the size for the guests you expect. If more turn up, they can usually keep joining for a short while, and we'll email you. At some point we may pause the newest guests until you move up a size; they're paused, not removed, and keep their account. Moving up before that point costs less than after it.",
   },
   {
     q: "How do videos count?",
