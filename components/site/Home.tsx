@@ -131,7 +131,7 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                   </h2>
                   <p className="kb-lead m-0">
                     Bigger events pay once, from A${TIERS.small.price.standard}. No subscription, and every size gets
-                    every feature.
+                    the full gallery.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">

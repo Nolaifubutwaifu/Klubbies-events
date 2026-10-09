@@ -108,7 +108,7 @@ export const ORGANISER_FEATURES: Feature[] = [
   {
     icon: "qr",
     title: "Share kit",
-    body: "A QR code, a printable poster and a ready-to-send email, so attendees find the gallery without you chasing them.",
+    body: "A QR code, a printable poster and an announcement email you can edit. On paid sizes we send it to every guest for you.",
   },
   {
     icon: "list",

@@ -662,6 +662,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"event_announcements": {
+                  Row: {
+                    "body": string,"event_id": string,"id": string,"recipient_count": number,"sent_at": string,"sent_by": string | null,"subject": string
+                  }
+                  Insert: {
+                    "body": string,"event_id": string,"id"?: string,"recipient_count"?: number,"sent_at"?: string,"sent_by"?: string | null,"subject": string
+                  }
+                  Update: {
+                    "body"?: string,"event_id"?: string,"id"?: string,"recipient_count"?: number,"sent_at"?: string,"sent_by"?: string | null,"subject"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "event_announcements_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"announcement_optouts": {
+                  Row: {
+                    "created_at": string,"email": string,"event_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"email": string,"event_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string,"event_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "announcement_optouts_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "events"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"stripe_events": {
                   Row: {
                     "created_at": string,"event_id": string | null,"id": string,"payload": NonNullable<Json>,"processed_at": string | null,"type": string,"updated_at": string
