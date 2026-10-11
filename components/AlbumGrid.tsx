@@ -74,6 +74,7 @@ export function AlbumGrid({
   processingCount = 0,
   canDownload = false,
   mineItems = [],
+  inset = true,
   albumTitle,
 }: {
   albumId: string;
@@ -94,6 +95,8 @@ export function AlbumGrid({
   /** Photos in this album the viewer is confirmed in. Empty when they have
       not enrolled or are in none, and then the chip isn't shown. */
   mineItems?: GridItem[];
+  /** Side padding of its own (attendee pages); off inside the organiser layout, which pads already. */
+  inset?: boolean;
   albumTitle: string;
 }) {
   const router = useRouter();
@@ -302,7 +305,7 @@ export function AlbumGrid({
           bar offers depends on who you are. A lone "All" chip is left out:
           there is nothing to switch to. */}
       {selecting || (chips.length < 2 && !message) ? null : (
-        <div className="flex w-full flex-wrap items-center gap-2 px-5 sm:px-10">
+        <div className={`flex w-full flex-wrap items-center gap-2 ${inset ? "px-5 sm:px-10" : ""}`}>
           {chips.length > 1 ? (
             <Segmented
               label="Show"
@@ -324,7 +327,9 @@ export function AlbumGrid({
       )}
 
       {/* Tight 3px gaps edge to edge on a phone, so the photos do the talking. */}
-      <div className="grid w-full grid-cols-3 gap-[3px] px-[3px] pb-2 pt-2 sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 sm:px-10">
+      <div
+        className={`grid w-full grid-cols-3 gap-[3px] pb-2 pt-2 sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 ${inset ? "px-[3px] sm:px-10" : "lg:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]"}`}
+      >
         {kind !== "saved" && kind !== "mine" ? <ProcessingTiles count={processingCount} /> : null}
         {shown.map((item) =>
           selecting ? (

@@ -256,7 +256,7 @@ export function AlbumManager({
                     ) : null}
                   </td>
                   <td>
-                    <Link href={`/e/${handle}/a/${album.id}`} className="flex min-w-[200px] items-center gap-3 text-ink no-underline">
+                    <Link href={`/admin/${handle}/albums/${album.id}`} className="flex min-w-[200px] items-center gap-3 text-ink no-underline">
                       <span className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]">
                         {album.coverUrl ? (
                           <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -292,7 +292,8 @@ export function AlbumManager({
                         </button>
                       ) : null}
                       <MoreMenu iconOnly label={`More for ${album.title}`}>
-                        <MoreLink href={`/e/${handle}/a/${album.id}`}>Open album</MoreLink>
+                        <MoreLink href={`/admin/${handle}/albums/${album.id}`}>Open album</MoreLink>
+                        <MoreLink href={`/e/${handle}/a/${album.id}`}>See it as an attendee</MoreLink>
                         {/* Dragging doesn't work with a finger in Safari, so moving
                             is also a menu choice (WCAG 2.5.7). */}
                         {index > 0 ? (

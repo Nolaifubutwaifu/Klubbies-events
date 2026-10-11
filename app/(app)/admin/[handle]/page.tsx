@@ -169,7 +169,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           key: "unfinished",
           title: `${plural(stuckCount, "upload")} didn't finish`,
           body: `In ${stuckAlbums.map(([, title]) => title).join(", ")}. Attendees can't see them. Upload them again or remove them; they clear themselves after ${EXPIRE_AFTER_DAYS} days.`,
-          href: stuckAlbums[0] ? `/e/${handle}/a/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
+          href: stuckAlbums[0] ? `/admin/${handle}/albums/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
           cta: "Fix",
           urgent: true,
         }
@@ -434,7 +434,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                       return (
                         <tr key={album.id}>
                           <td>
-                            <Link href={`/e/${handle}/a/${album.id}`} className="flex items-center gap-3 font-medium text-ink no-underline">
+                            <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 font-medium text-ink no-underline">
                               <span className="block h-10 w-10 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
                                 {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
                               </span>
