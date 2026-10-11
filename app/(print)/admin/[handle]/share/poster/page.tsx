@@ -29,10 +29,17 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
   const link = eventLink(handle).replace(/^https?:\/\//, "");
 
   const steps = [
-    ["Scan", "Point your phone camera at the code."],
-    ["Confirm", "Enter your email and the code we send you."],
-    ["Find yours", "Take a selfie to see every photo you're in."],
+    ["Scan the code", "With your phone camera. No app needed."],
+    ["Confirm your email", "Type the code we send you."],
+    ["Take a selfie", "See every photo you're in. Optional, and only you see them."],
   ];
+  const initials = event.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <div className="poster-screen flex min-h-dvh flex-col items-center gap-6 bg-[#e9e9e5] py-8 print:block print:bg-white print:p-0">
@@ -46,52 +53,59 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
       </div>
 
       <article
-        className="poster-sheet flex flex-col bg-white text-[#16181d] shadow-[0_20px_60px_-20px_rgb(0_0_0/0.35)]"
-        style={{ width: "210mm", height: "297mm", padding: "18mm 18mm 14mm" }}
+        className="poster-sheet flex flex-col overflow-hidden bg-white text-[#16181d] shadow-[0_20px_60px_-20px_rgb(0_0_0/0.35)]"
+        style={{ width: "210mm", height: "297mm", printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
       >
-        <div className="flex items-center justify-between">
-          {logoUrl ? <img src={logoUrl} alt="" style={{ height: "16mm", width: "auto", objectFit: "contain" }} /> : <span />}
-          {event.organisation ? <span className="text-[14px] text-[#4a4d55]">{event.organisation}</span> : null}
-        </div>
-
-        <div className="mt-[14mm]">
-          <p className="m-0 text-[15px] font-medium uppercase tracking-[0.12em]" style={{ color: accent }}>
-            Your photos from
-          </p>
-          <h1 className="serif mt-[3mm] text-[64px] leading-[1.02]">{event.name}</h1>
-          {meta ? <p className="m-0 mt-[4mm] text-[18px] text-[#4a4d55]">{meta}</p> : null}
-        </div>
-
-        <div className="mt-auto flex items-end gap-[12mm]">
+        <div className="flex flex-col text-white" style={{ background: accent, padding: "15mm 17mm 13mm", gap: "5mm" }}>
           <span
-            className="block flex-none [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
-            style={{ width: "82mm", height: "82mm" }}
-            // Generated server-side from the event link by the qrcode package.
-            dangerouslySetInnerHTML={{ __html: qr }}
-          />
-          <ol className="m-0 flex list-none flex-col gap-[6mm] p-0 pb-[3mm]">
+            className="flex items-center justify-center overflow-hidden bg-white font-bold"
+            style={{ width: "22mm", height: "22mm", borderRadius: "5mm", color: accent, fontSize: "24px" }}
+          >
+            {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2.5mm" }} /> : initials}
+          </span>
+          <span className="text-[18px] font-semibold uppercase tracking-[0.1em] text-white/85">Your photos from</span>
+          <h1 className="serif m-0 text-[72px] leading-[0.98] !text-white">{event.name}</h1>
+        </div>
+
+        <div className="flex flex-1 items-center" style={{ padding: "13mm 17mm", gap: "13mm" }}>
+          <div className="flex flex-none flex-col items-center" style={{ gap: "4mm" }}>
+            <span
+              className="block [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+              style={{ width: "78mm", height: "78mm" }}
+              // Generated server-side from the event link by the qrcode package.
+              dangerouslySetInnerHTML={{ __html: qr }}
+            />
+            <span className="mono text-[16px] text-[#33363d]">{link}</span>
+          </div>
+          <ol className="m-0 flex list-none flex-col p-0" style={{ gap: "7mm" }}>
             {steps.map(([title, body], index) => (
-              <li key={title} className="flex gap-[4mm]">
+              <li key={title} className="flex items-start gap-4">
                 <span
-                  className="flex h-[9mm] w-[9mm] flex-none items-center justify-center rounded-full text-[15px] font-semibold text-white"
-                  style={{ background: accent }}
+                  className="flex flex-none items-center justify-center rounded-full text-[18px] font-semibold text-white"
+                  style={{ background: accent, width: "11mm", height: "11mm" }}
                 >
                   {index + 1}
                 </span>
-                <span>
-                  <span className="block text-[18px] font-semibold">{title}</span>
-                  <span className="block text-[15px] leading-snug text-[#4a4d55]">{body}</span>
+                <span className="flex flex-col gap-1">
+                  <span className="text-[22px] font-semibold">{title}</span>
+                  <span className="text-[17px] leading-[1.45] text-[#4a4d55]">{body}</span>
                 </span>
               </li>
             ))}
           </ol>
         </div>
 
-        <div className="mt-[10mm] flex items-center justify-between border-t border-[#e4e4df] pt-[4mm] text-[14px] text-[#6b6e76]">
-          <span>{link}</span>
+        <div className="flex items-center justify-between border-t border-[#e4e4df] text-[15px] text-[#4a4d55]" style={{ padding: "6mm 17mm" }}>
+          <span>{[event.organisation ? `Hosted by ${event.organisation}` : null, meta].filter(Boolean).join(" · ")}</span>
           {/* The credit line, printed only (pricing handoff §5.7): a second QR
               code would confuse people scanning for the event. */}
-          <span>Private to attendees · Gallery by Klubbies Events</span>
+          <span className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="4" y="10" width="16" height="11" rx="2" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            </svg>
+            Klubbies Events
+          </span>
         </div>
       </article>
     </div>

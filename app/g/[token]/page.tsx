@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { EventMark } from "@/components/EventMark";
-import { Brand } from "@/components/ui";
+import { NoticePage } from "@/components/NoticePage";
 import { formatLongDate } from "@/lib/format";
 import { getPlanUsage } from "@/lib/billing/usage";
 import { resolveGuestLink, type GuestLinkState } from "@/lib/guest/links";
@@ -47,13 +47,9 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
   if (!session) {
     const copy = DEAD[state as Exclude<GuestLinkState, "ok">] ?? DEAD.unknown;
     return (
-      <div className="theme-soft relative flex min-h-dvh flex-col">
-        <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center gap-4 px-5 py-14">
-          <Brand />
-          <h1 className="text-[clamp(26px,6vw,34px)]">{copy.title}</h1>
-          <p className="m-0 text-[15px] text-[color:var(--ink-70)]">{copy.body}</p>
-        </main>
-      </div>
+      <NoticePage badge="warn" title={copy.title}>
+        <p>{copy.body}</p>
+      </NoticePage>
     );
   }
 
@@ -64,42 +60,68 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
     : null;
   const name = session.label.trim();
 
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+
   return (
-    <div className="theme-soft relative flex min-h-dvh flex-col" style={eventToneStyle(session.eventAccent)}>
-      <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
-        <div className="mx-auto flex min-h-[60px] w-full max-w-[760px] items-center justify-between gap-3 px-5">
-          <span className="flex min-w-0 items-center gap-2.5">
-            <EventMark name={session.eventName} logoUrl={logoUrl} accentColour={session.eventAccent} size={30} />
-            <span className="truncate text-[15px] font-semibold">{session.eventName}</span>
+    <div className="theme-soft relative flex min-h-dvh flex-col bg-[color:var(--kb-cream)]" style={eventToneStyle(session.eventAccent)}>
+      <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--tone-support,var(--kb-sand))]">
+        <div className="mx-auto flex w-full max-w-[880px] flex-wrap items-center gap-4 px-5 py-7 sm:px-8">
+          <EventMark name={session.eventName} logoUrl={logoUrl} accentColour={session.eventAccent} size={52} />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[color:var(--tone-support-ink,var(--kb-ink-2))]">Photographer upload</span>
+            <h1 className="serif text-[34px] leading-[1.02] sm:text-[44px]">{session.eventName}</h1>
+          </div>
+          <span className="flex items-center gap-2.5 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-[14px]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--kb-ink)] text-[13px] font-semibold text-white" aria-hidden>
+              {initials}
+            </span>
+            <span>
+              Uploading as <strong className="font-semibold">{name}</strong>
+            </span>
           </span>
-          <span className="hidden text-[14px] text-[color:var(--kb-ink-3)] sm:inline">Link expires {formatLongDate(session.expiresAt)}</span>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-6 px-5 py-10">
-        <div>
-          <span className="kb-eyebrow">Uploading as {name}</span>
-          <h1 className="serif mt-2 text-[clamp(36px,6vw,52px)]">{session.albumTitle}</h1>
-          <p className="m-0 mt-2 text-[15px] text-[color:var(--ink-70)]">
-            Every photo is credited to you. This link works until {formatLongDate(session.expiresAt)}.
+      <main className="mx-auto flex w-full max-w-[880px] flex-1 flex-col gap-5 px-5 py-8 sm:px-8">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <p className="m-0 text-[17px]">
+            Album: <strong className="font-semibold">{session.albumTitle}</strong>
+          </p>
+          <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
+            Every photo is credited to you. Your link works until {formatLongDate(session.expiresAt)}.
           </p>
         </div>
 
         <GuestUploader token={token} />
 
-        <div className="kb-info flex-col">
-          <span className="text-[14px] font-medium">Keep this tab open until the list says done.</span>
-          <p className="m-0 text-[14px]">
-            If the connection drops, open this link again and drop the same files: finished ones are skipped and the rest
-            carry on. This link only adds photos to {session.albumTitle}; it can&apos;t open the gallery.
-          </p>
-          {session.fileCount > 0 ? (
-            <p className="m-0 text-[14px]">
-              {session.fileCount.toLocaleString("en-AU")} file{session.fileCount === 1 ? "" : "s"} already came in on this link.
+        <div className="flex items-start gap-3 rounded-[10px] bg-[color:var(--kb-sand)] p-4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-0.5 flex-none text-[color:var(--kb-ink-2)]">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5M12 7.6v.1" />
+          </svg>
+          <div className="flex flex-col gap-1 text-[14px] text-[color:var(--kb-ink-2)]">
+            <p className="m-0">
+              Uploads keep going while this tab is open. If the connection drops, open this link again and drop the same
+              files: finished ones are skipped and the rest carry on.
             </p>
-          ) : null}
+            {session.fileCount > 0 ? (
+              <p className="m-0">
+                {session.fileCount.toLocaleString("en-AU")} file{session.fileCount === 1 ? "" : "s"} already came in on this link.
+              </p>
+            ) : null}
+          </div>
         </div>
       </main>
+
+      <footer className="px-5 pb-8 text-center text-[14px] text-[color:var(--kb-ink-3)]">
+        Private upload link by Klubbies Events · You can&apos;t see the gallery from here.
+      </footer>
     </div>
   );
 }

@@ -35,7 +35,8 @@ export function GuestUploader({ token }: { token: string }) {
   return (
     <div className="flex flex-col gap-4">
       <div
-        className="dropzone px-4 py-10"
+        aria-label="Choose photos and videos to upload"
+        className="dropzone min-h-[240px] gap-2.5 px-5 py-10"
         data-active={dragging}
         role="button"
         tabIndex={0}
@@ -48,10 +49,17 @@ export function GuestUploader({ token }: { token: string }) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <span className="soft-display text-[19px]">Drop photos and videos here</span>
-        <span className="text-[14px] text-[color:var(--ink-70)]">
-          HEIC, JPG, PNG, WebP, MP4 or MOV, kept at full quality
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]" aria-hidden>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
+          </svg>
         </span>
+        <span className="text-[18px] font-semibold">
+          <span className="[@media(pointer:coarse)]:hidden">Drop your photos and videos here</span>
+          <span className="hidden [@media(pointer:coarse)]:inline">Add your photos and videos</span>
+        </span>
+        <span className="text-[14px] text-[color:var(--kb-ink-2)]">Full resolution photos and videos, as many as you like. HEIC, JPG, PNG, WebP, MP4, MOV.</span>
+        <span className="btn btn-secondary mt-1">Choose files</span>
         <input
           ref={input}
           type="file"
@@ -75,73 +83,61 @@ export function GuestUploader({ token }: { token: string }) {
       ))}
 
       {jobs.length ? (
-        <div className="soft-card flex flex-col gap-3 p-4">
+        <section aria-label="Uploads" className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-4 sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="soft-display text-[17px]">
-              {busy ? `Uploading ${jobs.length} ${jobs.length === 1 ? "file" : "files"}` : failed.length ? "Some files need another go" : "All done"}
+            <h2 className="text-[16px] font-semibold">
+              {busy ? `Uploading ${done} of ${jobs.length}` : failed.length ? "Some files need another go" : "All done"}
+            </h2>
+            <span className="mono text-[14px] text-[color:var(--kb-ink-2)]" role="status">
+              {pct}%{failed.length ? ` · ${failed.length} failed` : ""}
             </span>
-            <span className="text-[14px] text-[color:var(--ink-70)]">{pct}%</span>
           </div>
           <div
-            className="h-[8px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text)_8%,transparent)]"
+            className="h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-sand)]"
             role="progressbar"
             aria-label="Upload progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={pct}
           >
-            <div
-              className="h-full rounded-full transition-[width]"
-              style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--color-accent-600), var(--color-accent-800))" }}
-            />
+            <div className="h-full rounded-[3px] bg-[color:var(--kb-ember)] transition-[width]" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-[14px] text-[color:var(--ink-70)]" role="status">
-            {done} of {jobs.length} done{failed.length ? ` · ${failed.length} failed` : ""}
-            {busy ? " · keep this tab open" : ""}
-          </span>
 
           <div className="flex flex-col">
             {jobs.slice(-30).map((job) => (
-              <div
-                key={job.key}
-                className="flex items-center gap-3 border-b border-[color-mix(in_srgb,var(--color-text)_7%,transparent)] py-2.5 last:border-b-0"
-              >
+              <div key={job.key} className="flex items-center gap-3 border-t border-[color:var(--kb-sand)] py-2.5 first:border-t-0">
                 {job.previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- local object URL
-                  <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[10px] object-cover" />
+                  <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[6px] object-cover" />
                 ) : (
-                  <span className="h-10 w-10 flex-none rounded-[10px] bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" />
+                  <span className="h-10 w-10 flex-none rounded-[6px] bg-[color:var(--kb-sand)]" />
                 )}
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-3">
-                    <span className="truncate text-[14px] font-semibold">{job.name}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="flex items-baseline justify-between gap-3 text-[14px]">
+                    <span className="mono truncate">{job.name}</span>
                     <span
-                      className="flex-none text-[14px] font-bold"
-                      style={{ color: job.status === "failed" ? "var(--color-accent-700)" : "var(--color-neutral-700)" }}
+                      className={`flex-none ${job.status === "done" ? "font-semibold text-[color:var(--kb-ok)]" : job.status === "failed" ? "font-semibold text-[color:var(--kb-warn)]" : "text-[color:var(--kb-ink-2)]"}`}
                     >
                       {job.status === "done" ? "Done" : job.status === "failed" ? "Failed" : `${Math.floor(job.progress * 100)}%`}
                     </span>
                   </span>
                   {job.status === "failed" ? (
-                    <span className="mt-0.5 flex items-center gap-2">
-                      <span className="text-[14px] text-accent-800">{job.error}</span>
-                      <button type="button" className="soft-btn soft-btn-tonal !min-h-[44px] !px-4 !text-[14px]" onClick={() => queue.retry(job.key)}>
-                        Retry
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-[14px] text-[color:var(--kb-warn)]">{job.error}</span>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => queue.retry(job.key)}>
+                        Retry now
                       </button>
                     </span>
-                  ) : (
-                    <span className="mt-1 block h-[5px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-text)_8%,transparent)]">
-                      <span
-                        className="block h-full rounded-full bg-accent transition-[width]"
-                        style={{ width: `${Math.floor(job.progress * 100)}%` }}
-                      />
+                  ) : job.status !== "done" ? (
+                    <span className="block h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]">
+                      <span className="block h-full bg-[color:var(--kb-ember)] transition-[width]" style={{ width: `${Math.floor(job.progress * 100)}%` }} />
                     </span>
-                  )}
+                  ) : null}
                 </span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       ) : null}
     </div>
   );
