@@ -80,10 +80,10 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate={false}>
       {mode === "code" ? (
         <div className="flex flex-col gap-2">
-          <label htmlFor="fullName" className="kb-label">
-            Full name
+          <label htmlFor="fullName" className="kb-label !text-[15px] !font-semibold">
+            Your name
           </label>
-          <input id="fullName" className="input" name="fullName" autoComplete="name" required maxLength={200} aria-describedby="fullName-help" />
+          <input id="fullName" className="input !min-h-[52px]" name="fullName" autoComplete="name" required maxLength={200} aria-describedby="fullName-help" />
           <span id="fullName-help" className="kb-help">
             {flow === "create"
               ? "Shown to attendees and photographers as the organiser."
@@ -94,17 +94,17 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
         </div>
       ) : null}
       <div className="flex flex-col gap-2">
-        <label htmlFor="email" className="kb-label">
-          Email
+        <label htmlFor="email" className="kb-label !text-[15px] !font-semibold">
+          {flow === "create" ? "Work email" : "Email"}
         </label>
-        <input id="email" className="input" name="email" type="email" inputMode="email" autoComplete="email" required maxLength={254} />
+        <input id="email" className="input !min-h-[52px]" name="email" type="email" inputMode="email" autoComplete="email" required maxLength={254} />
       </div>
       {mode === "password" ? (
         <div className="flex flex-col gap-2">
-          <label htmlFor="password" className="kb-label">
+          <label htmlFor="password" className="kb-label !text-[15px] !font-semibold">
             Password
           </label>
-          <input id="password" className="input" name="password" type="password" autoComplete="current-password" required minLength={8} />
+          <input id="password" className="input !min-h-[52px]" name="password" type="password" autoComplete="current-password" required minLength={8} />
         </div>
       ) : null}
       {error ? (
@@ -112,11 +112,23 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
           {error}
         </p>
       ) : null}
-      <button type="submit" className="btn btn-primary w-full" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-lg w-full" disabled={pending}>
         {submitLabel}
+        {pending || flow === "join" ? null : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        )}
       </button>
 
       {/* Someone joining from an event's link has no password yet. */}
+      {flow === "member" ? (
+        <div className="flex items-center gap-4 text-[14px] text-[color:var(--kb-ink-3)]" aria-hidden>
+          <span className="h-px flex-1 bg-[color:var(--kb-line)]" />
+          or
+          <span className="h-px flex-1 bg-[color:var(--kb-line)]" />
+        </div>
+      ) : null}
       {flow === "member" ? (
         <button
           type="button"

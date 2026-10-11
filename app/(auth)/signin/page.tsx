@@ -28,8 +28,11 @@ export default async function SignInPage(props: PageProps<"/signin">) {
     const full = publicEvent ? await eventIsFull(publicEvent.id).catch(() => false) : false;
     return (
       <AuthShell event={event}>
-        <AuthHeading>Get your photos</AuthHeading>
-        <p className="kb-lead mt-3 !text-[16px]">
+        {/* On a phone the event's name above is the heading. */}
+        <div className="max-lg:sr-only">
+          <AuthHeading>Get your photos</AuthHeading>
+        </div>
+        <p className="text-[16px] text-[color:var(--kb-ink-2)] lg:mt-3">
           {open
             ? "Use the email you'd like your photos under. We'll send a code to confirm it's you, then you're in."
             : "This event is for its guest list. Use the email you registered with, and we'll send you a code."}
@@ -39,7 +42,7 @@ export default async function SignInPage(props: PageProps<"/signin">) {
             {EVENT_FULL_MESSAGE} If you&apos;ve already joined, sign in as usual.
           </p>
         ) : null}
-        <div className="mt-7">
+        <div className="mt-6">
           <SignInForm flow="join" event={event.handle} />
         </div>
         <AuthNote>
@@ -62,30 +65,22 @@ export default async function SignInPage(props: PageProps<"/signin">) {
           <Link href="/signin" className="font-medium">
             Back
           </Link>
-        ) : (
-          <>
-            <span className="hidden sm:inline">Organising an event? </span>
-            <Link href="/start" className="font-medium">
-              Create one
-            </Link>
-          </>
-        )
+        ) : null
       }
     >
       <AuthHeading>Sign in</AuthHeading>
-      <p className="kb-lead mt-3 !text-[16px]">
-        For attendees and organisers of an existing event. Use the email you joined it with and we&rsquo;ll send you a
-        code, so there&rsquo;s no password to remember.
-      </p>
-      <div className="mt-7 flex flex-col gap-3">
+      <p className="mt-2.5 text-[17px] text-[color:var(--kb-ink-2)]">We&apos;ll email you a code. There&apos;s no password to remember.</p>
+      <div className="mt-6 flex flex-col gap-3">
         {inApp ? null : <ScanEventButton />}
         <SignInForm flow="member" />
-        <p className="m-0 text-center text-[15px] text-[color:var(--kb-ink-2)]">
-          New here and organising an event?{" "}
-          <Link href="/start" className="kb-link">
-            Create an event
-          </Link>
-        </p>
+        {inApp ? null : (
+          <p className="m-0 mt-2 border-t border-[color:var(--kb-line)] pt-5 text-center text-[14px] text-[color:var(--kb-ink-2)]">
+            Running an event?{" "}
+            <Link href="/start" className="font-semibold">
+              Create one
+            </Link>
+          </p>
+        )}
       </div>
       <AuthNote>
         Attending an event? The quickest way in is the link or QR code the organiser shared. It takes you straight to
