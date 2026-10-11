@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Disclosure } from "@/components/Disclosure";
 import { FormMessage, SubmitButton } from "@/components/forms";
 import type { ActionState } from "@/app/(app)/admin/actions";
@@ -41,6 +41,17 @@ export function GuestLinkForm({
   const [mailed, setMailed] = useState<{ ok?: boolean; text: string } | null>(null);
   const [mailing, setMailing] = useState(false);
 
+  // An address given with the form gets the link straight away.
+  const autoSent = useRef<string | null>(null);
+  useEffect(() => {
+    const url = state.url;
+    if (!url || !mailTo || autoSent.current === url) return;
+    autoSent.current = url;
+    void emailGuestLinkAction(eventId, url, mailTo)
+      .catch(() => ({ error: "Couldn't send it. Copy the link instead." }) as ActionState)
+      .then((res: ActionState) => setMailed(res.error ? { text: res.error } : { ok: true, text: res.message ?? `Sent to ${mailTo}` }));
+  }, [state.url, mailTo, eventId]);
+
   // The link is shown once, so give every way to hand it over: copy, the
   // phone's share sheet, and a QR the photographer can scan off this screen.
   useEffect(() => {
@@ -57,8 +68,12 @@ export function GuestLinkForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <form action={action} className="soft-card flex flex-col gap-4 p-5">
-        <h2 className="text-[16px] font-semibold">Add a photographer</h2>
+      <form
+        action={action}
+        onSubmit={(e) => setMailTo(String(new FormData(e.currentTarget).get("sendTo") ?? ""))}
+        className="flex flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5"
+      >
+        <h2 className="text-[17px] font-semibold">Add a photographer</h2>
 
         {albums.length === 0 ? (
           <p className="m-0 flex flex-wrap items-center gap-3 text-[14px] text-[color:var(--ink-70)]">
@@ -70,12 +85,17 @@ export function GuestLinkForm({
         ) : (
           <>
             <label className="field">
-              Photographer&apos;s name
-              <input className="input" name="label" placeholder="Jane Citizen" required maxLength={120} />
-              <span className="kb-help font-normal">Shown as the credit on every photo they upload.</span>
+              Name
+              <input className="input" name="label" placeholder="Shown as the credit" required maxLength={120} />
             </label>
             <label className="field">
-              Uploads land in
+              <span className="flex justify-between">
+                Email <span className="font-normal text-[color:var(--kb-ink-3)]">To send the link</span>
+              </span>
+              <input className="input" name="sendTo" type="email" placeholder="Optional" />
+            </label>
+            <label className="field">
+              Album
               <select className="input" name="albumId" defaultValue={albums[0]?.id}>
                 {albums.map((album) => (
                   <option key={album.id} value={album.id}>
@@ -86,8 +106,9 @@ export function GuestLinkForm({
               </select>
             </label>
             <label className="field">
-              Link expires
+              Link works until
               <input className="input" name="expiresOn" type="date" defaultValue={defaultExpiry} required />
+              <span className="kb-help font-normal">Two weeks after the event by default.</span>
             </label>
 
             <Disclosure title="What the link can do" className="rounded-[var(--kb-r-card)] bg-[color:var(--kb-cream)]">
@@ -104,7 +125,7 @@ export function GuestLinkForm({
             </Disclosure>
 
             <FormMessage state={state} />
-            <SubmitButton className="btn btn-primary self-start" pendingText="Making the link…">
+            <SubmitButton className="btn btn-primary w-full" pendingText="Making the link…">
               Create upload link
             </SubmitButton>
           </>
@@ -112,7 +133,7 @@ export function GuestLinkForm({
       </form>
 
       {state.url ? (
-        <div className="soft-card flex flex-col gap-3 !border-[color:var(--kb-ember)] p-5">
+        <div className="flex flex-col gap-3 rounded-[10px] border-[1.5px] border-[color:var(--kb-brand)] bg-white p-5">
           <span className="text-[14px] font-medium">Copy this link now and send it to the photographer. It isn&apos;t shown again.</span>
           <div className="flex flex-wrap items-center gap-2">
             <code className="mono min-w-0 flex-1 break-all rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3 py-2.5 text-[14px]">

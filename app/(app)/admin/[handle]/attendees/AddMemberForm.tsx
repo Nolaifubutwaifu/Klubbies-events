@@ -13,8 +13,8 @@ export function AddMemberForm({ eventId }: { eventId: string }) {
   }, [state]);
 
   return (
-    <form ref={form} action={action} className="soft-card flex flex-col gap-3 p-4">
-      <span className="text-[14px] font-semibold">Add one person</span>
+    <form ref={form} action={action} className="grid gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 sm:grid-cols-[1fr_1fr_220px_auto] sm:items-end">
+      <span className="text-[16px] font-semibold sm:col-span-4">Add one person</span>
       {/* Visible labels: a placeholder disappears the moment you type. */}
       <label className="field">
         Full name
@@ -32,10 +32,12 @@ export function AddMemberForm({ eventId }: { eventId: string }) {
         <option value="admin">Organiser (full access)</option>
       </select>
       </label>
-      <FormMessage state={state} />
-      <SubmitButton className="btn btn-secondary self-start" pendingText="Adding…">
+      <SubmitButton className="btn btn-primary" pendingText="Adding…">
         Add
       </SubmitButton>
+      <div className="sm:col-span-4 empty:hidden">
+        <FormMessage state={state} />
+      </div>
     </form>
   );
 }
