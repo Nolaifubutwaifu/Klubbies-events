@@ -1276,6 +1276,20 @@ html:has(.theme-soft) body {
     font-size: 17px;
     font-weight: 600;
   }
+  /* Status chips: the only pills (foundations rule 07). Colour per use. */
+  .kb-chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
   /* The dark marketing band (pricing, closing calls to action). */
   .kb-night-band {
     border-radius: 20px;

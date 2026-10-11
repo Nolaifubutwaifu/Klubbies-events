@@ -70,20 +70,21 @@ export function MemberTabBar({ handle, facesEnabled = false }: { handle: string;
     <nav
       data-tabbar
       aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-2 pb-[max(12px,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-1 pb-[max(14px,env(safe-area-inset-bottom))] pt-1 md:hidden"
     >
       {tabs.map((tab) => {
         const here = tab.match(pathname);
-        const colour = here ? "var(--kb-ink)" : "var(--kb-ink-3)";
+        // The event's colour marks where you are: its one quiet job here.
+        const colour = here ? "var(--kb-ember)" : "var(--kb-ink-3)";
         return (
           <Link
             key={tab.href}
             href={tab.href}
             aria-current={here ? "page" : undefined}
-            className="flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-[3px] text-center text-[14px] font-medium leading-[1.15] no-underline"
+            className={`flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 text-center text-[14px] leading-[1.15] no-underline ${here ? "font-semibold" : "font-medium"}`}
             style={{ color: colour }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={here ? "var(--kb-ember)" : colour} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={colour} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               {tab.icon}
             </svg>
             {tab.label}
