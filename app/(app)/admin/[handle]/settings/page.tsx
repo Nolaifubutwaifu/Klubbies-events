@@ -52,7 +52,7 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
   const link = eventLink(handle);
 
   return (
-    <main className="flex max-w-[820px] flex-col gap-8 pb-12 pt-2">
+    <main className="flex max-w-[820px] flex-col gap-8">
       <PageTitle kicker={event.name} title="Settings">
         Event details, branding, who can get in and for how long.
       </PageTitle>

@@ -68,7 +68,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
   const settled = rows.filter((r) => r.status !== "open");
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Removal requests">
         An attendee asked for a photo to come down. It is already hidden from attendees. You decide whether the original
         goes too.

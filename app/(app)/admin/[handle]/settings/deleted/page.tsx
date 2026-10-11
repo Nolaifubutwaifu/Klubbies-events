@@ -99,7 +99,7 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
   });
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Recently deleted">
         Albums, photos and videos you deleted stay here for 30 days, hidden from attendees, then they&apos;re deleted for
         good.

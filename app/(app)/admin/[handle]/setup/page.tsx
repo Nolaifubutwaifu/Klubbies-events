@@ -43,7 +43,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   if (!state.requiredDone) {
     const detailsDone = state.required[0].done;
     return (
-      <main className="flex max-w-[760px] flex-col gap-6 pb-12 pt-2">
+      <main className="flex max-w-[760px] flex-col gap-6">
         <SetupSteps
           steps={state.required.map((step) => ({
             label: step.title,
@@ -87,7 +87,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   const next = state.recommended.find((step) => !step.done) ?? null;
 
   return (
-    <main className="flex max-w-[760px] flex-col gap-6 pb-12 pt-2">
+    <main className="flex max-w-[760px] flex-col gap-6">
       {justPaid ? (
         <div className="kb-ok-note" role="status">
           Paid. {event.name} is now {planName(event.plan)}.

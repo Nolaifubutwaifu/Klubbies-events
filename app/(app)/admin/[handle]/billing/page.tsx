@@ -56,7 +56,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
   const { windowEnds, windowOpen } = overflowWindow(event);
 
   return (
-    <main className="flex max-w-[920px] flex-col gap-6 pb-12 pt-2">
+    <main className="flex max-w-[920px] flex-col gap-6">
       <PageTitle kicker={event.name} title="Plan and billing">
         One payment per event, no subscription. Every size has face search, your branding, the share kit and a gallery
         open for 12 months.

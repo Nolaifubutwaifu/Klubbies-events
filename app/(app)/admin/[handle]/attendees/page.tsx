@@ -68,7 +68,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
   const linkMode = event.access_mode === "link";
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={event.name} title="Attendees">
         {linkMode
           ? "Anyone with the event link who confirms their email joins and appears here. Importing a guest list is optional."

@@ -25,81 +25,77 @@ export function NewAlbumPanel({
   const [when, setWhen] = useState<"now" | "later">("now");
   const [publishAt, setPublishAt] = useState(tomorrowMorning);
 
+  const [download, setDownload] = useState(true);
+  const [contribute, setContribute] = useState(false);
+
   return (
-    <form action={action} className="soft-card flex flex-col gap-5 p-5 sm:p-6">
+    <form action={action} className="flex flex-col gap-5">
       <h2 className="text-[18px] font-semibold">New album</h2>
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-        <label className="field">
-          Album name
-          <input className="input" name="title" placeholder="Keynote, Networking drinks, Headshots" required maxLength={160} autoFocus={autoFocus} />
-        </label>
-        <label className="field">
-          Date (optional)
-          <input className="input" name="albumDate" type="date" defaultValue={defaultDate ?? ""} />
-        </label>
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
+        Name
+        <input className="input !min-h-[48px]" name="title" placeholder="Keynote, Networking drinks, Headshots" required maxLength={160} autoFocus={autoFocus} />
+      </label>
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
+        <span className="flex justify-between">
+          Date <span className="font-normal text-[color:var(--kb-ink-3)]">Optional</span>
+        </span>
+        <input className="input !min-h-[48px]" name="albumDate" type="date" defaultValue={defaultDate ?? ""} />
+      </label>
+
+      <div className="flex flex-col">
+        {(
+          [
+            ["allowDownload", "on", "Attendees can download", "Originals, one by one or as a zip", download, setDownload],
+            ["contributorScope", "members", "Attendees can add photos", "Good for a drinks album", contribute, setContribute],
+          ] as const
+        ).map(([name, value, label, hint, on, set]) => (
+          <div key={name} className="flex items-center gap-3 border-t border-[color:var(--kb-sand)] py-3 first:border-t-0">
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span id={`${name}-label`} className="text-[15px] font-medium">
+                {label}
+              </span>
+              <span className="text-[14px] text-[color:var(--kb-ink-3)]">{hint}</span>
+            </span>
+            <button type="button" role="switch" aria-checked={on} aria-labelledby={`${name}-label`} className="kb-switch" onClick={() => set(!on)} />
+            {on ? <input type="hidden" name={name} value={value} /> : null}
+          </div>
+        ))}
       </div>
 
-      <div className="flex flex-col gap-2.5">
-        <label className="flex items-center gap-3 text-[14px]">
-          <input type="checkbox" name="allowDownload" defaultChecked />
-          Attendees can download the originals
+      <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+        <legend className="mb-2 text-[15px] font-semibold">Publish</legend>
+        <label className={`flex cursor-pointer items-start gap-3 rounded-[8px] border p-3 text-[15px] ${when === "now" ? "border-[color:var(--kb-brand)] bg-[color:var(--kb-brand-tint)]" : "border-[color:var(--kb-line)]"}`}>
+          <input type="radio" name="when" checked={when === "now"} onChange={() => setWhen("now")} className="mt-0.5" />
+          <span className="flex flex-col">
+            <span className="font-medium">When I publish it</span>
+            <span className="text-[14px] text-[color:var(--kb-ink-3)]">Kept as a draft until you press Publish</span>
+          </span>
         </label>
-        <label className="flex items-center gap-3 text-[14px]">
-          <input
-            type="checkbox"
-            name="contributorScope"
-            value="members"
-          />
-          Attendees can add their own photos to this album
-        </label>
-      </div>
-
-      <fieldset className="m-0 flex flex-col gap-2.5 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-4">
-        <legend className="px-1 text-[14px] font-medium">When should attendees see it?</legend>
-        <label className="flex items-center gap-3 text-[14px]">
-          <input
-            type="radio"
-            name="when"
-            checked={when === "now"}
-            onChange={() => setWhen("now")}
-          />
-          When I publish it, straight after the upload
-        </label>
-        <label className="flex flex-wrap items-center gap-3 text-[14px]">
-          <input
-            type="radio"
-            name="when"
-            checked={when === "later"}
-            onChange={() => setWhen("later")}
-          />
-          Schedule it for
-          <input
-            className="input !min-h-[40px] !w-auto !py-1 !text-[14px]"
-            type="datetime-local"
-            value={publishAt}
-            onChange={(e) => {
-              setPublishAt(e.target.value);
-              setWhen("later");
-            }}
-            aria-label="Go live at"
-          />
+        <label className={`flex cursor-pointer items-start gap-3 rounded-[8px] border p-3 text-[15px] ${when === "later" ? "border-[color:var(--kb-brand)] bg-[color:var(--kb-brand-tint)]" : "border-[color:var(--kb-line)]"}`}>
+          <input type="radio" name="when" checked={when === "later"} onChange={() => setWhen("later")} className="mt-0.5" />
+          <span className="flex min-w-0 flex-1 flex-col gap-2">
+            <span className="font-medium">At a time I choose</span>
+            <input
+              className="input !min-h-[44px]"
+              type="datetime-local"
+              value={publishAt}
+              onChange={(e) => {
+                setPublishAt(e.target.value);
+                setWhen("later");
+              }}
+              aria-label="Publish at"
+            />
+            <span className="text-[14px] text-[color:var(--kb-ink-3)]">It goes live within the hour, and attendees who asked are emailed.</span>
+          </span>
         </label>
         <input type="hidden" name="publishAt" value={when === "later" ? publishAt : ""} />
-        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-          Scheduling lets the photographers finish and you check the selection first. It goes live on the hour after
-          this time, and attendees who asked are emailed.
-        </p>
       </fieldset>
 
       <FormMessage state={state} />
-      <SubmitButton className="soft-btn soft-btn-primary self-start" pendingText="Making the album…">
+      <SubmitButton className="btn btn-primary btn-lg w-full" pendingText="Making the album…">
         {when === "later" ? "Schedule and start uploading" : "Create and start uploading"}
       </SubmitButton>
-      <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-        The next screen is the drop zone. Uploads keep running while you move around, and each file picks up where it
-        left off if the connection drops.
-      </p>
     </form>
   );
 }

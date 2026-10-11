@@ -207,7 +207,6 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
       : null,
   ].filter((task): task is NonNullable<typeof task> => task !== null);
 
-  const live = (published.count ?? 0) > 0;
   const planShort = isTier(event.plan) ? planName(event.plan) : null;
 
   // Per album: views and downloads by attendees, for the table. Four albums at

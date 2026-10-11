@@ -54,7 +54,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
   const defaultExpiry = defaultExpiryDate(ctx.event.ends_on ?? ctx.event.starts_on);
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Photographers">
         Each photographer gets their own upload link. No account, no app, and every photo is credited to them.
       </PageTitle>

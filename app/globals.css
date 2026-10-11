@@ -909,8 +909,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: 1px dashed var(--kb-line-input);
-    border-radius: var(--kb-r-card);
+    border: 1.5px dashed var(--kb-line-input);
+    border-radius: 14px;
     background: var(--kb-white);
     text-align: center;
     cursor: pointer;

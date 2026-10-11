@@ -5,7 +5,7 @@
  */
 export default function AdminLoading() {
   return (
-    <div className="flex flex-col gap-6 pb-12 pt-2" aria-busy="true" aria-label="Loading">
+    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading">
       <div className="flex flex-col gap-2">
         <span className="soft-skeleton h-[14px] w-[120px] !rounded-[4px]" />
         <span className="soft-skeleton h-[32px] w-[min(320px,80%)] !rounded-[6px]" />

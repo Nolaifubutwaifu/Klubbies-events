@@ -39,7 +39,7 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
     .join("\n");
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={event.name} title="Share with attendees">
         One link does everything. {event.access_mode === "link"
           ? "Anyone who opens it and confirms their email joins the event."

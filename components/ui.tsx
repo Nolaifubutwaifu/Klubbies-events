@@ -30,7 +30,9 @@ export function Kicker({ children, className = "" }: { children: ReactNode; clas
   return <span className={`soft-chip ${className}`}>{children}</span>;
 }
 
-/** Page heading for the organiser screens: Geist, dense, one line of help. */
+/** Page heading for the organiser screens: Geist, dense, one line of help.
+    The event's name sits in the top bar's breadcrumb from 1024px, so the
+    kicker above the title only shows on smaller screens. */
 export function PageTitle({
   kicker,
   title,
@@ -42,14 +44,13 @@ export function PageTitle({
 }) {
   return (
     <div className="flex flex-col items-start gap-1.5">
-      {kicker ? <span className="kb-eyebrow">{kicker}</span> : null}
+      {kicker ? <span className="kb-eyebrow lg:hidden">{kicker}</span> : null}
       <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[30px]">{title}</h1>
       {children ? <p className="max-w-[64ch] text-[15px] text-[color:var(--kb-ink-2)]">{children}</p> : null}
     </div>
   );
 }
 
-/** No blank screens: an illustration, one sentence, one action. */
 export function EmptyState({
   title,
   children,
