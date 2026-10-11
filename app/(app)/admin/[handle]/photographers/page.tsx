@@ -1,10 +1,9 @@
-import { Disclosure } from "@/components/Disclosure";
 import type { Metadata } from "next";
 import { BillingGate } from "@/components/BillingGate";
 import { EmptyState, PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
-import { formatBytes, formatDate } from "@/lib/format";
+import { formatBytes, formatDate, formatDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { GuestLinkForm } from "./GuestLinkForm";
 import { RevokeButton } from "./RevokeButton";
@@ -54,72 +53,93 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
   const defaultExpiry = defaultExpiryDate(ctx.event.ends_on ?? ctx.event.starts_on);
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Photographers">
-        Each photographer gets their own upload link. No account, no app, and every photo is credited to them.
+        Each photographer gets their own upload link. They need no account, and every photo is credited to them.
       </PageTitle>
 
       {!canWrite(ctx.event) ? <BillingGate handle={handle} action="add photographers" deletedAt={ctx.event.photos_deleted_at} /> : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <GuestLinkForm eventId={ctx.event.id} handle={handle} albums={albums ?? []} defaultExpiry={defaultExpiry} />
-
-        <div className="flex flex-col gap-6">
-          <section className="soft-card flex flex-col gap-4 p-5">
-            <h2 className="text-[16px] font-semibold">Upload links</h2>
-            {links?.length ? (
-              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-                {links.map((link) => {
-                  const state = stateOf(link);
-                  return (
-                    <li
-                      key={link.id}
-                      className="flex flex-wrap items-center gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-3.5"
-                    >
-                      <span className="min-w-[200px] flex-1">
-                        <span className="block text-[14px] font-medium">{link.label}</span>
-                        <span className="block text-[14px] text-[color:var(--ink-70)]">
-                          {[
-                            link.revoked_at
-                              ? `Revoked ${formatDate(link.revoked_at)}`
-                              : `Created ${formatDate(link.created_at)} · expires ${formatDate(link.expires_at)}`,
-                            `${link.file_count.toLocaleString("en-AU")} file${link.file_count === 1 ? "" : "s"}`,
-                            link.byte_total > 0 ? formatBytes(link.byte_total) : null,
-                            albumTitle.get(link.album_id) ?? null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                      </span>
-                      <span className={state.tone === "live" ? "soft-chip" : "soft-chip soft-chip-muted"}>{state.label}</span>
-                      {state.tone === "live" ? <RevokeButton linkId={link.id} label={link.label} /> : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EmptyState title="No photographers yet">
-                Add one for each photographer. You can make several links for the same person, one per album.
-              </EmptyState>
-            )}
-          </section>
-
-          <Disclosure title="What the photographer sees" hint="A preview of their upload page">
-            <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
-              Your event&apos;s name and logo, the album, and one drop zone. Uploads resume if the connection drops, and
-              duplicates are skipped. Photographers with an account can instead be added as Photographer on the
-              Attendees page.
-            </p>
-            <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-4">
-              <span className="block text-[14px] text-[color:var(--ink-70)]">Uploading to {ctx.event.name}</span>
-              <span className="mt-0.5 block text-[16px] font-semibold">{albums?.[0]?.title ?? "Your album"}</span>
-              <span className="mt-3 flex h-[76px] items-center justify-center rounded-[8px] border border-dashed border-[color:var(--kb-line-input)] bg-white text-[14px] text-[color:var(--ink-70)]">
-                Drop photos and videos here
-              </span>
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="min-w-0 flex-[2_1_560px]">
+          {links?.length ? (
+            <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+              <table className="kb-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Photographer</th>
+                    <th scope="col">Album</th>
+                    <th scope="col">Uploaded</th>
+                    <th scope="col">Last upload</th>
+                    <th scope="col">Link</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {links.map((link) => {
+                    const state = stateOf(link);
+                    return (
+                      <tr key={link.id}>
+                        <td>
+                          <span className="flex min-w-[180px] items-center gap-3">
+                            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[13px] font-semibold text-[color:var(--kb-ink-2)]" aria-hidden>
+                              {initials(link.label)}
+                            </span>
+                            <span className="flex min-w-0 flex-col leading-[1.35]">
+                              <span className="font-medium">{link.label}</span>
+                              <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                                {link.revoked_at
+                                  ? `Revoked ${formatDate(link.revoked_at)}`
+                                  : state.label === "Expired"
+                                    ? `Expired ${formatDate(link.expires_at)}`
+                                    : `Expires ${formatDate(link.expires_at)}`}
+                              </span>
+                            </span>
+                          </span>
+                        </td>
+                        <td>{albumTitle.get(link.album_id) ?? "Removed album"}</td>
+                        <td>
+                          {link.file_count > 0 ? (
+                            <>
+                              <span className="mono">{link.file_count.toLocaleString("en-AU")}</span>
+                              <span className="text-[color:var(--kb-ink-3)]"> · {formatBytes(link.byte_total)}</span>
+                            </>
+                          ) : (
+                            <span className="text-[color:var(--kb-ink-3)]">Not used yet</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap">{link.last_used_at ? formatDateTime(link.last_used_at) : "Never"}</td>
+                        <td>
+                          {state.tone === "live" ? (
+                            <RevokeButton linkId={link.id} label={link.label} />
+                          ) : (
+                            <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">{state.label}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </Disclosure>
+          ) : (
+            <EmptyState title="No photographers yet">
+              Add one for each photographer. You can make several links for the same person, one per album.
+            </EmptyState>
+          )}
+          <p className="mt-3 text-[14px] text-[color:var(--kb-ink-3)]">
+            Links are shown once, when they&apos;re made. Lost one? Revoke it and make a new one.
+          </p>
+        </div>
+
+        <div className="min-w-0 flex-[1_1_320px] lg:max-w-[380px]">
+          <GuestLinkForm eventId={ctx.event.id} handle={handle} albums={albums ?? []} defaultExpiry={defaultExpiry} />
         </div>
       </div>
     </main>
   );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? "?").slice(0, 2)).toUpperCase();
 }

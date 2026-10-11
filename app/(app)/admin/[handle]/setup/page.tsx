@@ -43,7 +43,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   if (!state.requiredDone) {
     const detailsDone = state.required[0].done;
     return (
-      <main className="flex max-w-[760px] flex-col gap-6 pb-12 pt-2">
+      <main className="flex max-w-[760px] flex-col gap-6">
         <SetupSteps
           steps={state.required.map((step) => ({
             label: step.title,
@@ -62,14 +62,16 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
           </>
         ) : (
           <>
-            <PageTitle kicker={`${event.name} · Step 3 of 3`} title="Choose your event's size">
-              {inApp
-                ? "Your event starts on Free. Tell us roughly how many guests to expect, then continue."
-                : "Pick a size by how many guests you expect. Small events are free."}
-            </PageTitle>
-            <section className="soft-card p-5 sm:p-6">
-              <SizeStep eventId={event.id} expected={event.expected_guests} offers={tierOffers(event)} inApp={inApp} payable={configured} />
-            </section>
+            <div className="flex flex-col gap-2">
+              <span className="mono text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step 3 of 3</span>
+              <h1 className="text-[28px] font-semibold tracking-[-0.02em] sm:text-[32px]">Choose your event&apos;s size</h1>
+              <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
+                {inApp
+                  ? "Your event starts on Free. Tell us roughly how many guests to expect, then continue."
+                  : "Pick a size by how many guests you expect. Small events are free, and every size gets every feature."}
+              </p>
+            </div>
+            <SizeStep eventId={event.id} expected={event.expected_guests} offers={tierOffers(event)} inApp={inApp} payable={configured} />
             {!inApp && !event.plan_rate ? (
               <ClubCodeForm
                 eventId={event.id}
@@ -87,7 +89,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
   const next = state.recommended.find((step) => !step.done) ?? null;
 
   return (
-    <main className="flex max-w-[760px] flex-col gap-6 pb-12 pt-2">
+    <main className="flex max-w-[760px] flex-col gap-6">
       {justPaid ? (
         <div className="kb-ok-note" role="status">
           Paid. {event.name} is now {planName(event.plan)}.
@@ -99,58 +101,68 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
           : "Everything's in place. Photos will appear for attendees as soon as albums are published."}
       </PageTitle>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
         <div className="flex items-center justify-between text-[14px]">
-          <span className="font-medium">
+          <span className="font-semibold">
             {recommendedDone} of {state.recommended.length} done
           </span>
-          {next ? <span className="text-[color:var(--kb-ink-2)]">Next: {next.title}</span> : <span>All done</span>}
+          <span className="mono text-[color:var(--kb-ink-3)]">{Math.round((recommendedDone / state.recommended.length) * 100)}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[color:var(--kb-sand)]">
-          <div className="h-full rounded-full bg-[color:var(--kb-ok)]" style={{ width: `${(recommendedDone / state.recommended.length) * 100}%` }} />
+        <div className="flex gap-1" aria-hidden>
+          {state.recommended.map((step) => (
+            <span key={step.key} className={`h-1.5 flex-1 rounded-[3px] ${step.done ? "bg-[color:var(--kb-ok)]" : "bg-[color:var(--kb-line)]"}`} />
+          ))}
         </div>
+        <details className="group">
+          <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2 text-[14px] text-[color:var(--kb-ink-2)] [&::-webkit-details-marker]:hidden">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--kb-ok)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 12.5l4.5 4.5L19 7" />
+            </svg>
+            Done: details, who can get in and size
+          </summary>
+          <ul className="m-0 mt-2 flex list-none flex-col gap-3 p-0">
+            {state.required.map((step) => (
+              <li key={step.key} className="flex flex-wrap items-center gap-3">
+                <span className="min-w-[180px] flex-1">
+                  <span className="block text-[15px] font-medium">{step.title}</span>
+                  <span className="block text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
+                </span>
+                <Link href={step.key === "size" ? `/admin/${handle}/billing` : step.href} className="text-[14px] font-medium">
+                  {step.cta}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
 
-      <ol className="m-0 flex list-none flex-col gap-3 p-0">
+      <ol className="m-0 flex list-none flex-col overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white p-0">
         {state.recommended.map((step, index) => {
           const isNext = next?.key === step.key;
           return (
-            <li
-              key={step.key}
-              className={`flex flex-wrap items-center gap-4 rounded-[var(--kb-r-card)] border bg-[color:var(--kb-white)] p-4 ${
-                isNext ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"
-              }`}
-            >
+            <li key={step.key} className={`flex items-start gap-4 border-t border-[color:var(--kb-sand)] px-5 py-4 first:border-t-0 ${isNext ? "bg-[color:var(--kb-brand-tint)]/40" : ""}`}>
               <StepTick done={step.done} next={isNext} index={index + 1} />
-              <span className="min-w-[200px] flex-1">
-                <span className={`block text-[15px] font-medium ${step.done ? "text-[color:var(--kb-ink-2)]" : ""}`}>{step.title}</span>
-                <span className="block text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {isNext ? <span className="text-[14px] font-semibold text-[color:var(--kb-brand-deep)]">Next</span> : null}
+                <span className={`text-[16px] font-semibold ${step.done ? "text-[color:var(--kb-ink-2)]" : ""}`}>{step.title}</span>
+                <span className="text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
+                {isNext ? (
+                  <span className="mt-2">
+                    <Link href={step.href} className="btn btn-primary no-underline">
+                      {step.cta}
+                    </Link>
+                  </span>
+                ) : null}
               </span>
-              <Link href={step.href} className={`btn btn-sm no-underline ${isNext ? "btn-primary" : "btn-secondary"}`}>
-                {step.cta}
-              </Link>
+              {isNext ? null : (
+                <Link href={step.href} className="mt-1 flex-none text-[14px] font-medium">
+                  {step.cta}
+                </Link>
+              )}
             </li>
           );
         })}
       </ol>
-
-      <details className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] p-4">
-        <summary className="cursor-pointer text-[15px] font-medium">Done: details, who can get in and size</summary>
-        <ul className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
-          {state.required.map((step) => (
-            <li key={step.key} className="flex flex-wrap items-center gap-3">
-              <StepTick done next={false} index={0} />
-              <span className="min-w-[180px] flex-1">
-                <span className="block text-[15px] font-medium">{step.title}</span>
-                <span className="block text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
-              </span>
-              <Link href={step.key === "size" ? `/admin/${handle}/billing` : step.href} className="btn btn-sm btn-secondary no-underline">
-                {step.cta}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </details>
 
       <Link href={`/admin/${handle}`} className="kb-link self-start">
         Go to the overview

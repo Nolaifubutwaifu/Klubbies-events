@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { BillingGate } from "@/components/BillingGate";
-import { PageTitle, Stat } from "@/components/ui";
+import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { canWrite } from "@/lib/billing/status";
-import { formatDate } from "@/lib/format";
+import { isTier, planName } from "@/lib/billing/plans";
+import { getPlanUsage } from "@/lib/billing/usage";
+import { formatDate, isoToBrisbaneInput } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { AddMemberForm } from "./AddMemberForm";
 import { MemberTable, type MemberRow } from "./MemberTable";
 import { RosterImport } from "./RosterImport";
+import { AccessModeCards, AttendeeButtons } from "./AttendeeTools";
 
 export const metadata: Metadata = { title: "Attendees" };
 
@@ -67,34 +69,39 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
   const joined = live.filter((m) => m.firstSeenAt).length;
   const linkMode = event.access_mode === "link";
 
-  return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
-      <PageTitle kicker={event.name} title="Attendees">
-        {linkMode
-          ? "Anyone with the event link who confirms their email joins and appears here. Importing a guest list is optional."
-          : "Guest list only: people on this list can sign in, nobody else. Import the list from your ticketing tool."}{" "}
-        <Link href={`/admin/${handle}/settings#access`}>Change who can get in</Link>
-      </PageTitle>
+  const usage = await getPlanUsage(event.id);
+  const planShort = isTier(event.plan) ? planName(event.plan) : null;
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+  return (
+    <main className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <PageTitle kicker={event.name} title="Attendees">
+          <span className="mono">{joined.toLocaleString("en-AU")}</span> joined
+          {usage?.guestLimit && planShort ? (
+            <>
+              {" "}
+              of <span className="mono">{usage.guestLimit.toLocaleString("en-AU")}</span> on {planShort}
+            </>
+          ) : !linkMode ? (
+            <>
+              {" "}
+              of <span className="mono">{live.length.toLocaleString("en-AU")}</span> on the list
+            </>
+          ) : null}{" "}
+          · <span className="mono">{findableUsers.size.toLocaleString("en-AU")}</span> found their photos
+        </PageTitle>
         {writable ? (
-          <>
-            <RosterImport eventId={event.id} />
-            <AddMemberForm eventId={event.id} />
-          </>
-        ) : (
-          <BillingGate handle={handle} action="add attendees" deletedAt={ctx.event.photos_deleted_at} />
-        )}
-        <div className="flex flex-col gap-3">
-          <Stat
-            value={joined.toLocaleString("en-AU")}
-            label="Joined"
-            hint={linkMode ? "through the link or the list" : `of ${live.length.toLocaleString("en-AU")} on the list`}
-            tone={joined > 0 ? "good" : "plain"}
-          />
-          <Stat value={findableUsers.size.toLocaleString("en-AU")} label="Added a selfie" hint="to find their photos" />
-        </div>
+          <AttendeeButtons importPanel={<RosterImport eventId={event.id} />} addPanel={<AddMemberForm eventId={event.id} />} />
+        ) : null}
       </div>
+
+      {writable ? null : <BillingGate handle={handle} action="add attendees" deletedAt={ctx.event.photos_deleted_at} />}
+
+      <AccessModeCards
+        eventId={event.id}
+        mode={linkMode ? "link" : "guest_list"}
+        endsOn={event.access_ends_at ? isoToBrisbaneInput(event.access_ends_at).slice(0, 10) : ""}
+      />
 
       <MemberTable
         eventId={event.id}
@@ -111,7 +118,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
       ) : null}
 
       {imports.data?.length ? (
-        <details className="soft-card flex flex-col gap-3 p-5">
+        <details className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
           <summary className="min-h-[44px] cursor-pointer content-center text-[16px] font-semibold">Import history</summary>
           <table className="table">
             <thead>

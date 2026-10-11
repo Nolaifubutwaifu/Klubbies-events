@@ -17,17 +17,17 @@ export default function EventAnnouncement({ eventName, organiser, body, eventUrl
     .map((p) => p.trim())
     .filter(Boolean);
   return (
-    <EmailLayout preview={paragraphs[0]?.slice(0, 120) ?? `Photos from ${eventName}`}>
-      <Text style={emailStyles.kicker}>{eventName}</Text>
+    <EmailLayout preview={paragraphs[0]?.slice(0, 120) ?? `Photos from ${eventName}`} eventName={eventName}>
+      <Text style={{ ...emailStyles.kicker, marginBottom: 14 }}>From {organiser}</Text>
       {paragraphs.map((paragraph, i) => (
         <Text key={i} style={{ ...emailStyles.body, whiteSpace: "pre-line" }}>
           {paragraph}
         </Text>
       ))}
       <Link href={eventUrl} style={emailStyles.button}>
-        Open the gallery
+        Get my photos
       </Link>
-      <Text style={{ ...emailStyles.body, fontSize: 13, marginTop: 24 }}>
+      <Text style={{ ...emailStyles.body, fontSize: 14, marginTop: 24 }}>
         Sent by Klubbies Events for {organiser}, because you&apos;re on the guest list for {eventName}.{" "}
         <Link href={unsubscribeUrl} style={emailStyles.link}>
           Stop emails about this event

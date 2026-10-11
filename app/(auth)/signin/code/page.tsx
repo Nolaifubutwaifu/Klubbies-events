@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
+import { AuthHeading, AuthShell } from "@/components/AuthShell";
 import { SIGNIN_COOKIE } from "@/lib/auth/flow";
 import { authEventPreview } from "@/lib/auth/preview";
 import { CodeForm } from "./CodeForm";
@@ -22,35 +22,43 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
   return (
     <AuthShell
       event={preview}
+      backHref={restartHref}
       topLink={
         <Link href={restartHref} className="font-medium">
           Use a different email
         </Link>
       }
     >
-      <AuthHeading chip={isCreate ? "Step 1 of 2" : undefined}>Check your email</AuthHeading>
+      <span className="mb-6 flex h-14 w-14 items-center justify-center rounded-[14px] bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]" aria-hidden>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="M3 7l9 6 9-6" />
+        </svg>
+      </span>
+      <AuthHeading step={isCreate ? { at: 1, of: 2 } : undefined}>Check your email</AuthHeading>
       {/* The address is theirs, they just typed it, so spelling it back is a
           help, not a leak. */}
-      <p className="kb-lead mt-3 !text-[16px]">
+      <p className="mt-3 text-[16px] text-[color:var(--kb-ink-2)]">
         {/* Only an open-link event can say so plainly: anywhere else the
             answer stays neutral, so a guest list can't be probed. */}
-        {openLink ? "A code is on its way to " : "If that address can open the event, a code is on its way to "}
-        <strong className="font-medium text-[color:var(--kb-ink)]">{email}</strong>. It works for ten minutes.
+        {openLink ? "We sent an 8 digit code to " : "If that address can open the event, an 8 digit code is on its way to "}
+        <strong className="font-semibold text-[color:var(--kb-ink)]">{email}</strong>.
       </p>
 
-      <div className="mt-7">
-        <CodeForm event={event} />
+      <div className="mt-6">
+        <CodeForm
+          event={event}
+          help={
+            isCreate
+              ? "Check junk, then send it again."
+              : openLink
+                ? "Check junk and the spelling of your address, then send a new code."
+                : preview
+                  ? "Check junk. This event uses a guest list, so use the email you registered with; if that's what you used, ask the organiser to add you."
+                  : "Check junk. Codes only go to addresses that are already in an event: open the event's link or QR code instead, or to organise a new event, start from Create an event."
+          }
+        />
       </div>
-
-      <AuthNote>
-        {isCreate
-          ? "Nothing arrived? Check junk, then send it again."
-          : openLink
-            ? "Nothing arrived? Check junk and the spelling of your address, then send a new code."
-            : preview
-              ? "Nothing arrived? Check junk. This event uses a guest list, so use the email you registered with; if that's what you used, ask the organiser to add you."
-              : "Nothing arrived? Check junk. Codes only go to addresses that are already in an event: open the event's link or QR code instead, or to organise a new event, start from Create an event."}
-      </AuthNote>
     </AuthShell>
   );
 }

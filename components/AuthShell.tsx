@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { EventMark } from "@/components/EventMark";
 import { Brand } from "@/components/ui";
@@ -17,105 +17,181 @@ export type AuthEvent = {
   accessMode: "link" | "guest_list";
 };
 
-/**
- * Sign in, Create an event and the code step. From 1024px a panel sits beside
- * the form: the event's own letterhead when someone arrived through its link,
- * otherwise a plain statement of what this is. Never a photo: the page is
- * public, and nothing from an event's gallery shows to anyone not let in.
- */
-export function AuthShell({
-  children,
-  event = null,
-  topLink,
-  footerLinks = [
-    { href: "/privacy", label: "Privacy" },
-    { href: "/terms", label: "Terms" },
-  ],
-  panel,
-}: {
-  children: ReactNode;
-  event?: AuthEvent | null;
-  /** The one route out, top right. */
-  topLink?: ReactNode;
-  footerLinks?: { href: string; label: string }[];
-  /** Replaces the default panel on desktop. */
-  panel?: ReactNode;
-}) {
-  const meta = event ? [formatEventDates(event.startsOn, event.endsOn), event.venue].filter(Boolean).join(" · ") : "";
+const ART_PHOTOS = ["sq-5", "sq-4", "sq-7", "sq-9", "sq-6", "sq-8"];
 
+/** The default panel: Klubbies' own marketing photos fading into night. */
+function PhotoPanel() {
   return (
-    <div className="theme-soft flex min-h-dvh flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" style={eventToneStyle(event?.accentColour)}>
-      <div className="relative hidden lg:block">
-        {panel ??
-          (event ? (
-            <div className="flex h-full flex-col justify-between border-r border-[color:var(--kb-line)] bg-[color:var(--kb-white)] p-12 xl:p-16">
-              <span className="h-1 w-16 rounded-full bg-[color:var(--kb-ember)]" aria-hidden />
-              <div className="flex flex-col gap-5">
-                <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={72} />
-                {event.organisation ? <span className="kb-eyebrow">Hosted by {event.organisation}</span> : null}
-                <h2 className="serif max-w-[14ch] text-[64px]">{event.name}</h2>
-                {meta ? <p className="m-0 text-[17px] text-[color:var(--kb-ink-2)]">{meta}</p> : null}
-              </div>
-              <p className="m-0 max-w-[40ch] text-[15px] text-[color:var(--kb-ink-3)]">
-                The photos from this event are private. Confirm your email to see them and find the ones you&apos;re in.
-              </p>
-            </div>
-          ) : (
-            <div className="flex h-full flex-col justify-between bg-[color:var(--kb-ink)] p-12 text-white xl:p-16">
-              <span className="h-1 w-16 rounded-full bg-[#5b78f0]" aria-hidden />
-              <p className="serif m-0 max-w-[16ch] text-[56px] text-white">
-                Every photo from your event, in every attendee&apos;s hands.
-              </p>
-              <p className="m-0 max-w-[44ch] text-[15px] text-white/80">
-                Private galleries for corporate events and meetups. Photographers upload, attendees find themselves with
-                a selfie.
-              </p>
-            </div>
-          ))}
+    <div aria-hidden className="relative flex h-full flex-col justify-end overflow-hidden bg-[color:var(--kb-night)] p-14">
+      <div className="absolute inset-x-10 top-10 grid grid-cols-3 gap-1.5">
+        {ART_PHOTOS.map((name) => (
+          <span key={name} className="relative block aspect-square overflow-hidden rounded-[6px]">
+            <Image src={`/marketing/${name}.webp`} alt="" fill sizes="16vw" className="object-cover" />
+          </span>
+        ))}
       </div>
-
-      <div className="flex min-h-dvh flex-col">
-        <header className="flex h-16 flex-none items-center justify-between gap-3 px-5 lg:h-20 lg:px-12">
-          <Brand />
-          {topLink ? <span className="text-right text-[14px] text-[color:var(--kb-ink-2)]">{topLink}</span> : null}
-        </header>
-
-        <main className="flex flex-1 flex-col px-5 lg:justify-center lg:px-12">
-          <div className="mx-auto w-full max-w-[440px] py-4 lg:py-10">
-            {/* Phone: the event's letterhead above the form. */}
-            {event ? (
-              <div className="mb-8 flex flex-col gap-3 lg:hidden">
-                <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={52} />
-                <span className="serif text-[38px]">{event.name}</span>
-                {meta || event.organisation ? (
-                  <span className="text-[14px] text-[color:var(--kb-ink-2)]">
-                    {[meta, event.organisation ? `Hosted by ${event.organisation}` : null].filter(Boolean).join(" · ")}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            {children}
-          </div>
-        </main>
-
-        <footer className="flex flex-none justify-center gap-6 px-5 pb-6 pt-4 lg:justify-start lg:px-12">
-          {footerLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="flex min-h-[44px] items-center text-[14px] text-[color:var(--kb-ink-3)] no-underline hover:underline">
-              {link.label}
-            </Link>
-          ))}
-        </footer>
+      <span className="absolute inset-0 bg-[linear-gradient(180deg,rgb(14_20_36/0)_30%,#0e1424_72%)]" />
+      <div className="relative flex max-w-[480px] flex-col gap-4">
+        <span className="flex items-center gap-2.5 text-[14px] font-semibold uppercase tracking-[0.08em] text-[#b3c1f6]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="10" width="16" height="11" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+          </svg>
+          Private to the people who were there
+        </span>
+        <p className="serif m-0 text-[44px] leading-[1.05] text-white">Every photo you&apos;re in, at full quality.</p>
       </div>
     </div>
   );
 }
 
-/** Heading for an auth screen: names the task, never a marketing line. */
-export function AuthHeading({ children, chip }: { children: ReactNode; chip?: ReactNode }) {
+/** Someone arrived through an event's link: its letterhead, in its colour. Never a photo from its gallery. */
+function EventPanel({ event, meta }: { event: AuthEvent; meta: string }) {
   return (
-    <div>
-      {chip ? <span className="kb-eyebrow mb-2 block">{chip}</span> : null}
-      <h1 className="text-[30px] font-semibold leading-[1.1] tracking-[-0.025em] lg:text-[36px]">{children}</h1>
+    <div className="flex h-full flex-col justify-between bg-[color:var(--kb-ember)] p-14 text-white">
+      <span className="flex items-center gap-2 text-[14px] font-semibold uppercase tracking-[0.08em] text-white/90">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <rect x="4" y="10" width="16" height="11" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+        {event.accessMode === "guest_list" ? "Guest list event" : "Private gallery"}
+      </span>
+      <div className="flex flex-col gap-5">
+        <span className="rounded-[18px] bg-white/15 p-1 self-start">
+          <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={72} />
+        </span>
+        <h2 className="serif max-w-[14ch] text-[64px] leading-[1.02] !text-white">{event.name}</h2>
+        {meta ? <p className="m-0 text-[17px] text-white">{meta}</p> : null}
+        {event.organisation ? <p className="m-0 text-[17px] text-white">Hosted by {event.organisation}</p> : null}
+      </div>
+      <p className="m-0 max-w-[40ch] text-[15px] text-white">
+        The photos from this event are private. Confirm your email to see them and find the ones you&apos;re in.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Sign in, Create an event and the code step. The form sits on paper at the
+ * left; from 1024px a panel fills the right: the event's letterhead when
+ * someone arrived through its link, otherwise night with marketing photos.
+ * Event screens keep ink buttons (attendee), the rest go Klubbies blue.
+ */
+export function AuthShell({
+  children,
+  event = null,
+  topLink,
+  footer,
+  panel,
+  backHref,
+}: {
+  children: ReactNode;
+  event?: AuthEvent | null;
+  /** The one route out, top right. */
+  topLink?: ReactNode;
+  /** The small print under the form column. */
+  footer?: ReactNode;
+  /** Replaces the default panel on desktop. */
+  panel?: ReactNode;
+  /** A later step for someone from an event's link: on a phone, a slim bar with Back instead of the letterhead. */
+  backHref?: string;
+}) {
+  const meta = event ? [formatEventDates(event.startsOn, event.endsOn), event.venue].filter(Boolean).join(" · ") : "";
+
+  return (
+    <div
+      className={`theme-soft flex min-h-dvh flex-1 flex-col bg-[color:var(--kb-cream)] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] ${event ? "" : "kb-branded"}`}
+      style={eventToneStyle(event?.accentColour)}
+    >
+      <div className="flex min-h-dvh flex-col px-5 pb-6 pt-5 sm:px-10 sm:pt-8">
+        <header className={`flex flex-none items-center justify-between gap-4 ${event ? "max-lg:hidden" : ""}`}>
+          <Brand size={18} />
+          {topLink ? <span className="text-right text-[14px] text-[color:var(--kb-ink-2)]">{topLink}</span> : null}
+        </header>
+
+        {/* Phone: the event's letterhead first, a band of its colour with the mark over the edge. */}
+        {event && backHref ? (
+          <div className="-mx-5 -mt-5 flex h-16 items-center gap-2 border-b border-[color:var(--kb-line)] px-3 sm:-mx-10 sm:-mt-8 lg:hidden">
+            <a href={backHref} aria-label="Back" className="flex h-11 w-11 items-center justify-center rounded-[8px] text-[color:var(--kb-ink)]">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </a>
+            <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={32} />
+            <span className="truncate text-[15px] font-semibold">{event.name}</span>
+          </div>
+        ) : event ? (
+          <div className="-mx-5 -mt-5 sm:-mx-10 sm:-mt-8 lg:hidden">
+            <div className="relative h-[150px] bg-[color:var(--kb-ember)]">
+              <span className="absolute -bottom-8 left-5 rounded-[18px] bg-[color:var(--kb-cream)] p-1 sm:left-10">
+                <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={72} />
+              </span>
+            </div>
+            <div className="mx-auto flex max-w-[440px] flex-col gap-2 px-5 pt-12 sm:px-0">
+              {event.accessMode === "guest_list" ? <GuestListLabel /> : null}
+              <span className="serif text-[38px] leading-[1.02]">{event.name}</span>
+              {meta ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">{meta}</span> : null}
+              {event.organisation ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">Hosted by {event.organisation}</span> : null}
+            </div>
+          </div>
+        ) : null}
+
+        <main className="flex flex-1 flex-col">
+          <div className={`mx-auto w-full max-w-[440px] lg:my-auto lg:py-12 ${event ? "pb-8 pt-6" : "my-auto py-8"}`}>{children}</div>
+        </main>
+
+        <footer className="flex-none text-[14px] text-[color:var(--kb-ink-3)]">
+          {footer ??
+            (event ? (
+              <p className="m-0 flex items-center justify-center gap-2 lg:justify-start">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="4" y="10" width="16" height="11" rx="2" />
+                  <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                </svg>
+                Private gallery by Klubbies Events · <a href="/privacy">Privacy</a>
+              </p>
+            ) : (
+              <p className="m-0">
+                By continuing you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.
+              </p>
+            ))}
+        </footer>
+      </div>
+
+      <div className="relative hidden lg:block">{panel ?? (event ? <EventPanel event={event} meta={meta} /> : <PhotoPanel />)}</div>
+    </div>
+  );
+}
+
+function GuestListLabel() {
+  return (
+    <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[color:var(--kb-ember)]">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="4" y="10" width="16" height="11" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </svg>
+      Guest list event
+    </span>
+  );
+}
+
+/** Heading for an auth screen: names the task, never a marketing line. */
+export function AuthHeading({ children, step }: { children: ReactNode; step?: { at: number; of: number } }) {
+  return (
+    <div className="flex flex-col gap-3.5">
+      {step ? (
+        <div className="flex items-center gap-3">
+          <span className="mono text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
+            Step {step.at} of {step.of}
+          </span>
+          <span className="flex flex-1 gap-1" aria-hidden>
+            {Array.from({ length: step.of }, (_, i) => (
+              <span key={i} className={`h-1 flex-1 rounded-[2px] ${i < step.at ? "bg-[color:var(--kb-brand)]" : "bg-[color:var(--kb-line)]"}`} />
+            ))}
+          </span>
+        </div>
+      ) : null}
+      <h1 className="serif text-[44px] leading-none sm:text-[56px]">{children}</h1>
     </div>
   );
 }

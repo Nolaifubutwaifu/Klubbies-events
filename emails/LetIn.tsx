@@ -7,7 +7,7 @@ export type LetInProps = { name: string; eventName: string; eventUrl: string };
 export default function LetIn({ name, eventName, eventUrl }: LetInProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
-    <EmailLayout preview={`Your photos from ${eventName} are ready`}>
+    <EmailLayout preview={`Your photos from ${eventName} are ready`} eventName={eventName}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>Your photos are ready</Text>
       <Text style={emailStyles.body}>

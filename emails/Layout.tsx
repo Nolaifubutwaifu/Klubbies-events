@@ -7,15 +7,55 @@ const fontFamily = "Geist, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 // email can be counted.
 const site = (process.env.APP_URL ?? "https://events.klubbies.app").replace(/\/$/, "");
 
-export function EmailLayout({ preview, children }: { preview: string; children: ReactNode }) {
+/** "Brisbane Product Summit 2026" → "BPS", for the event's tile in the header. */
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter((word) => /[a-z]/i.test(word))
+    .slice(0, 3)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
+/**
+ * Every email: the event it's about at the top (its tile and name), the
+ * message, then the privacy line and the credit. Emails not about one event
+ * carry the Klubbies Events name instead.
+ */
+export function EmailLayout({ preview, eventName = null, children }: { preview: string; eventName?: string | null; children: ReactNode }) {
   return (
     <Html lang="en">
       <Head />
       <Preview>{preview}</Preview>
       <Body style={{ background: "#f7f7f5", color: "#16181d", fontFamily, margin: 0, padding: "32px 0" }}>
         <Container style={{ maxWidth: 520, background: "#ffffff", border: "1px solid #e4e4df", borderRadius: 10 }}>
-          <Section style={{ padding: "18px 28px", borderBottom: "1px solid #e4e4df" }}>
-            <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Klubbies Events</Text>
+          <Section style={{ padding: "16px 28px", borderBottom: "1px solid #e4e4df" }}>
+            {eventName ? (
+              <Text style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: "28px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 28,
+                    height: 28,
+                    lineHeight: "28px",
+                    borderRadius: 7,
+                    background: "#16181d",
+                    color: "#ffffff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    verticalAlign: "middle",
+                    marginRight: 10,
+                  }}
+                >
+                  {initials(eventName)}
+                </span>
+                <span style={{ verticalAlign: "middle" }}>{eventName}</span>
+              </Text>
+            ) : (
+              <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Klubbies Events</Text>
+            )}
           </Section>
           <Section style={{ padding: "28px" }}>{children}</Section>
           <Hr style={{ borderColor: "#e4e4df", margin: 0 }} />
@@ -44,7 +84,7 @@ export const emailStyles = {
   /** Inline links: underlined and dark enough (7:1), not told apart by colour alone. */
   link: { color: "#1f379b", textDecoration: "underline" },
   kicker: { fontSize: 14, fontWeight: 600, color: "#2b4acb", margin: 0 },
-  heading: { fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "8px 0 12px" },
+  heading: { fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "8px 0 14px" },
   body: { fontSize: 16, lineHeight: 1.6, color: "#4a4d55", margin: "0 0 16px" },
   button: {
     background: "#16181d",

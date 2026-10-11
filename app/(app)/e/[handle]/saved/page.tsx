@@ -61,32 +61,23 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col">
-      <section>
-        <div className="w-full px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <span className="kb-eyebrow">{ctx.event.name}</span>
-              <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Saved</h1>
-              <p className="mt-2 text-[15px] text-[color:var(--ink-70)]">Your favourites and downloads from this event.</p>
-            </div>
+    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-5 pb-16 pt-7 sm:px-10 sm:pt-12">
+      {total === 0 && downloads.length === 0 ? (
+        <div className="flex flex-col gap-5">
+          <h1 className="serif text-[44px] leading-none">Saved</h1>
+          <div className="soft-dashed flex max-w-[640px] flex-col items-start gap-3 p-7">
+            <h2 className="text-[18px] font-semibold">Nothing saved yet</h2>
+            <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
+              Open any photo and tap the heart. It turns up here at full quality, ready to download.
+            </p>
+            <Link href={`/e/${handle}`} className="btn btn-primary no-underline">
+              Browse the albums
+            </Link>
           </div>
-
-          {total === 0 && downloads.length === 0 ? (
-            <div className="soft-dashed mt-8 flex max-w-[640px] flex-col items-start gap-3 p-7">
-              <h2 className="text-[18px] font-semibold">Nothing saved yet</h2>
-              <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
-                Open any photo and tap Favourite. It turns up here at full quality, ready to download.
-              </p>
-              <Link href={`/e/${handle}`} className="btn btn-primary no-underline">
-                Browse the albums
-              </Link>
-            </div>
-          ) : (
-            <SavedTabs handle={handle} groups={groups} downloads={downloads} />
-          )}
         </div>
-      </section>
+      ) : (
+        <SavedTabs handle={handle} groups={groups} downloads={downloads} />
+      )}
     </main>
   );
 }

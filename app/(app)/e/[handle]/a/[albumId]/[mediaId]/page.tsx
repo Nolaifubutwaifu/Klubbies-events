@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { getEventContext } from "@/lib/auth/session";
-import { formatBytes, formatDuration, formatLongDate, formatTime } from "@/lib/format";
+import { formatBytes, formatDateTime, formatDuration, formatLongDate } from "@/lib/format";
 import { matchForMedia, photosOfYouSequence } from "@/lib/faces/queries";
 import { logAccess } from "@/lib/media/access";
 import { favouritedIds } from "@/lib/media/favourites";
@@ -120,7 +120,7 @@ export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumI
         width: media.width,
         height: media.height,
         duration: formatDuration(media.duration_seconds),
-        takenAt: formatTime(media.captured_at),
+        takenAt: formatDateTime(media.captured_at).replace(", ", " · "),
         photographer: media.photographer_name,
       }}
       details={details}

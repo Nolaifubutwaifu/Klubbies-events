@@ -7,36 +7,40 @@ export type StepMark = { label: string; state: "done" | "current" | "todo" };
  */
 export function SetupSteps({ steps }: { steps: StepMark[] }) {
   return (
-    <ol className="m-0 grid list-none grid-cols-3 gap-2 p-0 sm:flex sm:flex-wrap sm:items-center" aria-label="Setup steps">
+    <ol className="m-0 flex list-none items-center gap-2 p-0 sm:gap-3" aria-label="Setup steps">
       {steps.map((step, index) => (
-        <li
-          key={step.label}
-          className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2"
-          aria-current={step.state === "current" ? "step" : undefined}
-        >
-          {index > 0 ? <span className="hidden h-px w-8 bg-[color:var(--kb-line-strong)] sm:block" aria-hidden /> : null}
-          <span
-            className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[14px] font-semibold"
-            style={
-              step.state === "done"
-                ? { background: "var(--kb-ok)", color: "#fff" }
-                : step.state === "current"
-                  ? { background: "var(--kb-brand)", color: "#fff" }
-                  : { background: "var(--kb-sand)", color: "var(--kb-ink-2)", boxShadow: "inset 0 0 0 1px var(--kb-line-strong)" }
-            }
-            aria-hidden
-          >
-            {step.state === "done" ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12.5l4.5 4.5L19 7" />
-              </svg>
-            ) : (
-              index + 1
-            )}
-          </span>
-          <span className={`text-[14px] ${step.state === "current" ? "font-semibold text-[color:var(--kb-ink)]" : "text-[color:var(--kb-ink-2)]"}`}>
-            {step.label}
-            <span className="sr-only">{step.state === "done" ? " (done)" : step.state === "current" ? " (current step)" : ""}</span>
+        <li key={step.label} className={`flex min-w-0 items-center gap-2 sm:gap-3 ${index > 0 ? "flex-1" : ""}`} aria-current={step.state === "current" ? "step" : undefined}>
+          {index > 0 ? (
+            <span className={`h-px min-w-4 flex-1 ${step.state === "todo" ? "bg-[color:var(--kb-line-strong)]" : "bg-[color:var(--kb-ok)]"}`} aria-hidden />
+          ) : null}
+          <span className="flex min-w-0 items-center gap-2">
+            <span
+              className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[14px] font-semibold"
+              style={
+                step.state === "done"
+                  ? { background: "var(--kb-ok)", color: "#fff" }
+                  : step.state === "current"
+                    ? { background: "var(--kb-brand)", color: "#fff" }
+                    : { background: "var(--kb-white)", color: "var(--kb-ink-2)", boxShadow: "inset 0 0 0 1px var(--kb-line-strong)" }
+              }
+              aria-hidden
+            >
+              {step.state === "done" ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12.5l4.5 4.5L19 7" />
+                </svg>
+              ) : (
+                index + 1
+              )}
+            </span>
+            <span
+              className={`truncate text-[14px] max-sm:hidden ${step.state === "current" ? "font-semibold text-[color:var(--kb-ink)]" : "text-[color:var(--kb-ink-2)]"} ${
+                step.state === "current" ? "max-sm:!inline" : ""
+              }`}
+            >
+              {step.label}
+              <span className="sr-only">{step.state === "done" ? " (done)" : step.state === "current" ? " (current step)" : ""}</span>
+            </span>
           </span>
         </li>
       ))}

@@ -46,7 +46,7 @@ export function SizeStep({
           required
           value={guests}
           onChange={(ev) => setGuests(ev.target.value)}
-          className="input mt-1 w-[180px] !text-[18px]"
+          className="input mono mt-1 w-[180px] !text-[18px]"
           placeholder="e.g. 120"
         />
       </label>
@@ -57,7 +57,7 @@ export function SizeStep({
           price="A$0"
           detail={`Up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos`}
           highlighted={freeFits}
-          note={count > TIERS.free.guests ? `More than ${TIERS.free.guests} guests is too many for Free` : null}
+          note={count > TIERS.free.guests ? `Too small for ${count.toLocaleString("en-AU")} guests` : null}
         >
           <button type="submit" name="tier" value="free" className={`btn ${freeFits || inApp ? "btn-primary" : "btn-secondary"} w-full`} disabled={pending}>
             {pending ? "Saving…" : "Continue with Free"}
@@ -72,7 +72,13 @@ export function SizeStep({
                 price={`A$${offer.amount}`}
                 detail={`Up to ${TIERS[offer.to].guests.toLocaleString("en-AU")} guests and ${TIERS[offer.to].photos.toLocaleString("en-AU")} photos`}
                 highlighted={fits === offer.to}
-                note={offer.rate === "club" ? "Club rate" : null}
+                note={
+                  count > TIERS[offer.to].guests
+                    ? `Too small for ${count.toLocaleString("en-AU")} guests`
+                    : offer.rate === "club"
+                      ? "Club rate"
+                      : null
+                }
               >
                 <button
                   type="submit"
@@ -81,7 +87,7 @@ export function SizeStep({
                   className={`btn ${fits === offer.to ? "btn-primary" : "btn-secondary"} w-full`}
                   disabled={pending || !payable}
                 >
-                  {pending ? "Opening checkout…" : `Pay A$${offer.amount}`}
+                  {pending ? "Opening checkout…" : `Pay A$${offer.amount} and continue`}
                 </button>
               </SizeCard>
             ))}
@@ -113,20 +119,18 @@ function SizeCard({
 }) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-[var(--kb-r-card)] border bg-[color:var(--kb-white)] p-4 ${
+      className={`flex flex-col gap-2.5 rounded-[12px] border bg-[color:var(--kb-white)] p-5 ${
         highlighted ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <span>
-          <span className="block text-[16px] font-semibold">{name}</span>
-          <span className="block text-[14px] text-[color:var(--kb-ink-2)]">{detail}</span>
-        </span>
-        <span className="text-[22px] font-semibold tracking-[-0.02em]">{price}</span>
-      </div>
-      {highlighted ? <span className="kb-pill-brand w-fit">Fits your guests</span> : null}
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[17px] font-semibold">{name}</span>
+        {highlighted ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Fits your guests</span> : null}
+      </span>
+      <span className="mono text-[28px] font-medium leading-none tracking-[-0.02em]">{price}</span>
+      <span className="text-[14px] text-[color:var(--kb-ink-2)]">{detail}</span>
       {note ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">{note}</span> : null}
-      <div className="mt-auto">{children}</div>
+      <div className="mt-auto pt-1">{children}</div>
     </div>
   );
 }

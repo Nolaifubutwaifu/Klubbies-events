@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
+import { formatEventDates } from "@/lib/format";
 import { ACCENT_SWATCHES, eventToneStyle, SWATCH_NAMES } from "@/lib/theme";
 import { updateEventAction, type ActionState } from "../../actions";
 
@@ -29,7 +30,9 @@ export function SettingsForm({
   const preview = eventToneStyle(accent);
 
   return (
-    <form action={action} className="soft-card flex flex-col gap-4 p-5">
+    <form action={action} className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start gap-8">
+      <div className="flex min-w-0 flex-[3_1_380px] flex-col gap-4">
       <label className="field">
         Event name
         <input className="input" name="name" defaultValue={name} required maxLength={120} />
@@ -64,10 +67,10 @@ export function SettingsForm({
       </label>
 
       <div className="flex flex-col gap-3">
-        <span className="text-[14px] font-medium">Brand colour</span>
-        <span className="text-[14px] leading-normal text-[color:var(--ink-70)]">
-          Used for links, highlights and the selected tab on every attendee screen. Buttons stay dark so they read on
-          any colour, and light colours are darkened until text on white is readable.
+        <span className="text-[14px] font-medium">Event colour</span>
+        <span className="text-[14px] leading-normal text-[color:var(--kb-ink-3)]">
+          Used for bands, highlights and the selected tab on attendee screens. Darkened automatically if text on it would
+          be hard to read.
         </span>
         <input type="hidden" name="accentColour" value={accent} />
         {/* A named radio group: arrow keys move between colours and the
@@ -129,15 +132,39 @@ export function SettingsForm({
             </button>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] p-3" style={preview} aria-hidden>
-          <span className="soft-chip">Your photos</span>
-          <span className="text-[14px] font-medium text-[color:var(--kb-ember)] underline underline-offset-4">See all 23</span>
-          <input type="checkbox" checked readOnly tabIndex={-1} />
-          {/* Attendee screens keep ink buttons; the organiser side's blue isn't theirs. */}
-          <span className="btn btn-primary btn-sm" style={{ background: "var(--kb-ink)", borderColor: "var(--kb-ink)" }}>
-            Download all
-          </span>
+      </div>
+      </div>
+
+      {/* What attendees see, live as the colour changes. */}
+      <div className="flex min-w-0 flex-[2_1_260px] flex-col gap-2 lg:sticky lg:top-24">
+        <span className="text-[14px] font-medium text-[color:var(--kb-ink-2)]">Preview</span>
+        <div className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white" style={preview} aria-hidden>
+          <div className="flex flex-col gap-1.5 bg-[color:var(--tone-support,var(--kb-sand))] p-4">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[color:var(--kb-ember)] text-[12px] font-bold text-white">
+              {name
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 3)
+                .map((word) => word[0])
+                .join("")
+                .toUpperCase()}
+            </span>
+            <span className="serif text-[24px] leading-[1.05]">{name}</span>
+            <span className="text-[14px] text-[color:var(--kb-ink-2)]">{[formatEventDates(startsOn, endsOn), venue].filter(Boolean).join(" · ") || "Date and venue"}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 p-4">
+            <span className="text-[15px] font-semibold">23 photos of you</span>
+            {/* Attendee screens keep ink buttons; the organiser side's blue isn't theirs. */}
+            <span className="rounded-[8px] bg-[color:var(--kb-ink)] px-3 py-2 text-[14px] font-semibold text-white">Download all</span>
+          </div>
+          <div className="flex border-t border-[color:var(--kb-line)] text-center text-[14px]">
+            <span className="flex-1 py-2.5 font-semibold text-[color:var(--kb-ember)]">Photos</span>
+            <span className="flex-1 py-2.5 text-[color:var(--kb-ink-3)]">Your photos</span>
+            <span className="flex-1 py-2.5 text-[color:var(--kb-ink-3)]">Saved</span>
+          </div>
         </div>
+        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">Buttons stay ink so your colour never makes them hard to read.</p>
+      </div>
       </div>
 
       <FormMessage state={state} />

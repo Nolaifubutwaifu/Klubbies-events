@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
 import { EventMark } from "@/components/EventMark";
 import { EventSwitcher } from "@/components/EventSwitcher";
+import { HeaderBack } from "@/components/HeaderBack";
 import { HeaderNav } from "@/components/HeaderNav";
 import { BrandTile } from "@/components/ui";
 import { displayNameFor } from "@/lib/auth/display-name";
@@ -51,19 +52,29 @@ export async function AppHeader({
   return (
     <>
       <header className="relative z-30 border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
-        <div className="relative mx-auto flex min-h-[60px] w-full max-w-[1320px] items-center gap-3 px-4 sm:px-6">
-          <Link href="/events" aria-label="Your events" className="hidden flex-none sm:block">
-            <BrandTile size={26} />
-          </Link>
-          <span className="hidden h-6 w-px bg-[color:var(--kb-line)] sm:block" aria-hidden />
+        <div
+          className={`relative mx-auto flex w-full items-center gap-2.5 ${
+            area === "attendee" ? "min-h-[60px] max-w-[1200px] pl-4 pr-3 sm:px-10 md:min-h-16" : "min-h-[60px] max-w-[1320px] gap-3 px-4 sm:px-6"
+          }`}
+        >
+          {area === "organiser" ? (
+            <>
+              <Link href="/events" aria-label="Your events" className="hidden flex-none sm:block">
+                <BrandTile size={26} />
+              </Link>
+              <span className="hidden h-6 w-px bg-[color:var(--kb-line)] sm:block" aria-hidden />
+            </>
+          ) : (
+            <HeaderBack handle={event.handle} />
+          )}
           <Link
             href={area === "organiser" ? `/admin/${event.handle}` : `/e/${event.handle}`}
             className="flex min-w-0 items-center gap-2.5 text-ink no-underline"
           >
-            <EventMark name={event.name} logoUrl={logoUrl} accentColour={event.accent_colour} size={30} />
+            <EventMark name={event.name} logoUrl={logoUrl} accentColour={event.accent_colour} size={area === "attendee" ? 32 : 30} />
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-semibold leading-tight">{event.name}</span>
-              {dates ? <span className="block truncate text-[14px] leading-tight text-[color:var(--kb-ink-3)]">{dates}</span> : null}
+              {dates && area === "organiser" ? <span className="block truncate text-[14px] leading-tight text-[color:var(--kb-ink-3)]">{dates}</span> : null}
             </span>
           </Link>
           <EventSwitcher currentEventId={event.id} area={area} />
@@ -84,7 +95,10 @@ export async function AppHeader({
                 </Link>
               )
             ) : null}
-            <AccountMenu name={displayName} avatarUrl={avatarUrl} />
+            {/* Attendees on a phone reach their profile from the tab bar's You. */}
+            <span className={area === "attendee" ? "hidden md:inline-flex" : "inline-flex"}>
+              <AccountMenu name={displayName} avatarUrl={avatarUrl} />
+            </span>
           </div>
         </div>
       </header>

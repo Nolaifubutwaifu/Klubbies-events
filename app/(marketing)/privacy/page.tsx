@@ -84,6 +84,7 @@ export default function PrivacyPage() {
     <LegalPage
       doc="privacy"
       title="Privacy at Klubbies Events"
+      summary="In short: only people the organiser lets in see an event's photos, face search is your choice, and photos, attendee details and faceprints are stored in Sydney."
       updated="27 September 2026"
       minutes={Math.max(1, Math.round(words / 220))}
       sections={SECTIONS.map(([title, body]) => ({ title, body: <p>{body}</p> }))}

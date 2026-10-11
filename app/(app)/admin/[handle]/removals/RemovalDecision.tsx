@@ -21,24 +21,19 @@ export function RemovalDecision({ requestId }: { requestId: string }) {
 
   return (
     <>
-      <div className="flex flex-wrap gap-2.5">
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={pending}
-          onClick={() => run(() => restorePhotoAction(requestId))}
-        >
+      <div className="flex flex-wrap gap-2 md:flex-col">
+        <button type="button" className="btn btn-primary" disabled={pending} onClick={() => setConfirming(true)}>
+          Keep it removed
+        </button>
+        <button type="button" className="btn btn-secondary" disabled={pending} onClick={() => run(() => restorePhotoAction(requestId))}>
           Put it back
         </button>
-        <button type="button" className="btn btn-danger btn-sm" disabled={pending} onClick={() => setConfirming(true)}>
-          Delete it for good
-        </button>
       </div>
-      {error ? <p className="m-0 mt-2 text-[14px] text-accent-800">{error}</p> : null}
+      {error ? <p className="kb-error m-0 mt-2">{error}</p> : null}
 
-      <Dialog open={confirming} onClose={() => setConfirming(false)} title="Delete this photo for good?">
+      <Dialog open={confirming} onClose={() => setConfirming(false)} title="Keep it removed for good?">
         <p className="text-[15px]">
-          The original goes with it and there is no undo. Anyone who already downloaded a copy keeps theirs.
+          The photo and its original are deleted, and there is no undo. Anyone who already downloaded a copy keeps theirs.
         </p>
         <div className="dialog-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirming(false)}>
@@ -50,7 +45,7 @@ export function RemovalDecision({ requestId }: { requestId: string }) {
             disabled={pending}
             onClick={() => run(() => confirmRemovalAction(requestId))}
           >
-            {pending ? "Deleting…" : "Delete it"}
+            {pending ? "Removing…" : "Keep it removed"}
           </button>
         </div>
       </Dialog>

@@ -1,8 +1,16 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { AlbumScreen, loadAlbum } from "@/app/(app)/e/[handle]/a/[albumId]/AlbumScreen";
 
-// Album editing now happens in the member view, with the edit panel opened on
-// top, so admins see exactly what members see.
-export default async function AdminAlbumRedirect(props: PageProps<"/admin/[handle]/albums/[albumId]">) {
+type Props = PageProps<"/admin/[handle]/albums/[albumId]">;
+
+export async function generateMetadata(props: Props): Promise<Metadata> {
   const { handle, albumId } = await props.params;
-  redirect(`/e/${handle}/a/${albumId}?edit=1`);
+  const data = await loadAlbum(handle, albumId);
+  return { title: data?.album.title ?? "Album" };
+}
+
+/** An album inside the organiser layout: the same screen attendees get, plus its figures and settings. */
+export default async function OrganiserAlbumPage(props: Props) {
+  const { handle, albumId } = await props.params;
+  return <AlbumScreen organiser handle={handle} albumId={albumId} search={await props.searchParams} />;
 }

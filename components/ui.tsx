@@ -2,23 +2,26 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 /** The product's own mark: a small ink tile and the name. */
-export function Brand({ href = "/", size = 17 }: { href?: string; size?: number }) {
+export function Brand({ href = "/", size = 17, tone = "dark" }: { href?: string; size?: number; tone?: "dark" | "light" }) {
+  const light = tone === "light";
   return (
-    <Link href={href} className="inline-flex items-center gap-2 text-ink no-underline" aria-label="Klubbies Events home">
-      <BrandTile size={Math.round(size * 1.45)} />
+    <Link href={href} className={`inline-flex items-center gap-2 no-underline ${light ? "text-white" : "text-ink"}`} aria-label="Klubbies Events home">
+      <BrandTile size={Math.round(size * 1.45)} tone={tone} />
       <span className="font-semibold tracking-[-0.02em]" style={{ fontSize: size }}>
-        Klubbies <span className="font-normal text-[color:var(--kb-ink-3)]">Events</span>
+        Klubbies <span className={`font-normal ${light ? "text-[color:var(--kb-night-ink)]" : "text-[color:var(--kb-ink-3)]"}`}>Events</span>
       </span>
     </Link>
   );
 }
 
-export function BrandTile({ size = 24 }: { size?: number }) {
+/** The mark. On night (the site footer) it turns over: white tile, night letter. */
+export function BrandTile({ size = 24, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
+  const light = tone === "light";
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden className="flex-none">
-      <rect width="64" height="64" rx="14" fill="#16181d" />
-      <path d="M19 15h8v15l11.5-15h9.5L35 30.5 48.5 49H39l-12-16.5V49h-8z" fill="#f7f7f5" />
-      <circle cx="48" cy="16" r="5" fill="#5b78f0" />
+      <rect width="64" height="64" rx="14" fill={light ? "#ffffff" : "#16181d"} />
+      <path d="M19 15h8v15l11.5-15h9.5L35 30.5 48.5 49H39l-12-16.5V49h-8z" fill={light ? "#0e1424" : "#f7f7f5"} />
+      <circle cx="48" cy="16" r="5" fill={light ? "#2b4acb" : "#5b78f0"} />
     </svg>
   );
 }
@@ -27,7 +30,9 @@ export function Kicker({ children, className = "" }: { children: ReactNode; clas
   return <span className={`soft-chip ${className}`}>{children}</span>;
 }
 
-/** Page heading for the organiser screens: Geist, dense, one line of help. */
+/** Page heading for the organiser screens: Geist, dense, one line of help.
+    The event's name sits in the top bar's breadcrumb from 1024px, so the
+    kicker above the title only shows on smaller screens. */
 export function PageTitle({
   kicker,
   title,
@@ -39,14 +44,13 @@ export function PageTitle({
 }) {
   return (
     <div className="flex flex-col items-start gap-1.5">
-      {kicker ? <span className="kb-eyebrow">{kicker}</span> : null}
+      {kicker ? <span className="kb-eyebrow lg:hidden">{kicker}</span> : null}
       <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[30px]">{title}</h1>
       {children ? <p className="max-w-[64ch] text-[15px] text-[color:var(--kb-ink-2)]">{children}</p> : null}
     </div>
   );
 }
 
-/** No blank screens: an illustration, one sentence, one action. */
 export function EmptyState({
   title,
   children,

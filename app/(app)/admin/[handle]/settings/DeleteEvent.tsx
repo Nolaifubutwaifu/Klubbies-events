@@ -12,7 +12,7 @@ export function DeleteEvent({ eventId, eventName }: { eventId: string; eventName
   const matches = typed.trim().toLowerCase() === eventName.trim().toLowerCase();
 
   return (
-    <div className="soft-card flex flex-col gap-3 p-5">
+    <div className="flex flex-col gap-3">
       <span className="text-[15px] font-medium">Delete this event</span>
       <p className="m-0 max-w-[62ch] text-[14px] text-[color:var(--ink-70)]">
         Takes the event offline for attendees and photographers straight away. Any organiser can restore it from Your

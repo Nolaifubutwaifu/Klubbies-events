@@ -18,14 +18,14 @@ export function DeleteAccount({ handOver, closes }: { handOver: EventRef[]; clos
 
   if (!open) {
     return (
-      <button type="button" className="btn btn-secondary btn-sm self-start" onClick={() => setOpen(true)}>
+      <button type="button" className="min-h-[52px] text-[15px] font-medium text-[#b42318]" onClick={() => setOpen(true)}>
         Delete my account
       </button>
     );
   }
 
   return (
-    <div className="soft-card flex flex-col gap-3 p-5 text-[14px] leading-normal">
+    <div className="kb-group flex flex-col gap-3 p-5 text-[14px] leading-normal">
       <h2 className="text-[18px] font-semibold">Delete your account</h2>
       <p className="m-0">
         This deletes your sign-in, your profile and photo, your saved photos, and your face recognition selfie and

@@ -15,8 +15,9 @@ const LINKS: { key: Exclude<SiteSection, null>; href: string; label: string }[] 
 ];
 
 /**
- * The one nav for Home, Features, Pricing, FAQ and the legal pages. Below 640px it is
- * the logo, a plain Log in link and a menu button: nothing can wrap.
+ * The one nav for Home, Features, Pricing, FAQ and the legal pages: sticky, on
+ * paper. Below 1024px the links fold into the Menu sheet, and below 640px the
+ * two buttons go too, so nothing can wrap.
  */
 export function SiteNav({ current = null, inApp = false }: { current?: SiteSection; inApp?: boolean }) {
   const links = inApp ? LINKS.filter((link) => link.key !== "pricing") : LINKS;
@@ -58,51 +59,46 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
   }, [open]);
 
   return (
-    <header className="border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
-      <div className="kb-wrap flex h-16 items-center gap-3 sm:h-20">
-        <Brand />
+    <header className="sticky top-0 z-40 border-b border-[color:var(--kb-line)] bg-[rgb(247_247_245/0.94)] backdrop-blur-[6px]">
+      <div className="kb-wrap flex h-16 items-center justify-between gap-6 sm:h-[72px]">
+        <Brand size={18} />
 
-        <nav aria-label="Main" className="ml-auto hidden items-center gap-7 lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
           {links.map((link) => (
             <Link
               key={link.key}
               href={link.href}
               aria-current={current === link.key ? "page" : undefined}
-              className={`flex min-h-[44px] items-center whitespace-nowrap text-[15px] no-underline ${
+              className={`flex min-h-[44px] items-center whitespace-nowrap px-1.5 text-[15px] font-medium no-underline ${
                 current === link.key
-                  ? "font-medium text-[color:var(--kb-ink)] underline decoration-[color:var(--kb-ember)] decoration-2 underline-offset-[8px]"
-                  : "font-medium text-[color:var(--kb-ink-2)] hover:text-[color:var(--kb-ink)]"
+                  ? "text-[color:var(--kb-ink)] shadow-[inset_0_-2px_0_var(--kb-brand)]"
+                  : "text-[color:var(--kb-ink-2)] hover:text-[color:var(--kb-ink)]"
               }`}
             >
               {link.label}
             </Link>
           ))}
-          <span className="flex items-center gap-3">
-            <Link href="/signin" className="btn btn-secondary no-underline">
-              Sign in
-            </Link>
-            <Link href="/start" className="btn btn-primary no-underline">
-              Create an event
-            </Link>
-          </span>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 lg:hidden">
-          <Link href="/signin" className="flex min-h-[44px] items-center px-2 text-[15px] font-medium text-[color:var(--kb-ink)] no-underline">
+        <div className="flex items-center gap-2">
+          <Link href="/signin" className="btn btn-quiet hidden no-underline sm:inline-flex">
             Sign in
+          </Link>
+          <Link href="/start" className="btn btn-primary hidden no-underline sm:inline-flex">
+            Create an event
           </Link>
           <button
             ref={menuButton}
             type="button"
-            className="kb-icon-btn"
-            aria-label="Open menu"
+            className="btn btn-secondary lg:hidden"
             aria-expanded={open}
             aria-controls="site-menu"
             onClick={() => setOpen(true)}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden>
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
+            Menu
           </button>
         </div>
       </div>

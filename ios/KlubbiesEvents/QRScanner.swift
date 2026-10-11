@@ -46,7 +46,7 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private let session = AVCaptureSession()
     private var preview: AVCaptureVideoPreviewLayer?
     private let hint = UILabel()
-    private let frameView = UIView()
+    private let frameView = CornerFrameView()
     private var handled = false
     private var lastRejected: String?
 
@@ -56,52 +56,87 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
 
         let title = UILabel()
         title.text = "Scan the event's QR code"
-        title.font = .systemFont(ofSize: 20, weight: .semibold)
+        title.font = .systemFont(ofSize: 22, weight: .semibold)
         title.textColor = .white
         title.textAlignment = .center
 
-        hint.text = "It's on the poster, the slides or the table cards."
+        hint.text = "It's on the poster, the closing slide or the email from the organiser."
         hint.font = .systemFont(ofSize: 15)
-        hint.textColor = UIColor(white: 1, alpha: 0.85)
+        hint.textColor = UIColor(red: 0.835, green: 0.843, blue: 0.867, alpha: 1) // #D5D7DD
         hint.textAlignment = .center
         hint.numberOfLines = 0
 
-        frameView.layer.borderColor = UIColor.white.cgColor
-        frameView.layer.borderWidth = 3
-        frameView.layer.cornerRadius = 16
         frameView.isUserInteractionEnabled = false
 
+        // Cancel in white, beside a round torch button: bright at the venue,
+        // dim in a dark room.
         var closeConfig = UIButton.Configuration.filled()
         closeConfig.title = "Cancel"
-        closeConfig.baseBackgroundColor = UIColor(white: 1, alpha: 0.18)
-        closeConfig.baseForegroundColor = .white
-        closeConfig.cornerStyle = .medium
-        closeConfig.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 28, bottom: 12, trailing: 28)
+        closeConfig.baseBackgroundColor = .white
+        closeConfig.baseForegroundColor = AppConfig.ink
+        closeConfig.cornerStyle = .capsule
+        closeConfig.contentInsets = NSDirectionalEdgeInsets(top: 15, leading: 32, bottom: 15, trailing: 32)
+        closeConfig.attributedTitle = AttributedString("Cancel", attributes: AttributeContainer([.font: UIFont.systemFont(ofSize: 16, weight: .semibold)]))
         let close = UIButton(configuration: closeConfig, primaryAction: UIAction { [weak self] _ in self?.dismiss(animated: true) })
         close.accessibilityLabel = "Cancel scanning"
 
+        var torchConfig = UIButton.Configuration.filled()
+        torchConfig.image = UIImage(systemName: "flashlight.off.fill")
+        torchConfig.baseBackgroundColor = UIColor(white: 1, alpha: 0.16)
+        torchConfig.baseForegroundColor = .white
+        torchConfig.cornerStyle = .capsule
+        let torch = UIButton(configuration: torchConfig)
+        torch.accessibilityLabel = "Turn on the torch"
+        torch.addAction(UIAction { [weak self, weak torch] _ in
+            guard let self, let torch else { return }
+            let on = self.toggleTorch()
+            torch.configuration?.image = UIImage(systemName: on ? "flashlight.on.fill" : "flashlight.off.fill")
+            torch.accessibilityLabel = on ? "Turn off the torch" : "Turn on the torch"
+        }, for: .primaryActionTriggered)
+
+        let buttons = UIStackView(arrangedSubviews: [torch, close])
+        buttons.axis = .horizontal
+        buttons.spacing = 12
+        buttons.alignment = .center
+
         let text = UIStackView(arrangedSubviews: [title, hint])
         text.axis = .vertical
-        text.spacing = 6
-        for subview in [frameView, text, close] as [UIView] {
+        text.spacing = 8
+        for subview in [frameView, text, buttons] as [UIView] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
         let safe = view.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
-            text.topAnchor.constraint(equalTo: safe.topAnchor, constant: 28),
+            text.topAnchor.constraint(equalTo: safe.topAnchor, constant: 40),
             text.leadingAnchor.constraint(equalTo: safe.leadingAnchor, constant: 24),
             text.trailingAnchor.constraint(equalTo: safe.trailingAnchor, constant: -24),
             frameView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             frameView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            frameView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.7),
+            frameView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.67),
             frameView.heightAnchor.constraint(equalTo: frameView.widthAnchor),
-            close.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            close.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -28),
-            close.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            buttons.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            buttons.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -32),
+            torch.widthAnchor.constraint(equalToConstant: 52),
+            torch.heightAnchor.constraint(equalToConstant: 52),
+            close.heightAnchor.constraint(greaterThanOrEqualToConstant: 52),
         ])
 
         startCamera()
+    }
+
+    /// Turns the torch on or off; returns whether it is now on.
+    private func toggleTorch() -> Bool {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else { return false }
+        do {
+            try device.lockForConfiguration()
+            let on = device.torchMode != .on
+            device.torchMode = on ? .on : .off
+            device.unlockForConfiguration()
+            return on
+        } catch {
+            return false
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -188,5 +223,59 @@ final class QRScannerViewController: UIViewController, AVCaptureMetadataOutputOb
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
             hint.text = "That code isn't a Klubbies Events link. Scan the QR code the organiser shared for the event."
         }
+    }
+}
+
+/// The viewfinder: four rounded corner brackets and a blue scan line.
+final class CornerFrameView: UIView {
+    private let corners = CAShapeLayer()
+    private let line = CALayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        corners.strokeColor = UIColor.white.cgColor
+        corners.fillColor = UIColor.clear.cgColor
+        corners.lineWidth = 4
+        corners.lineCap = .round
+        layer.addSublayer(corners)
+        line.backgroundColor = AppConfig.dot.cgColor
+        line.shadowColor = AppConfig.dot.cgColor
+        line.shadowOpacity = 0.7
+        line.shadowRadius = 8
+        line.shadowOffset = .zero
+        layer.addSublayer(line)
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let w = bounds.width, h = bounds.height
+        let arm: CGFloat = min(w, h) * 0.22
+        let r: CGFloat = 16
+        let path = UIBezierPath()
+        // Top left
+        path.move(to: CGPoint(x: 0, y: arm))
+        path.addLine(to: CGPoint(x: 0, y: r))
+        path.addQuadCurve(to: CGPoint(x: r, y: 0), controlPoint: .zero)
+        path.addLine(to: CGPoint(x: arm, y: 0))
+        // Top right
+        path.move(to: CGPoint(x: w - arm, y: 0))
+        path.addLine(to: CGPoint(x: w - r, y: 0))
+        path.addQuadCurve(to: CGPoint(x: w, y: r), controlPoint: CGPoint(x: w, y: 0))
+        path.addLine(to: CGPoint(x: w, y: arm))
+        // Bottom right
+        path.move(to: CGPoint(x: w, y: h - arm))
+        path.addLine(to: CGPoint(x: w, y: h - r))
+        path.addQuadCurve(to: CGPoint(x: w - r, y: h), controlPoint: CGPoint(x: w, y: h))
+        path.addLine(to: CGPoint(x: w - arm, y: h))
+        // Bottom left
+        path.move(to: CGPoint(x: arm, y: h))
+        path.addLine(to: CGPoint(x: r, y: h))
+        path.addQuadCurve(to: CGPoint(x: 0, y: h - r), controlPoint: CGPoint(x: 0, y: h))
+        path.addLine(to: CGPoint(x: 0, y: h - arm))
+        corners.frame = bounds
+        corners.path = path.cgPath
+        line.frame = CGRect(x: 20, y: h / 2 - 1, width: w - 40, height: 2)
     }
 }

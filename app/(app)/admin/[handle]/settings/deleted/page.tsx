@@ -32,7 +32,7 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
       .order("deleted_at", { ascending: false }),
     admin
       .from("media")
-      .select("id, kind, thumb_path, poster_path, deleted_at, deleted_by, albums!media_album_id_fkey!inner(title, deleted_at)")
+      .select("id, kind, original_filename, thumb_path, poster_path, deleted_at, deleted_by, albums!media_album_id_fkey!inner(title, deleted_at)")
       .eq("event_id", eventId)
       .not("deleted_at", "is", null)
       .is("albums.deleted_at", null)
@@ -84,6 +84,7 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
     deletedOn: formatDate(a.deleted_at),
     deletedBy: (a.deleted_by && nameOf.get(a.deleted_by)) || null,
     restoreBy: formatDate(restorableUntil(a.deleted_at as string)),
+    daysLeft: daysUntil(restorableUntil(a.deleted_at as string)),
   }));
   const items: BinItem[] = (media ?? []).map((m) => {
     const path = m.thumb_path ?? m.poster_path;
@@ -95,18 +96,17 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
       deletedOn: formatDate(m.deleted_at),
       deletedBy: (m.deleted_by && nameOf.get(m.deleted_by)) || null,
       restoreBy: formatDate(restorableUntil(m.deleted_at as string)),
+      filename: m.original_filename,
+      daysLeft: daysUntil(restorableUntil(m.deleted_at as string)),
     };
   });
 
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Recently deleted">
-        Albums, photos and videos you deleted stay here for 30 days, hidden from attendees, then they&apos;re deleted for
-        good.
+        Deleted photos and albums wait here for 30 days, then go for good. Attendees can&apos;t see them.{" "}
+        <Link href={`/admin/${handle}/settings`}>Back to Settings</Link>
       </PageTitle>
-      <Link href={`/admin/${handle}/settings`} className="self-start text-[14px]">
-        Back to Settings
-      </Link>
 
       {albumRows.length === 0 && items.length === 0 ? (
         <EmptyState title="Nothing deleted recently.">Anything you delete in the next 30 days can be restored from here.</EmptyState>
@@ -115,4 +115,9 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
       )}
     </main>
   );
+}
+
+/** Whole days until a date, never below zero. */
+function daysUntil(when: string | Date): number {
+  return Math.max(0, Math.ceil((new Date(when).getTime() - Date.now()) / 86_400_000));
 }

@@ -49,54 +49,34 @@ function hasSwiped(): boolean {
 const SHEET =
   "absolute inset-x-0 bottom-0 z-10 rounded-t-[26px] bg-[color:var(--kb-cream)] shadow-[0_-18px_40px_rgba(0,0,0,0.45)] sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[480px] sm:max-w-[calc(100%-48px)] sm:-translate-x-1/2 sm:rounded-[26px]";
 
-/** A bottom-bar action: favourite, download, and More for everything else. */
+/** A bottom-bar action: save or download, details, removal. */
 function Action({
   label,
   onClick,
   href,
-  active = false,
-  quiet = false,
-  filled = false,
-  pressed,
   children,
 }: {
   label: string;
-  /** For toggles (Save): announced as on or off. */
-  pressed?: boolean;
   onClick?: () => void;
   href?: string;
-  active?: boolean;
-  quiet?: boolean;
-  filled?: boolean;
   children: React.ReactNode;
 }) {
-  const colour = active ? "var(--kb-ember-on-dark)" : quiet ? "rgba(255,255,255,0.9)" : "#ffffff";
   const inner = (
     <>
-      <svg
-        width="23"
-        height="23"
-        viewBox="0 0 24 24"
-        fill={filled ? colour : "none"}
-        stroke={colour}
-        strokeWidth={filled ? 1.6 : 2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         {children}
       </svg>
       {label}
     </>
   );
   const className =
-    "flex min-h-[52px] flex-1 cursor-pointer flex-col items-center justify-center gap-[3px] border-0 bg-transparent text-[14px] font-bold no-underline";
+    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border-0 bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21]";
   return href ? (
-    <a href={href} className={className} style={{ color: colour }}>
+    <a href={href} className={className}>
       {inner}
     </a>
   ) : (
-    <button type="button" onClick={onClick} className={className} style={{ color: colour }} aria-pressed={pressed}>
+    <button type="button" onClick={onClick} className={className}>
       {inner}
     </button>
   );
@@ -266,33 +246,52 @@ export function Viewer({
   };
 
   const round =
-    "absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-0 bg-[rgba(20,16,15,0.5)] text-white no-underline backdrop-blur-sm transition-colors hover:bg-[rgba(20,16,15,0.75)]";
+    "absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-0 bg-[rgb(11_12_15/0.6)] text-white no-underline transition-colors hover:bg-[#22252c]";
 
   return (
     // The one screen that leaves the cream behind: a photo is easier to read
     // against near-black, and nothing else on this page competes with it.
-    <main ref={root} className="relative flex h-full min-h-0 flex-1 flex-col bg-[#14100f]">
-      <div className="flex flex-none items-center gap-3 px-3.5 pb-2.5 pt-3.5 sm:px-6">
+    <main ref={root} className="relative flex h-full min-h-0 flex-1 flex-col bg-[#0b0c0f] text-white">
+      <div className="flex h-16 flex-none items-center justify-between gap-2 px-2 sm:px-4">
         <Link
           href={albumHref}
           aria-label="Close photo"
-          className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/[0.14] text-white no-underline"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-white no-underline hover:bg-[#22252c]"
         >
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </Link>
-        <div className="min-w-0 flex-1 text-center">
-          <div className="truncate text-[14px] font-bold text-white">{albumTitle}</div>
-          <div className="text-[14px] text-white/[0.68]">
+        <div className="flex min-w-0 flex-1 flex-col items-center leading-[1.3]">
+          <span className="max-w-full truncate text-[15px] font-semibold">{albumTitle}</span>
+          <span className="mono text-[14px] text-[#a9acb5]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
             {countNoun ? ` ${countNoun}` : ""}
-            {current.takenAt ? ` · ${current.takenAt}` : ""}
-            {current.photographer ? ` · By ${current.photographer}` : ""}
-          </div>
+          </span>
         </div>
-        {/* Keeps the title centred; More lives in the bottom bar. */}
-        <span className="h-11 w-11 flex-none" aria-hidden />
+        <button
+          type="button"
+          aria-label="Favourite"
+          aria-pressed={saved}
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-full hover:bg-[#22252c]"
+          style={{ color: saved ? "#ff8a7a" : "#ffffff" }}
+          onClick={() => {
+            const next = !saved;
+            setSaved(next);
+            startTransition(async () => {
+              try {
+                setSaved((await toggleFavouriteAction(current.id)).favourited);
+              } catch {
+                setSaved(!next);
+                setMessage("Couldn't save that. Check your connection and try again.");
+              }
+            });
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={saved ? 1.5 : 1.9} strokeLinejoin="round" aria-hidden>
+            <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />
+          </svg>
+        </button>
       </div>
 
       <div
@@ -323,34 +322,48 @@ export function Viewer({
             height={current.height ?? undefined}
           />
         ) : (
-          <div className="text-white/70">This item can&apos;t be previewed.</div>
+          <div className="text-[#c4c7cf]">This item can&apos;t be previewed.</div>
         )}
         {prevHref ? (
-          <Link href={prevHref} replace scroll={false} className={`${round} left-2.5`} aria-label="Previous">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+          <Link href={prevHref} replace scroll={false} className={`${round} left-2.5 max-sm:hidden`} aria-label="Previous">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
               <path d="M14 6l-6 6 6 6" />
             </svg>
           </Link>
         ) : null}
         {nextHref ? (
-          <Link href={nextHref} replace scroll={false} className={`${round} right-2.5`} aria-label="Next">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+          <Link href={nextHref} replace scroll={false} className={`${round} right-2.5 max-sm:hidden`} aria-label="Next">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
               <path d="M10 6l6 6-6 6" />
             </svg>
           </Link>
         ) : null}
-        {nextHref && !swiped ? (
+        {matched ? (
+          <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-[rgb(11_12_15/0.72)] px-3 py-1.5 text-[14px]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="9" r="4" />
+              <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+            </svg>
+            You&apos;re in this
+          </span>
+        ) : nextHref && !swiped ? (
           // Until the first swipe, and it fades after a few seconds anyway:
           // a caption sitting on every photo was in the way of the photo.
-          <span className="soft-hint-fade pointer-events-none absolute bottom-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(20,16,15,0.55)] px-3 py-1 text-[14px] text-white/80 sm:hidden">
+          <span className="soft-hint-fade pointer-events-none absolute bottom-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[rgb(11_12_15/0.72)] px-3 py-1 text-[14px] text-[#e6e7ea] sm:hidden">
             Swipe for the next one
           </span>
         ) : null}
       </div>
 
+      {current.photographer || current.takenAt ? (
+        <div className="flex flex-none justify-between gap-3 px-5 pb-1.5 pt-3.5 text-[14px] text-[#c4c7cf]">
+          <span className="truncate">{current.photographer ? `Photo by ${current.photographer}` : ""}</span>
+          <span className="mono flex-none">{current.takenAt}</span>
+        </div>
+      ) : null}
+
       {/* Filmstrip: where you are in the night, without leaving the photo. */}
-      {/* Centred under the photo, scrolling only when the night is long. */}
-      <div ref={stripRef} className="mx-auto flex max-w-full flex-none gap-1 overflow-x-auto px-3 pt-2.5">
+      <div ref={stripRef} aria-label="More photos" className="mx-auto flex max-w-full flex-none gap-1 overflow-x-auto px-3 py-2.5">
         {strip.map((item, i) => {
           const here = item.id === current.id;
           const at = position + i - strip.findIndex((s) => s.id === current.id);
@@ -362,8 +375,8 @@ export function Viewer({
               scroll={false}
               aria-current={here ? "true" : undefined}
               aria-label={`${item.kind === "video" ? "Video" : "Photo"} ${at} of ${total}`}
-              className="block h-[46px] w-[46px] flex-none overflow-hidden rounded-[9px] bg-white/10"
-              style={here ? { border: "2px solid var(--kb-ember-on-dark)" } : { opacity: 0.5 }}
+              className="block h-12 w-12 flex-none overflow-hidden rounded-[4px] bg-white/10"
+              style={here ? { boxShadow: "0 0 0 2px #ffffff" } : { opacity: 0.55 }}
             >
               {item.thumbUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
@@ -374,48 +387,39 @@ export function Viewer({
         })}
       </div>
 
-      <div className="flex flex-none px-2 pb-6 pt-3">
-        <Action
-          label={saved ? "Favourited" : "Favourite"}
-          pressed={saved}
-          active={saved}
-          filled={saved}
-          onClick={() => {
-            const next = !saved;
-            setSaved(next);
-            startTransition(async () => {
-              try {
-                setSaved((await toggleFavouriteAction(current.id)).favourited);
-              } catch {
-                setSaved(!next);
-                setMessage("Couldn't save that. Check your connection and try again.");
-              }
-            });
-          }}
-        >
-          <path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.4 12 20 12 20Z" />
-        </Action>
+      <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5">
         {canDownload ? (
           <Action
-            label={saving ? "Saving…" : "Download"}
+            label={saving ? "Saving…" : env === "app" ? "Save to Photos" : "Download"}
             href={env === "web" ? `/api/media/${current.id}/download` : undefined}
             onClick={env === "app" ? saveToPhotos : env !== "web" ? () => setSheet("social") : undefined}
           >
-            <path d="M12 4v11M7 11l5 5 5-5" />
-            <path d="M5 20h14" />
+            {env === "app" ? (
+              <>
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <circle cx="9" cy="10" r="2" />
+                <path d="M21 16l-5-5-9 9" />
+              </>
+            ) : (
+              <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
+            )}
           </Action>
         ) : null}
-        <Action label="More" quiet onClick={() => setSheet(sheet === "more" ? "none" : "more")}>
-          <circle cx="5" cy="12" r="1.6" />
-          <circle cx="12" cy="12" r="1.6" />
-          <circle cx="19" cy="12" r="1.6" />
+        <Action label="Details" onClick={() => setSheet(sheet === "more" ? "none" : "more")}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v6M12 7.5v.5" />
         </Action>
-      </div>
+        {canAskRemoval ? (
+          <Action label={asked ? "Requested" : "Remove"} onClick={() => setSheet("removal")}>
+            <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+          </Action>
+        ) : null}
+      </nav>
 
       {message ? (
         <div
           role="status"
-          className="pointer-events-none absolute bottom-[104px] left-1/2 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-[14px] font-bold text-ink shadow-lg"
+          className="pointer-events-none absolute bottom-[170px] left-1/2 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-[14px] font-bold text-ink shadow-lg"
         >
           {message}
         </div>
@@ -457,11 +461,6 @@ export function Viewer({
                   }
                 >
                   This isn&rsquo;t me
-                </button>
-              ) : null}
-              {canAskRemoval ? (
-                <button type="button" className="kb-menu-item !min-h-[52px] !text-[16px]" data-danger="true" onClick={() => setSheet("removal")}>
-                  {asked ? "Removal requested" : "Request removal"}
                 </button>
               ) : null}
           </div>

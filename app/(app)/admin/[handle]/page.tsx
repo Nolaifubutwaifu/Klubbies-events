@@ -3,20 +3,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
-import { Disclosure } from "@/components/Disclosure";
-import { PlanMeters } from "@/components/PlanMeters";
-import { PageTitle, Stat } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { personName } from "@/lib/auth/display-name";
 import { accessHasEnded } from "@/lib/auth/session";
-import { overflowWindow } from "@/lib/billing/plans";
+import { isTier, overflowWindow, planName } from "@/lib/billing/plans";
 import { canWrite } from "@/lib/billing/status";
 import { getPlanUsage } from "@/lib/billing/usage";
 import { isNativeAppRequest } from "@/lib/native-app-server";
-import { formatDateTime, formatEventDates, formatLongDate, plural } from "@/lib/format";
+import { formatDate, formatDateTime, formatEventDates, formatLongDate, plural } from "@/lib/format";
 import { listStackedAlbums } from "@/lib/media/album-list";
 import { EXPIRE_AFTER_DAYS, STUCK_AFTER_MS } from "@/lib/media/constants";
 import { eventLink, eventQrSvg } from "@/lib/share";
+import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -171,7 +169,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           key: "unfinished",
           title: `${plural(stuckCount, "upload")} didn't finish`,
           body: `In ${stuckAlbums.map(([, title]) => title).join(", ")}. Attendees can't see them. Upload them again or remove them; they clear themselves after ${EXPIRE_AFTER_DAYS} days.`,
-          href: stuckAlbums[0] ? `/e/${handle}/a/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
+          href: stuckAlbums[0] ? `/admin/${handle}/albums/${stuckAlbums[0][0]}` : `/admin/${handle}/albums`,
           cta: "Fix",
           urgent: true,
         }
@@ -209,62 +207,112 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
       : null,
   ].filter((task): task is NonNullable<typeof task> => task !== null);
 
-  // Once photos are live the setup nag steps back: what matters now is what's
-  // broken (failed uploads, a full allowance), so Needs you comes first.
-  const live = (published.count ?? 0) > 0;
-  const needsYou = (
-    <section className="soft-card flex flex-col gap-3 p-5">
-      <div className="flex items-center gap-3">
-        <h2 className="text-[16px] font-semibold">Needs you</h2>
-        {tasks.length ? (
-          <span className="kb-chip-warn">{tasks.length}</span>
-        ) : (
-          <span className="kb-chip-ok">All clear</span>
-        )}
-      </div>
-      {tasks.length ? (
-        <ul className="m-0 flex list-none flex-col p-0">
-          {tasks.map((task, index) => (
-            <li
-              key={task.key}
-              className={`flex flex-wrap items-center gap-3 py-3 ${index > 0 ? "border-t border-[color:var(--kb-line)]" : ""}`}
-            >
-              <span
-                className="h-[7px] w-[7px] flex-none rounded-full"
-                style={{ background: task.urgent ? "var(--kb-warn)" : "var(--kb-line-strong)" }}
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-medium">{task.title}</span>
-                <span className="block text-[14px] text-[color:var(--ink-70)]">{task.body}</span>
-              </span>
-              <Link href={task.href} className="btn btn-sm btn-secondary no-underline">
-                {task.cta}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="m-0 text-[14px] text-[color:var(--ink-70)]">Nothing waiting on you.</p>
-      )}
-    </section>
+  const planShort = isTier(event.plan) ? planName(event.plan) : null;
+
+  // Per album: views and downloads by attendees, for the table. Four albums at
+  // most, two counts each, in parallel.
+  const albumStats = new Map(
+    await Promise.all(
+      stacked.map(async (album) => {
+        const count = (actions: string[]) =>
+          supabase
+            .from("access_events")
+            .select("id, media!inner(album_id)", { count: "exact", head: true })
+            .eq("event_id", eventId)
+            .eq("media.album_id", album.id)
+            .in("action", actions);
+        const [views, downloadsHere] = await Promise.all([count(["view"]), count(["download", "zip"])]);
+        return [album.id, { views: views.count ?? 0, downloads: downloadsHere.count ?? 0 }] as const;
+      }),
+    ),
   );
 
+  // The newest finished uploads, for the strip at the foot.
+  const { data: latest } = await supabase
+    .from("media")
+    .select("id, album_id, thumb_path, poster_path, photographer_name, created_at, albums!media_album_id_fkey(title)")
+    .eq("event_id", eventId)
+    .eq("status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(12);
+  const latestUrls = await signPaths(
+    supabase,
+    (latest ?? []).map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
+    SIGNED_URL_TTL.thumb,
+  );
+  const newest = latest?.[0];
+
+  const joinedCount = usage?.guestsJoined ?? joined.count ?? 0;
+  const found = findable.count ?? 0;
+  const numbers: { label: string; value: number; of: number | null; caption: string; tone: "brand" | "ok" | null }[] = [
+    {
+      label: "Photos and videos",
+      value: readyItems.count ?? 0,
+      of: usage?.photoLimit ?? null,
+      caption:
+        stuckCount > 0
+          ? `${stuckCount.toLocaleString("en-AU")} unfinished`
+          : usage?.photoLimit && planShort
+            ? `of ${usage.photoLimit.toLocaleString("en-AU")} on ${planShort}`
+            : `${plural(published.count ?? 0, "album")} live`,
+      tone: "brand",
+    },
+    {
+      label: "Attendees joined",
+      value: joinedCount,
+      of: usage?.guestLimit ?? null,
+      caption:
+        event.access_mode === "guest_list"
+          ? `of ${(onList.count ?? 0).toLocaleString("en-AU")} on the list`
+          : usage?.guestLimit && planShort
+            ? `of ${usage.guestLimit.toLocaleString("en-AU")} on ${planShort}`
+            : "through the event link",
+      tone: "brand",
+    },
+    {
+      label: "Found their photos",
+      value: found,
+      of: joinedCount || null,
+      caption: joinedCount ? `${Math.round((found / joinedCount) * 100)}% of those who joined` : "added a selfie",
+      tone: "ok",
+    },
+    { label: "Downloads", value: downloads.count ?? 0, of: null, caption: "Originals and zips", tone: null },
+  ];
+
+  const taskIcon = (urgent: boolean) =>
+    urgent ? (
+      <>
+        <path d="M12 3 2.5 20h19z" />
+        <path d="M12 10v4M12 17.2v.1" />
+      </>
+    ) : (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v4l2.5 2.5" />
+      </>
+    );
+
   return (
-    <main className="flex flex-col gap-6 pb-12 pt-2">
+    <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <PageTitle kicker={formatEventDates(event.starts_on, event.ends_on) || "Overview"} title={event.name}>
-          {closed
-            ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
-            : event.access_ends_at
-              ? `Open to attendees until ${formatLongDate(event.access_ends_at)}. ${event.access_mode === "link" ? "Anyone with the link can join." : "Guest list only."}`
-              : event.access_mode === "link"
-                ? "Anyone with the link can join."
-                : "Guest list only."}
-        </PageTitle>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
+          <p className="text-[15px] text-[color:var(--kb-ink-2)]">
+            {closed
+              ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
+              : [
+                  event.access_ends_at ? `Gallery open until ${formatDate(event.access_ends_at)}` : formatEventDates(event.starts_on, event.ends_on),
+                  event.access_mode === "link" ? "Anyone with the link can join" : "Guest list only",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+          </p>
+        </div>
         <div className="flex items-center gap-2">
-          {/* One primary button per screen: while setup steps remain, it's the Next step's. */}
-          <Link href={`/admin/${handle}/upload`} className={`btn ${nextStep && !live ? "btn-secondary" : "btn-primary"} no-underline`}>
+          <Link href={`/admin/${handle}/upload`} className="btn btn-secondary no-underline">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
             New album
           </Link>
           <MoreMenu iconOnly label="More actions">
@@ -275,148 +323,186 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </div>
       </div>
 
-      {live && tasks.length ? needsYou : null}
-
-      {nextStep && live ? (
-        <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
-          Setup {setup.recommended.filter((step) => step.done).length} of {setup.recommended.length} done · Next:{" "}
-          <Link href={nextStep.href}>{nextStep.title}</Link> ·{" "}
-          <Link href={`/admin/${handle}/setup`}>All steps</Link>
-        </p>
-      ) : nextStep ? (
-        <section className="kb-brand-band flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6" aria-label="Next step">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
+      {nextStep ? (
+        <section aria-label="Next step" className="flex flex-wrap items-center gap-5 rounded-[12px] border-[1.5px] border-[color:var(--kb-brand)] bg-white px-6 py-5">
+          <span className="kb-icon-well" aria-hidden>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </span>
+          <span className="flex min-w-0 flex-[1_1_320px] flex-col">
+            <span className="text-[14px] font-semibold text-[color:var(--kb-brand-deep)]">
               Next step · {setup.recommended.filter((step) => step.done).length} of {setup.recommended.length} done
             </span>
-            <span className="text-[20px] font-semibold tracking-[-0.01em]">{nextStep.title}</span>
-            <span className="text-[15px] text-[color:var(--kb-ink-2)]">{nextStep.hint}</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href={nextStep.href} className="btn btn-primary no-underline">
-              {nextStep.cta}
-            </Link>
-            <Link href={`/admin/${handle}/setup`} className="kb-link text-[14px]">
-              All steps
-            </Link>
-          </div>
+            <span className="text-[17px] font-semibold">{nextStep.title}</span>
+            <span className="text-[color:var(--kb-ink-2)]">{nextStep.hint}</span>
+          </span>
+          <Link href={nextStep.href} className="btn btn-primary no-underline">
+            {nextStep.cta}
+          </Link>
         </section>
       ) : null}
 
       {/* The numbers mean nothing before the first photo, so they wait for it. */}
       {hasPhotos ? (
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
-          <Stat
-            value={(readyItems.count ?? 0).toLocaleString("en-AU")}
-            label="Photos and videos"
-            hint={stuckCount > 0 ? `${stuckCount.toLocaleString("en-AU")} unfinished` : `${plural(published.count ?? 0, "album")} live`}
-            tone={stuckCount > 0 ? "attention" : "plain"}
-          />
-          {/* Guests as the plan counts them, so this matches the meter below;
-              the organiser team is left out. */}
-          <Stat
-            value={(usage?.guestsJoined ?? joined.count ?? 0).toLocaleString("en-AU")}
-            label="Attendees joined"
-            hint={event.access_mode === "guest_list" ? `of ${(onList.count ?? 0).toLocaleString("en-AU")} on the list` : "through the event link"}
-          />
-          <Stat
-            value={(findable.count ?? 0).toLocaleString("en-AU")}
-            label="Found their photos"
-            hint="added a selfie"
-            tone={(findable.count ?? 0) > 0 ? "good" : "plain"}
-          />
-          <Stat
-            value={(downloads.count ?? 0).toLocaleString("en-AU")}
-            label="Downloads"
-            hint="by attendees, single files and zips"
-            tone={(downloads.count ?? 0) > 0 ? "good" : "plain"}
-          />
-        </div>
-      ) : null}
-
-      {usage && (usage.guestLimit || usage.photoLimit) ? (
-        <section className="soft-card flex flex-col gap-3 p-5" aria-label="Plan usage">
-          <PlanMeters
-            guestsJoined={usage.guestsJoined}
-            guestLimit={usage.guestLimit}
-            guestsPaused={usage.guestsPaused}
-            unitsUsed={usage.unitsUsed}
-            photoLimit={usage.photoLimit}
-          />
+        <section aria-label="Numbers" className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+          {numbers.map((n) => (
+            <div key={n.label} className="flex flex-col gap-2.5 rounded-[10px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
+              <span className="text-[14px] text-[color:var(--kb-ink-2)]">{n.label}</span>
+              <span className="mono text-[32px] font-medium leading-none tracking-[-0.02em]">{n.value.toLocaleString("en-AU")}</span>
+              <span className="relative h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]" aria-hidden>
+                {n.of && n.tone ? (
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-[2px]"
+                    style={{ width: `${Math.min(100, (n.value / n.of) * 100)}%`, background: n.tone === "ok" ? "var(--kb-ok)" : "var(--kb-brand)" }}
+                  />
+                ) : null}
+              </span>
+              <span className="text-[14px] text-[color:var(--kb-ink-3)]">{n.caption}</span>
+            </div>
+          ))}
         </section>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        <div className="flex min-w-0 flex-col gap-6">
-          {live && tasks.length ? null : needsYou}
+      <div className="flex flex-wrap items-start gap-6">
+        <div className="flex min-w-0 flex-[2_1_520px] flex-col gap-6">
+          <section aria-labelledby="needs" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+            <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
+              <h2 id="needs" className="text-[17px] font-semibold">
+                Needs you
+              </h2>
+              {tasks.length ? (
+                <span className="kb-chip bg-[color:var(--kb-warn-tint)] text-[color:var(--kb-warn)]">{plural(tasks.length, "item")}</span>
+              ) : (
+                <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">All clear</span>
+              )}
+            </div>
+            {tasks.length ? (
+              tasks.map((task, index) => (
+                <Link
+                  key={task.key}
+                  href={task.href}
+                  className={`flex items-center gap-3.5 px-5 py-4 text-ink no-underline hover:bg-[color:var(--kb-cream)] ${index > 0 ? "border-t border-[color:var(--kb-sand)]" : ""}`}
+                >
+                  <span
+                    className={`flex h-9 w-9 flex-none items-center justify-center rounded-[8px] ${task.urgent ? "bg-[color:var(--kb-warn-tint)] text-[color:var(--kb-warn)]" : "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]"}`}
+                    aria-hidden
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      {taskIcon(task.urgent)}
+                    </svg>
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-semibold">{task.title}</span>
+                    <span className="text-[14px] text-[color:var(--kb-ink-2)]">{task.body}</span>
+                  </span>
+                  <span className="sr-only">{task.cta}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--kb-ink-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </Link>
+              ))
+            ) : (
+              <p className="m-0 px-5 py-4 text-[14px] text-[color:var(--kb-ink-2)]">Nothing waiting on you.</p>
+            )}
+          </section>
 
-          <section className="soft-card flex flex-col gap-4 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[16px] font-semibold">Albums</h2>
+          <section aria-labelledby="alb" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+            <div className="flex items-center justify-between px-5 py-4">
+              <h2 id="alb" className="text-[17px] font-semibold">
+                Albums
+              </h2>
               <Link href={`/admin/${handle}/albums`} className="text-[14px] font-medium">
-                All {(albumCount.count ?? 0).toLocaleString("en-AU")}
+                All albums
               </Link>
             </div>
             {stacked.length ? (
-              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
-                {stacked.map((album) => (
-                  <Link key={album.id} href={`/e/${handle}/a/${album.id}`} className="flex flex-col gap-2 text-ink no-underline">
-                    <span className="soft-tile relative block aspect-[4/3]">
-                      {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" /> : null}
-                      {album.status !== "published" ? (
-                        <span className="absolute left-2 top-2 rounded-[6px] bg-[rgb(22_24_29/0.78)] px-2 py-0.5 text-[14px] font-medium text-white">
-                          {album.status === "hidden" ? "Hidden" : "Draft"}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span>
-                      <span className="block truncate text-[14px] font-medium">{album.title}</span>
-                      <span className="block text-[14px] text-[color:var(--ink-70)]">
-                        {plural(album.photoCount + album.videoCount, "file")}
-                      </span>
-                    </span>
-                  </Link>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="kb-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Album</th>
+                      <th scope="col">Photos</th>
+                      <th scope="col">Views</th>
+                      <th scope="col">Downloads</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stacked.map((album) => {
+                      const stats = albumStats.get(album.id);
+                      return (
+                        <tr key={album.id}>
+                          <td>
+                            <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 font-medium text-ink no-underline">
+                              <span className="block h-10 w-10 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                                {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
+                              </span>
+                              {album.title}
+                            </Link>
+                          </td>
+                          <td className="mono">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
+                          <td className="mono">{(stats?.views ?? 0).toLocaleString("en-AU")}</td>
+                          <td className="mono">{(stats?.downloads ?? 0).toLocaleString("en-AU")}</td>
+                          <td>
+                            <AlbumStatus status={album.status} publishAt={album.publishAt} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No albums yet. Create one, then add photographers.</p>
+              <p className="m-0 px-5 pb-5 text-[14px] text-[color:var(--kb-ink-2)]">No albums yet. Create one, then add photographers.</p>
             )}
           </section>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-6">
-          <section className="soft-card flex flex-col gap-3 p-5">
-            <h2 className="text-[16px] font-semibold">Share with attendees</h2>
+        <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-6">
+          <section aria-labelledby="sh" className="flex flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
+            <h2 id="sh" className="text-[17px] font-semibold">
+              Share with attendees
+            </h2>
             <div className="flex items-center gap-4">
               <span
-                className="block w-[112px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+                className="block w-[104px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
                 // Generated server-side from the event link by the qrcode package.
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
                 aria-label="QR code for the event link"
                 role="img"
               />
-              <span className="min-w-0 break-all text-[14px] text-[color:var(--kb-ink-2)]">{link.replace(/^https?:\/\//, "")}</span>
+              <span className="flex min-w-0 flex-col gap-2">
+                <span className="mono break-all text-[14px]">{link.replace(/^https?:\/\//, "")}</span>
+                <CopyButton value={link} label="Copy link" className="btn btn-secondary !min-h-[40px]" />
+              </span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <CopyButton value={link} label="Copy link" className="btn btn-sm btn-secondary" />
-              <Link href={`/admin/${handle}/share`} className="btn btn-sm btn-secondary no-underline">
-                Poster and email
-              </Link>
-            </div>
+            <Link href={`/admin/${handle}/share`} className="text-[14px] font-medium">
+              Poster and announcement email
+            </Link>
           </section>
 
-          {/* Folded away by default: useful now and then, not every visit. */}
           {hasPhotos ? (
-            <Disclosure title="Activity" hint="Who opened and downloaded what, most recent first">
-              <Link href={`/admin/${handle}/activity`} className="self-start text-[14px] font-medium">
-                Full log
-              </Link>
+            <section aria-labelledby="act" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+              <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
+                <h2 id="act" className="text-[17px] font-semibold">
+                  Recent activity
+                </h2>
+                <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
+                  Full log
+                </Link>
+              </div>
               {activity.data?.length ? (
-                <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                <ul className="m-0 list-none py-1 pl-0">
                   {activity.data.map((e) => (
-                    <li key={e.id} className="flex flex-col">
-                      <span className="text-[14px]">
-                        <strong className="font-medium">
+                    <li key={e.id} className="flex gap-3 px-5 py-3">
+                      <span
+                        className="mt-[7px] h-2 w-2 flex-none rounded-full"
+                        style={{ background: e.action === "view" ? "var(--kb-line-strong)" : "var(--kb-brand)" }}
+                        aria-hidden
+                      />
+                      <span className="flex-1 text-[14px]">
+                        <strong className="font-semibold">
                           {e.memberships
                             ? personName({
                                 displayName: e.memberships.users?.display_name,
@@ -427,18 +513,56 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                         </strong>{" "}
                         {e.action === "zip" ? "downloaded a zip" : e.action === "download" ? "downloaded" : "viewed"}
                         {e.action === "zip" ? "" : ` ${e.media?.original_filename ?? "a photo"}`}
+                        <br />
+                        <span className="text-[color:var(--kb-ink-3)]">{formatDateTime(e.occurred_at)}</span>
                       </span>
-                      <span className="text-[14px] text-[color:var(--ink-55)]">{formatDateTime(e.occurred_at)}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="m-0 text-[14px] text-[color:var(--ink-70)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
+                <p className="m-0 px-5 py-4 text-[14px] text-[color:var(--kb-ink-2)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
               )}
-            </Disclosure>
+            </section>
           ) : null}
         </div>
       </div>
+
+      {latest?.length ? (
+        <section aria-labelledby="lu" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="lu" className="text-[17px] font-semibold">
+              Latest uploads
+            </h2>
+            {newest ? (
+              <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                {[newest.albums?.title, newest.photographer_name, formatDateTime(newest.created_at)].filter(Boolean).join(" · ")}
+              </span>
+            ) : null}
+          </div>
+          <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}>
+            {latest.map((m) => {
+              const url = latestUrls.get(m.thumb_path ?? m.poster_path ?? "");
+              return (
+                <Link
+                  key={m.id}
+                  href={m.album_id ? `/e/${handle}/a/${m.album_id}/${m.id}` : `/admin/${handle}/albums`}
+                  className="soft-tile block aspect-square !rounded-[4px]"
+                  aria-label={`Photo in ${m.albums?.title ?? "an album"}`}
+                >
+                  {url ? <img src={url} alt="" loading="lazy" /> : null}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
+}
+
+function AlbumStatus({ status, publishAt }: { status: string; publishAt: string | null }) {
+  if (status === "published") return <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Published</span>;
+  if (publishAt) return <span className="kb-chip bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]">{formatDateTime(publishAt)}</span>;
+  if (status === "hidden") return <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">Hidden</span>;
+  return <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">Draft</span>;
 }

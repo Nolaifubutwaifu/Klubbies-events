@@ -8,6 +8,8 @@ import { MoreButton, MoreLink, MoreMenu, MoreSeparator } from "@/components/More
 import { nativeSaveToPhotos } from "@/lib/native-app";
 
 const SHARE_BATCH = 8;
+/** Fired by the Select button; the album grid below listens and starts selecting. */
+export const SELECT_EVENT = "kb:album-select";
 const subscribeNever = () => () => {};
 
 /**
@@ -139,26 +141,28 @@ export function AlbumActions({
   let primary: React.ReactNode = null;
   if (canManage && !published) {
     primary = (
-      <button type="button" className="btn btn-primary btn-sm" disabled={pending || ready === 0} onClick={() => setPublished(true)}>
+      <button type="button" className="btn btn-primary !min-h-[48px] flex-1 sm:flex-none" disabled={pending || ready === 0} onClick={() => setPublished(true)}>
         {pending ? "Publishing…" : "Publish album"}
       </button>
     );
   } else if (canAdd) {
     primary = (
-      <Link href={adding ? albumHref : addHref} className="btn btn-primary btn-sm">
+      <Link href={adding ? albumHref : addHref} className="btn btn-primary !min-h-[48px] flex-1 sm:flex-none">
         {adding ? "Done adding" : "Add photos"}
       </Link>
     );
   } else if (download && canShareFiles) {
     primary = (
-      <button type="button" className="btn btn-primary btn-sm" onClick={saveToPhotos} disabled={busy}>
+      <button type="button" className="btn btn-primary !min-h-[48px] flex-1 sm:flex-none" onClick={saveToPhotos} disabled={busy}>
+        <DownloadIcon />
         {busy ? "Saving…" : "Save to Photos"}
       </button>
     );
   } else if (download) {
     primary = (
-      <a href={zipHref(0)} className="btn btn-primary btn-sm">
-        {parts > 1 ? "Download part 1" : "Download all"}
+      <a href={zipHref(0)} className="btn btn-secondary !min-h-[48px] flex-1 no-underline sm:flex-none">
+        <DownloadIcon />
+        {parts > 1 ? "Download part 1" : "Download album"}
       </a>
     );
   }
@@ -188,9 +192,18 @@ export function AlbumActions({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-2">
+    <div className="flex w-full flex-col gap-1">
+      <div className="flex w-full items-center gap-2">
         {primary}
+        {ready > 0 ? (
+          <button type="button" className="btn btn-secondary !min-h-[48px]" onClick={() => window.dispatchEvent(new Event(SELECT_EVENT))}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="4" y="4" width="16" height="16" rx="3" />
+              <path d="M8.5 12l2.5 2.5 4.5-5" />
+            </svg>
+            Select
+          </button>
+        ) : null}
         {menuItems.length ? (
           <MoreMenu iconOnly label="More album actions">
             {menuItems}
@@ -201,5 +214,13 @@ export function AlbumActions({
       {progress ? <span className="kb-help">{progress}</span> : null}
       {error ? <span className="kb-error">{error}</span> : null}
     </div>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
+    </svg>
   );
 }

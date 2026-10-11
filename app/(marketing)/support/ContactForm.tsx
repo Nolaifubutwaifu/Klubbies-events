@@ -16,7 +16,7 @@ export function ContactForm() {
   }, [state]);
 
   return (
-    <form action={action} id="contact" className="flex scroll-mt-6 flex-col gap-3">
+    <form action={action} id="contact" className="flex scroll-mt-28 flex-col gap-5">
       <input ref={started} type="hidden" name="started" defaultValue="" />
       <div aria-hidden="true" className="absolute left-[-10000px] top-auto h-px w-px overflow-hidden">
         <label>
@@ -25,25 +25,23 @@ export function ContactForm() {
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-[15px] font-semibold">
-        Your email
-        <input className="input" name="email" type="email" required maxLength={320} autoComplete="email" defaultValue={values?.email} />
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
+        Your name
+        <input className="input !min-h-[48px]" name="name" required maxLength={200} autoComplete="name" defaultValue={values?.name} />
       </label>
-      <label className="flex flex-col gap-1 text-[15px] font-semibold">
-        <span>
-          Your name
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
+        Email
+        <input className="input !min-h-[48px]" name="email" type="email" required maxLength={320} autoComplete="email" defaultValue={values?.email} />
+      </label>
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
+        <span className="flex justify-between">
+          Event <span className="font-normal text-[color:var(--kb-ink-3)]">Optional</span>
         </span>
-        <input className="input" name="name" required maxLength={200} autoComplete="name" defaultValue={values?.name} />
+        <input className="input !min-h-[48px]" name="event" maxLength={200} placeholder="Name or link of the event" defaultValue={values?.event} />
       </label>
-      <label className="flex flex-col gap-1 text-[15px] font-semibold">
-        <span>
-          Event name <span className="font-normal text-[color:var(--kb-ink-3)]">(if it&apos;s about one)</span>
-        </span>
-        <input className="input" name="event" maxLength={200} defaultValue={values?.event} />
-      </label>
-      <label className="flex flex-col gap-1 text-[15px] font-semibold">
-        What it&apos;s about
-        <select className="input" name="topic" defaultValue={values?.topic || "help"}>
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
+        Topic
+        <select className="input !min-h-[48px]" name="topic" defaultValue={values?.topic || "help"}>
           {CONTACT_TOPICS.map((topic) => (
             <option key={topic.value} value={topic.value}>
               {topic.label}
@@ -51,13 +49,13 @@ export function ContactForm() {
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-[15px] font-semibold">
+      <label className="flex flex-col gap-2 text-[15px] font-semibold">
         Message
         <textarea className="input min-h-[140px]" name="message" required minLength={10} maxLength={5000} defaultValue={values?.message} />
       </label>
 
       <FormMessage state={state} />
-      <SubmitButton className="btn btn-primary self-start" pendingText="Sending…">
+      <SubmitButton className="btn btn-primary btn-lg w-full" pendingText="Sending…">
         Send message
       </SubmitButton>
     </form>

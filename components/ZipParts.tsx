@@ -30,8 +30,8 @@ export function ZipParts({
         const from = i * ZIP_PART_SIZE + 1;
         const to = Math.min(count, (i + 1) * ZIP_PART_SIZE);
         return (
-          <a key={i} href={i === 0 ? href : `${href}${join}part=${i}`} className={className} download>
-            Part {i + 1} ({from}–{to})
+          <a key={i} href={i === 0 ? href : `${href}${join}part=${i}`} className={className} download aria-label={`Part ${i + 1} of ${parts}, files ${from} to ${to}`}>
+            Part {i + 1} of {parts}
           </a>
         );
       })}

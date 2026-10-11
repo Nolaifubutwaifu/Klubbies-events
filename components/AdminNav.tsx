@@ -82,64 +82,24 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-type NavLink = { href: string; label: string; icon: string; exact?: boolean; badge: number; urgent?: boolean };
+type NavLink = { href: string; label: string; icon: string; exact?: boolean; badge: number; urgent?: boolean; aside?: string };
+type Group = { title: string | null; links: NavLink[] };
 
-/**
- * The organiser's spine, grouped so it can be scanned: Overview, then Photos,
- * People and Event. A rail on desktop; on a phone one Menu button naming the
- * current screen, which opens the same grouped list. Hidden entirely while
- * the event's required setup steps are unfinished (the layout decides).
- */
-export function AdminNav({
-  handle,
-  eventName,
-  eventAddress,
-  accentColour,
-  logoUrl,
-  status,
-  counts,
-  plan,
-  next,
-}: {
-  handle: string;
-  eventName: string;
-  /** The shareable address without its scheme, from APP_URL. */
-  eventAddress: string;
-  accentColour: string | null;
-  logoUrl: string | null;
-  status: { label: string; tone: "live" | "quiet" | "attention" };
-  counts: AdminNavCounts;
-  plan: { line: string; hint: string };
-  /** The next recommended setup step, if any are left. */
-  next: { title: string; href: string; done: number; total: number } | null;
-}) {
-  const pathname = usePathname();
-  const base = `/admin/${handle}`;
-  const [open, setOpen] = useState(false);
-  const panel = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (ev: KeyboardEvent) => ev.key === "Escape" && setOpen(false);
-    document.addEventListener("keydown", onKey);
-    panel.current?.querySelector<HTMLElement>("a")?.focus();
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  const groups: { title: string | null; links: NavLink[] }[] = [
+function navGroups(base: string, counts: AdminNavCounts, planShort: string): Group[] {
+  return [
     { title: null, links: [{ href: base, label: "Overview", icon: "overview", exact: true, badge: 0 }] },
     {
       title: "Photos",
       links: [
-        { href: `${base}/albums`, label: "Albums", icon: "albums", badge: counts.albums },
+        { href: `${base}/albums`, label: "Albums", icon: "albums", badge: 0 },
         { href: `${base}/upload`, label: "Upload", icon: "upload", badge: 0 },
-        { href: `${base}/photographers`, label: "Photographers", icon: "photographers", badge: counts.photographers },
+        { href: `${base}/photographers`, label: "Photographers", icon: "photographers", badge: 0 },
       ],
     },
     {
       title: "People",
       links: [
-        { href: `${base}/attendees`, label: "Attendees", icon: "attendees", badge: counts.attendees },
+        { href: `${base}/attendees`, label: "Attendees", icon: "attendees", badge: 0 },
         { href: `${base}/share`, label: "Invite and share", icon: "share", badge: 0 },
         ...(counts.removals > 0
           ? [{ href: `${base}/removals`, label: "Removal requests", icon: "removals", badge: counts.removals, urgent: true }]
@@ -150,27 +110,25 @@ export function AdminNav({
       title: "Event",
       links: [
         { href: `${base}/settings`, label: "Settings", icon: "settings", badge: 0 },
-        { href: `${base}/billing`, label: "Plan", icon: "plan", badge: 0 },
+        { href: `${base}/billing`, label: "Plan", icon: "plan", badge: 0, aside: planShort },
         { href: `${base}/activity`, label: "Activity", icon: "activity", badge: 0 },
       ],
     },
   ];
+}
+
+function useCurrent(groups: Group[]) {
+  const pathname = usePathname();
   const isActive = (link: NavLink) => (link.exact ? pathname === link.href : pathname.startsWith(link.href));
-  const current = groups.flatMap((g) => g.links).find(isActive);
-  const urgentCount = counts.removals;
+  return { isActive, current: groups.flatMap((g) => g.links).find(isActive) };
+}
 
-  const toneStyle =
-    status.tone === "live"
-      ? { background: "var(--kb-ok-tint)", color: "var(--kb-ok)" }
-      : status.tone === "attention"
-        ? { background: "var(--kb-warn-tint)", color: "var(--kb-warn)" }
-        : { background: "var(--kb-sand)", color: "var(--kb-ink-2)" };
-
-  const list = (
-    <div className="flex flex-col gap-4">
+function NavList({ groups, isActive, onPick }: { groups: Group[]; isActive: (link: NavLink) => boolean; onPick?: () => void }) {
+  return (
+    <div className="flex flex-col" onClick={(ev) => onPick && (ev.target as HTMLElement).closest("a") && onPick()}>
       {groups.map((group) => (
-        <div key={group.title ?? "top"} className="flex flex-col gap-0.5">
-          {group.title ? <span className="px-3 pb-1 text-[14px] font-medium text-[color:var(--kb-ink-3)]">{group.title}</span> : null}
+        <div key={group.title ?? "top"} className="flex flex-col">
+          {group.title ? <span className="px-3 pb-1.5 pt-4 text-[14px] font-semibold text-[color:var(--kb-ink-3)]">{group.title}</span> : null}
           {group.links.map((link) => {
             const active = isActive(link);
             return (
@@ -178,23 +136,24 @@ export function AdminNav({
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className="flex min-h-[44px] items-center gap-2.5 rounded-[8px] px-3 text-[15px] font-medium no-underline transition-colors lg:min-h-[40px] lg:text-[14px]"
-                style={{
-                  background: active ? "var(--kb-brand-tint)" : "transparent",
-                  color: active ? "var(--kb-brand-deep)" : "var(--kb-ink-2)",
-                }}
+                className={`flex min-h-[44px] items-center gap-3 rounded-[8px] px-3 text-[15px] font-medium no-underline transition-colors ${
+                  active
+                    ? "bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]"
+                    : link.urgent
+                      ? "text-[color:var(--kb-warn)] hover:bg-[#f2f2ef]"
+                      : "text-[#33363d] hover:bg-[#f2f2ef] hover:text-[color:var(--kb-ink)]"
+                }`}
               >
-                <span style={{ color: active ? "var(--kb-brand)" : "var(--kb-ink-3)" }}>
+                <span className={active ? "text-[color:var(--kb-brand)]" : link.urgent ? "" : "text-[color:var(--kb-ink-3)]"}>
                   <Icon name={link.icon} />
                 </span>
                 <span className="whitespace-nowrap">{link.label}</span>
                 {link.badge > 0 ? (
-                  <span
-                    className="ml-auto rounded-[6px] px-1.5 py-px text-[14px] font-medium tabular-nums"
-                    style={link.urgent ? { background: "var(--kb-warn)", color: "#fff" } : { background: "var(--kb-sand)", color: "var(--kb-ink-2)" }}
-                  >
+                  <span className="mono ml-auto rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] text-[color:var(--kb-warn)]">
                     {link.badge.toLocaleString("en-AU")}
                   </span>
+                ) : link.aside ? (
+                  <span className="ml-auto text-[14px] text-[color:var(--kb-ink-3)]">{link.aside}</span>
                 ) : null}
               </Link>
             );
@@ -203,84 +162,209 @@ export function AdminNav({
       ))}
     </div>
   );
+}
+
+type Shared = {
+  handle: string;
+  counts: AdminNavCounts;
+  plan: { line: string; hint: string; short: string };
+};
+
+/**
+ * The organiser's spine on a wide screen: a full-height white rail with the
+ * event at the top, Overview, then Photos, People and Event, and the setup
+ * progress and you at the foot. Hidden entirely while the event's required
+ * setup steps are unfinished (the layout decides).
+ */
+export function AdminRail({
+  handle,
+  eventName,
+  accentColour,
+  logoUrl,
+  status,
+  counts,
+  plan,
+  next,
+  switcher,
+  account,
+}: Shared & {
+  eventName: string;
+  accentColour: string | null;
+  logoUrl: string | null;
+  status: { label: string; tone: "live" | "quiet" | "attention" };
+  /** The next recommended setup step, if any are left. */
+  next: { title: string; href: string; done: number; total: number } | null;
+  /** The event switcher, rendered on the server. */
+  switcher: ReactNode;
+  /** You, at the foot. */
+  account: { node: ReactNode; name: string };
+}) {
+  const base = `/admin/${handle}`;
+  const groups = navGroups(base, counts, plan.short);
+  const { isActive } = useCurrent(groups);
+  const statusColour = status.tone === "live" ? "var(--kb-ok)" : status.tone === "attention" ? "var(--kb-warn)" : "var(--kb-ink-3)";
 
   return (
-    <nav aria-label="Organiser" className="lg:sticky lg:top-4 lg:self-start">
-      {/* Phone: one button that says where you are. */}
-      <div className="lg:hidden">
-        <button
-          type="button"
-          className="flex min-h-[48px] w-full items-center gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-3.5 text-left"
-          aria-expanded={open}
-          aria-controls="organiser-menu"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span style={{ color: "var(--kb-brand)" }}>
-            <Icon name={current?.icon ?? "overview"} />
+    <aside
+      aria-label="Organiser"
+      className="sticky top-0 hidden h-dvh w-[256px] flex-none flex-col overflow-y-auto border-r border-[color:var(--kb-line)] bg-white px-3 py-4 lg:flex"
+    >
+      <div className="flex items-center gap-3 border-b border-[color:var(--kb-sand)] px-2 pb-4 pt-1">
+        <EventMark name={eventName} logoUrl={logoUrl} accentColour={accentColour} size={40} />
+        <span className="flex min-w-0 flex-1 flex-col leading-[1.3]">
+          <span className="truncate text-[15px] font-semibold">{eventName}</span>
+          <span className="flex items-center gap-1.5 text-[14px]" style={{ color: statusColour }}>
+            <span className="h-2 w-2 flex-none rounded-full" style={{ background: statusColour }} aria-hidden />
+            <span className="truncate">{status.label}</span>
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14px] text-[color:var(--kb-ink-3)]">Menu</span>
-            <span className="block truncate text-[15px] font-semibold">{current?.label ?? "Overview"}</span>
-          </span>
-          {urgentCount > 0 && !open ? (
-            <span className="rounded-[6px] px-1.5 py-px text-[14px] font-medium" style={{ background: "var(--kb-warn)", color: "#fff" }}>
-              {urgentCount}
-            </span>
-          ) : null}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={open ? "rotate-180" : ""}>
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
-        {open ? (
-          <div
-            ref={panel}
-            id="organiser-menu"
-            // Choosing a screen closes the menu.
-            onClick={(ev) => (ev.target as HTMLElement).closest("a") && setOpen(false)}
-            className="mt-2 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] p-2 shadow-[var(--soft-shadow-lift)]"
-          >
-            {list}
-          </div>
-        ) : null}
+        </span>
+        {switcher}
       </div>
 
-      {/* Desktop: the rail. */}
-      <div className="hidden flex-col gap-1 lg:flex lg:w-[232px]">
-        <div className="flex flex-col gap-2 px-2 pb-4 pt-1">
-          <div className="flex items-center gap-2.5">
-            <EventMark name={eventName} logoUrl={logoUrl} accentColour={accentColour} size={36} />
-            <span className="min-w-0">
-              <span className="block truncate text-[15px] font-semibold">{eventName}</span>
-              <span className="block truncate text-[14px] text-[color:var(--ink-55)]">{eventAddress}</span>
-            </span>
-          </div>
-          <span className="w-fit rounded-[6px] px-2 py-0.5 text-[14px] font-medium" style={toneStyle}>
-            {status.label}
-          </span>
-        </div>
+      <nav aria-label="Organiser" className="pt-3">
+        <NavList groups={groups} isActive={isActive} />
+      </nav>
 
-        {list}
-
+      <div className="mt-auto flex flex-col gap-3 pt-6">
         {next ? (
           <Link
             href={`${base}/setup`}
-            className="mt-4 block rounded-[var(--kb-r-card)] border border-[#cdd7f7] bg-[color:var(--kb-brand-tint)] px-3.5 py-3 text-ink no-underline"
+            className="flex flex-col gap-2 rounded-[10px] border border-[color:var(--kb-sand)] bg-[color:var(--kb-cream)] p-3.5 text-ink no-underline"
           >
-            <span className="block text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
-              Setup {next.done} of {next.total}
+            <span className="flex justify-between text-[14px]">
+              <span className="font-semibold">
+                Setup {next.done} of {next.total}
+              </span>
+              <span className="mono text-[color:var(--kb-ink-3)]">{Math.round((next.done / next.total) * 100)}%</span>
             </span>
-            <span className="block text-[14px] text-[color:var(--kb-ink-2)]">Next: {next.title}</span>
+            <span className="relative h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-line)]" aria-hidden>
+              <span className="absolute inset-y-0 left-0 rounded-[3px] bg-[color:var(--kb-brand)]" style={{ width: `${(next.done / next.total) * 100}%` }} />
+            </span>
+            <span className="text-[14px] text-[color:var(--kb-ink-2)]">Next: {next.title}</span>
           </Link>
         ) : (
-          <Link
-            href={`${base}/billing`}
-            className="mt-4 block rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-3.5 py-3 text-ink no-underline"
-          >
-            <span className="block text-[14px] font-medium">{plan.line}</span>
-            <span className="block text-[14px] text-[color:var(--kb-ink-3)]">{plan.hint}</span>
+          <Link href={`${base}/billing`} className="flex flex-col rounded-[10px] border border-[color:var(--kb-sand)] bg-[color:var(--kb-cream)] p-3.5 text-ink no-underline">
+            <span className="text-[14px] font-semibold">{plan.line}</span>
+            <span className="text-[14px] text-[color:var(--kb-ink-3)]">{plan.hint}</span>
           </Link>
         )}
+        <div className="flex items-center gap-2.5 px-2 py-1">
+          {account.node}
+          <span className="flex min-w-0 flex-1 flex-col leading-[1.3]">
+            <span className="truncate text-[14px] font-semibold">{account.name}</span>
+            <span className="text-[14px] text-[color:var(--kb-ink-3)]">Organiser</span>
+          </span>
+        </div>
       </div>
-    </nav>
+    </aside>
+  );
+}
+
+/** The bar above every organiser screen on a wide screen: where you are, and the way across to the gallery. */
+export function AdminTopbar({ handle, eventName, counts, plan }: Shared & { eventName: string }) {
+  const base = `/admin/${handle}`;
+  const { current } = useCurrent(navGroups(base, counts, plan.short));
+  const pathname = usePathname();
+  // Screens that aren't in the menu still say where you are.
+  const extra = pathname.startsWith(`${base}/setup`)
+    ? "Setup"
+    : pathname.startsWith(`${base}/export`)
+      ? "Download everything"
+      : pathname.startsWith(`${base}/settings/deleted`)
+        ? "Recently deleted"
+        : null;
+  return (
+    <div className="sticky top-0 z-20 hidden h-16 flex-none items-center justify-between gap-4 border-b border-[color:var(--kb-line)] bg-white px-10 lg:flex">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[14px] text-[color:var(--kb-ink-3)]">
+        <Link href={base} className="truncate text-[color:var(--kb-ink-3)] no-underline hover:text-[color:var(--kb-ink)]">
+          {eventName}
+        </Link>
+        <span aria-hidden>/</span>
+        <span className="truncate font-medium text-[color:var(--kb-ink)]" aria-current="page">
+          {extra ?? current?.label ?? "Overview"}
+        </span>
+      </nav>
+      <Link href={`/e/${handle}`} className="btn btn-secondary no-underline">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        Attendee view
+      </Link>
+    </div>
+  );
+}
+
+/** On a phone: one button naming the current screen, which opens the menu as a sheet from the bottom. */
+export function AdminMenuButton({ handle, counts, plan }: Shared) {
+  const base = `/admin/${handle}`;
+  const groups = navGroups(base, counts, plan.short);
+  const { isActive, current } = useCurrent(groups);
+  const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const button = trigger.current;
+    const onKey = (ev: KeyboardEvent) => ev.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panel.current?.querySelector<HTMLElement>("a[aria-current=page], a")?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      button?.focus();
+    };
+  }, [open]);
+
+  return (
+    <div className="lg:hidden">
+      <button
+        ref={trigger}
+        type="button"
+        className="btn btn-secondary w-full !justify-between"
+        aria-expanded={open}
+        aria-controls="organiser-menu"
+        onClick={() => setOpen(true)}
+      >
+        <span className="flex items-center gap-2">
+          Menu · {current?.label ?? "Overview"}
+          {counts.removals > 0 ? (
+            <span className="mono rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] font-normal text-[color:var(--kb-warn)]">{counts.removals}</span>
+          ) : null}
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open ? (
+        <div className="fixed inset-0 z-50" role="presentation">
+          <button type="button" aria-label="Close menu" tabIndex={-1} className="absolute inset-0 bg-[rgb(14_20_36/0.45)]" onClick={() => setOpen(false)} />
+          <div
+            ref={panel}
+            id="organiser-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Organiser menu"
+            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[20px] bg-white px-3 pb-[max(28px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-20px_40px_-20px_rgb(0_0_0/0.4)]"
+          >
+            <span className="mx-auto mb-2.5 block h-[5px] w-10 rounded-[3px] bg-[color:var(--kb-line-strong)]" aria-hidden />
+            <div className="flex items-center justify-between pb-1.5 pl-3.5 pr-1.5">
+              <h2 className="text-[17px] font-semibold">Menu</h2>
+              <button type="button" aria-label="Close menu" className="flex h-11 w-11 items-center justify-center rounded-[8px] hover:bg-[color:var(--kb-sand)]" onClick={() => setOpen(false)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <nav aria-label="Organiser">
+              <NavList groups={groups} isActive={isActive} onPick={() => setOpen(false)} />
+            </nav>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

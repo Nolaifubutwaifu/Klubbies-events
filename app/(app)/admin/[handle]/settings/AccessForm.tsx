@@ -42,7 +42,7 @@ export function AccessForm({
   ];
 
   return (
-    <form action={action} className="soft-card flex flex-col gap-4 p-5">
+    <form action={action} className="flex flex-col gap-4">
       <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
         <legend className="mb-2 text-[14px] font-medium">Who can get in</legend>
         {options.map((option) => (

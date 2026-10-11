@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { favouriteManyAction, loadAlbumPageAction } from "@/app/(app)/e/[handle]/actions";
 import { ProcessingTiles } from "@/components/ProcessingBanner";
 import { deleteMediaAction, restoreMediaAction, setAlbumCoverAction } from "@/app/(app)/admin/actions";
 import { Dialog } from "@/components/Dialog";
 import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
+import { SELECT_EVENT } from "@/components/AlbumActions";
+import { Segmented } from "@/components/Segmented";
 
 function duration(seconds: number | null): string {
   if (!seconds) return "";
@@ -72,6 +74,7 @@ export function AlbumGrid({
   processingCount = 0,
   canDownload = false,
   mineItems = [],
+  inset = true,
   albumTitle,
 }: {
   albumId: string;
@@ -92,6 +95,8 @@ export function AlbumGrid({
   /** Photos in this album the viewer is confirmed in. Empty when they have
       not enrolled or are in none, and then the chip isn't shown. */
   mineItems?: GridItem[];
+  /** Side padding of its own (attendee pages); off inside the organiser layout, which pads already. */
+  inset?: boolean;
   albumTitle: string;
 }) {
   const router = useRouter();
@@ -174,6 +179,30 @@ export function AlbumGrid({
       setHasMore(next.hasMore);
       setPage(page + 1);
     });
+
+  // Select lives beside Download in the album's actions row (AlbumActions).
+  useEffect(() => {
+    const start = () => setSelecting(true);
+    window.addEventListener(SELECT_EVENT, start);
+    return () => window.removeEventListener(SELECT_EVENT, start);
+  }, []);
+
+  // The next page loads as the end of the grid scrolls into view; the button
+  // stays for keyboards and for anyone the observer misses.
+  const sentinel = useRef<HTMLSpanElement>(null);
+  const loadMoreRef = useRef(loadMore);
+  useEffect(() => {
+    loadMoreRef.current = loadMore;
+  });
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || !hasMore || pending) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadMoreRef.current();
+    }, { rootMargin: "600px 0px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, pending, kind]);
 
   if (items.length === 0 && processingCount === 0) {
     return <p className="soft-card m-6 p-6 text-[14px] text-[color:var(--ink-70)]">Nothing in this album yet.</p>;
@@ -275,33 +304,31 @@ export function AlbumGrid({
           whole point of an album is taking a handful home. What the selection
           bar offers depends on who you are. A lone "All" chip is left out:
           there is nothing to switch to. */}
-      {selecting ? null : (
-        <div className="flex w-full flex-wrap items-center gap-2 px-4 pt-4 sm:px-6">
-          {chips.length > 1
-            ? chips.map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={kind === value}
-                  onClick={() => setKind(value)}
-                  className={`soft-btn !min-h-[44px] !px-4 !text-[14px] ${kind === value ? "!bg-ink !text-white" : "soft-btn-tonal"}`}
-                >
-                  {label}
-                </button>
-              ))
-            : null}
-          <button type="button" className="btn btn-secondary btn-sm ml-auto" onClick={() => setSelecting(true)}>
-            Select photos
-          </button>
+      {selecting || (chips.length < 2 && !message) ? null : (
+        <div className={`flex w-full flex-wrap items-center gap-2 ${inset ? "px-5 sm:px-10" : ""}`}>
+          {chips.length > 1 ? (
+            <Segmented
+              label="Show"
+              value={kind}
+              onChange={setKind}
+              className="flex-1 sm:max-w-[560px]"
+              options={chips.map(([value, label]) => ({
+                value,
+                label: label.slice(0, label.lastIndexOf(" ")),
+                count: Number(label.slice(label.lastIndexOf(" ") + 1).replace(/,/g, "")),
+                accent: value === "mine",
+              }))}
+            />
+          ) : null}
           <span className="w-full text-[14px] text-[color:var(--ink-70)] empty:hidden" role="status">
             {message}
           </span>
         </div>
       )}
 
+      {/* Tight 3px gaps edge to edge on a phone, so the photos do the talking. */}
       <div
-        className="grid w-full gap-1 px-1 pb-6 pt-3 sm:gap-1.5 sm:px-4"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(clamp(104px, 14vw, 168px), 1fr))" }}
+        className={`grid w-full grid-cols-3 gap-[3px] pb-2 pt-2 sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 ${inset ? "px-[3px] sm:px-10" : "lg:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]"}`}
       >
         {kind !== "saved" && kind !== "mine" ? <ProcessingTiles count={processingCount} /> : null}
         {shown.map((item) =>
@@ -314,9 +341,9 @@ export function AlbumGrid({
               aria-label={labelFor(item)}
               // The selection ring sits on a layer above the photo, so the
               // focus ring stays the global one instead of being overridden.
-              className={`relative block aspect-square overflow-hidden rounded-[10px] border-0 bg-bg p-0 ${
+              className={`relative block aspect-square overflow-hidden rounded-[3px] border-0 bg-bg p-0 ${
                 selected.has(item.id)
-                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[10px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
+                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[3px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
                   : ""
               }`}
             >
@@ -327,7 +354,7 @@ export function AlbumGrid({
               key={item.id}
               href={`${hrefBase}/${item.id}`}
               aria-label={labelFor(item)}
-              className="soft-tile relative block aspect-square !rounded-[10px]"
+              className="soft-tile relative block aspect-square !rounded-[3px]"
               scroll={false}
             >
               <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />
@@ -343,9 +370,14 @@ export function AlbumGrid({
       ) : null}
 
       {hasMore && kind !== "mine" ? (
-        <button type="button" className="btn btn-secondary mb-6 self-center" disabled={pending} onClick={loadMore}>
-          {pending ? "Loading…" : "Load more"}
-        </button>
+        <div className="flex flex-col items-center gap-2 px-5 pb-6">
+          <span ref={sentinel} className="text-center text-[14px] text-[color:var(--kb-ink-3)]">
+            Showing {items.length.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")} · loading more as you scroll
+          </span>
+          <button type="button" className="btn btn-secondary" disabled={pending} onClick={loadMore}>
+            {pending ? "Loading…" : "Load more"}
+          </button>
+        </div>
       ) : null}
 
       <Dialog open={confirm} onClose={() => setConfirm(false)} title={`Delete ${selected.size} ${selected.size === 1 ? "item" : "items"}?`}>

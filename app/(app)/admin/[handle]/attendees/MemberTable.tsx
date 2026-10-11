@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Dialog } from "@/components/Dialog";
 import { FormMessage } from "@/components/forms";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import {
   removeMembersAction,
   restoreMemberAction,
@@ -32,22 +32,30 @@ export type MemberRow = {
 };
 
 const FILTERS = [
-  { key: "all", label: "Everyone" },
-  { key: "team", label: "Organisers and photographers" },
+  { key: "all", label: "All" },
   { key: "signed_in", label: "Joined" },
   { key: "invited", label: "Not joined yet" },
+  { key: "team", label: "Organisers" },
   { key: "revoked", label: "Removed" },
 ] as const;
 
-function statusTag(member: MemberRow) {
-  if (member.status === "revoked") return <span className="tag tag-neutral">Removed</span>;
-  if (member.paused) return <span className="tag tag-neutral">Paused</span>;
-  if (member.firstSeenAt) return <span className="tag">Joined</span>;
-  return <span className="tag tag-neutral">Not joined yet</span>;
+type FilterKey = (typeof FILTERS)[number]["key"];
+
+function matches(m: MemberRow, filter: FilterKey): boolean {
+  return filter === "all"
+    ? m.status !== "revoked"
+    : filter === "team"
+      ? m.status !== "revoked" && m.roleName !== "Attendee"
+      : filter === "signed_in"
+        ? Boolean(m.firstSeenAt) && m.status === "active"
+        : filter === "invited"
+          ? !m.firstSeenAt && m.status !== "revoked"
+          : m.status === "revoked";
 }
 
-function shortDate(value: string): string {
-  return formatDate(value);
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? "?").slice(0, 2)).toUpperCase();
 }
 
 export function MemberTable({
@@ -65,7 +73,7 @@ export function MemberTable({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [roleTarget, setRoleTarget] = useState<string>("");
@@ -76,17 +84,7 @@ export function MemberTable({
     const q = query.trim().toLowerCase();
     return members.filter((m) => {
       const matchesText = !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.roleName.toLowerCase().includes(q);
-      const matchesFilter =
-        filter === "all"
-          ? m.status !== "revoked"
-          : filter === "team"
-            ? m.status !== "revoked" && m.roleName !== "Attendee"
-            : filter === "signed_in"
-              ? Boolean(m.firstSeenAt) && m.status === "active"
-              : filter === "invited"
-                ? !m.firstSeenAt && m.status !== "revoked"
-                : m.status === "revoked";
-      return matchesText && matchesFilter;
+      return matchesText && matches(m, filter);
     });
   }, [members, query, filter]);
 
@@ -113,34 +111,40 @@ export function MemberTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1">
-          {FILTERS.map((f) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative flex min-w-[220px] flex-[1_1_260px] items-center sm:max-w-[320px]">
+          <span className="sr-only">Search attendees</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--kb-ink-3)" strokeWidth="2" strokeLinecap="round" aria-hidden className="pointer-events-none absolute left-3">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+          <input className="input !pl-10" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" />
+        </label>
+        {FILTERS.map((f) => {
+          const count = members.filter((m) => matches(m, f.key)).length;
+          if (f.key === "revoked" && count === 0) return null;
+          return (
             <button
               key={f.key}
               type="button"
-              className="btn btn-sm btn-secondary"
               aria-pressed={filter === f.key}
               onClick={() => setFilter(f.key)}
+              className={`flex min-h-[40px] items-center gap-2 rounded-[8px] border px-3.5 text-[14px] font-medium ${
+                filter === f.key
+                  ? "border-[color:var(--kb-ink)] bg-[color:var(--kb-ink)] text-white"
+                  : "border-[color:var(--kb-line)] bg-white text-[color:var(--kb-ink-2)] hover:border-[color:var(--kb-line-strong)]"
+              }`}
             >
-              {f.label}
+              {f.label} <span className="mono">{count.toLocaleString("en-AU")}</span>
             </button>
-          ))}
-        </div>
-        <input
-          className="input w-full sm:max-w-[280px]"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name, email or role"
-          aria-label="Search attendees"
-        />
+          );
+        })}
       </div>
 
       <FormMessage state={result} />
 
       {chosen.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line-strong)] bg-[color:var(--kb-white)] px-4 py-2 text-[14px]">
+        <div className="flex flex-wrap items-center gap-3 rounded-[10px] bg-[color:var(--kb-ink)] px-4 py-2 text-[14px] text-white [&_.btn-secondary]:border-white/30 [&_.btn-secondary]:bg-transparent [&_.btn-secondary]:text-white">
           <strong>{chosen.length} selected</strong>
           {canManageRoles ? (
             <>
@@ -185,8 +189,8 @@ export function MemberTable({
       ) : null}
 
       {/* Wider than a phone: the scroller takes focus so the keyboard can reach it. */}
-      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Attendee list">
-        <table className="table min-w-[760px]">
+      <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white" tabIndex={0} role="region" aria-label="Attendee list">
+        <table className="kb-table min-w-[760px]">
           <thead>
             <tr>
               <th className="w-8">
@@ -197,13 +201,14 @@ export function MemberTable({
                   onChange={(e) => setSelected(e.target.checked ? new Set(selectable.map((m) => m.id)) : new Set())}
                 />
               </th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Selfie</th>
-              <th>Added</th>
-              <th />
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+              <th scope="col">Joined</th>
+              <th scope="col">Photos found</th>
+              <th scope="col">Role</th>
+              <th scope="col">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -211,29 +216,36 @@ export function MemberTable({
               <tr key={member.id}>
                 <td>
                   {member.userId !== currentUserId && member.status !== "revoked" ? (
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${member.name}`}
-                      checked={selected.has(member.id)}
-                      onChange={() => toggle(member.id)}
-                    />
+                    <input type="checkbox" aria-label={`Select ${member.name}`} checked={selected.has(member.id)} onChange={() => toggle(member.id)} />
                   ) : null}
                 </td>
-                <td className="font-medium">
-                  {member.name}
-                  {member.nameMismatch && member.claimedName ? (
-                    <div className="mt-1">
-                      <span className="tag tag-accent-2" title="The name typed at sign-in differs from the list">
-                        Signed in as “{member.claimedName}”
-                      </span>
-                    </div>
-                  ) : null}
-                </td>
-                <td className="text-[color:var(--ink-70)]">{member.email}</td>
                 <td>
-                  {canManageRoles && member.userId !== currentUserId ? (
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[13px] font-semibold text-[color:var(--kb-ink-2)]" aria-hidden>
+                      {initials(member.name)}
+                    </span>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-medium">{member.name}</span>
+                      {member.nameMismatch && member.claimedName ? (
+                        <span className="text-[14px] text-[color:var(--kb-ink-3)]" title="The name typed at sign-in differs from the list">
+                          Signed in as “{member.claimedName}”
+                        </span>
+                      ) : null}
+                    </span>
+                    {member.status === "revoked" ? (
+                      <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">Removed</span>
+                    ) : member.paused ? (
+                      <span className="kb-chip bg-[color:var(--kb-warn-tint)] text-[color:var(--kb-warn)]">Paused</span>
+                    ) : null}
+                  </span>
+                </td>
+                <td className="text-[color:var(--kb-ink-2)]">{member.email}</td>
+                <td className="whitespace-nowrap text-[color:var(--kb-ink-2)]">{member.firstSeenAt ? formatDateTime(member.firstSeenAt) : "Not yet"}</td>
+                <td className="text-[color:var(--kb-ink-2)]">{member.findable ? "Selfie added" : "No selfie"}</td>
+                <td>
+                  {canManageRoles && member.userId !== currentUserId && member.status !== "revoked" ? (
                     <select
-                      className="input max-w-[160px] text-[14px]"
+                      className="input !min-h-[38px] max-w-[170px] !py-1 text-[14px]"
                       value={member.roleId ?? ""}
                       disabled={pending}
                       aria-label={`Role for ${member.name}`}
@@ -246,12 +258,13 @@ export function MemberTable({
                       ))}
                     </select>
                   ) : (
-                    <span className={member.isAdminRole ? "tag" : "tag tag-neutral"}>{member.roleName}</span>
+                    <span
+                      className={`kb-chip ${member.isAdminRole ? "bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]" : "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]"}`}
+                    >
+                      {member.roleName}
+                    </span>
                   )}
                 </td>
-                <td>{statusTag(member)}</td>
-                <td className="text-[color:var(--ink-70)]">{member.findable ? "Added" : "–"}</td>
-                <td className="whitespace-nowrap text-[color:var(--ink-70)]">{shortDate(member.since)}</td>
                 <td className="whitespace-nowrap text-right">
                   {member.status === "revoked" ? (
                     <button type="button" className="btn btn-sm btn-secondary" disabled={pending} onClick={() => run(() => restoreMemberAction(eventId, member.id))}>
@@ -263,11 +276,12 @@ export function MemberTable({
             ))}
           </tbody>
         </table>
+        <div className="flex items-center justify-between border-t border-[color:var(--kb-sand)] px-4 py-3 text-[14px] text-[color:var(--kb-ink-3)]">
+          <span>
+            Showing {visible.length.toLocaleString("en-AU")} of {members.filter((m) => m.status !== "revoked").length.toLocaleString("en-AU")}
+          </span>
+        </div>
       </div>
-
-      <span className="text-[14px] text-[color:var(--ink-55)]">
-        {visible.length.toLocaleString("en-AU")} shown of {members.length.toLocaleString("en-AU")}
-      </span>
 
       <Dialog open={confirmRemove} onClose={() => setConfirmRemove(false)} title={`Remove ${chosen.length} ${chosen.length === 1 ? "person" : "people"}?`}>
         <p className="text-[15px] leading-normal">
