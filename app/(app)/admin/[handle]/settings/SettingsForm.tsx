@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, SubmitButton } from "@/components/forms";
+import { formatEventDates } from "@/lib/format";
 import { ACCENT_SWATCHES, eventToneStyle, SWATCH_NAMES } from "@/lib/theme";
 import { updateEventAction, type ActionState } from "../../actions";
 
@@ -149,7 +150,7 @@ export function SettingsForm({
                 .toUpperCase()}
             </span>
             <span className="serif text-[24px] leading-[1.05]">{name}</span>
-            <span className="text-[14px] text-[color:var(--kb-ink-2)]">{[startsOn, venue].filter(Boolean).join(" · ") || "Date and venue"}</span>
+            <span className="text-[14px] text-[color:var(--kb-ink-2)]">{[formatEventDates(startsOn, endsOn), venue].filter(Boolean).join(" · ") || "Date and venue"}</span>
           </div>
           <div className="flex items-center justify-between gap-3 p-4">
             <span className="text-[15px] font-semibold">23 photos of you</span>

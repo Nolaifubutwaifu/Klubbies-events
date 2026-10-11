@@ -6,7 +6,7 @@ import { PlanMeters } from "@/components/PlanMeters";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { CLUB_CODES } from "@/lib/billing/club-codes";
-import { KEEP_YEAR_AUD, overflowWindow, planName, suggestedTier, TIERS, tierOffers } from "@/lib/billing/plans";
+import { isTier, KEEP_YEAR_AUD, overflowWindow, planName, suggestedTier, TIERS, tierOffers } from "@/lib/billing/plans";
 import { stripeConfigured, syncReturnedSession } from "@/lib/billing/stripe";
 import { getPlanUsage } from "@/lib/billing/usage";
 import { formatDateTime, formatLongDate } from "@/lib/format";
@@ -58,8 +58,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
   return (
     <main className="flex max-w-[920px] flex-col gap-6">
       <PageTitle kicker={event.name} title="Plan and billing">
-        One payment per event, no subscription. Every size has face search, your branding, the share kit and a gallery
-        open for 12 months.
+        One payment for this event. No subscription.
       </PageTitle>
 
       {search.canceled ? <div className="notice">Checkout was cancelled. Nothing was charged.</div> : null}
@@ -78,13 +77,34 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
         </div>
       ) : null}
 
-      <section className="soft-card flex flex-col gap-5 p-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-[22px] font-semibold tracking-[-0.02em]">{planName(event.plan)}</h2>
-          {rateLabel ? <span className="soft-chip">{rateLabel}</span> : null}
-          {event.billing_status === "comped" ? <span className="soft-chip">Complimentary</span> : null}
-          {event.paid_at ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">Paid {formatLongDate(event.paid_at)}</span> : null}
+      <section aria-labelledby="current" className="flex flex-wrap items-start gap-8 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-6">
+        <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1.5">
+          <span className="text-[14px] text-[color:var(--kb-ink-3)]">Current size</span>
+          <h2 id="current" className="flex flex-wrap items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em]">
+            {planName(event.plan)}
+            {event.billing_status === "comped" ? (
+              <span className="kb-chip bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]">Complimentary</span>
+            ) : event.paid_at ? (
+              <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Paid</span>
+            ) : event.plan === "free" ? (
+              <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">Free</span>
+            ) : null}
+            {rateLabel ? <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">{rateLabel}</span> : null}
+          </h2>
+          {event.paid_at ? (
+            <p className="text-[15px] text-[color:var(--kb-ink-2)]">
+              {!inApp && purchases?.find((p) => p.kind !== "keep_year") ? (
+                <>
+                  <span className="mono">A${((purchases?.find((p) => p.kind !== "keep_year")?.amount_cents ?? 0) / 100).toFixed(0)}</span> paid on{" "}
+                </>
+              ) : (
+                "Paid "
+              )}
+              {formatLongDate(event.paid_at)}
+            </p>
+          ) : null}
         </div>
+        <div className="min-w-0 flex-[2_1_360px]">
         {usage ? (
           <PlanMeters
             guestsJoined={usage.guestsJoined}
@@ -117,6 +137,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
         {event.plan === "unlimited" ? (
           <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">This event has no guest or photo limit.</p>
         ) : null}
+        </div>
       </section>
 
       {/* No sizes or prices in the app (Apple 3.1.1), but not a dead end
@@ -136,37 +157,48 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
 
       {offers.length && !inApp ? (
         <section className="flex flex-col gap-4" aria-labelledby="sizes">
-          <h2 id="sizes" className="text-[18px] font-semibold">
-            {event.plan === "free" ? "Choose a size" : "Upgrade"}
-          </h2>
-          <ExpectedGuestsForm eventId={event.id} expected={event.expected_guests} />
-          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-            {offers.map((offer) => {
+          <div className="flex flex-col gap-1">
+            <h2 id="sizes" className="text-[18px] font-semibold">
+              {event.plan === "free" ? "Choose a size" : "Need a bigger size?"}
+            </h2>
+            {offers[0]?.kind === "upgrade" ? (
+              <p className="text-[15px] text-[color:var(--kb-ink-2)]">You&apos;ve already paid for {planName(event.plan)}, so you only pay the extra.</p>
+            ) : null}
+          </div>
+          <div className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+            {isTier(event.plan) ? (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-[color:var(--kb-cream)] px-5 py-4">
+                <span className="flex items-center gap-2.5 font-semibold">
+                  {TIERS[event.plan].name}
+                  <span className="kb-chip bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]">Your size</span>
+                </span>
+                <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                  {TIERS[event.plan].guests.toLocaleString("en-AU")} guests · {TIERS[event.plan].photos.toLocaleString("en-AU")} photos
+                </span>
+              </div>
+            ) : null}
+            {offers.map((offer, index) => {
               const tier = TIERS[offer.to];
+              const fits = suggestion === offer.to;
+              const primary = suggestion ? fits : index === 0;
               return (
-                <div
-                  key={offer.to}
-                  className={`soft-card flex flex-col gap-3 p-5 ${suggestion === offer.to ? "outline outline-2 outline-[color:var(--kb-ember)]" : ""}`}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-[17px] font-semibold">{tier.name}</span>
-                    {suggestion === offer.to ? <span className="soft-chip">Fits your guests</span> : null}
-                  </span>
-                  <span className="text-[14px] text-[color:var(--kb-ink-2)]">
-                    Up to {tier.guests.toLocaleString("en-AU")} guests · {tier.photos.toLocaleString("en-AU")} photos and videos
-                  </span>
-                  <span className="text-[32px] font-semibold leading-none tracking-[-0.03em]">A${offer.amount}</span>
-                  <span className="text-[14px] text-[color:var(--kb-ink-3)]">
-                    {offer.kind === "upgrade"
-                      ? `You've already paid for ${planName(offer.from)}, so you only pay the extra`
-                      : "One payment for this event"}
-                    {offer.late ? ", plus a surcharge because the event has already run out of room" : ""}.
-                    {offer.rate === "club" ? " Club rate." : ""}
+                <div key={offer.to} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--kb-sand)] px-5 py-4">
+                  <span className="flex min-w-0 flex-[1_1_220px] flex-col">
+                    <span className="flex flex-wrap items-center gap-2.5 font-semibold">
+                      {tier.name}
+                      <span className="mono font-medium">{offer.kind === "upgrade" ? "+" : ""}A${offer.amount}</span>
+                      {fits ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Fits your guests</span> : null}
+                    </span>
+                    <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                      {tier.guests.toLocaleString("en-AU")} guests · {tier.photos.toLocaleString("en-AU")} photos
+                      {offer.late ? " · includes the late surcharge" : ""}
+                      {offer.rate === "club" ? " · club rate" : ""}
+                    </span>
                   </span>
                   {devActivate ? null : (
                     <form action={startCheckoutAction.bind(null, event.id, offer.to)}>
-                      <SubmitButton className="btn btn-primary w-full" pendingText="Opening secure checkout…" disabled={!configured}>
-                        Pay A${offer.amount}
+                      <SubmitButton className={`btn ${primary ? "btn-primary" : "btn-secondary"}`} pendingText="Opening secure checkout…" disabled={!configured}>
+                        {offer.kind === "upgrade" ? `Move up to ${tier.name}` : `Choose ${tier.name}`}
                       </SubmitButton>
                     </form>
                   )}
@@ -174,6 +206,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
               );
             })}
           </div>
+          <ExpectedGuestsForm eventId={event.id} expected={event.expected_guests} />
           <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
             If more guests turn up than your size allows, they can usually keep joining for a short while, and at some
             point we may pause new guests until you upgrade. Upgrading after that point costs more; the price is shown
@@ -185,36 +218,47 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             <div className="notice">Payments aren&apos;t configured on this deployment yet (STRIPE_SECRET_KEY).</div>
           ) : null}
           <span className="text-[14px] text-[color:var(--kb-ink-3)]">
-            Payments are handled by Stripe. We never see your card details. By paying you agree to the{" "}
+            Prices are in Australian dollars. Payments go through Stripe, and we never see your card details. See the{" "}
             <Link href="/terms">terms</Link> and <Link href="/refunds">refund policy</Link>.
           </span>
         </section>
       ) : null}
 
-      <section id="keep" className="soft-card flex scroll-mt-6 flex-col gap-3 p-6" aria-labelledby="keep-heading">
-        <h2 id="keep-heading" className="text-[18px] font-semibold">
-          How long photos are kept
-        </h2>
+      <section
+        id="keep"
+        aria-labelledby="keep-heading"
+        className="flex scroll-mt-24 flex-wrap items-center gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 sm:p-6"
+      >
+        <span className="kb-icon-well" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M3 10h18M8 3v4M16 3v4" />
+          </svg>
+        </span>
         {event.photos_deleted_at ? (
-          <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">
-            Photos from this event were deleted on {formatLongDate(event.photos_deleted_at)}, 12 months after the event.
-          </p>
+          <span className="flex min-w-0 flex-[1_1_320px] flex-col">
+            <h2 id="keep-heading" className="text-[17px] font-semibold">
+              Photos were deleted on {formatLongDate(event.photos_deleted_at)}
+            </h2>
+            <span className="text-[14px] text-[color:var(--kb-ink-2)]">12 months after the event, as the terms say.</span>
+          </span>
         ) : (
           <>
-            <p className="m-0 max-w-[62ch] text-[15px] text-[color:var(--kb-ink-2)]">
-              Photos, the guest list and face search data are kept until{" "}
-              <strong>{formatLongDate(event.photos_delete_at)}</strong>, 12 months after the event
-              {event.extra_years ? ` plus ${event.extra_years === 1 ? "a year" : `${event.extra_years} years`} kept` : ""}. We
-              email you 30 and 7 days before. After that nothing can be recovered.
-            </p>
+            <span className="flex min-w-0 flex-[1_1_320px] flex-col">
+              <h2 id="keep-heading" className="text-[17px] font-semibold">
+                Photos are kept until {formatLongDate(event.photos_delete_at)}
+              </h2>
+              <span className="text-[14px] text-[color:var(--kb-ink-2)]">
+                After that every photo, video and face record is deleted, and nothing can be recovered. We email you 30 and 7
+                days before.
+                {event.extra_years ? ` Includes ${event.extra_years === 1 ? "a year" : `${event.extra_years} years`} you kept.` : ""}
+              </span>
+            </span>
             {inApp ? null : (
-              <form action={startKeepYearAction.bind(null, event.id)} className="flex flex-wrap items-center gap-3">
+              <form action={startKeepYearAction.bind(null, event.id)}>
                 <SubmitButton className="btn btn-secondary" pendingText="Opening secure checkout…" disabled={!configured}>
-                  Keep another year: A${KEEP_YEAR_AUD}
+                  Keep another year · A${KEEP_YEAR_AUD}
                 </SubmitButton>
-                <span className="text-[14px] text-[color:var(--kb-ink-3)]">
-                  Keeps everything, and the gallery open, 12 months longer. Can be bought again each year.
-                </span>
               </form>
             )}
           </>

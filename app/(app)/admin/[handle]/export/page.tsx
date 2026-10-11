@@ -1,9 +1,11 @@
+/* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ZipParts } from "@/components/ZipParts";
 import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { formatLongDate, plural } from "@/lib/format";
+import { listStackedAlbums } from "@/lib/media/album-list";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Download everything" };
@@ -38,44 +40,55 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
       }),
     ),
   );
-  const listed = (albums ?? []).filter((album) => (counts.get(album.id) ?? 0) > 0);
+  const listed = albums ?? [];
+  const covers = new Map((await listStackedAlbums(supabase, event.id, { includeDrafts: true })).map((album) => [album.id, album.coverUrl]));
   const total = listed.reduce((sum, album) => sum + (counts.get(album.id) ?? 0), 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex max-w-[920px] flex-col gap-6">
       <PageTitle kicker={event.name} title="Download everything">
-        {event.photos_delete_at
-          ? `Photos and videos are kept until ${formatLongDate(event.photos_delete_at)}. `
-          : null}
-        Each zip holds up to 150 files, so bigger albums come in numbered parts. Download every part to keep the lot.
+        Every album as a zip of the original files. Large albums come in parts so each download stays manageable.
+        {event.photos_delete_at ? ` Photos and videos are kept until ${formatLongDate(event.photos_delete_at)}.` : ""}
       </PageTitle>
 
       {listed.length === 0 ? (
-        <p className="soft-card m-0 p-5 text-[15px]">There&apos;s nothing to download yet.</p>
+        <p className="m-0 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 text-[15px]">There&apos;s nothing to download yet.</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        <section aria-label="Albums to download" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--kb-sand)] bg-[#fafaf8] px-5 py-3 text-[14px]">
+            <span className="font-semibold">{plural(listed.length, "album")}</span>
+            <span className="mono text-[color:var(--kb-ink-3)]">{plural(total, "file")}</span>
+          </div>
           {listed.map((album) => {
             const count = counts.get(album.id) ?? 0;
+            const cover = covers.get(album.id);
             return (
-              <li key={album.id} id={`album-${album.id}`} className="soft-card flex flex-col gap-3 p-5">
-                <div>
-                  <h2 className="m-0 text-[17px] font-semibold">{album.title}</h2>
-                  <p className="m-0 text-[14px] text-[color:var(--ink-55)]">
-                    {album.album_date ? `${formatLongDate(album.album_date)} · ` : ""}
-                    {plural(count, "file")}
-                  </p>
-                </div>
-                <ZipParts href={`/api/albums/${album.id}/zip`} count={count} label="Download zip" />
-              </li>
+              <div key={album.id} id={`album-${album.id}`} className="flex flex-wrap items-center gap-4 border-t border-[color:var(--kb-sand)] px-5 py-3.5 first-of-type:border-t-0">
+                <span className="block h-11 w-11 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                  {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : null}
+                </span>
+                <span className="flex min-w-0 flex-[1_1_200px] flex-col">
+                  <span className="font-medium">{album.title}</span>
+                  <span className={count ? "mono text-[14px] text-[color:var(--kb-ink-3)]" : "text-[14px] text-[color:var(--kb-ink-3)]"}>
+                    {count ? plural(count, "file") : "Nothing to download yet"}
+                  </span>
+                </span>
+                {count ? <ZipParts href={`/api/albums/${album.id}/zip`} count={count} label="Download zip" className="btn btn-secondary btn-sm no-underline" /> : null}
+              </div>
             );
           })}
-        </ul>
+        </section>
       )}
 
-      <p className="m-0 text-[14px] text-[color:var(--ink-55)]">
-        {plural(total, "file")} in {plural(listed.length, "album")}.{" "}
-        <Link href={`/admin/${event.handle}/billing#keep`}>Keep everything for another year</Link> instead.
-      </p>
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
+        <span className="flex flex-col">
+          <span className="font-semibold">Not ready to let them go?</span>
+          <span className="text-[14px] text-[color:var(--kb-ink-2)]">Keep every photo and the gallery for another 12 months.</span>
+        </span>
+        <Link href={`/admin/${event.handle}/billing#keep`} className="btn btn-primary no-underline">
+          Keep everything for another year
+        </Link>
+      </section>
     </div>
   );
 }
