@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Brand } from "@/components/ui";
+import { NoticePage } from "@/components/NoticePage";
 import { announcementOptOutToken } from "@/lib/events/announcements";
 import { unsubscribeToken, type NotifyKind } from "@/lib/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -34,47 +34,62 @@ export default async function UnsubscribePage(props: PageProps<"/unsubscribe">) 
     ? ((await createAdminClient().from("events").select("name").eq("id", announceEvent).maybeSingle()).data?.name ?? "this event")
     : null;
 
+  const profile = (
+    <Link href="/account" className="btn btn-secondary no-underline">
+      All email settings
+    </Link>
+  );
+
+  if (done) {
+    return (
+      <NoticePage badge="ok" title="That's switched off." actions={profile}>
+        <p>
+          You won&apos;t get those emails again. Sign-in codes and anything about your access ending still come through,
+          because you need those.
+        </p>
+      </NoticePage>
+    );
+  }
+  if (announceValid) {
+    return (
+      <NoticePage
+        badge="info"
+        eyebrow="Email settings"
+        title={`Stop emails about ${announceName}?`}
+        actions={
+          <>
+            <AnnouncementOptOutButton eventId={announceEvent} email={announceEmail} token={token} />
+            {profile}
+          </>
+        }
+      >
+        <p>
+          The organiser won&apos;t be able to send you announcements about this event through us. Sign-in codes still come
+          through.
+        </p>
+      </NoticePage>
+    );
+  }
+  if (valid && isKind(kind)) {
+    return (
+      <NoticePage
+        badge="info"
+        eyebrow="Email settings"
+        title={`Turn off ${LABELS[kind]}?`}
+        actions={
+          <>
+            <UnsubscribeButton userId={userId} kind={kind} token={token} label={`Turn off ${LABELS[kind]}`} />
+            {profile}
+          </>
+        }
+      >
+        <p>You&apos;ll still get sign-in codes, and you can turn them back on any time from your profile.</p>
+      </NoticePage>
+    );
+  }
   return (
-    <main className="mx-auto flex w-full max-w-[560px] flex-col gap-6 px-6 py-12">
-      <Brand />
-      {done ? (
-        <>
-          <h1 className="display text-[32px]">That&apos;s switched off.</h1>
-          <p className="text-[15px] leading-normal text-ink-70">
-            You won&apos;t get those emails again. Sign-in codes and anything about your access ending still come
-            through, because you need those.
-          </p>
-        </>
-      ) : announceValid ? (
-        <>
-          <span className="kicker">Email settings</span>
-          <h1 className="display text-[32px]">Stop emails about {announceName}?</h1>
-          <p className="text-[15px] leading-normal text-ink-70">
-            The organiser won&apos;t be able to send you announcements about this event through us. Sign-in codes still
-            come through.
-          </p>
-          <AnnouncementOptOutButton eventId={announceEvent} email={announceEmail} token={token} />
-        </>
-      ) : valid && isKind(kind) ? (
-        <>
-          <span className="kicker">Email settings</span>
-          <h1 className="display text-[32px]">Turn off {LABELS[kind]}?</h1>
-          <p className="text-[15px] leading-normal text-ink-70">
-            You can turn them back on any time from your profile.
-          </p>
-          <UnsubscribeButton userId={userId} kind={kind} token={token} label={`Turn off ${LABELS[kind]}`} />
-        </>
-      ) : (
-        <>
-          <h1 className="display text-[32px]">That link has expired.</h1>
-          <p className="text-[15px] leading-normal text-ink-70">
-            Open your profile to change which emails you get.
-          </p>
-        </>
-      )}
-      <Link href="/account" className="btn btn-secondary self-start">
-        Your profile
-      </Link>
-    </main>
+    <NoticePage badge="warn" title="That link has expired." actions={profile}>
+      <p>Open your profile to change which emails you get.</p>
+    </NoticePage>
   );
 }

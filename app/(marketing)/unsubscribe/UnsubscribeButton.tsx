@@ -19,7 +19,7 @@ export function UnsubscribeButton({
   return (
     <button
       type="button"
-      className="btn btn-primary btn-lg self-start"
+      className="btn btn-primary"
       disabled={pending}
       onClick={() => startTransition(() => unsubscribeAction(userId, kind, token))}
     >
@@ -33,7 +33,7 @@ export function AnnouncementOptOutButton({ eventId, email, token }: { eventId: s
   return (
     <button
       type="button"
-      className="btn btn-primary btn-lg self-start"
+      className="btn btn-primary"
       disabled={pending}
       onClick={() => startTransition(() => optOutOfAnnouncementsAction(eventId, email, token))}
     >

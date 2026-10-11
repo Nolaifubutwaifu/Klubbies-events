@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Faq } from "@/components/site/Faq";
-import { SectionHeading } from "@/components/site/parts";
+import { Tick } from "@/components/site/parts";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { TIER_ORDER, TIERS } from "@/lib/billing/plans";
@@ -14,11 +14,12 @@ export const metadata: Metadata = {
   description: `Free for up to ${TIERS.free.guests} guests. Bigger events pay once, from A$${TIERS.small.price.standard}.`,
 };
 
-function Check() {
+function Spec({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--kb-brand)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-1 flex-none">
-      <path d="M5 12.5l4.5 4.5L19 7" />
-    </svg>
+    <div className={`flex justify-between gap-3 border-t border-[color:var(--kb-line)] py-3 text-[15px] ${last ? "border-b" : ""}`}>
+      <span className="text-[color:var(--kb-ink-2)]">{label}</span>
+      <span className="mono font-medium">{value}</span>
+    </div>
   );
 }
 
@@ -30,19 +31,19 @@ export default async function PricingPage() {
     <>
       <SiteNav current="pricing" />
       <main>
-        <section className="kb-section !pb-10 !pt-12 sm:!pt-20">
-          <div className="kb-wrap flex flex-col gap-4">
+        <section className="pb-12 pt-12 sm:pb-16 sm:pt-24">
+          <div className="kb-wrap flex flex-col items-center gap-5 text-center">
             <span className="kb-eyebrow">Pricing</span>
-            <h1 className="kb-h1 max-w-[18ch]">One payment per event. Free for small ones.</h1>
-            <p className="kb-lead m-0 max-w-[56ch]">
-              Pick a size by how many guests you expect. No subscription to cancel afterwards, and every size gets the
-              full gallery.
+            <h1 className="kb-h1 max-w-[14ch] !text-[80px] !leading-none max-sm:!text-[50px]">One payment per event. Free for small ones.</h1>
+            <p className="kb-lead m-0 max-w-[52ch]">
+              Free for up to {TIERS.free.guests} guests and {TIERS.free.photos} photos, no card needed. Bigger events pay
+              once, by size. No subscription.
             </p>
           </div>
         </section>
 
-        <section className="kb-section !pt-0" aria-label="Sizes">
-          <div className="kb-wrap flex flex-col gap-6">
+        <section className="pb-16 sm:pb-24" aria-label="Sizes">
+          <div className="kb-wrap flex flex-col gap-5">
             <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
               {TIER_ORDER.map((tier) => {
                 const spec = TIERS[tier];
@@ -50,100 +51,86 @@ export default async function PricingPage() {
                 return (
                   <li
                     key={tier}
-                    className={`flex flex-col gap-4 rounded-[var(--kb-r-panel)] border bg-white p-6 ${free ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"}`}
+                    className={`flex flex-col gap-5 rounded-[14px] bg-white ${free ? "border-2 border-[color:var(--kb-brand)] p-[31px]" : "border border-[color:var(--kb-line)] p-8"}`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-[20px] font-semibold">{spec.name}</h2>
-                      {free ? <span className="kb-pill-brand">No card needed</span> : null}
+                      {free ? <span className="kb-pill-brand !min-h-[28px] font-semibold">No card needed</span> : null}
                     </div>
                     <p className="m-0 flex items-baseline gap-2">
-                      <span className="text-[40px] font-semibold leading-none tracking-[-0.03em]">A${spec.price.standard}</span>
-                      <span className="text-[14px] text-[color:var(--kb-ink-3)]">per event</span>
+                      <span className="serif text-[64px] leading-none">A${spec.price.standard}</span>
+                      {free ? null : <span className="text-[15px] text-[color:var(--kb-ink-2)]">per event</span>}
                     </p>
-                    <ul className="m-0 flex list-none flex-col gap-2 p-0 text-[15px]">
-                      <li className="flex gap-2.5">
-                        <Check />
-                        Up to {spec.guests.toLocaleString("en-AU")} guests
-                      </li>
-                      <li className="flex gap-2.5">
-                        <Check />
-                        {spec.photos.toLocaleString("en-AU")} photos and videos
-                      </li>
-                      {free ? null : (
-                        <li className="flex gap-2.5 text-[color:var(--kb-ink-2)]">
-                          <Check />
-                          Student clubs: A${spec.price.club}
-                        </li>
-                      )}
-                    </ul>
-                    <Link href="/start" className={`btn ${free ? "btn-primary" : "btn-secondary"} mt-auto w-full no-underline`}>
-                      {free ? "Start free" : "Create an event"}
+                    <div>
+                      <Spec label="Guests" value={`up to ${spec.guests.toLocaleString("en-AU")}`} />
+                      <Spec label="Photos" value={spec.photos.toLocaleString("en-AU")} />
+                      <Spec label="Gallery open" value="12 months" last />
+                    </div>
+                    <Link href="/start" className={`btn ${free ? "btn-primary" : "btn-secondary"} btn-lg mt-auto w-full no-underline`}>
+                      Create an event
                     </Link>
                   </li>
                 );
               })}
             </ul>
-
-            <div className="flex flex-col gap-3 rounded-[var(--kb-r-panel)] border border-[color:var(--kb-line)] bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-[15px]">
-                <strong>More than {TIERS.large.guests.toLocaleString("en-AU")} guests?</strong> We&apos;ll quote a size
-                that fits.
-              </span>
-              <Link href="/support" className="btn btn-secondary no-underline">
-                Ask us
-              </Link>
-            </div>
+            <p className="m-0 text-center text-[15px] text-[color:var(--kb-ink-2)]">
+              More than {TIERS.large.guests.toLocaleString("en-AU")} guests? <Link href="/support#contact">Ask us</Link> and
+              we&apos;ll quote a size that fits.
+            </p>
           </div>
         </section>
 
-        <section className="kb-section kb-sand">
-          <div className="kb-wrap grid gap-10 lg:grid-cols-2">
-            <div className="flex flex-col gap-5">
-              <SectionHeading eyebrow="Every size" title="Everything is included." />
-              <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[16px]">
-                {PRICE.includes.map((item) => (
-                  <li key={item} className="flex gap-2.5">
-                    <Check />
-                    {item}
-                  </li>
-                ))}
-              </ul>
+        <section className="border-y border-[color:var(--kb-line)] bg-white py-16 sm:py-24" aria-labelledby="inc">
+          <div className="kb-wrap flex flex-wrap gap-14">
+            <div className="flex flex-[1_1_320px] flex-col gap-4">
+              <span className="kb-eyebrow">Every size</span>
+              <h2 id="inc" className="kb-h2 !text-[52px] !leading-[1.02] max-sm:!text-[38px]">
+                Everything is included.
+              </h2>
+              <p className="m-0 text-[17px] text-[color:var(--kb-ink-2)]">
+                Sizes differ only in guests and photos. No feature is held back, and there&apos;s no limit on photographers.
+              </p>
             </div>
-            <div className="flex flex-col gap-4">
-              <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
-                <h3 className="kb-h3">More guests than you planned?</h3>
-                <p className="kb-body m-0 mt-2">{PRICE.footnote}</p>
-              </div>
-              <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
-                <h3 className="kb-h3">Student clubs</h3>
-                <p className="kb-body m-0 mt-2">{PRICE.clubs} Enter it when you choose your event&apos;s size.</p>
-              </div>
-              <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
-                <h3 className="kb-h3">Announcement email, sent for you</h3>
-                <p className="kb-body m-0 mt-2">
-                  Every size gets a ready-made announcement to copy. On paid sizes we send it to every guest for you, with
-                  your name on it and your own words.
-                </p>
-              </div>
-              <div className="rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white p-5">
-                <h3 className="kb-h3">Videos</h3>
-                <p className="kb-body m-0 mt-2">
-                  Video counts by length: a minute counts as 10 photos and a 5 second clip as 1.
-                </p>
-              </div>
-            </div>
+            <ul className="m-0 grid flex-[2_1_560px] list-none gap-x-8 p-0 sm:grid-cols-2">
+              {PRICE.includes.map((item) => (
+                <li key={item} className="flex gap-3 border-t border-[color:var(--kb-line)] py-[18px]">
+                  <Tick size={20} className="mt-[3px]" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
-        <section className="kb-section" aria-labelledby="price-questions">
-          <div className="kb-wrap grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-            <div className="flex flex-col gap-4">
-              <SectionHeading id="price-questions" eyebrow="FAQ" title="Questions about pricing" />
-              <Link href="/faq" className="kb-link self-start">
+        <section className="py-16 sm:py-24" aria-label="Details">
+          <div className="kb-wrap grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { title: "More guests than you planned?", body: "They can usually keep joining for a short while, and we'll email you. Moving up before that point costs less than after it." },
+              { title: "Student clubs", body: `Club prices from A$${TIERS.small.price.club} with your campus club code. Enter it when you choose your event's size.` },
+              { title: "Announcement email, sent for you", body: "On paid sizes we send your announcement to every guest, in your own words." },
+              { title: "Videos", body: "Video counts by length: 1 photo per 6 seconds, so a minute counts as 10." },
+            ].map((card) => (
+              <div key={card.title} className="flex flex-col gap-2.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-7">
+                <h3 className="text-[18px] font-semibold">{card.title}</h3>
+                <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">{card.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="pb-20 sm:pb-[120px]" aria-labelledby="price-questions">
+          <div className="kb-wrap flex flex-wrap gap-14">
+            <div className="flex flex-[1_1_300px] flex-col items-start gap-4">
+              <h2 id="price-questions" className="kb-h2 !text-[44px] max-sm:!text-[36px]">
+                Questions about pricing
+              </h2>
+              <Link href="/faq" className="text-[15px] font-semibold">
                 See all questions
               </Link>
             </div>
-            <Faq items={FAQS.filter((item) => item.group === "Pricing")} />
+            <div className="min-w-0 flex-[2_1_560px]">
+              <Faq items={FAQS.filter((item) => item.group === "Pricing")} openFirst />
+            </div>
           </div>
         </section>
       </main>

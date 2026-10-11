@@ -8,16 +8,6 @@ import type { Feature } from "@/lib/copy/site";
  * (public/marketing), never with anything from a real event's private gallery.
  */
 
-const PHOTOS = Array.from({ length: 12 }, (_, i) => `/marketing/sq-${i + 1}.webp`);
-
-export function Tile({ index, className = "", src }: { index: number; className?: string; src?: string }) {
-  return (
-    <span className={`relative block overflow-hidden rounded-[4px] bg-[color:var(--kb-mist)] ${className}`} aria-hidden>
-      <Image src={src ?? PHOTOS[index % PHOTOS.length]} alt="" fill sizes="(max-width: 768px) 30vw, 160px" className="object-cover" />
-    </span>
-  );
-}
-
 const ICONS: Record<Feature["icon"], ReactNode> = {
   search: <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" />,
   face: (
@@ -31,8 +21,13 @@ const ICONS: Record<Feature["icon"], ReactNode> = {
   download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
   bell: <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" />,
-  list: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
-  upload: <path d="M12 20V8M7 13l5-5 5 5M5 4h14" />,
+  list: (
+    <>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />
+    </>
+  ),
+  upload: <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />,
   camera: (
     <>
       <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
@@ -47,137 +42,234 @@ const ICONS: Record<Feature["icon"], ReactNode> = {
   ),
   qr: (
     <>
-      <rect x="4" y="4" width="6" height="6" rx="1" />
-      <rect x="14" y="4" width="6" height="6" rx="1" />
-      <rect x="4" y="14" width="6" height="6" rx="1" />
-      <path d="M14 14h2.5v2.5H14zM18 18h2v2h-2zM18 14h2M14 18v2" />
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM18 18h3v3h-3z" />
     </>
   ),
-  brand: (
-    <>
-      <rect x="4" y="4" width="16" height="16" rx="3" />
-      <path d="M8 15l3-6 2 4 1.5-2L17 15" />
-    </>
-  ),
+  brand: <path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z" />,
 };
 
 export function FeatureIcon({ icon }: { icon: Feature["icon"] }) {
   return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]" aria-hidden>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <span className="flex h-12 w-12 flex-none items-center justify-center rounded-[12px] bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]" aria-hidden>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
         {ICONS[icon]}
       </svg>
     </span>
   );
 }
 
-/** The attendee's "Your photos" screen, drawn at phone size. */
-export function PhoneMock() {
+/* ---------------------------------------------------------------------------
+   October 2026 redesign pieces. Drawn interface again, with the example
+   event's teal standing in for an event colour.
+   --------------------------------------------------------------------------- */
+
+const EVENT_TEAL = "#0e6e66";
+
+/** A marketing photo by name (public/marketing). */
+export function Photo({ name, className = "", sizes = "160px" }: { name: string; className?: string; sizes?: string }) {
   return (
-    // A picture of the app, not the app: screen readers skip it.
-    <div aria-hidden className="relative mx-auto w-[300px] rounded-[40px] border border-[color:var(--kb-line-strong)] bg-[#16181d] p-2.5 shadow-[0_40px_80px_-40px_rgb(22_24_29/0.55)]">
-      <div className="overflow-hidden rounded-[31px] bg-[color:var(--kb-cream)]">
-        <div className="flex items-center gap-2 border-b border-[color:var(--kb-line)] bg-white px-4 pb-3 pt-7">
-          <span className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0e7490] text-[14px] font-semibold text-white">PS</span>
-          <span className="min-w-0">
-            <span className="block truncate text-[14px] font-semibold leading-tight">Product Summit 2026</span>
-            <span className="block text-[14px] leading-tight text-[color:var(--kb-ink-3)]">14 Nov · Brisbane</span>
-          </span>
-        </div>
-        <div className="flex flex-col gap-3 p-4">
-          <span className="kb-eyebrow">Your photos</span>
-          <span className="serif text-[30px]">23 photos of you</span>
-          <div className="grid grid-cols-3 gap-1">
-            {Array.from({ length: 9 }, (_, i) => (
-              <Tile key={i} index={i} className="aspect-square" />
+    <span className={`relative block overflow-hidden bg-[color:var(--kb-mist)] ${className}`} aria-hidden>
+      <Image src={`/marketing/${name}.webp`} alt="" fill sizes={sizes} className="object-cover" />
+    </span>
+  );
+}
+
+export function Tick({ size = 18, className = "", color = "var(--kb-ok)" }: { size?: number; className?: string; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`flex-none ${className}`}>
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </svg>
+  );
+}
+
+/** The hero picture: the attendee's Your photos screen on a phone, on a night panel with two notes. */
+export function HeroShowcase() {
+  const grid = ["sq-5", "sq-4", "sq-7", "sq-9", "sq-6", "sq-8", "sq-10", "cover-awards", "sq-1"];
+  return (
+    <div
+      role="img"
+      aria-label="The attendee's Your photos screen on a phone"
+      className="relative flex h-[520px] items-center justify-center overflow-hidden rounded-[20px] bg-[color:var(--kb-night)] sm:h-[620px]"
+    >
+      <span
+        aria-hidden
+        className="absolute inset-0 [background-image:linear-gradient(rgb(255_255_255/0.05)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.05)_1px,transparent_1px)] [background-size:48px_48px]"
+      />
+      <div className="relative h-[480px] w-[250px] rounded-[40px] bg-[#05070d] p-[9px] shadow-[0_40px_80px_-30px_rgb(0_0_0/0.6)] sm:h-[560px] sm:w-[290px]">
+        <div className="flex h-full w-full flex-col overflow-hidden rounded-[32px] bg-white">
+          <div className="flex flex-col gap-1 px-[18px] pb-[18px] pt-[30px] text-white" style={{ background: EVENT_TEAL }}>
+            <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#cfede9]">Brisbane Product Summit</span>
+            <span className="serif text-[30px] leading-[1.05]">Your photos</span>
+          </div>
+          <div className="flex items-center justify-between px-3.5 pb-2.5 pt-3.5">
+            <span className="text-[14px] font-semibold">23 photos of you</span>
+            <span className="text-[13px] font-semibold" style={{ color: EVENT_TEAL }}>
+              Download all
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-[3px] px-3.5">
+            {grid.map((name) => (
+              <Photo key={name} name={name} className="aspect-square rounded-[4px]" sizes="90px" />
             ))}
           </div>
-          <span className="flex gap-2">
-            <span className="flex h-9 flex-1 items-center justify-center rounded-[8px] bg-[#16181d] text-[14px] font-medium text-white">Download all</span>
-            <span className="flex h-9 flex-1 items-center justify-center rounded-[8px] border border-[color:var(--kb-line-strong)] bg-white text-[14px] font-medium">See all</span>
-          </span>
-          <span className="mt-1 text-[14px] font-semibold">Albums</span>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              ["Awards night", "/marketing/cover-awards.webp"],
-              ["Networking drinks", "/marketing/cover-drinks.webp"],
-            ].map(([title, cover], i) => (
-              <span key={title} className="flex flex-col gap-1">
-                <Tile index={i} src={cover} className="aspect-[4/3]" />
-                <span className="text-[14px] font-medium">{title}</span>
-              </span>
-            ))}
+          <div className="mt-auto grid grid-cols-4 border-t border-[color:var(--kb-line)] px-1.5 pb-4 pt-2.5 text-center text-[11px] text-[color:var(--kb-ink-3)]">
+            <span>Photos</span>
+            <span className="font-semibold" style={{ color: EVENT_TEAL }}>
+              Your photos
+            </span>
+            <span>Saved</span>
+            <span>You</span>
           </div>
         </div>
+      </div>
+      <div className="absolute bottom-14 left-7 hidden items-center gap-3 rounded-[12px] bg-white px-4 py-3.5 shadow-[0_18px_44px_-14px_rgb(0_0_0/0.45)] sm:flex">
+        <Photo name="selfie" className="h-11 w-11 rounded-full" sizes="44px" />
+        <span className="flex flex-col leading-[1.35]">
+          <span className="text-[15px] font-semibold">Found you in 23 photos</span>
+          <span className="text-[14px] text-[color:var(--kb-ink-2)]">Keynote, Networking, Awards</span>
+        </span>
+      </div>
+      <div className="absolute right-7 top-14 hidden min-w-[200px] flex-col gap-1.5 rounded-[12px] bg-white px-4 py-3.5 shadow-[0_18px_44px_-14px_rgb(0_0_0/0.45)] sm:flex">
+        <span className="text-[14px] text-[color:var(--kb-ink-2)]">Saved to your phone</span>
+        <span className="flex items-center gap-2 text-[15px] font-semibold">
+          <Tick />
+          Original quality
+        </span>
       </div>
     </div>
   );
 }
 
-/** The organiser's share kit, drawn: a QR on a poster. */
-export function PosterMock() {
-  const cells = [
-    "1111111001011111110",
-    "1000001011010000010",
-    "1011101001110111010",
-    "1011101010010111010",
-    "1011101011010111010",
-    "1000001000110000010",
-    "1111111010101111111",
-    "0000000011100000000",
-    "1101011100111010110",
-    "0110100111001101001",
-    "1011011010110010111",
-    "0000000010011011010",
-    "1111111011101010110",
-    "1000001001010110001",
-    "1011101011110011011",
-    "1011101010101100101",
-    "1011101001011010110",
-    "1000001010110101001",
-    "1111111011001011011",
+function MiniCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex w-full max-w-[280px] flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-4 shadow-[0_10px_28px_-12px_rgb(22_24_29/0.2)]">
+      {children}
+    </div>
+  );
+}
+
+function UploadRow({ file, status, progress }: { file: string; status: string; progress: number }) {
+  const done = progress >= 100;
+  return (
+    <span className="flex flex-col gap-1.5">
+      <span className="flex justify-between text-[13px]">
+        <span className="mono">{file}</span>
+        <span className={done ? "font-semibold text-[color:var(--kb-ok)]" : "text-[color:var(--kb-ink-2)]"}>{status}</span>
+      </span>
+      <span className="relative h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-line)]">
+        <span
+          className="absolute inset-y-0 left-0"
+          style={{ width: `${progress}%`, background: done ? "var(--kb-ok)" : "var(--kb-brand)" }}
+        />
+      </span>
+    </span>
+  );
+}
+
+const QR_PATH =
+  "M2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM9 3h2v2H9zM12 4h1v3h-1zM8 6h2v2H8zM0 8h2v1H0zM3 8h3v2H3zM7 9h3v1H7zM11 8h3v2h-3zM15 8h2v3h-2zM18 8h3v1h-3zM1 11h2v2H1zM5 11h3v1H5zM9 11h2v3H9zM12 12h3v1h-3zM17 12h2v2h-2zM8 14h1v3H8zM10 15h3v1h-3zM14 14h2v2h-2zM17 16h4v1h-4zM11 17h2v4h-2zM14 18h3v2h-3zM19 18h2v3h-2zM8 19h2v2H8z";
+
+/** A small drawn QR code. Decoration: it does not scan. */
+export function DrawnQr({ size = 112 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 21 21" shapeRendering="crispEdges" aria-hidden>
+      <rect width="21" height="21" fill="#fff" />
+      <path fill="#16181d" d="M0 0h7v7H0zM14 0h7v7h-7zM0 14h7v7H0z" />
+      <path fill="#fff" d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1z" />
+      <path fill="#16181d" d={QR_PATH} />
+    </svg>
+  );
+}
+
+/** The picture above each of the home page's three steps. */
+export function StepVisual({ step }: { step: 0 | 1 | 2 }) {
+  return (
+    <div aria-hidden className="flex h-[220px] items-center justify-center gap-4 bg-[color:var(--kb-sand)] p-7">
+      {step === 0 ? (
+        <MiniCard>
+          <span className="text-[13px] text-[color:var(--kb-ink-3)]">Event name</span>
+          <span className="-mt-1.5 rounded-[6px] border border-[color:var(--kb-line-strong)] px-2.5 py-1.5 text-[15px] font-semibold">
+            Brisbane Product Summit 2026
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-[22px] w-[22px] rounded-full shadow-[0_0_0_2px_#fff,0_0_0_4px_#0e6e66]" style={{ background: EVENT_TEAL }} />
+            <span className="h-[22px] w-[22px] rounded-full bg-[#2b4acb]" />
+            <span className="h-[22px] w-[22px] rounded-full bg-[#9a3412]" />
+            <span className="h-[22px] w-[22px] rounded-full bg-[#16181d]" />
+          </span>
+          <span className="flex items-center gap-2 text-[14px]">
+            <span className="h-4 w-4 rounded-full border-[5px] border-[color:var(--kb-brand)]" />
+            Anyone with the link
+          </span>
+        </MiniCard>
+      ) : step === 1 ? (
+        <MiniCard>
+          <span className="text-[13px] text-[color:var(--kb-ink-3)]">Uploading to Keynote as Priya Shah</span>
+          <UploadRow file="DSC_2041.jpg" status="Done" progress={100} />
+          <UploadRow file="DSC_2042.jpg" status="64%" progress={64} />
+          <UploadRow file="DSC_2043.jpg" status="Waiting" progress={0} />
+        </MiniCard>
+      ) : (
+        <>
+          <div className="rounded-[10px] border border-[color:var(--kb-line)] bg-white p-3.5 shadow-[0_10px_28px_-12px_rgb(22_24_29/0.2)]">
+            <DrawnQr />
+          </div>
+          <div className="flex max-w-[110px] flex-col gap-2">
+            <span className="text-[14px] font-semibold leading-[1.3]">Scan to get your photos</span>
+            <Photo name="selfie" className="h-[52px] w-[52px] rounded-full shadow-[0_0_0_3px_#fff,0_0_0_5px_var(--kb-brand)]" sizes="52px" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Face search, drawn: six photos, three of them you. */
+export function FaceMatchVisual() {
+  const photos: [string, boolean][] = [
+    ["sq-6", false],
+    ["sq-5", true],
+    ["sq-7", false],
+    ["sq-4", true],
+    ["sq-8", false],
+    ["sq-9", true],
   ];
   return (
-    <div aria-hidden className="mx-auto flex aspect-[210/297] w-full max-w-[340px] flex-col rounded-[6px] border border-[color:var(--kb-line)] bg-white p-7 shadow-[0_30px_60px_-35px_rgb(22_24_29/0.45)]">
-      <span className="text-[14px] font-medium uppercase tracking-[0.12em] text-[#0e7490]">Your photos from</span>
-      <span className="serif mt-1 text-[34px]">Product Summit 2026</span>
-      <span className="text-[14px] text-[color:var(--kb-ink-3)]">14 November · Brisbane</span>
-      <div className="mt-auto flex items-end gap-4">
-        <svg viewBox="0 0 19 19" className="w-[46%] flex-none" shapeRendering="crispEdges" aria-hidden>
-          {cells.flatMap((row, y) => [...row].map((c, x) => (c === "1" ? <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill="#16181d" /> : null)))}
-        </svg>
-        <ol className="m-0 flex list-none flex-col gap-2 p-0 text-[14px]">
-          {["Scan", "Confirm your email", "Find yours"].map((step, i) => (
-            <li key={step} className="flex items-center gap-2">
-              <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[#0e7490] text-[14px] font-semibold text-white">{i + 1}</span>
-              {step}
-            </li>
-          ))}
-        </ol>
+    <div aria-hidden className="relative mb-9">
+      <div className="grid grid-cols-3 gap-1">
+        {photos.map(([name, match]) => (
+          <Photo
+            key={name}
+            name={name}
+            sizes="(max-width: 768px) 30vw, 180px"
+            className={`aspect-square rounded-[6px] ${match ? "shadow-[0_0_0_3px_var(--kb-brand)]" : "opacity-45"}`}
+          />
+        ))}
+      </div>
+      <div className="absolute -bottom-9 left-1/2 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[color:var(--kb-ink)] py-2 pl-2 pr-5 text-white shadow-[0_18px_44px_-14px_rgb(22_24_29/0.5)]">
+        <Photo name="selfie" className="h-10 w-10 rounded-full" sizes="40px" />
+        <span className="text-[15px] font-semibold">3 of 6 are you</span>
       </div>
     </div>
   );
 }
 
-export function SectionHeading({ eyebrow, title, lead, id }: { eyebrow: string; title: ReactNode; lead?: string; id?: string }) {
+/** A full-bleed row of six photos, under the closing call to action. */
+export function PhotoStrip() {
   return (
-    <div className="flex max-w-[720px] flex-col gap-3">
-      <span className="kb-eyebrow">{eyebrow}</span>
-      <h2 id={id} className="kb-h2">
-        {title}
-      </h2>
-      {lead ? <p className="kb-lead m-0">{lead}</p> : null}
+    <div aria-hidden className="mt-20 grid grid-cols-3 gap-1 sm:grid-cols-6">
+      {["cover-awards", "sq-4", "sq-7", "sq-6", "sq-8", "sq-9"].map((name) => (
+        <Photo key={name} name={name} className="h-[160px] sm:h-[240px]" sizes="(max-width: 640px) 33vw, 17vw" />
+      ))}
     </div>
   );
 }
 
-
-/**
- * The closing call to action on Features and How it works: a filled band with
- * a short case, the two next steps and a strip of gallery tiles, so it reads
- * as a finished section rather than a heading floating on white.
- */
-export function ClosingCta({
+/** The closing call to action on night: two buttons and three ticks. */
+export function NightCta({
   title,
   lead,
   points,
@@ -189,38 +281,60 @@ export function ClosingCta({
   secondary: { href: string; label: string };
 }) {
   return (
-    <section className="kb-section">
+    <section className="kb-section !pt-0">
       <div className="kb-wrap">
-        <div className="kb-brand-band grid items-center gap-8 overflow-hidden p-6 sm:p-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div className="flex flex-col gap-5">
-            <h2 className="kb-h2 max-w-[18ch]">{title}</h2>
-            <p className="kb-lead m-0 max-w-[48ch]">{lead}</p>
-            <ul className="m-0 flex list-none flex-col gap-2 p-0">
-              {points.map((point) => (
-                <li key={point} className="flex items-start gap-2.5 text-[15px] text-[color:var(--kb-ink)]">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--kb-brand)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-none" aria-hidden>
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <div className="flex flex-wrap gap-3 pt-1">
-              <a href="/start" className="btn btn-primary btn-lg no-underline">
+        <div className="kb-night-band flex flex-wrap items-center justify-between gap-12 px-7 py-12 sm:px-14 sm:py-16">
+          <div className="flex flex-[1_1_420px] flex-col gap-[18px]">
+            <h2 className="kb-h2 !leading-[1.02]">{title}</h2>
+            <p className="m-0 max-w-[48ch] text-[18px] text-[color:var(--kb-night-ink)]">{lead}</p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <a href="/start" className="btn btn-light btn-lg no-underline">
                 Create an event
               </a>
-              <a href={secondary.href} className="btn btn-secondary btn-lg no-underline">
+              <a href={secondary.href} className="btn btn-ghost-dark btn-lg no-underline">
                 {secondary.label}
               </a>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-1.5" aria-hidden>
-            {Array.from({ length: 6 }, (_, i) => (
-              <Tile key={i} index={i + 2} className={`aspect-square ${i === 0 ? "col-span-2 row-span-2 !aspect-auto" : ""}`} />
+          <ul className="m-0 flex flex-[1_1_320px] list-none flex-col gap-3.5 p-0 text-[16px] text-[#e6e9f2]">
+            {points.map((point) => (
+              <li key={point} className="flex items-center gap-3">
+                <Tick size={20} color="#b3c1f6" />
+                {point}
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </div>
     </section>
+  );
+}
+
+/** The share kit, drawn: a tilted A4 poster and the announcement email. */
+export function ShareKitVisual() {
+  return (
+    <div aria-hidden className="relative h-[460px] min-w-0 overflow-hidden rounded-[20px] bg-[color:var(--kb-sand)] sm:h-[520px]">
+      <div className="absolute left-6 top-8 flex h-[410px] w-[290px] -rotate-3 flex-col items-center gap-3.5 rounded-[4px] bg-white p-7 text-center shadow-[0_30px_60px_-30px_rgb(22_24_29/0.4)] sm:left-12 sm:top-12">
+        <span className="flex h-12 w-12 items-center justify-center rounded-[10px] font-bold text-white" style={{ background: EVENT_TEAL }}>
+          BPS
+        </span>
+        <span className="serif text-[28px] leading-[1.05]">Brisbane Product Summit 2026</span>
+        <span className="text-[13px] text-[color:var(--kb-ink-2)]">Scan for every photo you&apos;re in</span>
+        <DrawnQr size={140} />
+        <span className="mono text-[12px] text-[color:var(--kb-ink-3)]">events.klubbies.app/e/bps26</span>
+      </div>
+      <div className="absolute bottom-8 right-4 w-[300px] overflow-hidden rounded-[12px] bg-white shadow-[0_30px_60px_-30px_rgb(22_24_29/0.4)] sm:bottom-12 sm:right-10 sm:w-[320px]">
+        <div className="flex flex-col gap-0.5 border-b border-[color:var(--kb-line)] px-[18px] py-3.5 text-[13px]">
+          <span className="text-[color:var(--kb-ink-3)]">Subject</span>
+          <span className="text-[14px] font-semibold">Your photos from Brisbane Product Summit</span>
+        </div>
+        <div className="flex flex-col gap-2.5 p-[18px] text-[14px] text-[color:var(--kb-ink-2)]">
+          <span>Hi there, thanks for coming. Every photo from the day is ready, and you can find the ones you&apos;re in with one selfie.</span>
+          <span className="self-start rounded-[6px] px-3.5 py-2 font-semibold text-white" style={{ background: EVENT_TEAL }}>
+            Get my photos
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
