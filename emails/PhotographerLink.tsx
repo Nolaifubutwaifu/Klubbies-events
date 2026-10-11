@@ -6,7 +6,7 @@ export type PhotographerLinkProps = { eventName: string; albumTitle: string; org
 /** The one-time upload link, sent by the organiser from Photographers. */
 export default function PhotographerLink({ eventName, albumTitle, organiser, url, expiresOn }: PhotographerLinkProps) {
   return (
-    <EmailLayout preview={`Your upload link for ${eventName}`}>
+    <EmailLayout preview={`Your upload link for ${eventName}`} eventName={eventName}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>Your upload link</Text>
       <Text style={emailStyles.body}>

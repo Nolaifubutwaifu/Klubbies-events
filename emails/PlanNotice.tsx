@@ -18,7 +18,7 @@ export type PlanNoticeProps = {
  */
 export default function PlanNotice({ eventName, heading, paragraphs, offers, buttonLabel, buttonUrl }: PlanNoticeProps) {
   return (
-    <EmailLayout preview={heading}>
+    <EmailLayout preview={heading} eventName={eventName}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>{heading}</Text>
       {paragraphs.map((text) => (

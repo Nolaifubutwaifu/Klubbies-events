@@ -13,7 +13,7 @@ export type AlbumPublishedProps = {
 export default function AlbumPublished({ name, eventName, albumTitle, albumMeta, albumUrl, unsubscribeUrl }: AlbumPublishedProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
-    <EmailLayout preview={`${albumTitle} from ${eventName} is ready`}>
+    <EmailLayout preview={`${albumTitle} from ${eventName} is ready`} eventName={eventName}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>{albumTitle}</Text>
       <Text style={emailStyles.body}>
@@ -21,7 +21,7 @@ export default function AlbumPublished({ name, eventName, albumTitle, albumMeta,
         organiser let in can see them.
       </Text>
       <Link href={albumUrl} style={emailStyles.button}>
-        See the photos
+        Open the album
       </Link>
       <Text style={{ ...emailStyles.body, fontSize: 14, marginTop: 24 }}>
         Don&apos;t want these? <Link href={unsubscribeUrl} style={emailStyles.link}>Turn off new album emails</Link>.

@@ -12,7 +12,7 @@ export type AccessEndingProps = {
 export default function AccessEnding({ name, eventName, endsOn, eventUrl, unsubscribeUrl }: AccessEndingProps) {
   const firstName = name.split(" ")[0] || "there";
   return (
-    <EmailLayout preview={`The ${eventName} gallery closes on ${endsOn}`}>
+    <EmailLayout preview={`The ${eventName} gallery closes on ${endsOn}`} eventName={eventName}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>The gallery closes on {endsOn}</Text>
       <Text style={emailStyles.body}>

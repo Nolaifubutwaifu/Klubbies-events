@@ -12,7 +12,7 @@ export type DeletionWarningProps = {
 /** To organisers, 30 and 7 days before an event's photos are deleted. */
 export default function DeletionWarning({ eventName, deletesOn, daysLeft, albums, billingUrl }: DeletionWarningProps) {
   return (
-    <EmailLayout preview={`Photos from ${eventName} will be deleted on ${deletesOn}`}>
+    <EmailLayout preview={`Photos from ${eventName} will be deleted on ${deletesOn}`} eventName={eventName}>
       <Text style={emailStyles.kicker}>{eventName}</Text>
       <Text style={emailStyles.heading}>
         Photos will be deleted in {daysLeft} {daysLeft === 1 ? "day" : "days"}
