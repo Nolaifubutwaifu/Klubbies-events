@@ -91,6 +91,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
   }
 
   const selfieUrl = enrolled ? await ownSelfie(ctx.event.id, ctx.userId) : null;
+  const pendingSelfie = state.profile?.status === "pending" ? await ownSelfie(ctx.event.id, ctx.userId) : null;
   const PREVIEW = 9;
 
   return (
@@ -119,17 +120,50 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
         ) : null}
 
         {state.profile?.status === "pending" ? (
-          <div className="mx-5 flex max-w-[56ch] flex-col gap-2 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 sm:mx-10">
-            <span className="text-[17px] font-semibold">Looking now</span>
-            <LookingNow eventId={ctx.event.id} />
-            {/* Say what it is actually waiting on. "A minute" is a lie when
-                an event has just switched on and thousands of photos are
-                still being indexed ahead of the first search. */}
-            <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-              We&rsquo;re comparing your selfie against this event&rsquo;s photos.{" "}
-              {progress.remaining > 0
-                ? `There are ${progress.remaining.toLocaleString("en-AU")} photos still being read, so this may take a while. Your photos appear here as they are found, so you don't need to wait on this page.`
-                : "This usually takes under a minute."}
+          <div className="mx-5 flex flex-col gap-4 sm:mx-10">
+            <section role="status" aria-labelledby="looking-title" className="flex max-w-[640px] flex-col gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5">
+              <div className="flex items-center gap-3.5">
+                <span className="relative block h-12 w-12 flex-none">
+                  {pendingSelfie ? <img src={pendingSelfie} alt="" className="h-12 w-12 rounded-full object-cover" /> : <span className="block h-12 w-12 rounded-full bg-[color:var(--kb-sand)]" />}
+                  <span className="absolute -inset-1 animate-pulse rounded-full border-2 border-[color:var(--kb-ember)] motion-reduce:animate-none" aria-hidden />
+                </span>
+                <span className="flex flex-col">
+                  <h2 id="looking-title" className="text-[17px] font-semibold">
+                    Looking now
+                  </h2>
+                  {/* Say what it is actually waiting on. "A minute" is a lie when
+                      an event has just switched on and thousands of photos are
+                      still being indexed ahead of the first search. */}
+                  <span className="text-[14px] text-[color:var(--kb-ink-2)]">
+                    {progress.remaining > 0 ? "This event's photos are still being read, so this may take a while." : "This usually takes under a minute."}
+                  </span>
+                </span>
+              </div>
+              {progress.total > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  <span className="flex justify-between text-[14px]">
+                    <span className="text-[color:var(--kb-ink-2)]">Checked</span>
+                    <span className="mono">
+                      {(progress.total - progress.remaining).toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")}
+                    </span>
+                  </span>
+                  <span className="relative h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-sand)]" aria-hidden>
+                    <span
+                      className="absolute inset-y-0 left-0 rounded-[3px] bg-[color:var(--kb-ember)]"
+                      style={{ width: `${Math.round(((progress.total - progress.remaining) / progress.total) * 100)}%` }}
+                    />
+                  </span>
+                </div>
+              ) : null}
+              <LookingNow eventId={ctx.event.id} />
+            </section>
+            <div aria-hidden className="grid max-w-[640px] grid-cols-3 gap-[3px]">
+              {Array.from({ length: 6 }, (_, i) => (
+                <span key={i} className="soft-skeleton block aspect-square !rounded-[3px]" />
+              ))}
+            </div>
+            <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
+              You can leave this page. We&apos;ll keep looking, and new photos are checked as they&apos;re uploaded.
             </p>
           </div>
         ) : null}

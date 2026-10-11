@@ -181,12 +181,17 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
           </div>
 
           {albums.length === 0 ? (
-            <div className="soft-dashed flex flex-col items-start gap-2 p-8">
-              <span className="text-[17px] font-semibold">No photos yet</span>
-              <span className="max-w-[52ch] text-[15px] text-[color:var(--kb-ink-2)]">
+            <div className="flex flex-col items-center gap-2 rounded-[12px] border-[1.5px] border-dashed border-[color:var(--kb-line-strong)] px-6 py-10 text-center">
+              <span className="mb-2 flex gap-1.5" aria-hidden>
+                <span className="h-2 w-2 rounded-full bg-[color:var(--kb-ember)]" />
+                <span className="h-2 w-2 rounded-full bg-[color:var(--kb-line-strong)]" />
+                <span className="h-2 w-2 rounded-full bg-[color:var(--kb-line-strong)]" />
+              </span>
+              <span className="text-[19px] font-semibold">No photos yet</span>
+              <span className="max-w-[44ch] text-[15px] text-[color:var(--kb-ink-2)]">
                 {ctx.perms.manage_albums
                   ? "Create an album and hand your photographers their upload links. Photos appear here as they land."
-                  : "The photographers are still working. Photos appear here as soon as the organiser publishes them, and we'll email you when they do."}
+                  : "The organiser publishes albums as the photographers finish. We'll email you when the first one is ready."}
               </span>
               {ctx.perms.manage_albums ? (
                 <Link href={`/admin/${handle}/upload`} className="btn btn-primary mt-2 no-underline">

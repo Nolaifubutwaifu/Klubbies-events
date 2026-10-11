@@ -5,6 +5,7 @@ import { CreditLine } from "@/components/event/CreditLine";
 import { EventIntro } from "@/components/event/EventIntro";
 import { JoinEvent } from "@/components/event/JoinEvent";
 import { MemberTabBar } from "@/components/MemberTabBar";
+import { EventMark } from "@/components/EventMark";
 import { BrandTile } from "@/components/ui";
 import { getEventContext, getPublicEvent, getSessionUser } from "@/lib/auth/session";
 import { faceStateFor } from "@/lib/faces/queries";
@@ -54,40 +55,49 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
     const logo = ctx.event.logo_path
       ? ((await signLogoMarks(supabase, [ctx.event.logo_path])).get(ctx.event.logo_path) ?? null)
       : null;
+    const closed = ctx.accessClosed;
+    const host = ctx.event.organisation ?? "the organiser";
     return (
-      <Door accentColour={ctx.event.accent_colour}>
-        <EventIntro
-          name={ctx.event.name}
-          organisation={ctx.event.organisation}
-          startsOn={ctx.event.starts_on}
-          endsOn={ctx.event.ends_on}
-          venue={ctx.event.venue}
-          logoUrl={logo}
-          accentColour={ctx.event.accent_colour}
-        >
-          {ctx.accessClosed ? (
-            <div className="kb-info max-w-[52ch] flex-col">
-              <strong>This gallery closed on {formatLongDate(ctx.event.access_ends_at)}.</strong>
-              <span>
-                The organiser set it to close after the event. Your selfie and face data were deleted when it closed. If
-                you still need a photo, ask {ctx.event.organisation ? ctx.event.organisation : "the organiser"}: we can pass
-                your message on (mention the event name).
-              </span>
-              <Link href="/support#contact" className="kb-link self-start">
-                Ask the organiser through us
-              </Link>
-            </div>
+      <div className="flex flex-1 flex-col bg-[color:var(--kb-cream)]" style={eventToneStyle(ctx.event.accent_colour)}>
+        {/* The event's colour, its mark over the edge: the event vouches for the message. */}
+        <div className="relative h-[180px] bg-[color:var(--kb-ember)] sm:h-[220px]">
+          <span className="absolute -bottom-9 left-1/2 w-full max-w-[640px] -translate-x-1/2 px-5 sm:px-8">
+            <span className="inline-block rounded-[18px] bg-[color:var(--kb-cream)] p-1">
+              <EventMark name={ctx.event.name} logoUrl={logo} accentColour={ctx.event.accent_colour} size={72} />
+            </span>
+          </span>
+        </div>
+        <main className="mx-auto flex w-full max-w-[640px] flex-1 flex-col items-start gap-4 px-5 pb-16 pt-14 sm:px-8">
+          <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[color:var(--kb-ember)]">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="4" y="10" width="16" height="11" rx="2" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            </svg>
+            {closed ? `Closed on ${formatLongDate(ctx.event.access_ends_at)}` : "Full for now"}
+          </span>
+          <h1 className="serif text-[40px] leading-[1.02] sm:text-[48px]">{closed ? "This gallery has closed" : "This gallery is full for now"}</h1>
+          {closed ? (
+            <>
+              <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
+                {ctx.event.name} is no longer open to attendees. Photos you saved or downloaded are still yours, and your
+                selfie and face data were deleted when it closed.
+              </p>
+              <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
+                If you need a photo, ask {host}, who ran the event. <Link href="/support#contact">We can pass your message on</Link>.
+              </p>
+            </>
           ) : (
-            <div className="kb-info max-w-[52ch] flex-col">
-              <strong>This gallery is full for now.</strong>
-              <span>
-                We&apos;ve asked the organiser to make room, and we&apos;ll email you when it opens. Your selfie and saved
-                photos are kept.
-              </span>
-            </div>
+            <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
+              We&apos;ve asked the organiser to make room, and we&apos;ll email you when it opens. Your selfie and saved photos
+              are kept.
+            </p>
           )}
-        </EventIntro>
-      </Door>
+          <Link href="/events" className="btn btn-secondary mt-2 no-underline">
+            Your other events
+          </Link>
+        </main>
+        <CreditLine inApp={await isNativeAppRequest()} />
+      </div>
     );
   }
 

@@ -54,7 +54,7 @@ function EventPanel({ event, meta }: { event: AuthEvent; meta: string }) {
           <rect x="4" y="10" width="16" height="11" rx="2" />
           <path d="M8 10V7a4 4 0 0 1 8 0v3" />
         </svg>
-        Private gallery
+        {event.accessMode === "guest_list" ? "Guest list event" : "Private gallery"}
       </span>
       <div className="flex flex-col gap-5">
         <span className="rounded-[18px] bg-white/15 p-1 self-start">
@@ -128,6 +128,7 @@ export function AuthShell({
               </span>
             </div>
             <div className="mx-auto flex max-w-[440px] flex-col gap-2 px-5 pt-12 sm:px-0">
+              {event.accessMode === "guest_list" ? <GuestListLabel /> : null}
               <span className="serif text-[38px] leading-[1.02]">{event.name}</span>
               {meta ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">{meta}</span> : null}
               {event.organisation ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">Hosted by {event.organisation}</span> : null}
@@ -159,6 +160,18 @@ export function AuthShell({
 
       <div className="relative hidden lg:block">{panel ?? (event ? <EventPanel event={event} meta={meta} /> : <PhotoPanel />)}</div>
     </div>
+  );
+}
+
+function GuestListLabel() {
+  return (
+    <span className="flex items-center gap-1.5 text-[14px] font-semibold text-[color:var(--kb-ember)]">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="4" y="10" width="16" height="11" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </svg>
+      Guest list event
+    </span>
   );
 }
 
