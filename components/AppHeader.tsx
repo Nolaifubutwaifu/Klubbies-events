@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
 import { EventMark } from "@/components/EventMark";
 import { EventSwitcher } from "@/components/EventSwitcher";
+import { HeaderBack } from "@/components/HeaderBack";
 import { HeaderNav } from "@/components/HeaderNav";
 import { BrandTile } from "@/components/ui";
 import { displayNameFor } from "@/lib/auth/display-name";
@@ -63,7 +64,9 @@ export async function AppHeader({
               </Link>
               <span className="hidden h-6 w-px bg-[color:var(--kb-line)] sm:block" aria-hidden />
             </>
-          ) : null}
+          ) : (
+            <HeaderBack handle={event.handle} />
+          )}
           <Link
             href={area === "organiser" ? `/admin/${event.handle}` : `/e/${event.handle}`}
             className="flex min-w-0 items-center gap-2.5 text-ink no-underline"

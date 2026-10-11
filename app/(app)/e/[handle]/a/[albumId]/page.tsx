@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Uploader } from "@/app/(app)/admin/[handle]/albums/[albumId]/Uploader";
@@ -9,7 +8,7 @@ import { AlbumActions } from "@/components/AlbumActions";
 import { UnfinishedUploads } from "@/components/UnfinishedUploads";
 import { getEventContext } from "@/lib/auth/session";
 import { faceStateFor, photosOfYouInAlbum } from "@/lib/faces/queries";
-import { formatLongDate, plural } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { favouritedIds } from "@/lib/media/favourites";
 import { listAlbumMedia } from "@/lib/media/queries";
 import { ProcessingBanner } from "@/components/ProcessingBanner";
@@ -196,80 +195,68 @@ export default async function AlbumPage(props: Props) {
   const videoCount = counts?.video_count ?? 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col">
-      {/* Sticky album header: the title and the download stay reachable while
-          you scroll a thousand photos. */}
-      <div className="sticky top-0 z-20 border-b border-[color:var(--kb-line)] bg-[rgb(247_247_245/0.94)] backdrop-blur-md">
-        <div className="flex w-full flex-wrap items-center gap-4 px-4 py-3.5 sm:px-6">
-          <Link
-            href={`/e/${handle}`}
-            aria-label="Back to the event"
-            className="kb-icon-btn flex-none text-ink no-underline"
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
-              <path d="M14 6l-6 6 6 6" />
-            </svg>
-          </Link>
-
-          <div className="min-w-[220px] flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-[clamp(20px,2.4vw,26px)] font-semibold">{album.title}</h1>
-              {canManage ? (
-                <span className={album.status === "published" ? "soft-chip" : "soft-chip soft-chip-muted"}>
-                  {album.status === "published" ? "Published" : "Draft · attendees can't see it"}
+    <main className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col gap-[18px] pb-6">
+      {/* The album's title block. The event bar above carries Back. */}
+      <div className="flex flex-col gap-[18px] pt-6">
+        <div className="flex flex-col gap-1.5 px-5 sm:px-10">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="serif text-[44px] leading-none">{album.title}</h1>
+            {canManage ? (
+              <span
+                className={`kb-chip ${album.status === "published" ? "bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]" : "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]"}`}
+              >
+                {album.status === "published" ? "Published" : "Draft · attendees can't see it"}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-[15px] text-[color:var(--kb-ink-2)]">
+            {[
+              photoCount ? (
+                <span key="p">
+                  <span className="mono">{photoCount.toLocaleString("en-AU")}</span> {photoCount === 1 ? "photo" : "photos"}
                 </span>
-              ) : null}
-            </div>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[14px] text-[color:var(--ink-70)]">
-              <span>
-                {[
-                  formatLongDate(album.album_date),
-                  photoCount ? plural(photoCount, "photo") : null,
-                  videoCount ? plural(videoCount, "video") : null,
-                  credits.length
-                    ? `photos by ${credits.slice(0, 3).join(", ")}${credits.length > 3 ? ` +${credits.length - 3}` : ""}`
-                    : addedBy
-                      ? `added by ${addedBy}`
-                      : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-              <span className="inline-flex flex-none items-center gap-1.5 whitespace-nowrap">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
-                  <rect x="4" y="10" width="16" height="11" rx="2" />
-                  <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                </svg>
-                Private to attendees
-              </span>
-            </p>
-          </div>
+              ) : null,
+              videoCount ? (
+                <span key="v">
+                  <span className="mono">{videoCount.toLocaleString("en-AU")}</span> {videoCount === 1 ? "video" : "videos"}
+                </span>
+              ) : null,
+              album.album_date ? <span key="d">{formatDate(album.album_date)}</span> : null,
+              credits.length ? (
+                <span key="c">by {listNames(credits)}</span>
+              ) : addedBy ? (
+                <span key="a">added by {addedBy}</span>
+              ) : null,
+            ]
+              .filter(Boolean)
+              .flatMap((part, i) => (i === 0 ? [part] : [<span key={`s${i}`}> · </span>, part]))}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <AlbumActions
-              albumId={album.id}
-              mediaIds={(readyIds ?? []).map((m) => m.id)}
-              parts={Math.max(1, Math.ceil((photoCount + videoCount) / 150))}
-              canDownload={album.allow_download || canManage}
-              canManage={canManage}
-              canAdd={canAdd}
-              published={album.status === "published"}
-              albumHref={albumHref}
-              editing={editing}
-              adding={adding}
-            />
-          </div>
+        <div className="flex px-5 sm:px-10">
+          <AlbumActions
+            albumId={album.id}
+            mediaIds={(readyIds ?? []).map((m) => m.id)}
+            parts={Math.max(1, Math.ceil((photoCount + videoCount) / 150))}
+            canDownload={album.allow_download || canManage}
+            canManage={canManage}
+            canAdd={canAdd}
+            published={album.status === "published"}
+            albumHref={albumHref}
+            editing={editing}
+            adding={adding}
+          />
         </div>
       </div>
 
       {album.description ? (
-        <div className="w-full px-4 pt-5 sm:px-6">
+        <div className="w-full px-5 sm:px-10">
           <p className="max-w-[60ch] text-[15px] leading-normal text-[color:var(--ink-70)]">{album.description}</p>
         </div>
       ) : null}
 
       {album.contributor_scope === "members" && !canManage && ctx.membership ? (
-        <div className="kb-info mx-4 mt-4 sm:mx-6">Attendees can add their own photos to this album. Yours appear straight away.</div>
+        <div className="kb-info mx-5 sm:mx-10">Attendees can add their own photos to this album. Yours appear straight away.</div>
       ) : null}
 
       {canManage && unfinished?.length ? <UnfinishedUploads items={unfinished} addHref={`${albumHref}?add=1`} /> : null}
@@ -323,4 +310,11 @@ export default async function AlbumPage(props: Props) {
       />
     </main>
   );
+}
+
+/** "Priya Shah", "Priya Shah and Tom Reid", "Priya Shah, Tom Reid and 2 others". */
+function listNames(names: string[]): string {
+  if (names.length <= 2) return names.join(" and ");
+  if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
+  return `${names[0]}, ${names[1]} and ${names.length - 2} others`;
 }
