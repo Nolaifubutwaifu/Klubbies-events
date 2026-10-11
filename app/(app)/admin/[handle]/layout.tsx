@@ -1,14 +1,16 @@
 import Link from "next/link";
-import { AdminNav } from "@/components/AdminNav";
+import { AccountMenu } from "@/components/AccountMenu";
+import { AdminMenuButton, AdminRail, AdminTopbar } from "@/components/AdminNav";
+import { EventSwitcher } from "@/components/EventSwitcher";
 import { AppHeader } from "@/components/AppHeader";
 import { requireAdminContext } from "@/lib/auth/admin-context";
-import { accessHasEnded } from "@/lib/auth/session";
+import { displayNameFor } from "@/lib/auth/display-name";
+import { accessHasEnded, getProfile } from "@/lib/auth/session";
 import { isTier, planName, retentionNotice, TIERS } from "@/lib/billing/plans";
 import { BILLING_LABEL, canWrite, type BillingStatus } from "@/lib/billing/status";
-import { eventAddress } from "@/lib/env";
 import { setupState } from "@/lib/events/setup";
 import { formatDate, formatLongDate } from "@/lib/format";
-import { signLogoMarks } from "@/lib/storage";
+import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { eventToneStyle } from "@/lib/theme";
@@ -51,12 +53,13 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
     ? {
         line: `${planName(event.plan)}${event.plan_rate === "club" ? " · club rate" : ""}`,
         hint: `Up to ${TIERS[event.plan].guests.toLocaleString("en-AU")} guests and ${TIERS[event.plan].photos.toLocaleString("en-AU")} photos`,
+        short: planName(event.plan),
       }
     : billing === "comped"
-      ? { line: "Complimentary", hint: "Nothing to pay for this event" }
+      ? { line: "Complimentary", hint: "Nothing to pay for this event", short: "Comped" }
       : writable
-        ? { line: planName(event.plan), hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing] }
-        : { line: BILLING_LABEL[billing], hint: "Activate to upload" };
+        ? { line: planName(event.plan), hint: event.paid_at ? `Paid ${formatDate(event.paid_at)}` : BILLING_LABEL[billing], short: planName(event.plan) }
+        : { line: BILLING_LABEL[billing], hint: "Activate to upload", short: "Not active" };
 
   const status: { label: string; tone: "live" | "quiet" | "attention" } = !writable
     ? { label: "Not activated", tone: "attention" }
@@ -80,39 +83,64 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
   }
 
   const nextStep = setup.recommended.find((step) => !step.done) ?? null;
+  const counts = {
+    albums: albums.count ?? 0,
+    attendees: attendees.count ?? 0,
+    photographers: photographers.count ?? 0,
+    removals: removals.count ?? 0,
+  };
+  const [displayName, profile] = await Promise.all([displayNameFor(ctx), getProfile()]);
+  const avatarUrl = profile?.avatar_url
+    ? ((await signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display)).get(profile.avatar_url) ?? null)
+    : null;
 
   return (
-    <div className="kb-branded flex flex-1 flex-col" style={eventToneStyle(event.accent_colour)}>
-      <AppHeader ctx={ctx} area="organiser" />
-      <div className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col gap-3 px-4 pt-4 sm:px-6 lg:flex-row lg:items-start lg:gap-8 lg:pt-6">
-        <AdminNav
-          handle={handle}
-          eventName={event.name}
-          eventAddress={eventAddress(handle)}
-          accentColour={event.accent_colour}
-          logoUrl={logoUrl}
-          status={status}
-          counts={{
-            albums: albums.count ?? 0,
-            attendees: attendees.count ?? 0,
-            photographers: photographers.count ?? 0,
-            removals: removals.count ?? 0,
-          }}
-          plan={plan}
-          next={
-            nextStep
-              ? {
-                  title: nextStep.title,
-                  href: nextStep.href,
-                  done: setup.recommended.filter((step) => step.done).length,
-                  total: setup.recommended.length,
-                }
-              : null
-          }
-        />
-        <div className="min-w-0 flex-1">
+    <div className="kb-branded flex flex-1" style={eventToneStyle(event.accent_colour)}>
+      <AdminRail
+        handle={handle}
+        eventName={event.name}
+        accentColour={event.accent_colour}
+        logoUrl={logoUrl}
+        status={status}
+        counts={counts}
+        plan={plan}
+        switcher={<EventSwitcher currentEventId={event.id} area="organiser" />}
+        account={{ node: <AccountMenu name={displayName} avatarUrl={avatarUrl} />, name: displayName }}
+        next={
+          nextStep
+            ? {
+                title: nextStep.title,
+                href: nextStep.href,
+                done: setup.recommended.filter((step) => step.done).length,
+                total: setup.recommended.length,
+              }
+            : null
+        }
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Phones keep the slim event bar; the rail and this top bar take over from 1024px. */}
+        <div className="lg:hidden">
+          <AppHeader ctx={ctx} area="organiser" />
+        </div>
+        <AdminTopbar handle={handle} eventName={event.name} counts={counts} plan={plan} />
+        <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-4 px-5 pb-14 pt-5 sm:px-10 lg:pt-8">
+          <AdminMenuButton handle={handle} counts={counts} plan={plan} />
+          {!writable ? (
+            <div className="kb-info hidden flex-wrap items-center justify-between lg:flex">
+              {inApp ? (
+                <span>This event isn&apos;t active yet, so uploading and adding attendees are switched off.</span>
+              ) : (
+                <>
+                  <span>This event isn&apos;t activated yet. Uploading and adding attendees unlock after payment.</span>
+                  <Link href={`/admin/${handle}/billing`} className="btn btn-secondary btn-sm no-underline">
+                    Activate event
+                  </Link>
+                </>
+              )}
+            </div>
+          ) : null}
           {retention ? (
-            <div className="kb-info mb-4 flex-wrap items-center justify-between" role="status">
+            <div className="kb-info flex-wrap items-center justify-between" role="status">
               {retention.kind === "deleted" ? (
                 <span>Photos from this event were deleted on {formatLongDate(retention.on)}, 12 months after the event.</span>
               ) : (
@@ -127,7 +155,7 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
               )}
             </div>
           ) : null}
-          {props.children}
+          <div className="min-w-0">{props.children}</div>
         </div>
       </div>
     </div>

@@ -834,25 +834,36 @@
     background: var(--kb-line);
   }
 
-  .table {
+  /* Organiser tables: a quiet header band, roomy rows, no line under the last. */
+  .table,
+  .kb-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 15px;
   }
-  .table th {
-    padding: 10px 8px;
+  .table th,
+  .kb-table th {
+    padding: 10px 16px;
     border-bottom: 1px solid var(--kb-line);
+    background: #fafaf8;
     text-align: left;
     font-size: 14px;
     font-weight: 500;
     color: var(--kb-ink-3);
+    white-space: nowrap;
   }
-  .table td {
-    padding: 10px 8px;
-    border-bottom: 1px solid var(--kb-line);
+  .table td,
+  .kb-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--kb-sand);
     vertical-align: middle;
   }
-  .table tbody tr:hover {
+  .table tbody tr:last-child td,
+  .kb-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .table tbody tr:hover,
+  .kb-table tbody tr:hover {
     background: var(--kb-cream);
   }
 
