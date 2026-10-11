@@ -22,9 +22,14 @@ final class SplashView: UIView {
         isAccessibilityElement = true
         accessibilityLabel = "Klubbies Events, loading"
 
-        let size: CGFloat = 88
+        let size: CGFloat = 96
         tile.translatesAutoresizingMaskIntoConstraints = false
         drawMark(in: tile.layer, size: size)
+        // A soft drop shadow, as on the design canvas.
+        tile.layer.shadowColor = AppConfig.ink.cgColor
+        tile.layer.shadowOpacity = 0.22
+        tile.layer.shadowRadius = 15
+        tile.layer.shadowOffset = CGSize(width: 0, height: 18)
 
         let name = NSMutableAttributedString(string: "Klubbies", attributes: [
             .font: UIFont.systemFont(ofSize: 26, weight: .semibold),
@@ -46,7 +51,7 @@ final class SplashView: UIView {
             tile.heightAnchor.constraint(equalToConstant: size),
             tile.centerXAnchor.constraint(equalTo: centerXAnchor),
             tile.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -24),
-            wordmark.topAnchor.constraint(equalTo: tile.bottomAnchor, constant: 18),
+            wordmark.topAnchor.constraint(equalTo: tile.bottomAnchor, constant: 22),
             wordmark.centerXAnchor.constraint(equalTo: centerXAnchor),
         ])
 
