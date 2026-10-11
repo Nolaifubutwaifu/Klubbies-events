@@ -264,6 +264,15 @@ export function AdminRail({
 export function AdminTopbar({ handle, eventName, counts, plan }: Shared & { eventName: string }) {
   const base = `/admin/${handle}`;
   const { current } = useCurrent(navGroups(base, counts, plan.short));
+  const pathname = usePathname();
+  // Screens that aren't in the menu still say where you are.
+  const extra = pathname.startsWith(`${base}/setup`)
+    ? "Setup"
+    : pathname.startsWith(`${base}/export`)
+      ? "Download everything"
+      : pathname.startsWith(`${base}/settings/deleted`)
+        ? "Recently deleted"
+        : null;
   return (
     <div className="sticky top-0 z-20 hidden h-16 flex-none items-center justify-between gap-4 border-b border-[color:var(--kb-line)] bg-white px-10 lg:flex">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[14px] text-[color:var(--kb-ink-3)]">
@@ -272,7 +281,7 @@ export function AdminTopbar({ handle, eventName, counts, plan }: Shared & { even
         </Link>
         <span aria-hidden>/</span>
         <span className="truncate font-medium text-[color:var(--kb-ink)]" aria-current="page">
-          {current?.label ?? "Overview"}
+          {extra ?? current?.label ?? "Overview"}
         </span>
       </nav>
       <Link href={`/e/${handle}`} className="btn btn-secondary no-underline">
