@@ -20,6 +20,7 @@ export function AnnouncementComposer({
   recipientCount,
   sendsLeft,
   sent,
+  planName = null,
 }: {
   eventId: string;
   handle: string;
@@ -30,6 +31,7 @@ export function AnnouncementComposer({
   recipientCount: number;
   sendsLeft: number;
   sent: { subject: string; recipient_count: number; sent_at: string; when: string }[];
+  planName?: string | null;
 }) {
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
@@ -39,14 +41,19 @@ export function AnnouncementComposer({
   const people = `${recipientCount.toLocaleString("en-AU")} ${recipientCount === 1 ? "person" : "people"}`;
 
   return (
-    <section className="soft-card flex flex-col gap-4 p-5" aria-labelledby="announcement">
-      <div className="flex flex-col gap-1">
-        <h2 id="announcement" className="text-[16px] font-semibold">
-          Announcement email
-        </h2>
-        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-          Edit it to sound like you. {canSend ? "Send it to your guests from here, or copy it into your own email." : "Copy it into your own email or ticketing tool."}
-        </p>
+    <section className="flex min-w-0 flex-[2_1_440px] flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5" aria-labelledby="announcement">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <span className="flex min-w-0 flex-col gap-1">
+          <h2 id="announcement" className="text-[17px] font-semibold">
+            Announcement email
+          </h2>
+          <span className="text-[14px] text-[color:var(--kb-ink-2)]">
+            {canSend
+              ? "In your own words. We send it from Klubbies Events with your name on it."
+              : "In your own words. Copy it into your own email or ticketing tool."}
+          </span>
+        </span>
+        {canSend && planName ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Included on {planName}</span> : null}
       </div>
 
       <label className="field">
@@ -55,25 +62,28 @@ export function AnnouncementComposer({
       </label>
       <label className="field">
         Message
-        <textarea className="input min-h-[240px] leading-relaxed" value={body} maxLength={4000} onChange={(e) => setBody(e.target.value)} />
+        <textarea className="input min-h-[200px] leading-relaxed" value={body} maxLength={4000} onChange={(e) => setBody(e.target.value)} />
+        {canSend ? <span className="kb-help font-normal">A Get my photos button with your event link is added below your message.</span> : null}
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
         {canSend ? (
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-secondary"
             disabled={pending || sendsLeft <= 0 || recipientCount === 0}
             onClick={() => {
               setResult(null);
               setConfirming(true);
             }}
           >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 12l16-8-6 16-2-7z" />
+            </svg>
             Send to {people}
           </button>
         ) : null}
-        <CopyButton value={subject} label="Copy subject" className="btn btn-secondary" />
-        <CopyButton value={body} label="Copy message" className="btn btn-secondary" />
+        <CopyButton value={`${subject}\n\n${body}`} label="Copy text" className="btn btn-secondary" />
       </div>
 
       {canSend ? (
