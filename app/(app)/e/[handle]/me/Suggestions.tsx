@@ -13,7 +13,7 @@ import type { Suggestion } from "@/lib/faces/queries";
  */
 function FaceCrop({ suggestion }: { suggestion: Suggestion }) {
   return (
-    <span className="block aspect-square w-full overflow-hidden rounded-[16px] bg-[color:var(--tone-support)]">
+    <span className="block aspect-square w-full overflow-hidden rounded-[6px] bg-[color:var(--tone-support)]">
       {/* eslint-disable-next-line @next/next/no-img-element -- private, per-member crop */}
       <img
         src={`/api/faces/${suggestion.matchId}/crop`}
@@ -112,16 +112,17 @@ export function Suggestions({
 
   if (remaining.length === 0) return held || error ? <section className="flex flex-col gap-2">{undoBar}{error ? <p className="kb-error m-0" role="alert">{error}</p> : null}</section> : null;
 
+  // One at a time: the face, two answers, and how many are left.
+  const suggestion = remaining[0];
+  const answered = suggestions.length - remaining.length;
+
   return (
-    <section className="flex flex-col gap-3">
+    <section aria-labelledby="suggestions-title" className="flex flex-col gap-3.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-[18px]">
       <div className="flex flex-col gap-0.5">
-        <h2 className="soft-display text-[19px]">Is this you?</h2>
-        <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-          Saying yes helps us recognise you next time. Saying no means we never suggest that photo again.
-          {total > suggestions.length
-            ? ` ${total.toLocaleString("en-AU")} waiting. Answer these and the next ones appear.`
-            : ""}
-        </p>
+        <h2 id="suggestions-title" className="text-[17px] font-semibold">
+          Is this you?
+        </h2>
+        <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">Less sure matches. Your answers sharpen the next ones.</p>
       </div>
       {undoBar}
       {error ? (
@@ -129,36 +130,26 @@ export function Suggestions({
           {error}
         </p>
       ) : null}
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6">
-        {remaining.map((suggestion) => (
-          <div key={suggestion.matchId} className="soft-card flex w-[188px] flex-none flex-col gap-2 p-3">
-            {suggestion.albumId ? (
-              <Link href={`/e/${handle}/a/${suggestion.albumId}/${suggestion.mediaId}`} className="block">
-                <FaceCrop suggestion={suggestion} />
-              </Link>
-            ) : (
-              <FaceCrop suggestion={suggestion} />
-            )}
-            <span className="truncate text-[14px] text-[color:var(--ink-55)]">{suggestion.albumTitle}</span>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                className="btn btn-ghost flex-1 !px-2"
-                onClick={() => answer(suggestion, "confirm")}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost flex-1 !px-2"
-                onClick={() => answer(suggestion, "reject")}
-              >
-                Not me
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-[72px_1fr] items-center gap-3">
+        {suggestion.albumId ? (
+          <Link href={`/e/${handle}/a/${suggestion.albumId}/${suggestion.mediaId}`} className="block" aria-label={`Open the photo from ${suggestion.albumTitle}`}>
+            <FaceCrop suggestion={suggestion} />
+          </Link>
+        ) : (
+          <FaceCrop suggestion={suggestion} />
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" className="btn btn-primary !min-h-[48px] !px-2" onClick={() => answer(suggestion, "confirm")}>
+            Yes, me
+          </button>
+          <button type="button" className="btn btn-secondary !min-h-[48px] !px-2" onClick={() => answer(suggestion, "reject")}>
+            Not me
+          </button>
+        </div>
       </div>
+      <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">
+        {(answered + 1).toLocaleString("en-AU")} of {Math.max(total, suggestions.length).toLocaleString("en-AU")}
+      </span>
     </section>
   );
 }

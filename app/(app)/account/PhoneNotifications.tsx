@@ -20,20 +20,19 @@ export function PhoneNotifications() {
 
   const on = state.permission === "granted" || state.permission === "provisional";
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--kb-line)] pb-3 text-[14px]">
-      <span>
-        <strong className="font-medium">iPhone notifications</strong>
-        <br />
-        <span className="text-[color:var(--ink-70)]">
+    <div className="kb-row">
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span>iPhone notifications</span>
+        <span className="text-[14px] text-[color:var(--kb-ink-3)]">
           {on
-            ? "On. Everything ticked below also comes to this iPhone."
+            ? "On. Everything switched on below also comes to this iPhone."
             : state.permission === "denied"
               ? "Off in iPhone Settings for Klubbies Events."
-              : "Off. Turn on to get everything ticked below on this iPhone too."}
+              : "Off. Turn on to get everything below on this iPhone too."}
         </span>
       </span>
       {on ? (
-        <span className="soft-chip">On</span>
+        <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">On</span>
       ) : (
         <button
           type="button"

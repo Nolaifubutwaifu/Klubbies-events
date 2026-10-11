@@ -29,43 +29,41 @@ export async function FaceRow({ events }: { events: MyEvent[] }) {
   if (rows.length === 0) return null;
 
   return (
-    <>
-      <h2 className="mt-2 text-[16px] font-semibold">Face search</h2>
-      <div className="soft-card flex flex-col">
-        {rows.map((event, index) => {
+    <section aria-labelledby="g-faces">
+      <h2 id="g-faces" className="kb-group-title">
+        Face search
+      </h2>
+      <div className="kb-group">
+        {rows.map((event) => {
           const status = statusByEvent.get(event.eventId);
           return (
-            <div
-              key={event.membershipId}
-              className={`flex flex-wrap items-center gap-3 p-4 ${
-                index > 0 ? "border-t border-[color:var(--kb-line)]" : ""
-              }`}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-medium">{event.name}</span>
-                <span className="block text-[14px] text-[color:var(--ink-70)]">
+            <Link key={event.membershipId} href={`/e/${event.handle}/me`} className="kb-row">
+              <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]" aria-hidden>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+                </svg>
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate">{event.name}</span>
+                <span className="text-[14px] text-[color:var(--kb-ink-3)]">
                   {status === "ready"
-                    ? "On. Only you see your matches."
+                    ? "Selfie added. Only you see your matches."
                     : status === "pending"
                       ? "Setting up."
                       : status === "failed"
                         ? "Your selfie could not be read."
-                        : "Off. Add a selfie to find yourself in photos."}
+                        : "No face data"}
                 </span>
               </span>
-              <Link
-                href={`/e/${event.handle}/me`}
-                className="btn btn-sm btn-secondary no-underline"
-              >
-                {status === "ready" ? "Manage" : "Set it up"}
-              </Link>
-            </div>
+              <span className="text-[15px] font-medium text-[color:var(--kb-ember)]">{status === "ready" ? "Manage" : "Set up"}</span>
+            </Link>
           );
         })}
       </div>
-      <p className="m-0 text-[14px] leading-normal text-[color:var(--ink-70)]">
+      <p className="m-0 px-1 pt-2 text-[14px] leading-normal text-[color:var(--kb-ink-3)]">
         Turning it off deletes your selfie, your faceprint and every match for that event within 24 hours.
       </p>
-    </>
+    </section>
   );
 }

@@ -10,6 +10,7 @@ import { Dialog } from "@/components/Dialog";
 import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
 import { SELECT_EVENT } from "@/components/AlbumActions";
+import { Segmented } from "@/components/Segmented";
 
 function duration(seconds: number | null): string {
   if (!seconds) return "";
@@ -303,27 +304,18 @@ export function AlbumGrid({
       {selecting || (chips.length < 2 && !message) ? null : (
         <div className="flex w-full flex-wrap items-center gap-2 px-5 sm:px-10">
           {chips.length > 1 ? (
-            <div role="group" aria-label="Show" className="flex min-w-0 flex-1 gap-1 rounded-[10px] bg-[color:var(--kb-sand)] p-1 sm:max-w-[560px]">
-              {chips.map(([value, label]) => {
-                const [word, count] = [label.slice(0, label.lastIndexOf(" ")), label.slice(label.lastIndexOf(" ") + 1)];
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={kind === value}
-                    onClick={() => setKind(value)}
-                    className={`flex min-h-[40px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] px-2 text-[15px] ${
-                      kind === value
-                        ? "bg-white font-semibold text-[color:var(--kb-ink)] shadow-[0_1px_2px_rgb(22_24_29/0.1)]"
-                        : "font-medium text-[color:var(--kb-ink-2)]"
-                    }`}
-                  >
-                    {word}
-                    <span className={`mono text-[14px] ${value === "mine" ? "text-[color:var(--kb-ember)]" : ""}`}>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <Segmented
+              label="Show"
+              value={kind}
+              onChange={setKind}
+              className="flex-1 sm:max-w-[560px]"
+              options={chips.map(([value, label]) => ({
+                value,
+                label: label.slice(0, label.lastIndexOf(" ")),
+                count: Number(label.slice(label.lastIndexOf(" ") + 1).replace(/,/g, "")),
+                accent: value === "mine",
+              }))}
+            />
           ) : null}
           <span className="w-full text-[14px] text-[color:var(--ink-70)] empty:hidden" role="status">
             {message}

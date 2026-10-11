@@ -5,7 +5,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Placeholder } from "@/components/ui";
 import { getEventContext } from "@/lib/auth/session";
-import { formatLongDate } from "@/lib/format";
 import { backfillProgress } from "@/lib/faces/backfill";
 import {
   faceStateFor,
@@ -14,8 +13,10 @@ import {
   type PhotosOfYouGroup,
   type Suggestion,
 } from "@/lib/faces/queries";
+import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { Enrol, TurnOff } from "./Enrol";
+import { Enrol, ReplaceSelfie, TurnOff } from "./Enrol";
 import { LookingNow } from "./LookingNow";
 import { Suggestions } from "./Suggestions";
 
@@ -78,146 +79,166 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
 
   const stillLooking = state.backfillRunning || progress.remaining > 0;
 
+  // Not enrolled: the selfie screen is the whole page.
+  if (!state.profile) {
+    return (
+      <main className="flex flex-1 flex-col">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col px-5 pb-16 pt-8 sm:px-10 sm:pt-12">
+          <Enrol page eventId={ctx.event.id} backHref={`/e/${handle}`} />
+        </div>
+      </main>
+    );
+  }
+
+  const selfieUrl = enrolled ? await ownSelfie(ctx.event.id, ctx.userId) : null;
+  const PREVIEW = 9;
+
   return (
     <main className="flex flex-1 flex-col">
-      <section>
-        <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-7 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <span className="kb-eyebrow">{ctx.event.name}</span>
-              <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Your photos</h1>
-              <p className="mt-2 max-w-[52ch] text-[16px] text-[color:var(--kb-ink-2)]">Only you see this page.</p>
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-7 pb-16 pt-7 sm:pt-12">
+        <div className="flex flex-col gap-1.5 px-5 sm:px-10">
+          <h1 className="serif text-[44px] leading-none">Your photos</h1>
+          <p className="flex items-center gap-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="4" y="10" width="16" height="11" rx="2" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            </svg>
+            Only you see this page.
+          </p>
+        </div>
+
+        {/* The selfie was unusable. Say so rather than leaving them waiting. */}
+        {state.profile?.status === "failed" ? (
+          <div className="mx-5 flex flex-col gap-3 sm:mx-10">
+            <div className="kb-info flex-col">
+              <strong>That photo didn&rsquo;t work</strong>
+              <span>{state.profile.failure_reason ?? "We could not find a clear face in it."}</span>
             </div>
+            <Enrol eventId={ctx.event.id} />
           </div>
+        ) : null}
 
-          {/* Not enrolled: the pitch and the consent screen. */}
-          {!state.profile ? <Enrol eventId={ctx.event.id} backHref={`/e/${handle}`} /> : null}
+        {state.profile?.status === "pending" ? (
+          <div className="mx-5 flex max-w-[56ch] flex-col gap-2 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 sm:mx-10">
+            <span className="text-[17px] font-semibold">Looking now</span>
+            <LookingNow eventId={ctx.event.id} />
+            {/* Say what it is actually waiting on. "A minute" is a lie when
+                an event has just switched on and thousands of photos are
+                still being indexed ahead of the first search. */}
+            <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
+              We&rsquo;re comparing your selfie against this event&rsquo;s photos.{" "}
+              {progress.remaining > 0
+                ? `There are ${progress.remaining.toLocaleString("en-AU")} photos still being read, so this may take a while. Your photos appear here as they are found, so you don't need to wait on this page.`
+                : "This usually takes under a minute."}
+            </p>
+          </div>
+        ) : null}
 
-          {/* The selfie was unusable. Say so rather than leaving them waiting. */}
-          {state.profile?.status === "failed" ? (
-            <div className="soft-card flex max-w-[56ch] flex-col gap-3 p-5">
-              <span className="text-[17px] font-semibold">That photo didn&rsquo;t work</span>
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                {state.profile.failure_reason ?? "We could not find a clear face in it."}
-              </p>
-              <Enrol eventId={ctx.event.id} />
-            </div>
-          ) : null}
+        {enrolled ? (
+          <>
+            {total > 0 ? (
+              <section aria-label="Summary" className="mx-5 flex items-center gap-3.5 rounded-[12px] bg-[color:var(--kb-ink)] p-[18px] text-white sm:mx-10">
+                {selfieUrl ? <img src={selfieUrl} alt="" className="h-12 w-12 flex-none rounded-full object-cover" /> : null}
+                <span className="flex min-w-0 flex-1 flex-col leading-[1.3]">
+                  <span className="text-[20px] font-semibold">
+                    <span className="mono">{total.toLocaleString("en-AU")}</span> {total === 1 ? "photo" : "photos"}
+                  </span>
+                  <span className="text-[14px] text-[#c4c7cf]">
+                    in {groups.length.toLocaleString("en-AU")} {groups.length === 1 ? "album" : "albums"}
+                    {stillLooking ? `, still looking through ${progress.remaining.toLocaleString("en-AU")} more` : ""}
+                  </span>
+                </span>
+                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} label="All" className="btn btn-light !min-h-[48px] no-underline" />
+              </section>
+            ) : null}
 
-          {state.profile?.status === "pending" ? (
-            <div className="soft-card flex max-w-[56ch] flex-col gap-2 p-5">
-              <span className="text-[17px] font-semibold">Looking now</span>
-              <LookingNow eventId={ctx.event.id} />
-              {/* Say what it is actually waiting on. "A minute" is a lie when
-                  an event has just switched on and thousands of photos are
-                  still being indexed ahead of the first search. */}
-              <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                We&rsquo;re comparing your selfie against this event&rsquo;s photos.{" "}
-                {progress.remaining > 0
-                  ? `There are ${progress.remaining.toLocaleString("en-AU")} photos still being read, so this may take a while. Your photos appear here as they are found, so you don't need to wait on this page.`
-                  : "This usually takes under a minute."}
-              </p>
-            </div>
-          ) : null}
-
-          {enrolled ? (
-            <>
+            <div className="px-5 sm:px-10 empty:hidden">
               <Suggestions handle={handle} suggestions={suggestions.items} total={suggestions.total} />
+            </div>
 
-              {total > 0 ? (
-                <section className="flex flex-col gap-6">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="text-[18px] font-semibold">
-                      {total.toLocaleString("en-AU")} {total === 1 ? "photo" : "photos"} of you in{" "}
-                      {groups.length.toLocaleString("en-AU")} {groups.length === 1 ? "album" : "albums"}
+            {total > 0 ? (
+              /* Stacked by album, because that is how anyone remembers which
+                 night they are looking for. */
+              groups.map((group) => (
+                <section key={group.albumId} aria-labelledby={`g-${group.albumId}`} className="flex flex-col gap-2.5">
+                  <div className="flex items-baseline justify-between gap-2 px-5 sm:px-10">
+                    <h2 id={`g-${group.albumId}`} className="text-[18px] font-semibold">
+                      {group.albumTitle}
                     </h2>
-                    <span className="flex flex-wrap items-center gap-3">
-                      {stillLooking ? (
-                        <span className="text-[14px] text-[color:var(--ink-55)]">
-                          Still looking through {progress.remaining.toLocaleString("en-AU")} more
-                        </span>
-                      ) : null}
-                      <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} className="btn btn-primary no-underline" />
-                    </span>
+                    <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length.toLocaleString("en-AU")}</span>
                   </div>
-
-                  {/* Stacked by album, because that is how anyone remembers
-                      which night they are looking for. */}
-                  {groups.map((group) => (
-                    <section key={group.albumId} className="flex flex-col gap-2.5">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <Link
-                          href={`/e/${handle}/a/${group.albumId}`}
-                          className="text-[16px] font-semibold text-ink no-underline"
-                        >
-                          {group.albumTitle}
-                        </Link>
-                        <span className="text-[14px] text-[color:var(--ink-55)]">
-                          {group.albumDate ? `${formatLongDate(group.albumDate)} · ` : ""}
-                          {group.items.length.toLocaleString("en-AU")} of you
-                        </span>
-                      </div>
-                      <div
-                        className="grid gap-2"
-                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(clamp(104px, 18vw, 168px), 1fr))" }}
+                  <div className="grid grid-cols-3 gap-[3px] px-[3px] sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 sm:px-10">
+                    {group.items.slice(0, PREVIEW).map((item) => (
+                      <Link
+                        key={item.matchId}
+                        href={`/e/${handle}/a/${group.albumId}/${item.mediaId}?from=me`}
+                        className="soft-tile block aspect-square !rounded-[3px] no-underline"
+                        aria-label={`Photo of you from ${group.albumTitle}`}
                       >
-                        {group.items.map((item) => (
-                          <Link
-                            key={item.matchId}
-                            href={`/e/${handle}/a/${group.albumId}/${item.mediaId}?from=me`}
-                            className="soft-tile block aspect-square no-underline"
-                            aria-label={`Photo of you from ${group.albumTitle}`}
-                          >
-                            {item.thumbUrl ? (
-                              <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (
-                              <Placeholder seed={item.mediaId} className="h-full w-full" />
-                            )}
-                          </Link>
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-
-                  {hasMore ? (
-                    <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                      Showing your {total.toLocaleString("en-AU")} most recent. Older ones are in the albums
-                      themselves, where each shows how many are of you.
-                    </p>
+                        {item.thumbUrl ? (
+                          <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        ) : (
+                          <Placeholder seed={item.mediaId} className="h-full w-full" />
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                  {group.items.length > PREVIEW ? (
+                    <Link href={`/e/${handle}/a/${group.albumId}`} className="px-5 text-[15px] font-medium sm:px-10">
+                      See all {group.items.length.toLocaleString("en-AU")} in {group.albumTitle}
+                    </Link>
                   ) : null}
                 </section>
-              ) : stillLooking ? (
-                /* Enrolled, backfill still running: silence would read as failure. */
-                <div className="soft-dashed flex max-w-[56ch] flex-col items-start gap-2 p-7">
-                  <span className="text-[17px] font-semibold">Still looking through this event&rsquo;s photos</span>
-                  <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
-                    {progress.remaining.toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")} to go.
-                    Photos appear here as we find them.
-                  </p>
-                </div>
-              ) : (
-                /* Enrolled, backfill done, nothing found. Say it plainly. */
+              ))
+            ) : stillLooking ? (
+              /* Enrolled, backfill still running: silence would read as failure. */
+              <div className="soft-dashed mx-5 flex max-w-[56ch] flex-col items-start gap-2 p-7 sm:mx-10">
+                <span className="text-[17px] font-semibold">Still looking through this event&rsquo;s photos</span>
+                <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
+                  {progress.remaining.toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")} to go. Photos
+                  appear here as we find them.
+                </p>
+              </div>
+            ) : (
+              /* Enrolled, backfill done, nothing found. Say it plainly. */
+              <div className="mx-5 flex flex-col gap-4 sm:mx-10">
                 <div className="soft-dashed flex max-w-[56ch] flex-col items-start gap-2 p-7">
                   <span className="text-[17px] font-semibold">We didn&rsquo;t find you in anything yet</span>
                   <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
                     That happens: dim rooms, crowds and motion blur all hide faces, and we skip anything we are not
                     reasonably sure about. A brighter selfie facing the camera usually helps.
                   </p>
-                  <Enrol eventId={ctx.event.id} />
                 </div>
-              )}
-
-              <div className="flex flex-col gap-2 border-t border-[color:var(--kb-line)] pt-5">
-                <p className="m-0 max-w-[60ch] text-[14px] leading-normal text-[color:var(--ink-70)]">
-                  Face recognition is not reliable. It misses people and it sometimes matches the wrong person. Matches
-                  are suggestions, not statements of fact. Tap &ldquo;Not me&rdquo; on anything wrong.
-                </p>
-                <TurnOff eventId={ctx.event.id} />
+                <Enrol eventId={ctx.event.id} />
               </div>
-            </>
-          ) : null}
-        </div>
-      </section>
+            )}
+
+            {hasMore ? (
+              <p className="m-0 px-5 text-[14px] text-[color:var(--ink-70)] sm:px-10">
+                Showing your {total.toLocaleString("en-AU")} most recent. Older ones are in the albums themselves, where
+                each shows how many are of you.
+              </p>
+            ) : null}
+
+            <section aria-label="Face search" className="mx-5 mt-2 flex flex-col gap-1 border-t border-[color:var(--kb-line)] pt-5 sm:mx-10">
+              <p className="m-0 max-w-[60ch] text-[14px] text-[color:var(--kb-ink-2)]">
+                Missing some? Dim rooms and motion blur cause misses. Matches are suggestions, not statements of fact: tap
+                &ldquo;Not me&rdquo; on anything wrong.
+              </p>
+              {total > 0 ? <ReplaceSelfie eventId={ctx.event.id} /> : null}
+              <TurnOff eventId={ctx.event.id} />
+            </section>
+          </>
+        ) : null}
+      </div>
     </main>
   );
+}
+
+/** The viewer's own selfie, signed for them alone. */
+async function ownSelfie(eventId: string, userId: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("member_face_profiles").select("selfie_path").eq("event_id", eventId).eq("user_id", userId).maybeSingle();
+  if (!data?.selfie_path) return null;
+  return (await signPaths(admin, [data.selfie_path], SIGNED_URL_TTL.display)).get(data.selfie_path) ?? null;
 }

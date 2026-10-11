@@ -28,7 +28,7 @@ async function toJpeg(file: File): Promise<File | null> {
   return new File([blob], "selfie.jpg", { type: "image/jpeg" });
 }
 
-export function Enrol({ eventId, backHref }: { eventId: string; backHref?: string }) {
+export function Enrol({ eventId, backHref, page = false }: { eventId: string; backHref?: string; page?: boolean }) {
   const [consented, setConsented] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -52,17 +52,50 @@ export function Enrol({ eventId, backHref }: { eventId: string; backHref?: strin
     setMessage("");
   }
 
+  const submit = () =>
+    startTransition(async () => {
+      if (!selfie) return;
+      const res = await enrolFaceAction(eventId, selfie, consented);
+      setMessage(res.error ?? res.message ?? "");
+    });
+
+  const Title = page ? "h1" : "h2";
+
   return (
-    <div className="soft-card flex max-w-[56ch] flex-col gap-3 p-5">
+    <div className={`flex w-full max-w-[460px] flex-col gap-6 ${page ? "" : "rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5"}`}>
       {/* Plain and short up front; the full explanation is one tap away
           and must be read the same way before anyone ticks the box. */}
-      <span className="text-[20px] font-semibold">{MEMBER_CONSENT.title}</span>
-      <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
-        Add a selfie and we&apos;ll find every photo you&apos;re in. Only you see them.
-      </p>
-      <button type="button" className="kb-link self-start text-[15px]" onClick={() => setDetailsOpen(true)}>
-        How it works and your privacy
-      </button>
+      <div className="flex flex-col gap-2">
+        <Title className={page ? "serif text-[40px] leading-[1.02]" : "text-[20px] font-semibold"}>{MEMBER_CONSENT.title}</Title>
+        <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">One selfie. Only you see the matches, and you can delete it any time.</p>
+      </div>
+
+      {/* The selfie, or the place it goes. */}
+      <div className="relative flex h-[210px] w-[210px] items-center justify-center self-center rounded-full bg-[color:var(--kb-sand)]" aria-hidden={!preview}>
+        <span className="absolute -inset-2.5 rounded-full border-2 border-dashed border-[color:var(--kb-line-input)]" aria-hidden />
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element -- local object URL
+          <img src={preview} alt="Your selfie" className="h-full w-full rounded-full object-cover" />
+        ) : (
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="var(--kb-ink-3)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="12" cy="9" r="4" />
+            <path d="M4.5 20.5c0-4 3.4-6.2 7.5-6.2s7.5 2.2 7.5 6.2" />
+          </svg>
+        )}
+      </div>
+
+      <label className="flex cursor-pointer items-start gap-3.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-4">
+        <input type="checkbox" checked={consented} onChange={(ev) => setConsented(ev.target.checked)} className="mt-0.5 !h-[22px] !w-[22px]" />
+        <span className="text-[15px] text-[#33363d]">
+          {MEMBER_CONSENT.tickbox}{" "}
+          <button type="button" className="font-medium text-[color:var(--kb-ember)] underline underline-offset-4" onClick={(ev) => {
+            ev.preventDefault();
+            setDetailsOpen(true);
+          }}>
+            What this means
+          </button>
+        </span>
+      </label>
       <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} title="How finding your photos works">
         <p className="m-0 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.lead}</p>
         <p className="m-0 text-[15px] leading-normal text-[color:var(--kb-ink-2)]">{MEMBER_CONSENT.what}</p>
@@ -78,74 +111,43 @@ export function Enrol({ eventId, backHref }: { eventId: string; backHref?: strin
         </div>
       </Dialog>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex h-[76px] w-[76px] flex-none items-center justify-center overflow-hidden rounded-full border border-[color:var(--kb-line)] bg-[color:var(--kb-sand)] text-[14px] font-medium text-[color:var(--kb-ink-3)]">
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local object URL
-            <img src={preview} alt="Your selfie" className="h-full w-full object-cover" />
-          ) : (
-            "Selfie"
-          )}
-        </span>
-        {/* Two inputs: one opens the front camera, the other the photo
-            library. A single input with `capture` gives phones no choice. */}
-        <input ref={camera} type="file" accept="image/*" capture="user" className="hidden" onChange={pick} />
-        <input ref={library} type="file" accept="image/*" className="hidden" onChange={pick} />
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn btn-secondary" onClick={() => camera.current?.click()}>
-            {selfie ? "Take another" : "Take a selfie"}
+      {/* Two inputs: one opens the front camera, the other the photo
+          library. A single input with `capture` gives phones no choice. */}
+      <input ref={camera} type="file" accept="image/*" capture="user" className="hidden" onChange={pick} />
+      <input ref={library} type="file" accept="image/*" className="hidden" onChange={pick} />
+      <div className="flex flex-col gap-2.5">
+        {selfie ? (
+          <button type="button" className="btn btn-primary !min-h-[52px]" disabled={!consented || pending} onClick={submit}>
+            {pending ? "Setting up…" : "Find my photos"}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => library.current?.click()}>
-            Choose from your photos
-          </button>
-        </div>
-      </div>
-
-      <label className="flex cursor-pointer items-start gap-3 text-[15px]">
-        <input
-          type="checkbox"
-          checked={consented}
-          onChange={(ev) => setConsented(ev.target.checked)}
-          className="mt-0.5"
-        />
-        <span>{MEMBER_CONSENT.tickbox}</span>
-      </label>
-
-      <div className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={!consented || !selfie || pending}
-        onClick={() =>
-          startTransition(async () => {
-            if (!selfie) return;
-            const res = await enrolFaceAction(eventId, selfie, consented);
-            setMessage(res.error ?? res.message ?? "");
-          })
-        }
-      >
-        {pending ? "Setting up…" : "Find my photos"}
-      </button>
-        {/* It's optional, so leaving is a plain choice, not a hunt for the back button. */}
-        {backHref ? (
-          <Link href={backHref} className="btn btn-ghost no-underline">
-            Not now
-          </Link>
         ) : null}
+        <button type="button" className={`btn ${selfie ? "btn-secondary" : "btn-primary"} !min-h-[52px]`} onClick={() => camera.current?.click()}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+          {selfie ? "Take another" : "Take a selfie"}
+        </button>
+        <button type="button" className="btn btn-secondary !min-h-[52px]" onClick={() => library.current?.click()}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <circle cx="9" cy="10" r="2" />
+            <path d="M21 16l-5-5-9 9" />
+          </svg>
+          Choose from your photos
+        </button>
       </div>
-      {!pending && (!selfie || !consented) ? (
-        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-          {!selfie && !consented
-            ? "Add a selfie and tick the box to continue."
-            : !selfie
-              ? "Add a selfie to continue."
-              : "Tick the box to continue."}
-        </p>
-      ) : null}
+      {!pending && selfie && !consented ? <p className="m-0 -mt-3 text-center text-[14px] text-[color:var(--kb-ink-3)]">Tick the box to continue.</p> : null}
       {message ? (
         <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]" role="status">
           {message}
         </p>
+      ) : null}
+      {/* It's optional, so leaving is a plain choice, not a hunt for the back button. */}
+      {backHref ? (
+        <Link href={backHref} className="-mt-2 flex min-h-[44px] items-center self-center text-[15px] font-medium">
+          Not now, just browse the albums
+        </Link>
       ) : null}
     </div>
   );
@@ -161,12 +163,8 @@ export function TurnOff({ eventId }: { eventId: string }) {
 
   if (!confirming) {
     return (
-      <button
-        type="button"
-        className="kb-link kb-link-quiet"
-        onClick={() => setConfirming(true)}
-      >
-        Turn this off and delete my faceprint
+      <button type="button" className="kb-link self-start !text-[15px] !font-medium !text-[#b42318]" onClick={() => setConfirming(true)}>
+        Turn off face search and delete my face data
       </button>
     );
   }
@@ -197,5 +195,16 @@ export function TurnOff({ eventId }: { eventId: string }) {
         Keep it
       </button>
     </div>
+  );
+}
+
+/** "Replace my selfie": opens the selfie screen again in place, under the grid. */
+export function ReplaceSelfie({ eventId }: { eventId: string }) {
+  const [open, setOpen] = useState(false);
+  if (open) return <div className="pt-3"><Enrol eventId={eventId} /></div>;
+  return (
+    <button type="button" className="kb-link self-start !text-[15px] !font-medium" onClick={() => setOpen(true)}>
+      Replace my selfie
+    </button>
   );
 }

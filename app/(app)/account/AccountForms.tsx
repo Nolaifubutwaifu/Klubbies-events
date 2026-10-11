@@ -47,7 +47,7 @@ export function ProfileForm({
         />
       </label>
       <FormMessage state={state} />
-      <SubmitButton className="soft-btn soft-btn-primary self-start" pendingText="Saving…">
+      <SubmitButton className="btn btn-primary self-start" pendingText="Saving…">
         Save profile
       </SubmitButton>
     </form>
@@ -85,17 +85,17 @@ export function AvatarUploader({ userId, avatarUrl }: { userId: string; avatarUr
     <div className="flex flex-wrap items-start gap-4">
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-        <img src={avatarUrl} alt="" className="h-[104px] w-[104px] flex-none rounded-full object-cover" />
+        <img src={avatarUrl} alt="" className="h-16 w-16 flex-none rounded-full object-cover" />
       ) : (
         <span
-          className="flex h-[104px] w-[104px] flex-none items-center justify-center rounded-full text-[14px] text-[color:var(--ink-55)]"
+          className="flex h-16 w-16 flex-none items-center justify-center rounded-full text-[14px] text-[color:var(--ink-55)]"
           style={{ background: "var(--tone-support)" }}
         >
           No photo
         </span>
       )}
       <div className="flex min-w-[180px] flex-1 flex-col gap-2">
-        <button type="button" className="soft-btn soft-btn-tonal self-start !min-h-[40px] !px-4 !text-[14px]" onClick={() => input.current?.click()} disabled={busy}>
+        <button type="button" className="btn btn-secondary self-start" onClick={() => input.current?.click()} disabled={busy}>
           {busy ? "Uploading…" : avatarUrl ? "Change photo" : "Add a photo"}
         </button>
         <span className="text-[14px] leading-normal text-ink-70">
@@ -119,34 +119,36 @@ export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
   const [state, action] = useActionState<AccountResult, FormData>(setPasswordAction, {});
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--soft-r-sm)] border border-[color-mix(in_srgb,var(--color-text)_8%,transparent)] p-3.5">
-      <span className="text-[14px]">
-        <strong>Password</strong>
-        <br />
-        <span className="text-[14px] text-ink-70">
-          {hasPassword ? "Set. You can sign in with email and password." : "Faster if you sign in often."}
+    <>
+      <div className="kb-row">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span>Password</span>
+          <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+            {hasPassword ? "Set. You can sign in with email and password." : "Faster if you sign in often."}
+          </span>
         </span>
-      </span>
+        {open ? null : (
+          <button type="button" className="min-h-[44px] text-[15px] font-medium text-[color:var(--kb-ember)]" onClick={() => setOpen(true)}>
+            {hasPassword ? "Change" : "Set one"}
+          </button>
+        )}
+      </div>
       {open ? (
-        <form action={action} className="flex w-full flex-col gap-2">
-          <input className="input" type="password" name="password" placeholder="New password" minLength={10} required autoComplete="new-password" />
-          <input className="input" type="password" name="confirm" placeholder="Repeat password" minLength={10} required autoComplete="new-password" />
+        <form action={action} className="flex flex-col gap-2 border-t border-[color:var(--kb-sand)] p-4">
+          <input className="input" type="password" name="password" placeholder="New password" minLength={10} required autoComplete="new-password" aria-label="New password" />
+          <input className="input" type="password" name="confirm" placeholder="Repeat password" minLength={10} required autoComplete="new-password" aria-label="Repeat password" />
           <FormMessage state={state} />
           <div className="flex gap-2">
-            <SubmitButton className="btn btn-primary text-[14px]" pendingText="Saving…">
+            <SubmitButton className="btn btn-primary" pendingText="Saving…">
               Save password
             </SubmitButton>
-            <button type="button" className="btn btn-ghost text-[14px]" onClick={() => setOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)}>
               Cancel
             </button>
           </div>
         </form>
-      ) : (
-        <button type="button" className="btn btn-secondary text-[14px]" onClick={() => setOpen(true)}>
-          {hasPassword ? "Change password" : "Set a password"}
-        </button>
-      )}
-    </div>
+      ) : null}
+    </>
   );
 }
 
@@ -160,22 +162,26 @@ export function NotificationToggles({
   const [pending, startTransition] = useTransition();
 
   const items: [keyof typeof prefs, string][] = [
-    ["notify_new_album", "New photos are published at an event I'm in"],
-    ["notify_access_ending", "An event's gallery closes in a week"],
+    ["notify_new_album", "A new album is published"],
+    ["notify_access_ending", "A gallery is about to close"],
   ];
 
   return (
-    <div className="mt-3 flex flex-col gap-3">
-      {/* These are email settings; the iPhone switch above only adds the app. */}
-      <span className="text-[14px] font-medium">Email me when</span>
+    <>
       {items.map(([key, label]) => (
-        <label key={key} className="flex cursor-pointer items-center gap-3 text-[14px]">
-          <input
-            type="checkbox"
-            checked={prefs[key]}
+        <div key={key} className="kb-row">
+          <span id={`pref-${key}`} className="flex-1">
+            {label}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={prefs[key]}
+            aria-labelledby={`pref-${key}`}
+            className="kb-switch"
             disabled={pending}
-            onChange={(e) => {
-              const next = { ...prefs, [key]: e.target.checked };
+            onClick={() => {
+              const next = { ...prefs, [key]: !prefs[key] };
               setPrefs(next);
               startTransition(async () => {
                 const res = await setNotificationsAction(next);
@@ -183,10 +189,37 @@ export function NotificationToggles({
               });
             }}
           />
-          {label}
-        </label>
+        </div>
       ))}
-      {message ? <span className="text-[14px] text-ink-55">{message}</span> : null}
-    </div>
+      {message ? (
+        <p className="kb-row !min-h-0 text-[14px] text-[color:var(--kb-ink-3)]" role="status">
+          {message}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/** Name, photo and a line about you: a row that opens into the form. */
+export function ProfileRow({ userId, displayName, email, bio, avatarUrl }: { userId: string; displayName: string; email: string; bio: string | null; avatarUrl: string | null }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className="kb-row">
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[14px] text-[color:var(--kb-ink-3)]">Name</span>
+          <span className="truncate">{displayName || "Not set"}</span>
+        </span>
+        <button type="button" className="min-h-[44px] text-[15px] font-medium text-[color:var(--kb-ember)]" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Close" : "Edit"}
+        </button>
+      </div>
+      {open ? (
+        <div className="flex flex-col gap-6 border-t border-[color:var(--kb-sand)] p-4">
+          <AvatarUploader userId={userId} avatarUrl={avatarUrl} />
+          <ProfileForm displayName={displayName} email={email} bio={bio} />
+        </div>
+      ) : null}
+    </>
   );
 }

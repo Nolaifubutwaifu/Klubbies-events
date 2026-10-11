@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import Link from "next/link";
 import { useState } from "react";
+import { Segmented } from "@/components/Segmented";
 import type { SavedGroup } from "@/lib/media/favourites";
 import { formatDate } from "@/lib/format";
 
@@ -51,60 +52,64 @@ export function SavedTabs({
     return map;
   }, new Map());
 
+  const tile = "soft-tile relative block aspect-square !rounded-[3px]";
+  const grid = "grid grid-cols-3 gap-[3px] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] sm:gap-1";
+  const only = groups.length === 1 ? groups[0] : null;
+
   return (
-    <>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {(
-          [
-            ["favourites", `Favourites ${favouriteCount.toLocaleString("en-AU")}`],
-            ["downloads", `Downloads ${downloads.length.toLocaleString("en-AU")}`],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={tab === value}
-            onClick={() => setTab(value)}
-            className={`soft-btn !min-h-[40px] !px-4 !text-[14px] ${tab === value ? "!bg-ink !text-white" : "soft-btn-tonal"}`}
-          >
-            {label}
-          </button>
-        ))}
+    <div className="flex flex-col gap-5">
+      <div className="flex items-end justify-between gap-3">
+        <h1 className="serif text-[44px] leading-none">Saved</h1>
+        {tab === "favourites" && only ? (
+          <a href={`/api/albums/${only.albumId}/zip?only=${only.items.map((i) => i.id).join(",")}`} className="btn btn-secondary no-underline">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
+            </svg>
+            Download {favouriteCount.toLocaleString("en-AU")}
+          </a>
+        ) : null}
       </div>
 
+      <Segmented
+        label="Show"
+        value={tab}
+        onChange={setTab}
+        className="sm:max-w-[420px]"
+        options={[
+          { value: "favourites", label: "Favourites", count: favouriteCount },
+          { value: "downloads", label: "Downloaded", count: downloads.length },
+        ]}
+      />
+
       {tab === "favourites" && favouriteCount === 0 ? (
-        <p className="mt-6 text-[15px] text-[color:var(--ink-70)]">
-          Nothing here yet. Tap the heart on any photo to keep it in this list.
-        </p>
+        <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">Tap the heart on any photo to keep it here.</p>
       ) : tab === "favourites" ? (
-        <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           {groups.map((group) => (
-            <section key={group.albumId}>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link href={`/e/${handle}/a/${group.albumId}`} className="soft-display text-[18px] text-ink no-underline">
-                  {group.albumTitle}
-                </Link>
-                {group.albumDate ? <span className="text-[14px] text-[color:var(--ink-55)]">{formatDate(group.albumDate)}</span> : null}
-                <span className="text-[14px] text-[color:var(--ink-55)]">{group.items.length} saved</span>
-                <a
-                  href={`/api/albums/${group.albumId}/zip?only=${group.items.map((i) => i.id).join(",")}`}
-                  className="kb-link ml-auto"
-                >
-                  Download these
-                </a>
-              </div>
-              <div className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(clamp(104px, 13vw, 150px), 1fr))" }}>
+            <section key={group.albumId} className="flex flex-col gap-2.5">
+              {groups.length > 1 ? (
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <Link href={`/e/${handle}/a/${group.albumId}`} className="text-[18px] font-semibold text-ink no-underline">
+                    {group.albumTitle}
+                  </Link>
+                  <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length}</span>
+                  <a href={`/api/albums/${group.albumId}/zip?only=${group.items.map((i) => i.id).join(",")}`} className="ml-auto text-[15px] font-medium">
+                    Download these
+                  </a>
+                </div>
+              ) : null}
+              <div className={grid}>
                 {group.items.map((item) => (
                   <Link
                     key={item.id}
                     href={`/e/${handle}/a/${group.albumId}/${item.id}`}
                     aria-label={`${item.kind === "video" ? "Video" : "Photo"} from ${group.albumTitle}`}
-                    className="soft-tile relative block aspect-square !rounded-[11px]"
+                    className={tile}
                     scroll={false}
                   >
                     {item.thumbUrl ? <img src={item.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
                     {item.kind === "video" ? (
-                      <span className="absolute bottom-1.5 left-1.5 rounded-full bg-[rgba(25,18,22,0.72)] px-2 py-0.5 text-[14px] font-bold text-white">
+                      <span className="absolute bottom-1.5 left-1.5 rounded-full bg-[rgb(11_12_15/0.72)] px-2 py-0.5 text-[14px] font-semibold text-white">
                         {duration(item.durationSeconds) || "Video"}
                       </span>
                     ) : null}
@@ -116,30 +121,29 @@ export function SavedTabs({
               </div>
             </section>
           ))}
+          <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">Tap the heart on any photo to keep it here.</p>
         </div>
       ) : downloads.length ? (
-        <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           {[...downloadGroups.entries()].map(([key, items]) => (
-            <section key={key}>
-              <div className="flex flex-wrap items-center gap-3">
+            <section key={key} className="flex flex-col gap-2.5">
+              <div className="flex flex-wrap items-baseline gap-3">
                 {items[0].albumId ? (
-                  <Link href={`/e/${handle}/a/${items[0].albumId}`} className="soft-display text-[18px] text-ink no-underline">
+                  <Link href={`/e/${handle}/a/${items[0].albumId}`} className="text-[18px] font-semibold text-ink no-underline">
                     {items[0].albumTitle}
                   </Link>
                 ) : (
-                  <span className="soft-display text-[18px]">{items[0].albumTitle}</span>
+                  <span className="text-[18px] font-semibold">{items[0].albumTitle}</span>
                 )}
-                <span className="text-[14px] text-[color:var(--ink-55)]">
-                  {items.length} download{items.length === 1 ? "" : "s"}
-                </span>
+                <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{items.length}</span>
               </div>
-              <div className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(clamp(104px, 13vw, 150px), 1fr))" }}>
+              <div className={grid}>
                 {items.map((item) => (
                   <Link
                     key={`${item.id}-${item.at}`}
                     href={item.albumId ? `/e/${handle}/a/${item.albumId}/${item.id}` : `/e/${handle}`}
                     aria-label={`Downloaded from ${item.albumTitle}, ${formatDate(item.at)}`}
-                    className="soft-tile relative block aspect-square !rounded-[11px]"
+                    className={tile}
                     scroll={false}
                   >
                     {item.thumbUrl ? <img src={item.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
@@ -150,11 +154,11 @@ export function SavedTabs({
           ))}
         </div>
       ) : (
-        <p className="mt-6 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
-          Nothing downloaded yet. Anything you save to your phone or pull down as a zip shows up here, so you can find
-          it again.
+        <p className="max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
+          Nothing downloaded yet. Anything you save to your phone or pull down as a zip shows up here, so you can find it
+          again.
         </p>
       )}
-    </>
+    </div>
   );
 }
