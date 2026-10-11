@@ -57,7 +57,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
 
   if (!configured) {
     return (
-      <div className="soft-card flex flex-col gap-2 p-5">
+      <div className="flex flex-col gap-2">
         <span className="text-[14px] font-medium">Face search</span>
         <p className="m-0 text-[14px] text-[color:var(--ink-70)]">
           Not available on this deployment yet. It needs AWS credentials set on the server.
@@ -69,7 +69,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
   if (enabled) {
     const done = Math.max(0, live.total - live.remaining);
     return (
-      <div className="soft-card flex flex-col gap-3 p-5">
+      <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-[14px] font-medium">Attendees find their photos with a selfie</span>
           <span className="soft-chip">On</span>
@@ -171,7 +171,7 @@ export function FaceRecognition({ eventId, eventName, configured, enabled, enrol
   }
 
   return (
-    <div className="soft-card flex flex-col gap-3 p-5">
+    <div className="flex flex-col gap-3">
       <span className="text-[15px] font-medium">{EVENT_NOTICE.title(eventName)}</span>
       <p className="m-0 text-[14px] text-[color:var(--ink-70)]">{EVENT_NOTICE.lead}</p>
       <ul className="m-0 flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-normal text-[color:var(--ink-70)]">
