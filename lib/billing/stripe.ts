@@ -92,7 +92,7 @@ export async function createCheckoutSession(
     line_items: [lineItem],
     client_reference_id: event.id,
     metadata,
-    ...(event.stripe_customer_id ? { customer: event.stripe_customer_id } : { customer_email: email || undefined, customer_creation: "always" as const }),
+    ...customerFields(event, email),
     payment_intent_data: { metadata, description: `${offerLabel(offer)}: ${event.name}` },
     // Companies pay for events: a real invoice, with their billing details,
     // is what their accounts team asks for.
@@ -109,6 +109,17 @@ export async function createCheckoutSession(
   return session.url;
 }
 
+/**
+ * Who pays. Someone who has paid before is already a Stripe customer; with tax
+ * ID collection on, Stripe refuses to open Checkout for them unless it may
+ * save the business name and address they enter back onto that customer.
+ */
+function customerFields(event: EventRecord, email: string) {
+  return event.stripe_customer_id
+    ? { customer: event.stripe_customer_id, customer_update: { name: "auto" as const, address: "auto" as const } }
+    : { customer_email: email || undefined, customer_creation: "always" as const };
+}
+
 /** "Keep another year": one A$29 payment that moves the deletion date 12 months on. */
 export async function createKeepYearCheckout(event: EventRecord, email: string): Promise<string> {
   const billingUrl = `${appUrl()}/admin/${event.handle}/billing`;
@@ -123,7 +134,7 @@ export async function createKeepYearCheckout(event: EventRecord, email: string):
     ],
     client_reference_id: event.id,
     metadata,
-    ...(event.stripe_customer_id ? { customer: event.stripe_customer_id } : { customer_email: email || undefined, customer_creation: "always" as const }),
+    ...customerFields(event, email),
     payment_intent_data: { metadata, description: `Keep another year: ${event.name}` },
     invoice_creation: { enabled: true, invoice_data: { metadata, description: `Keep another year: ${event.name}` } },
     billing_address_collection: "required",
