@@ -113,8 +113,10 @@ export function MoreMenu({
           id={id}
           className={`kb-menu top-[calc(100%+8px)] ${menuClassName ?? (align === "end" ? "right-0" : "left-0")}`}
           onClick={(ev) => {
-            // Choosing anything closes the menu. A form's submit still fires.
-            if ((ev.target as HTMLElement).closest("a, button")) setOpen(false);
+            // Choosing anything closes the menu, one tick later: closing
+            // straight away removes a form before its submit goes out, and
+            // the browser drops it ("Sign out" did nothing).
+            if ((ev.target as HTMLElement).closest("a, button")) setTimeout(() => setOpen(false), 0);
           }}
         >
           {children}
