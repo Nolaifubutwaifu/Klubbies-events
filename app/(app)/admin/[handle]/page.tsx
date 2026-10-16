@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
+import { Disclosure } from "@/components/Disclosure";
 import { MoreLink, MoreMenu } from "@/components/MoreMenu";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { personName } from "@/lib/auth/display-name";
@@ -15,7 +16,6 @@ import { listStackedAlbums } from "@/lib/media/album-list";
 import { EXPIRE_AFTER_DAYS, STUCK_AFTER_MS } from "@/lib/media/constants";
 import { eventLink, eventQrSvg } from "@/lib/share";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { setupState } from "@/lib/events/setup";
@@ -37,6 +37,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   const setup = await setupState(event, inApp);
   if (!setup.requiredDone) redirect(`/admin/${handle}/setup`);
   const nextStep = setup.recommended.find((step) => !step.done) ?? null;
+  const doneSteps = setup.recommended.filter((step) => step.done).length;
 
   const [
     joined,
@@ -50,7 +51,6 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     activity,
     stacked,
     photographerLinks,
-    findable,
     qrSvg,
   ] = await Promise.all([
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "active"),
@@ -84,14 +84,6 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
       .limit(6),
     listStackedAlbums(supabase, eventId, { includeDrafts: true, limit: 4 }),
     supabase.from("album_guest_links").select("id", { count: "exact", head: true }).eq("event_id", eventId),
-    // How many attendees found themselves. A count only, read with the
-    // service role after the organiser check above: profiles are private to
-    // their owners, and nothing here says who.
-    createAdminClient()
-      .from("member_face_profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("event_id", eventId)
-      .eq("status", "ready"),
     eventQrSvg(handle),
   ]);
 
@@ -174,7 +166,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           urgent: true,
         }
       : null,
-    // Left to the Next step card while setup steps remain.
+    // Left to Next steps while setup steps remain.
     !nextStep && writable && (photographerLinks.count ?? 0) === 0 && (readyItems.count ?? 0) === 0
       ? {
           key: "photographer",
@@ -243,7 +235,6 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   const newest = latest?.[0];
 
   const joinedCount = usage?.guestsJoined ?? joined.count ?? 0;
-  const found = findable.count ?? 0;
   const numbers: { label: string; value: number; of: number | null; caption: string; tone: "brand" | "ok" | null }[] = [
     {
       label: "Photos and videos",
@@ -269,13 +260,6 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             : "through the event link",
       tone: "brand",
     },
-    {
-      label: "Found their photos",
-      value: found,
-      of: joinedCount || null,
-      caption: joinedCount ? `${Math.round((found / joinedCount) * 100)}% of those who joined` : "added a selfie",
-      tone: "ok",
-    },
     { label: "Downloads", value: downloads.count ?? 0, of: null, caption: "Originals and zips", tone: null },
   ];
 
@@ -295,19 +279,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   return (
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
-          <p className="text-[15px] text-[color:var(--kb-ink-2)]">
-            {closed
-              ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
-              : [
-                  event.access_ends_at ? `Gallery open until ${formatDate(event.access_ends_at)}` : formatEventDates(event.starts_on, event.ends_on),
-                  event.access_mode === "link" ? "Anyone with the link can join" : "Guest list only",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-          </p>
-        </div>
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
         <div className="flex items-center gap-2">
           <Link href={`/admin/${handle}/upload`} className="btn btn-secondary no-underline">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -323,24 +295,63 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </div>
       </div>
 
+      <section aria-labelledby="sh" className="flex flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
+        <h2 id="sh" className="text-[17px] font-semibold">
+          Share with attendees
+        </h2>
+        <div className="flex items-center gap-4">
+          <span
+            className="block w-[104px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+            // Generated server-side from the event link by the qrcode package.
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+            aria-label="QR code for the event link"
+            role="img"
+          />
+          <span className="flex min-w-0 flex-col items-start gap-2">
+            <span className="mono break-all text-[14px]">{link.replace(/^https?:\/\//, "")}</span>
+            <CopyButton value={link} label="Copy link" className="btn btn-secondary !min-h-[40px]" />
+          </span>
+        </div>
+        <Link href={`/admin/${handle}/share`} className="text-[14px] font-medium">
+          Poster and announcement email
+        </Link>
+      </section>
+
       {nextStep ? (
-        <section aria-label="Next step" className="flex flex-wrap items-center gap-5 rounded-[12px] border-[1.5px] border-[color:var(--kb-brand)] bg-white px-6 py-5">
-          <span className="kb-icon-well" aria-hidden>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </span>
-          <span className="flex min-w-0 flex-[1_1_320px] flex-col">
-            <span className="text-[14px] font-semibold text-[color:var(--kb-brand-deep)]">
-              Next step · {setup.recommended.filter((step) => step.done).length} of {setup.recommended.length} done
-            </span>
-            <span className="text-[17px] font-semibold">{nextStep.title}</span>
-            <span className="text-[color:var(--kb-ink-2)]">{nextStep.hint}</span>
-          </span>
-          <Link href={nextStep.href} className="btn btn-primary no-underline">
-            {nextStep.cta}
-          </Link>
-        </section>
+        <Disclosure card title="Next steps" hint={`${doneSteps} of ${setup.recommended.length} done`} aside={`${doneSteps} of ${setup.recommended.length} done`}>
+          <ul className="m-0 flex list-none flex-col p-0">
+            {setup.recommended.map((step, index) => (
+              <li key={step.key} className={`flex items-center gap-3.5 py-3 ${index > 0 ? "border-t border-[color:var(--kb-sand)]" : ""}`}>
+                <span
+                  className={`flex h-7 w-7 flex-none items-center justify-center rounded-full ${step.done ? "bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]" : "border-[1.5px] border-[color:var(--kb-line-strong)]"}`}
+                  aria-hidden
+                >
+                  {step.done ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m5 12 5 5 9-10" />
+                    </svg>
+                  ) : null}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="font-semibold">
+                    {step.title}
+                    <span className="sr-only">{step.done ? " (done)" : ""}</span>
+                  </span>
+                  <span className="text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
+                </span>
+                {step.key === nextStep.key ? (
+                  <Link href={step.href} className="btn btn-primary btn-sm no-underline">
+                    {step.cta}
+                  </Link>
+                ) : step.done ? null : (
+                  <Link href={step.href} className="text-[14px] font-medium">
+                    {step.cta}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
       ) : null}
 
       {/* The numbers mean nothing before the first photo, so they wait for it. */}
@@ -459,43 +470,13 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           </section>
         </div>
 
-        <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-6">
-          <section aria-labelledby="sh" className="flex flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
-            <h2 id="sh" className="text-[17px] font-semibold">
-              Share with attendees
-            </h2>
-            <div className="flex items-center gap-4">
-              <span
-                className="block w-[104px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
-                // Generated server-side from the event link by the qrcode package.
-                dangerouslySetInnerHTML={{ __html: qrSvg }}
-                aria-label="QR code for the event link"
-                role="img"
-              />
-              <span className="flex min-w-0 flex-col gap-2">
-                <span className="mono break-all text-[14px]">{link.replace(/^https?:\/\//, "")}</span>
-                <CopyButton value={link} label="Copy link" className="btn btn-secondary !min-h-[40px]" />
-              </span>
-            </div>
-            <Link href={`/admin/${handle}/share`} className="text-[14px] font-medium">
-              Poster and announcement email
-            </Link>
-          </section>
-
-          {hasPhotos ? (
-            <section aria-labelledby="act" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
-              <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
-                <h2 id="act" className="text-[17px] font-semibold">
-                  Recent activity
-                </h2>
-                <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
-                  Full log
-                </Link>
-              </div>
+        {hasPhotos ? (
+          <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-6">
+            <Disclosure card title="Recent activity">
               {activity.data?.length ? (
-                <ul className="m-0 list-none py-1 pl-0">
+                <ul className="m-0 -my-2 list-none pl-0">
                   {activity.data.map((e) => (
-                    <li key={e.id} className="flex gap-3 px-5 py-3">
+                    <li key={e.id} className="flex gap-3 py-2.5">
                       <span
                         className="mt-[7px] h-2 w-2 flex-none rounded-full"
                         style={{ background: e.action === "view" ? "var(--kb-line-strong)" : "var(--kb-brand)" }}
@@ -520,25 +501,23 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                   ))}
                 </ul>
               ) : (
-                <p className="m-0 px-5 py-4 text-[14px] text-[color:var(--kb-ink-2)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
+                <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
               )}
-            </section>
-          ) : null}
-        </div>
+              <Link href={`/admin/${handle}/activity`} className="self-start text-[14px] font-medium">
+                Full log
+              </Link>
+            </Disclosure>
+          </div>
+        ) : null}
       </div>
 
       {latest?.length ? (
-        <section aria-labelledby="lu" className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="lu" className="text-[17px] font-semibold">
-              Latest uploads
-            </h2>
-            {newest ? (
-              <span className="text-[14px] text-[color:var(--kb-ink-3)]">
-                {[newest.albums?.title, newest.photographer_name, formatDateTime(newest.created_at)].filter(Boolean).join(" · ")}
-              </span>
-            ) : null}
-          </div>
+        <Disclosure
+          card
+          title="Latest uploads"
+          hint={newest ? [newest.albums?.title, formatDateTime(newest.created_at)].filter(Boolean).join(" · ") : undefined}
+          aside={newest ? [newest.albums?.title, newest.photographer_name, formatDateTime(newest.created_at)].filter(Boolean).join(" · ") : undefined}
+        >
           <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}>
             {latest.map((m) => {
               const url = latestUrls.get(m.thumb_path ?? m.poster_path ?? "");
@@ -554,8 +533,19 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
               );
             })}
           </div>
-        </section>
+        </Disclosure>
       ) : null}
+
+      <p className="m-0 border-t border-[color:var(--kb-line)] pt-5 text-[14px] text-[color:var(--kb-ink-3)]">
+        {closed
+          ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
+          : [
+              event.access_ends_at ? `Gallery open until ${formatDate(event.access_ends_at)}` : formatEventDates(event.starts_on, event.ends_on),
+              event.access_mode === "link" ? "Anyone with the link can join" : "Guest list only",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+      </p>
     </main>
   );
 }

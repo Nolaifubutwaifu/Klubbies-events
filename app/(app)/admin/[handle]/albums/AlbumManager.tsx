@@ -352,8 +352,7 @@ export function AlbumManager({
       ) : null}
 
       <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-        Scheduled albums publish within the hour of the time you set. The top album is what attendees see first: drag the
-        grip to reorder, or use Move up and Move down in each album&apos;s menu. Hiding keeps the files.
+        Scheduled albums publish within the hour of the time you set. The top album is what attendees see first.
       </p>
     </div>
   );

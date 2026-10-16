@@ -295,76 +295,93 @@ export function AdminTopbar({ handle, eventName, counts, plan }: Shared & { even
   );
 }
 
-/** On a phone: one button naming the current screen, which opens the menu as a sheet from the bottom. */
+/**
+ * On a phone: a bar naming the current screen. Tapping it folds the menu open
+ * from the bar itself, over the page, and the chevron turns; tapping outside,
+ * Escape or choosing a screen folds it shut.
+ */
 export function AdminMenuButton({ handle, counts, plan }: Shared) {
   const base = `/admin/${handle}`;
   const groups = navGroups(base, counts, plan.short);
   const { isActive, current } = useCurrent(groups);
   const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const button = trigger.current;
-    const onKey = (ev: KeyboardEvent) => ev.key === "Escape" && setOpen(false);
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      setOpen(false);
+      button?.focus();
+    };
+    const onPointer = (ev: PointerEvent) => {
+      if (!root.current?.contains(ev.target as Node)) setOpen(false);
+    };
     document.addEventListener("keydown", onKey);
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    panel.current?.querySelector<HTMLElement>("a[aria-current=page], a")?.focus();
+    document.addEventListener("pointerdown", onPointer);
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = overflow;
-      button?.focus();
+      document.removeEventListener("pointerdown", onPointer);
     };
   }, [open]);
 
+  const label = current?.label ?? "Overview";
+
   return (
-    <div className="lg:hidden">
+    <div ref={root} className="relative z-30 lg:hidden">
       <button
         ref={trigger}
         type="button"
-        className="btn btn-secondary w-full !justify-between"
+        className={`flex min-h-[52px] w-full cursor-pointer items-center gap-3 border border-[color:var(--kb-line)] bg-white px-4 text-left text-[16px] font-semibold text-ink shadow-[0_1px_2px_rgb(22_24_29/0.04)] transition-[border-radius,box-shadow] duration-200 ${
+          open ? "rounded-t-[12px] border-b-[color:var(--kb-sand)] shadow-[0_18px_40px_-18px_rgb(22_24_29/0.3)]" : "rounded-[12px]"
+        }`}
         aria-expanded={open}
         aria-controls="organiser-menu"
-        onClick={() => setOpen(true)}
+        aria-label={`${label}. Organiser menu`}
+        onClick={() => setOpen((value) => !value)}
       >
-        <span className="flex items-center gap-2">
-          Menu · {current?.label ?? "Overview"}
-          {counts.removals > 0 ? (
-            <span className="mono rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] font-normal text-[color:var(--kb-warn)]">{counts.removals}</span>
-          ) : null}
+        <span className="text-[color:var(--kb-brand)]">
+          <Icon name={current?.icon ?? "overview"} />
         </span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {counts.removals > 0 ? (
+          <span className="mono rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] font-normal text-[color:var(--kb-warn)]">{counts.removals}</span>
+        ) : null}
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`flex-none text-[color:var(--kb-ink-3)] transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        >
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-50" role="presentation">
-          <button type="button" aria-label="Close menu" tabIndex={-1} className="absolute inset-0 bg-[rgb(14_20_36/0.45)]" onClick={() => setOpen(false)} />
-          <div
-            ref={panel}
-            id="organiser-menu"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Organiser menu"
-            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[20px] bg-white px-3 pb-[max(28px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-20px_40px_-20px_rgb(0_0_0/0.4)]"
-          >
-            <span className="mx-auto mb-2.5 block h-[5px] w-10 rounded-[3px] bg-[color:var(--kb-line-strong)]" aria-hidden />
-            <div className="flex items-center justify-between pb-1.5 pl-3.5 pr-1.5">
-              <h2 className="text-[17px] font-semibold">Menu</h2>
-              <button type="button" aria-label="Close menu" className="flex h-11 w-11 items-center justify-center rounded-[8px] hover:bg-[color:var(--kb-sand)]" onClick={() => setOpen(false)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                  <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
-            <nav aria-label="Organiser">
-              <NavList groups={groups} isActive={isActive} onPick={() => setOpen(false)} />
-            </nav>
-          </div>
+      {/* Folds down from the bar: rows 0fr to 1fr, so it opens to its own height. */}
+      <div
+        className={`absolute inset-x-0 top-full grid transition-[grid-template-rows,opacity] duration-[260ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none ${
+          open ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div
+          ref={panel}
+          id="organiser-menu"
+          inert={!open}
+          className="min-h-0 overflow-hidden rounded-b-[12px] border-x border-b border-[color:var(--kb-line)] bg-white shadow-[0_18px_40px_-18px_rgb(22_24_29/0.3)]"
+        >
+          <nav aria-label="Organiser" className="max-h-[70dvh] overflow-y-auto px-2 pb-2.5 pt-1">
+            <NavList groups={groups} isActive={isActive} onPick={() => setOpen(false)} />
+          </nav>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

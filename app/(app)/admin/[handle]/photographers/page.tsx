@@ -55,7 +55,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
   return (
     <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Photographers">
-        Each photographer gets their own upload link. They need no account, and every photo is credited to them.
+        Each photographer gets their own upload link.
       </PageTitle>
 
       {!canWrite(ctx.event) ? <BillingGate handle={handle} action="add photographers" deletedAt={ctx.event.photos_deleted_at} /> : null}
