@@ -100,6 +100,7 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
           sendsLeft={Math.max(0, ANNOUNCEMENT_LIMIT - announce.sent.length)}
           sent={announce.sent.map((item) => ({ ...item, when: formatDateTime(item.sent_at) }))}
           planName={isTier(event.plan) ? planName(event.plan) : null}
+          free={event.plan === "free"}
         />
       </div>
     </main>

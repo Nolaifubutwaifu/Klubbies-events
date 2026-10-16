@@ -60,16 +60,6 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
     .join(" · ");
   const binCount = (binnedAlbums ?? 0) + (binnedItems ?? 0);
 
-  const jumps: [string, string][] = [
-    ["details", "Details and colour"],
-    ["brand", "Logo"],
-    ["access", "Access"],
-    ["privacy", "Privacy"],
-    ["faces", "Face search"],
-    ["link", "Event link"],
-    ["deleted", "Recently deleted"],
-    ["danger", "Delete this event"],
-  ];
 
   return (
     <main className="flex max-w-[960px] flex-col gap-5">
@@ -77,17 +67,6 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
         Changes save when you press Save in each section.
       </PageTitle>
 
-      <nav aria-label="Jump to" className="flex flex-wrap gap-2">
-        {jumps.map(([id, label]) => (
-          <a
-            key={id}
-            href={`#${id}`}
-            className="inline-flex min-h-[36px] items-center rounded-full border border-[color:var(--kb-line)] bg-white px-3 text-[14px] font-medium text-[#33363d] no-underline hover:border-[color:var(--kb-ink)] hover:text-[color:var(--kb-ink)] [@media(pointer:coarse)]:min-h-[44px]"
-          >
-            {label}
-          </a>
-        ))}
-      </nav>
 
       {/* Each group folds away, so the page is a short list to pick from.
           A link to #access (from Attendees, say) opens that group. */}

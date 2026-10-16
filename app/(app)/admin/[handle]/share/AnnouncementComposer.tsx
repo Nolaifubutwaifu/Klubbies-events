@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { sendAnnouncementAction } from "@/app/(app)/admin/announcement-actions";
-import { CopyButton } from "@/components/CopyButton";
 import { Dialog } from "@/components/Dialog";
 
 /**
- * The announcement email: edit the subject and message, then copy it into
- * your own email, or (paid sizes) have us send it to every guest for you.
+ * The announcement email: edit the subject and message, and (paid sizes) we
+ * send it to every guest with the organiser's name on it. On Free the whole
+ * box is greyed out and can't be typed in.
  */
 export function AnnouncementComposer({
   eventId,
@@ -21,6 +21,7 @@ export function AnnouncementComposer({
   sendsLeft,
   sent,
   planName = null,
+  free,
 }: {
   eventId: string;
   handle: string;
@@ -32,6 +33,8 @@ export function AnnouncementComposer({
   sendsLeft: number;
   sent: { subject: string; recipient_count: number; sent_at: string; when: string }[];
   planName?: string | null;
+  /** On the Free size: says so instead of explaining. */
+  free: boolean;
 }) {
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
@@ -48,30 +51,42 @@ export function AnnouncementComposer({
             Announcement email
           </h2>
           <span className="text-[14px] text-[color:var(--kb-ink-2)]">
-            {canSend
-              ? "In your own words. We send it from Klubbies Events with your name on it."
-              : "In your own words. Copy it into your own email or ticketing tool."}
+            {canSend ? (
+              "We send it from Klubbies Events with your name on it."
+            ) : free ? (
+              <>
+                Not included in free plan
+                {inApp ? null : (
+                  <>
+                    {" "}
+                    · <Link href={`/admin/${handle}/billing`}>See sizes</Link>
+                  </>
+                )}
+              </>
+            ) : (
+              "Available once the event is active"
+            )}
           </span>
         </span>
         {canSend && planName ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Included on {planName}</span> : null}
       </div>
 
-      <label className="field">
-        Subject
-        <input className="input" value={subject} maxLength={150} onChange={(e) => setSubject(e.target.value)} />
-      </label>
-      <label className="field">
-        Message
-        <textarea className="input min-h-[200px] leading-relaxed" value={body} maxLength={4000} onChange={(e) => setBody(e.target.value)} />
-        {canSend ? <span className="kb-help font-normal">A Get my photos button with your event link is added below your message.</span> : null}
-      </label>
+      <fieldset disabled={!canSend} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0 disabled:pointer-events-none disabled:select-none disabled:opacity-45">
+        <label className="field">
+          Subject
+          <input className="input" value={subject} maxLength={150} onChange={(e) => setSubject(e.target.value)} />
+        </label>
+        <label className="field">
+          Message
+          <textarea className="input min-h-[200px] leading-relaxed" value={body} maxLength={4000} onChange={(e) => setBody(e.target.value)} />
+          {canSend ? <span className="kb-help font-normal">A Get my photos button with your event link is added below your message.</span> : null}
+        </label>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {canSend ? (
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             className="btn btn-secondary"
-            disabled={pending || sendsLeft <= 0 || recipientCount === 0}
+            disabled={!canSend || pending || sendsLeft <= 0 || recipientCount === 0}
             onClick={() => {
               setResult(null);
               setConfirming(true);
@@ -80,11 +95,10 @@ export function AnnouncementComposer({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M4 12l16-8-6 16-2-7z" />
             </svg>
-            Send to {people}
+            Send via Klubbies
           </button>
-        ) : null}
-        <CopyButton value={`${subject}\n\n${body}`} label="Copy text" className="btn btn-secondary" />
-      </div>
+        </div>
+      </fieldset>
 
       {canSend ? (
         <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
@@ -92,17 +106,7 @@ export function AnnouncementComposer({
             ? "Nobody to send it to yet: add a guest list or share the link first."
             : `Goes to everyone on the guest list and everyone who joined, ${people} now. Replies come to you. ${sendsLeft} of 3 sends left for this event.`}
         </p>
-      ) : (
-        <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
-          {inApp ? (
-            "Sending it for you isn't included in this event's size."
-          ) : (
-            <>
-              We can send it to every guest for you on the paid sizes. <Link href={`/admin/${handle}/billing`}>See sizes</Link>
-            </>
-          )}
-        </p>
-      )}
+      ) : null}
 
       {result ? (
         <p className={result.ok ? "m-0 text-[14px] font-medium text-[#1f6b3a]" : "kb-error m-0"} role="status">

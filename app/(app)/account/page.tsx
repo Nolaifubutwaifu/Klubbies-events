@@ -42,7 +42,7 @@ export default async function AccountPage(props: PageProps<"/account">) {
 
   return (
     <main className="flex flex-1 flex-col">
-      <SimpleHeader name={name} avatarUrl={avatarUrl} />
+      <SimpleHeader name={name} avatarUrl={avatarUrl} back={tabEvent && from ? `/e/${tabEvent.handle}` : "/events"} />
 
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-[26px] px-5 pb-24 pt-7 sm:px-8 sm:pt-10">
         <div className="flex items-center gap-4">
@@ -95,7 +95,7 @@ export default async function AccountPage(props: PageProps<"/account">) {
           <div className="kb-group">
             {events.length ? (
               events.slice(0, 6).map((event) => (
-                <Link key={event.membershipId} href={event.isAdmin ? `/admin/${event.handle}` : `/e/${event.handle}`} className="kb-row">
+                <Link key={event.membershipId} href={`/e/${event.handle}`} className="kb-row">
                   <EventMark name={event.name} logoUrl={event.logoPath ? signed.get(event.logoPath) : null} accentColour={event.accentColour} size={32} />
                   <span className="flex min-w-0 flex-1 items-center gap-2">
                     <span className="truncate">{event.name}</span>

@@ -19,7 +19,7 @@ export default async function UploadPage(props: PageProps<"/admin/[handle]/uploa
   return (
     <main className="flex flex-col gap-6">
       <PageTitle kicker={ctx.event.name} title="Upload">
-        Full quality photos and videos. Uploads keep going while this tab is open. Photographers without an account upload
+        Uploads keep going while this tab is open. Photographers without an account upload
         through their own link from Photographers.
       </PageTitle>
 

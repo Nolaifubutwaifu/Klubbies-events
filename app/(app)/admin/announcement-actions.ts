@@ -33,7 +33,7 @@ export async function sendAnnouncementAction(eventId: string, subject: string, b
   if (!ctx?.perms.manage_event) return { error: "Only organisers can send this" };
   if (!canSendAnnouncements(ctx.event)) {
     const inApp = isNativeAppUserAgent((await headers()).get("user-agent"));
-    return { error: inApp ? "Sending it for you isn't included in this event's size." : "Sending it for you is part of the paid sizes. Copy it instead, or choose a size on the Plan page." };
+    return { error: inApp ? "Not included in this event's size." : "Not included in free plan. Choose a size on the Plan page." };
   }
   const parsed = schema.safeParse({ subject, body });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };

@@ -39,7 +39,8 @@ export default async function EventsPage(props: PageProps<"/events">) {
     `Joined ${formatDate(event.since)}`;
   // Organisers open their event's admin, where an unfinished setup is
   // waiting; the gallery is one tap away from there.
-  const hrefFor = (event: (typeof events)[number]) => (event.isAdmin ? `/admin/${event.handle}` : `/e/${event.handle}`);
+  // Everyone opens the gallery first; organisers switch over with Organise at the top.
+  const hrefFor = (event: (typeof events)[number]) => `/e/${event.handle}`;
   const [featured, ...rest] = events;
 
   function Chip({ event }: { event: (typeof events)[number] }) {
