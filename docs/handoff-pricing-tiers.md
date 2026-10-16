@@ -80,7 +80,7 @@ Paused guests get no email when they're paused; they see the message on screen. 
 - Photo limit upgrades always cost the plain difference.
 - The event keeps its rate (club or standard).
 - No upgrade prices in Stripe: the app works out the amount and sends one Checkout, like today's, labelled for example "Upgrade Small to Medium (late)", with an invoice.
-- Promotion codes are off for upgrades, so FOUNDING25 can't make an upgrade free. Founding clubs still get their A$60 Medium to Large gap.
+- Promotion codes work on upgrades too (since 17 Oct 2026), but only codes not limited to a product: an upgrade has no Stripe price to match. FOUNDING25 is limited to Medium, so it can't make an upgrade free. Founding clubs still get their A$60 Medium to Large gap.
 
 | Upgrade | On time, club / standard (A$) | Late, club / standard (A$) |
 | --- | --- | --- |

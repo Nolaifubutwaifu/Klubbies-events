@@ -211,7 +211,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             If more guests turn up than your size allows, they can usually keep joining for a short while, and at some
             point we may pause new guests until you upgrade. Upgrading after that point costs more; the price is shown
             before you pay.
-            {offers[0]?.kind === "tier" ? " Have a promotion code? Enter it on the payment page." : ""}
+            Have a promotion code? Enter it on the payment page.
           </p>
           {!event.plan_rate ? <ClubCodeForm eventId={event.id} code={event.club_code} campus={event.club_code ? (CLUB_CODES[event.club_code] ?? null) : null} /> : null}
           {!configured && !devActivate ? (

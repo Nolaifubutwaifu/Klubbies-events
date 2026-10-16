@@ -58,7 +58,8 @@ function offerLabel(offer: TierOffer): string {
  * One Checkout payment for a tier or an upgrade. Moving off Free at the list
  * price uses the tier's Stripe price, so promotion codes like FOUNDING25 can
  * apply; everything else is charged the amount lib/billing/plans.ts works out.
- * Promotion codes are off for upgrades from a paid tier.
+ * Promotion codes work on upgrades as well, but only codes not limited to a
+ * product: an upgrade has no Stripe price for a limited code to match.
  */
 export async function createCheckoutSession(
   event: EventRecord,
@@ -99,7 +100,10 @@ export async function createCheckoutSession(
     invoice_creation: { enabled: true, invoice_data: { metadata, description: `${offerLabel(offer)}: ${event.name}` } },
     billing_address_collection: "required",
     tax_id_collection: { enabled: true },
-    allow_promotion_codes: offer.kind === "tier",
+    // On upgrades too. An upgrade is charged as its own one-off line, never a
+    // tier's Stripe price, so a code limited to a product (FOUNDING25 to
+    // Medium) can't apply to it; only codes open to every product can.
+    allow_promotion_codes: true,
     success_url: `${billingUrl}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${billingUrl}?canceled=1`,
   });
