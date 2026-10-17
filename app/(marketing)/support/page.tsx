@@ -132,7 +132,8 @@ export default async function SupportPage() {
           <div className="kb-wrap flex flex-wrap items-start gap-16">
             <div className="flex min-w-0 flex-[3_1_520px] flex-col">
               <h2 className="border-b border-[color:var(--kb-ink)] pb-3 text-[24px] font-semibold">Get help</h2>
-              {TOPICS.map((topic) => (
+              {/* Billing stays off the app: Apple allows no pointers to paying elsewhere there. */}
+              {TOPICS.filter((topic) => !(inApp && topic.id === "billing")).map((topic) => (
                 <details key={topic.id} id={topic.id} className="group scroll-mt-24 border-b border-[color:var(--kb-line)]">
                   <summary className="flex cursor-pointer list-none gap-4 py-[22px] [&::-webkit-details-marker]:hidden">
                     <span className="kb-icon-well" aria-hidden>

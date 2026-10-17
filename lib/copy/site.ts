@@ -89,6 +89,9 @@ export type Feature = {
   body: string;
 };
 
+/** Left out of the features list inside the iPhone app, which may not mention paid sizes. */
+export const PAID_SIZES_NOTE = " On paid sizes we send it to every guest for you.";
+
 export const ORGANISER_FEATURES: Feature[] = [
   {
     icon: "brand",
@@ -108,7 +111,7 @@ export const ORGANISER_FEATURES: Feature[] = [
   {
     icon: "qr",
     title: "Share kit",
-    body: "A QR code, a printable poster and an announcement email you can edit. On paid sizes we send it to every guest for you.",
+    body: `A QR code, a printable poster and an announcement email you can edit.${PAID_SIZES_NOTE}`,
   },
   {
     icon: "list",

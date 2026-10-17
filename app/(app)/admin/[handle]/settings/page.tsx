@@ -15,6 +15,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { AccessForm } from "./AccessForm";
 import { DeleteEvent } from "./DeleteEvent";
+import { isNativeAppRequest } from "@/lib/native-app-server";
 import { FaceRecognition } from "./FaceRecognition";
 import { LogoUploader } from "./LogoUploader";
 import { PrivacySwitches } from "./PrivacySwitches";
@@ -167,7 +168,7 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
         </Disclosure>
 
         <Disclosure card id="danger" title="Delete this event" aside="Removes every photo, album and guest" className="scroll-mt-24">
-          <DeleteEvent eventId={event.id} eventName={event.name} />
+          <DeleteEvent eventId={event.id} eventName={event.name} inApp={await isNativeAppRequest()} />
         </Disclosure>
       </div>
     </main>
