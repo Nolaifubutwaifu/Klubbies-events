@@ -101,15 +101,20 @@ export function AlbumGrid({
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
-  // A refresh (after a delete or an upload) brings a new first page. Take it
-  // in without remounting, so the Undo bar survives the refresh.
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [page, setPage] = useState(0);
+  // A refresh (after a delete, or as uploads land) brings a new first page.
+  // Take it in without remounting, so the Undo bar survives the refresh, and
+  // keep the pages already scrolled to rather than jumping back to the first.
   const [lastInitial, setLastInitial] = useState(initialItems);
   if (initialItems !== lastInitial) {
     setLastInitial(initialItems);
-    setItems(initialItems);
+    if (page === 0) setItems(initialItems);
+    else {
+      const fresh = new Set(initialItems.map((item) => item.id));
+      setItems([...initialItems, ...items.filter((item) => !fresh.has(item.id))]);
+    }
   }
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [page, setPage] = useState(0);
   const [selecting, setSelecting] = useState(selectMode);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState(false);

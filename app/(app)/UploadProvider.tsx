@@ -1,12 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { createContext, useContext, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { EMPTY_SNAPSHOT, UploadQueue, type JobView } from "@/lib/media/upload-queue";
 import { tellAppBusy } from "@/lib/native-app";
 
 // One queue per album, kept above the page so uploads keep running while the
 // member moves around the app.
+
+/** While files land, the album on screen refreshes at most this often. */
+const LIVE_REFRESH_MS = 6000;
 
 type Registry = {
   queues: Map<string, UploadQueue>;
@@ -22,7 +25,27 @@ const UploadContext = createContext<{
 
 export function UploadProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const registry = useRef<Registry>({ queues: new Map(), listeners: new Set(), snapshot: EMPTY_SNAPSHOT, busy: false });
+  const here = useRef(pathname);
+  useEffect(() => {
+    here.current = pathname;
+  }, [pathname]);
+  const lastRefresh = useRef(0);
+  const pendingRefresh = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // A finished file shows up in its album without leaving the page: refresh
+  // the album you're looking at, at most every few seconds while a big batch
+  // lands. Nothing happens on other pages; the idle refresh covers those.
+  const showLanded = (albumId: string) => {
+    if (!here.current.includes(albumId) || pendingRefresh.current) return;
+    const wait = Math.max(0, lastRefresh.current + LIVE_REFRESH_MS - Date.now());
+    pendingRefresh.current = setTimeout(() => {
+      pendingRefresh.current = null;
+      lastRefresh.current = Date.now();
+      if (here.current.includes(albumId)) router.refresh();
+    }, wait);
+  };
 
   const recompute = () => {
     const all: JobView[] = [];
@@ -39,7 +62,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const queueFor = (albumId: string) => {
     const existing = registry.current.queues.get(albumId);
     if (existing) return existing;
-    const queue = new UploadQueue(albumId, () => router.refresh());
+    const queue = new UploadQueue(
+      albumId,
+      () => router.refresh(),
+      () => showLanded(albumId),
+    );
     queue.subscribe(recompute);
     registry.current.queues.set(albumId, queue);
     return queue;
