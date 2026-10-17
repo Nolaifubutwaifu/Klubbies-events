@@ -8,6 +8,11 @@ import { supabaseUrl } from "@/lib/supabase/config";
 // Client-side upload queue: prepares derivatives, uploads originals with
 // resumable TUS straight to Supabase Storage (the Next server never proxies
 // bytes), then finalises. One failed file never blocks the rest.
+//
+// Two lanes, so the connection never waits on the browser: a few files are
+// prepared ahead (thumbnail, preview, fingerprint) while up to six others
+// upload. With preparing inside the upload slots, a 14 GB batch used about a
+// third of a 27 Mbit/s line.
 
 type Ticket = {
   /** The album already has this exact file: nothing to upload. */
@@ -50,7 +55,14 @@ export type JobView = Readonly<{
   previewUrl?: string;
 }>;
 
-const CONCURRENCY = 3;
+/** Files uploading at once. */
+const UPLOADS_AT_ONCE = 6;
+/** Of those, videos: each can be hundreds of MB, and preparing one holds it in memory. */
+const VIDEOS_AT_ONCE = 2;
+/** Files being prepared at once: decoding and resizing is the browser's heavy work. */
+const PREPARING_AT_ONCE = 2;
+/** Prepared files waiting for an upload slot, at most, so memory stays flat on a big batch. */
+const PREPARED_AHEAD = 6;
 const CHUNK_SIZE = 6 * 1024 * 1024; // Supabase requires exactly 6 MB chunks
 const RESUMABLE_ENDPOINT = `${supabaseUrl.replace(".supabase.co", ".storage.supabase.co")}/storage/v1/upload/resumable`;
 
@@ -67,7 +79,9 @@ export const EMPTY_SNAPSHOT: readonly JobView[] = [];
 export class UploadQueue {
   private jobs = new Map<string, Job>();
   private listeners = new Set<() => void>();
-  private active = 0;
+  private uploading = 0;
+  private uploadingVideos = 0;
+  private preparing = 0;
   private snapshot: readonly JobView[] = EMPTY_SNAPSHOT;
   private supabase = createClient();
 
@@ -146,17 +160,51 @@ export class UploadQueue {
     this.emit();
   }
 
+  private isVideo(job: Job) {
+    return job.mimeType.startsWith("video/");
+  }
+
+  /** Prepared and fingerprinted, waiting for an upload slot. */
+  private isReady(job: Job) {
+    return job.status === "queued" && job.prepared !== undefined && job.hash !== undefined;
+  }
+
+  private settle() {
+    const busy = [...this.jobs.values()].some((j) => j.status !== "done" && j.status !== "failed");
+    if (!busy) this.onIdle();
+    this.pump();
+  }
+
   private pump() {
+    // Upload lane: everything prepared, in order, videos two at a time.
     for (const job of this.jobs.values()) {
-      if (this.active >= CONCURRENCY) break;
-      if (job.status !== "queued") continue;
-      this.active++;
+      if (this.uploading >= UPLOADS_AT_ONCE) break;
+      if (!this.isReady(job)) continue;
+      const video = this.isVideo(job);
+      if (video && this.uploadingVideos >= VIDEOS_AT_ONCE) continue;
+      this.uploading++;
+      if (video) this.uploadingVideos++;
+      job.status = "uploading";
+      void this.send(job).finally(() => {
+        this.uploading--;
+        if (video) this.uploadingVideos--;
+        this.settle();
+      });
+    }
+
+    // Prepare lane: keep the next few ready. Videos held back by their limit
+    // don't count, so photos behind them still get prepared and sent.
+    const videosFull = this.uploadingVideos >= VIDEOS_AT_ONCE;
+    let ahead = [...this.jobs.values()].filter((j) => this.isReady(j) && !(videosFull && this.isVideo(j))).length;
+    for (const job of this.jobs.values()) {
+      if (this.preparing >= PREPARING_AT_ONCE || ahead + this.preparing >= PREPARED_AHEAD) break;
+      if (job.status !== "queued" || this.isReady(job)) continue;
+      this.preparing++;
+      ahead++;
       job.status = "preparing";
-      void this.process(job).finally(() => {
-        this.active--;
-        const busy = [...this.jobs.values()].some((j) => j.status !== "done" && j.status !== "failed");
-        if (!busy) this.onIdle();
-        this.pump();
+      void this.prepare(job).finally(() => {
+        this.preparing--;
+        this.settle();
       });
     }
     this.emit();
@@ -193,16 +241,30 @@ export class UploadQueue {
     });
   }
 
-  private async process(job: Job) {
+  /** Thumbnail, preview and fingerprint, ahead of the upload. */
+  private async prepare(job: Job) {
     try {
       this.patch(job, { status: "preparing", error: undefined });
       const prepared =
-        job.prepared ?? (job.mimeType.startsWith("video/") ? await prepareVideo(job.file) : await preparePhoto(job.file, job.mimeType));
-      this.patch(job, { prepared, previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined) });
+        job.prepared ?? (this.isVideo(job) ? await prepareVideo(job.file) : await preparePhoto(job.file, job.mimeType));
+      if (job.hash === undefined) job.hash = await contentHash(job.file);
+      this.patch(job, {
+        prepared,
+        status: "queued",
+        previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
+      });
+    } catch (error) {
+      this.patch(job, { status: "failed", error: friendlyError(error) });
+    }
+  }
 
+  /** Ticket, original, derivatives, finalise: the network half. */
+  private async send(job: Job) {
+    const prepared = job.prepared!;
+    try {
+      this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        if (job.hash === undefined) job.hash = await contentHash(job.file);
         const res = await fetch("/api/media/upload_ticket", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -226,7 +288,6 @@ export class UploadQueue {
       }
 
       if (!job.originalDone) {
-        this.patch(job, { status: "uploading" });
         await this.uploadOriginal(job, ticket);
         this.patch(job, { originalDone: true, uploaded: job.file.size });
       }
