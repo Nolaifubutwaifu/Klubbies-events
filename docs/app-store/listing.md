@@ -71,21 +71,53 @@ Regenerate them with `scripts/app-store-screenshots.ts` (instructions at the top
 
 ## App Privacy
 
-Tracking: **No.** No data is used to track people, and there is no advertising or analytics SDK.
+App Store Connect → the app → **App Privacy**. Answers checked against Apple's definitions (https://developer.apple.com/app-store/app-privacy-details/) and the database on 17 Oct 2026. The app is our website in a web view, and Apple counts data collected through web views of our own site, so this covers everything events.klubbies.app collects. `ios/KlubbiesEvents/PrivacyInfo.xcprivacy` lists the same twelve types.
 
-Data collected, all **linked to the user**, all for **App Functionality** only:
+**Privacy policy URL:** https://events.klubbies.app/privacy
 
-| Apple category | Data type | Why |
-| --- | --- | --- |
-| Contact Info | Email Address | Sign-in codes, new-album and gallery-closing emails |
-| Contact Info | Name | Shown to the organiser on the attendee list |
-| User Content | Photos or Videos | Photos organisers, photographers and attendees upload; the optional selfie |
-| Sensitive Info | Biometric data | Faceprints made from event photos and the optional selfie, for "Your photos" |
-| Identifiers | User ID | The account |
-| Identifiers | Device ID | The notification token, only if notifications are turned on |
-| Usage Data | Product Interaction | The event's activity log of views and downloads, shown to its organisers |
+**Do you or your third-party partners collect data from this app?** Yes.
 
-Not collected: location, financial info (payments happen on the website through Stripe), contacts, browsing history, diagnostics.
+For **every** data type below, give the same three answers:
+
+- Used for tracking? **No.** No advertising, no analytics SDK, nothing shared with data brokers.
+- Linked to the user's identity? **Yes.** Everything sits with the account.
+- Purpose: **App Functionality** only. Not Analytics, not Product Personalisation, not advertising or marketing.
+
+### Select these data types
+
+| Apple category → data type | What it is in Klubbies Events |
+| --- | --- |
+| Contact Info → **Name** | The name people give when they join; names on an organiser's guest list; photographer names |
+| Contact Info → **Email Address** | Sign-in codes; new-album, gallery-closing and announcement emails; guest-list emails |
+| User Content → **Photos or Videos** | Uploaded photos and videos, the optional selfie, profile pictures, event logos |
+| User Content → **Audio Data** | The sound in uploaded videos (the app can record video with the microphone) |
+| User Content → **Emails or Text Messages** | An organiser's announcement email (subject and message are stored and sent to guests) |
+| User Content → **Customer Support** | Messages sent through the contact form on the support page |
+| User Content → **Other User Content** | Event names and descriptions, album titles, profile bio, removal requests |
+| Sensitive Info → **Sensitive Info** | Biometric data: faceprints made from event photos and the optional selfie, for "Your photos" (AWS Rekognition, Sydney) |
+| Identifiers → **User ID** | The account ID |
+| Identifiers → **Device ID** | The push notification token, only if notifications are turned on |
+| Usage Data → **Product Interaction** | Which photos were viewed and downloaded (the organiser's activity log), last visit, Saved photos |
+| Diagnostics → **Other Diagnostic Data** | A hashed IP address and the browser name stored with each view and download |
+
+### Leave these unticked
+
+| Data type | Why not |
+| --- | --- |
+| Payment Info, Purchase History | Organisers pay on the website through Stripe. Nothing can be bought in the app, and card details never reach us |
+| Precise Location, Coarse Location | We never read location. Note: original files keep the camera's own metadata, which can include where a photo was taken |
+| Contacts | We never read the phone's contacts. Guest lists are files organisers upload, covered by Name and Email Address |
+| Phone Number, Physical Address, Other Contact Info | Not asked for |
+| Health, Fitness, Financial, Credit | Not collected |
+| Browsing History, Search History | Album search runs on the device; nothing about other websites |
+| Advertising Data, Other Usage Data | No ads; Product Interaction covers usage |
+| Crash Data, Performance Data | No crash or performance reporting in the app; server errors are logged without user details |
+| Gameplay Content, Environment Scanning, Hands, Head, Other Data | Not applicable |
+
+### Worth knowing
+
+- **Emails carry a small credit line** ("Photos by Klubbies Events · Run your own event"). If a reviewer counts that as marketing, add **Developer's Advertising or Marketing** to Email Address. We send no newsletters.
+- **The hashed IP and browser name are stored but never read.** If you'd rather not declare Other Diagnostic Data, we can stop storing them; then that row goes.
 
 ## Age rating
 
