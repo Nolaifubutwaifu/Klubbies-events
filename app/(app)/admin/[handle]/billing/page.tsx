@@ -57,8 +57,9 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
 
   return (
     <main className="flex max-w-[920px] flex-col gap-6">
-      <PageTitle kicker={event.name} title="Plan and billing">
-        One payment for this event. No subscription.
+      {/* In the iPhone app: the event's size and its use, and nothing about paying (Apple 3.1.1). */}
+      <PageTitle kicker={event.name} title={inApp ? "Plan" : "Plan and billing"}>
+        {inApp ? "This event's size and how much of it is used." : "One payment for this event. No subscription."}
       </PageTitle>
 
       {search.canceled ? <div className="notice">Checkout was cancelled. Nothing was charged.</div> : null}

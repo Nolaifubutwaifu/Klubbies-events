@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FeatureIcon, Photo, ShareKitVisual, Tick } from "@/components/site/parts";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
-import { ATTENDEE_FEATURES, ORGANISER_FEATURES, ORGANISERS, PRIVACY_PROMISES } from "@/lib/copy/site";
+import { ATTENDEE_FEATURES, ORGANISER_FEATURES, ORGANISERS, PAID_SIZES_NOTE, PRIVACY_PROMISES } from "@/lib/copy/site";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 
 export const metadata: Metadata = { title: "Features" };
@@ -47,7 +47,8 @@ export default async function FeaturesPage() {
               For organisers
             </GroupLabel>
             <div className="grid border-l border-t border-[color:var(--kb-line)] border-t-[color:var(--kb-line-strong)] bg-white sm:grid-cols-2 lg:grid-cols-3">
-              {ORGANISER_FEATURES.map((feature) => (
+              {/* In the app, nothing about paid sizes (Apple 3.1.1). */}
+              {ORGANISER_FEATURES.map((feature) => (inApp ? { ...feature, body: feature.body.replace(PAID_SIZES_NOTE, "") } : feature)).map((feature) => (
                 <div key={feature.title} className="flex flex-col gap-3.5 border-b border-r border-[color:var(--kb-line)] p-7 sm:p-9">
                   <FeatureIcon icon={feature.icon} />
                   <h3 className="text-[20px] font-semibold">{feature.title}</h3>

@@ -5,7 +5,7 @@ import { FormMessage } from "@/components/forms";
 import { deleteEventAction, type ActionState } from "../../actions";
 
 /** The danger zone: closed until asked for, then one typed confirmation. */
-export function DeleteEvent({ eventId, eventName }: { eventId: string; eventName: string }) {
+export function DeleteEvent({ eventId, eventName, inApp = false }: { eventId: string; eventName: string; inApp?: boolean }) {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [state, action, pending] = useActionState<ActionState, FormData>(deleteEventAction.bind(null, eventId), {});
@@ -16,8 +16,8 @@ export function DeleteEvent({ eventId, eventName }: { eventId: string; eventName
       <span className="text-[15px] font-medium">Delete this event</span>
       <p className="m-0 max-w-[62ch] text-[14px] text-[color:var(--ink-70)]">
         Takes the event offline for attendees and photographers straight away. Any organiser can restore it from Your
-        events for 30 days; after that every photo, video, attendee and all face search data are deleted for good. A
-        payment for the event isn&apos;t refunded by deleting it.
+        events for 30 days; after that every photo, video, attendee and all face search data are deleted for good.
+        {inApp ? null : " A payment for the event isn't refunded by deleting it."}
       </p>
       {open ? (
         <form action={action} className="flex flex-col gap-3">
