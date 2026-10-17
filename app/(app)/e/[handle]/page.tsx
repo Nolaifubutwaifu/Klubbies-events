@@ -6,6 +6,7 @@ import { FaceNotice } from "@/components/FaceNotice";
 import { EventMark } from "@/components/EventMark";
 import { MarkVisited } from "@/components/MarkVisited";
 import { PushPrompt } from "@/components/PushPrompt";
+import { apnsConfigured } from "@/lib/push/apns";
 import { YourPhotosCard } from "@/components/event/YourPhotosCard";
 import { getEventContext } from "@/lib/auth/session";
 import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/queries";
@@ -150,8 +151,9 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
           </div>
         ) : null}
 
-        {/* One ask at a time: the notification card waits behind the face notice. */}
-        {needsNotice ? null : <PushPrompt eventName={event.name} />}
+        {/* One ask at a time: the notification card waits behind the face notice.
+            Not offered at all until the server can send (the APNs key is set). */}
+        {needsNotice || !apnsConfigured() ? null : <PushPrompt eventName={event.name} />}
 
         <section
           className={`flex flex-col gap-4 lg:gap-6 ${needsNotice ? "pointer-events-none select-none opacity-35" : ""}`}

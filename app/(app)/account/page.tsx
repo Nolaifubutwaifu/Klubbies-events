@@ -12,6 +12,7 @@ import { NotificationToggles, PasswordForm, ProfileRow } from "./AccountForms";
 import { DeleteAccount } from "./DeleteAccount";
 import { FaceRow } from "./FaceRow";
 import { PhoneNotifications } from "./PhoneNotifications";
+import { apnsConfigured } from "@/lib/push/apns";
 
 export const metadata: Metadata = { title: "Your profile" };
 
@@ -76,7 +77,7 @@ export default async function AccountPage(props: PageProps<"/account">) {
             Email me when
           </h2>
           <div className="kb-group">
-            <PhoneNotifications />
+            {apnsConfigured() ? <PhoneNotifications /> : null}
             <NotificationToggles
               initial={{
                 notify_new_album: profile.notify_new_album,

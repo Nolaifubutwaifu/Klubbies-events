@@ -40,9 +40,6 @@ Save photos straight into your Photos library, download a whole album or all you
 PRIVATE BY DEFAULT
 Nothing is public. Only people the organiser let in can see an event, every photo is served through a link that expires within minutes, and the gallery closes on the date the organiser sets. If you're in a photo you want gone, ask for it to come down: it's hidden straight away while the organiser decides.
 
-NEW PHOTOS, TOLD STRAIGHT AWAY
-Turn on notifications and hear when a new album is published.
-
 FOR ORGANISERS
 Create an event, add your logo and colour, give each photographer their own upload link, and share the QR code. See who joined, what was downloaded, and handle removal requests from your phone. Events are set up and paid for on the website.
 
@@ -60,14 +57,14 @@ The first release of Klubbies Events.
 
 In `docs/app-store/screenshots/`, in this order:
 
-1. `01-event.png`: an event's page, branded, with the attendee's own photos at the top
+1. `01-event.png`: an event's page, branded, with "12 photos of you" at the top
 2. `02-your-photos.png`: Your photos, found with a selfie
-3. `03-album.png`: an album
-4. `04-viewer.png`: the photo viewer with Save and Download
+3. `03-album.png`: an album, as an attendee sees it
+4. `04-viewer.png`: the photo viewer with Download, Details and Remove
 5. `05-join.png`: the join screen the QR scanner opens
-6. `06-organiser.png`: the organiser's overview
+6. `06-organiser.png`: the organiser's Overview with the QR code
 
-Regenerate them with `scripts/app-store-screenshots.ts` (instructions at the top of the file). Check you are happy for the people in the demo photos to appear in the App Store before uploading.
+Retaken in the new design on 17 Oct 2026. Regenerate them with `scripts/app-store-screenshots.ts` (instructions at the top of the file); on a local server it gives the demo attendee a selfie and demo matches first, since face matching needs AWS. Check you are happy for the people in the demo photos to appear in the App Store before uploading.
 
 ## App Privacy
 
@@ -142,20 +139,24 @@ To set it up once the live site works (Claude can do this with your OK, since it
 
 ### Notes for the reviewer
 
-Klubbies Events shares photos from private events: conferences, launches and meetups. An organiser creates an event on our website, photographers upload to it, and attendees join by scanning the event's QR code or opening its link, then confirming their email with a one-time code.
+Klubbies Events shares photos from private events: conferences, launches and club events. An organiser creates an event on our website, photographers upload to it, and attendees join by scanning the event's QR code or opening its link, then confirming their email with a one-time code.
 
 To review: tap "Use a password instead" on the sign-in screen and use the demo account above. It is an attendee of a demo event with photos.
 
-- Scan the event's QR code: on the sign-in screen and on Your events. It opens only Klubbies Events links and refuses any other code.
-- Your photos: finds the photos you're in from an optional selfie. Consent is asked on that screen, only the account holder sees their matches, and it can be turned off, which deletes the faceprint.
-- Save to Photos (add-only access), downloads, notifications for new albums, an offline screen.
+Built for iPhone, beyond the website:
+- A native QR scanner (on the sign-in screen and on Your events). It opens only Klubbies Events links and refuses any other code.
+- Save to Photos straight into the photo library (add-only access), and downloads of whole albums.
+- A native offline screen and launch screen.
+
+Also worth checking:
+- Your photos: finds the photos you're in from an optional selfie. Consent is asked on that screen, only the account holder sees their matches, and turning it off deletes the faceprint.
 - Account deletion: Profile (the "You" tab), Delete my account.
-- Reporting content: open a photo, More, Request removal. It is hidden immediately and the organiser decides; we act on reports to support@klubbies.app within 24 hours.
-- Payments: organisers pay per event on our website. The app contains no purchases and no links or buttons to pay.
+- User content: every photo has Remove (request removal), which hides it immediately while the organiser decides. Organisers can remove any attendee from their event. We act on reports to support@klubbies.app within 24 hours.
+- Payments: organisers pay per event on our website. The app contains no purchases and no links, buttons or wording about paying.
 
 ## Before you submit
 
 - `SUPABASE_SERVICE_ROLE_KEY` set in Vercel, so the live site can sign people in.
 - `support@klubbies.app` receives email (the support page's contact form sends to it, and every email's Reply-To is it).
-- APNs variables set in Vercel if you want notifications at launch (see `ios/README.md`, step 5).
+- Notifications: the app only offers them once the APNs variables are set in Vercel (`ios/README.md`, step 5). Until then they are left out of the description and the reviewer notes; add both back when they work.
 - The reviewer account above works on a phone, not just on the Mac.
