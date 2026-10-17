@@ -6,7 +6,8 @@ import { supabaseUrl } from "@/lib/supabase/config";
 // The guest version of the upload queue. Same shape as the member one, minus
 // everything that needs a session: no TUS (which signs each chunk with a JWT),
 // no resume across tabs. The server hands out one signed URL per object and
-// the browser PUTs straight to storage.
+// the browser PUTs straight to storage. Like the member queue it runs two
+// lanes: a few files prepared ahead while up to six upload.
 
 export type GuestJobStatus = "queued" | "preparing" | "uploading" | "finishing" | "done" | "failed";
 
@@ -47,7 +48,14 @@ type Job = {
   originalDone?: boolean;
 };
 
-const CONCURRENCY = 2;
+/** Files uploading at once. */
+const UPLOADS_AT_ONCE = 6;
+/** Of those, videos: each is one PUT of up to hundreds of MB. */
+const VIDEOS_AT_ONCE = 2;
+/** Files being prepared at once: decoding and resizing is the browser's heavy work. */
+const PREPARING_AT_ONCE = 2;
+/** Prepared files waiting for an upload slot, at most. */
+const PREPARED_AHEAD = 6;
 
 export const EMPTY_GUEST_SNAPSHOT: readonly GuestJobView[] = [];
 
@@ -62,7 +70,9 @@ function friendlyError(error: unknown): string {
 export class GuestUploadQueue {
   private jobs = new Map<string, Job>();
   private listeners = new Set<() => void>();
-  private active = 0;
+  private uploading = 0;
+  private uploadingVideos = 0;
+  private preparing = 0;
   private snapshot: readonly GuestJobView[] = EMPTY_GUEST_SNAPSHOT;
 
   constructor(private readonly token: string) {}
@@ -128,14 +138,43 @@ export class GuestUploadQueue {
     this.emit();
   }
 
+  private isVideo(job: Job) {
+    return job.mimeType.startsWith("video/");
+  }
+
+  /** Prepared and fingerprinted, waiting for an upload slot. */
+  private isReady(job: Job) {
+    return job.status === "queued" && job.prepared !== undefined && job.hash !== undefined;
+  }
+
   private pump() {
+    // Upload lane: everything prepared, in order, videos two at a time.
     for (const job of this.jobs.values()) {
-      if (this.active >= CONCURRENCY) break;
-      if (job.status !== "queued") continue;
-      this.active++;
+      if (this.uploading >= UPLOADS_AT_ONCE) break;
+      if (!this.isReady(job)) continue;
+      const video = this.isVideo(job);
+      if (video && this.uploadingVideos >= VIDEOS_AT_ONCE) continue;
+      this.uploading++;
+      if (video) this.uploadingVideos++;
+      job.status = "uploading";
+      void this.send(job).finally(() => {
+        this.uploading--;
+        if (video) this.uploadingVideos--;
+        this.pump();
+      });
+    }
+
+    // Prepare lane: keep the next few ready; videos held back by their limit don't count.
+    const videosFull = this.uploadingVideos >= VIDEOS_AT_ONCE;
+    let ahead = [...this.jobs.values()].filter((j) => this.isReady(j) && !(videosFull && this.isVideo(j))).length;
+    for (const job of this.jobs.values()) {
+      if (this.preparing >= PREPARING_AT_ONCE || ahead + this.preparing >= PREPARED_AHEAD) break;
+      if (job.status !== "queued" || this.isReady(job)) continue;
+      this.preparing++;
+      ahead++;
       job.status = "preparing";
-      void this.process(job).finally(() => {
-        this.active--;
+      void this.prepare(job).finally(() => {
+        this.preparing--;
         this.pump();
       });
     }
@@ -163,20 +202,31 @@ export class GuestUploadQueue {
     });
   }
 
-  private async process(job: Job) {
+  /** Thumbnail, preview and fingerprint, ahead of the upload. */
+  private async prepare(job: Job) {
     try {
       this.patch(job, { status: "preparing", error: undefined });
       const prepared =
         job.prepared ??
-        (job.mimeType.startsWith("video/") ? await prepareVideo(job.file) : await preparePhoto(job.file, job.mimeType));
+        (this.isVideo(job) ? await prepareVideo(job.file) : await preparePhoto(job.file, job.mimeType));
+      if (job.hash === undefined) job.hash = await contentHash(job.file);
       this.patch(job, {
         prepared,
+        status: "queued",
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
+    } catch (error) {
+      this.patch(job, { status: "failed", error: friendlyError(error) });
+    }
+  }
 
+  /** Ticket, original, derivatives, finalise: the network half. */
+  private async send(job: Job) {
+    const prepared = job.prepared!;
+    try {
+      this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        if (job.hash === undefined) job.hash = await contentHash(job.file);
         const res = await fetch(`/api/guest/${encodeURIComponent(this.token)}/ticket`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -197,7 +247,6 @@ export class GuestUploadQueue {
       }
 
       if (!job.originalDone) {
-        this.patch(job, { status: "uploading" });
         await this.putSigned(job, ticket.signed[ticket.storagePath], job.file, ticket.mimeType, 0.85, 0);
         this.patch(job, { originalDone: true, progress: 0.85 });
       }
