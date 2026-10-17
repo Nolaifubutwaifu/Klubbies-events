@@ -74,6 +74,8 @@ export class UploadQueue {
   constructor(
     private readonly albumId: string,
     private readonly onIdle: () => void,
+    /** Each file that lands in the album, so the grid can show it straight away. */
+    private readonly onItemDone: () => void = () => {},
   ) {}
 
   subscribe = (listener: () => void) => {
@@ -257,6 +259,7 @@ export class UploadQueue {
         throw new Error(body.error ?? "Could not finish the upload");
       }
       this.patch(job, { status: "done" });
+      this.onItemDone();
     } catch (error) {
       this.patch(job, { status: "failed", error: friendlyError(error) });
       // Tell the server, so the row stops showing as "processing" to guests
