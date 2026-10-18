@@ -21,6 +21,8 @@ type Registry = {
 const UploadContext = createContext<{
   queueFor: (albumId: string) => UploadQueue;
   useAllJobs: () => readonly JobView[];
+  retryAllFailed: () => void;
+  clearAllFailed: () => void;
 } | null>(null);
 
 export function UploadProvider({ children }: { children: ReactNode }) {
@@ -82,13 +84,23 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       () => EMPTY_SNAPSHOT,
     );
 
-  return <UploadContext.Provider value={{ queueFor, useAllJobs }}>{children}</UploadContext.Provider>;
+  const retryAllFailed = () => registry.current.queues.forEach((queue) => queue.retryFailed());
+  const clearAllFailed = () => registry.current.queues.forEach((queue) => queue.clearFailed());
+
+  return <UploadContext.Provider value={{ queueFor, useAllJobs, retryAllFailed, clearAllFailed }}>{children}</UploadContext.Provider>;
 }
 
 export function useUploadQueue(albumId: string): UploadQueue {
   const ctx = useContext(UploadContext);
   if (!ctx) throw new Error("UploadProvider is missing");
   return ctx.queueFor(albumId);
+}
+
+/** Retry or give up on every failed file, in every album. */
+export function useFailedActions(): { retryAll: () => void; clearAll: () => void } {
+  const ctx = useContext(UploadContext);
+  if (!ctx) throw new Error("UploadProvider is missing");
+  return { retryAll: ctx.retryAllFailed, clearAll: ctx.clearAllFailed };
 }
 
 export function useUploadJobs(): readonly JobView[] {

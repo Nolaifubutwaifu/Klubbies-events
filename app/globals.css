@@ -1206,6 +1206,37 @@ html:has(.theme-soft) body {
   }
 }
 
+/* Double tap to like: a heart that pops and fades over the photo. */
+@keyframes kb-heart-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  40% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+.kb-heart-pop {
+  animation: kb-heart-pop 900ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kb-heart-pop {
+    animation-duration: 600ms;
+    animation-name: soft-hint-fade;
+  }
+}
+
 /* The viewer's swipe hint: there when you arrive, gone before it gets in the
    way of the photo. */
 @keyframes soft-hint-fade {

@@ -147,10 +147,15 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
             <div className="h-full rounded-[3px] bg-[color:var(--kb-brand)] transition-[width]" style={{ width: `${pct}%` }} />
           </div>
           {busy ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">Keep this tab open. You can move around the app.</span> : null}
-          {failed.length > 1 && !busy ? (
-            <button type="button" className="btn btn-secondary self-start" onClick={() => queue.retryFailed()}>
-              Retry all {failed.length}
-            </button>
+          {failed.length ? (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn btn-secondary" onClick={() => queue.retryFailed()}>
+                {failed.length === 1 ? "Retry it" : `Retry all ${failed.length}`}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => queue.clearFailed()}>
+                Clear failed
+              </button>
+            </div>
           ) : null}
           <ul className="m-0 flex list-none flex-col p-0">
             {shown.map((job) => {

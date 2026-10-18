@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { useUploadJobs } from "./UploadProvider";
+import { useFailedActions, useUploadJobs } from "./UploadProvider";
 
 // The album's own upload panel shows the same progress in full, so the tray
 // steps aside while one is on screen.
@@ -19,6 +19,7 @@ const subscribePanel = (onChange: () => void) => {
  */
 export function UploadTray() {
   const jobs = useUploadJobs();
+  const { retryAll, clearAll } = useFailedActions();
   const busy = jobs.filter((j) => j.status !== "done" && j.status !== "failed");
   const failed = jobs.filter((j) => j.status === "failed");
 
@@ -30,7 +31,8 @@ export function UploadTray() {
   }, [busy.length]);
 
   const panel = useSyncExternalStore(subscribePanel, panelOpen, () => false);
-  if (busy.length === 0 || panel) return null;
+  // Stays up while anything failed, so it can be retried or let go.
+  if ((busy.length === 0 && failed.length === 0) || panel) return null;
 
   const totalBytes = jobs.reduce((sum, j) => sum + j.size, 0);
   const sentBytes = jobs.reduce((sum, j) => sum + (j.status === "done" ? j.size : Math.min(j.uploaded, j.size)), 0);
@@ -42,7 +44,9 @@ export function UploadTray() {
     <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-4 z-40 w-[300px] max-w-[92vw] rounded-[var(--kb-r-card)] border border-[color:var(--kb-line)] bg-white shadow-[0_18px_40px_-18px_rgb(22_24_29/0.35)] md:bottom-4">
       <div className="flex items-center justify-between px-3 pt-3 text-[14px] font-semibold">
         <span>
-          Uploading {busy.length} {busy.length === 1 ? "file" : "files"}
+          {busy.length
+            ? `Uploading ${busy.length} ${busy.length === 1 ? "file" : "files"}`
+            : `${failed.length} ${failed.length === 1 ? "file" : "files"} didn't upload`}
         </span>
         <span>{pct}%</span>
       </div>
@@ -50,9 +54,19 @@ export function UploadTray() {
         <div className="h-full rounded-full bg-[color:var(--kb-ember)]" style={{ width: `${pct}%` }} />
       </div>
       <p className="m-0 px-3 py-2 text-[14px] leading-normal text-ink-70" role="status">
-        {done} of {jobs.length} done{failed.length ? ` · ${failed.length} failed` : ""}. Keep this tab open until it
-        finishes; you can browse other pages.
+        {done} of {jobs.length} done{failed.length ? ` · ${failed.length} failed` : ""}.
+        {busy.length ? " Keep this tab open until it finishes; you can browse other pages." : ""}
       </p>
+      {failed.length ? (
+        <div className="flex gap-2 px-3 pb-3">
+          <button type="button" className="btn btn-secondary btn-sm flex-1" onClick={retryAll}>
+            Retry {failed.length === 1 ? "it" : `all ${failed.length}`}
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={clearAll}>
+            Clear failed
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
