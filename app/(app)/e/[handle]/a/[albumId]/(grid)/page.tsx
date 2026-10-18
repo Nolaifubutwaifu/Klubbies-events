@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AlbumScreen, loadAlbum } from "./AlbumScreen";
+import { AlbumScreen, loadAlbum } from "../AlbumScreen";
 
 type Props = PageProps<"/e/[handle]/a/[albumId]">;
 

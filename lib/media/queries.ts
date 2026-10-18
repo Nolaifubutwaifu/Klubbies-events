@@ -157,7 +157,11 @@ export type ViewerData = {
   position: number;
   total: number;
   strip: { id: string; thumbUrl: string | null; kind: string }[];
+  /** The photos either side at display size (a video's poster), so a swipe can slide one in before the page for it loads. */
+  neighbours: { prev: Slide | null; next: Slide | null };
 };
+
+export type Slide = { id: string; kind: string; url: string | null };
 
 const STRIP_RADIUS = 12;
 
@@ -174,7 +178,7 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
   const at = `"${media.sort_at}"`;
   const before = `sort_at.lt.${at},and(sort_at.eq.${at},id.lt.${media.id})`;
   const after = `sort_at.gt.${at},and(sort_at.eq.${at},id.gt.${media.id})`;
-  const stripColumns = "id, kind, thumb_path, poster_path";
+  const stripColumns = "id, kind, thumb_path, poster_path, display_path, storage_path";
 
   const [prevRows, nextRows, beforeCount, totalCount] = await Promise.all([
     supabase
@@ -209,7 +213,10 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
   const stripRows = [...prev, media, ...next];
 
   const isVideo = media.kind === "video";
-  const [thumbUrls, displayUrls, videoUrls] = await Promise.all([
+  const slidePath = (m: { kind: string; poster_path: string | null; display_path: string | null; storage_path: string }) =>
+    m.kind === "video" ? m.poster_path : (m.display_path ?? m.storage_path);
+  const besides = [prev[prev.length - 1], next[0]].filter((m): m is NonNullable<typeof m> => Boolean(m));
+  const [thumbUrls, displayUrls, videoUrls, besideUrls] = await Promise.all([
     signPaths(
       supabase,
       stripRows.map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
@@ -221,7 +228,17 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
       SIGNED_URL_TTL.display,
     ),
     isVideo ? signPaths(supabase, [media.storage_path], SIGNED_URL_TTL.video) : Promise.resolve(new Map<string, string>()),
+    signPaths(
+      supabase,
+      besides.map(slidePath).filter((p): p is string => Boolean(p)),
+      SIGNED_URL_TTL.display,
+    ),
   ]);
+  const slide = (m: (typeof besides)[number] | undefined): Slide | null => {
+    if (!m) return null;
+    const path = slidePath(m);
+    return { id: m.id, kind: m.kind, url: path ? (besideUrls.get(path) ?? null) : null };
+  };
   // Video plays from the R2 copy once it has one (docs/handoff-retention-backups.md).
   const r2Video = isVideo ? await r2Url(media, signedUrlLifetime(SIGNED_URL_TTL.video)) : null;
 
@@ -240,5 +257,6 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
       const path = m.thumb_path ?? m.poster_path;
       return { id: m.id, kind: m.kind, thumbUrl: path ? (thumbUrls.get(path) ?? null) : null };
     }),
+    neighbours: { prev: slide(prev[prev.length - 1]), next: slide(next[0]) },
   };
 }

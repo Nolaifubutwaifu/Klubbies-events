@@ -136,6 +136,7 @@ export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumI
       canAskRemoval={ctx.event.allow_removal_requests && Boolean(ctx.membership)}
       alreadyAsked={Boolean(openRequest)}
       faceMatchId={faceMatch?.matchId ?? null}
+      neighbours={mine ? undefined : data.neighbours}
     />
   );
 }

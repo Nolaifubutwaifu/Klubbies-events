@@ -26,6 +26,24 @@ type Current = {
 const SWIPED_KEY = "kb-swiped";
 const subscribeNever = () => () => {};
 
+type Slide = { id: string; kind: string; url: string | null };
+
+/**
+ * The image URL each photo was last shown with. Every page signs its URLs
+ * afresh, and a new signature is a new download: reusing the one already on
+ * screen means the photo you swiped to doesn't blink when its page arrives.
+ * Signed display URLs last ten minutes, so an entry is reused for eight.
+ */
+const shown = new Map<string, { url: string; at: number }>();
+const REUSE_MS = 8 * 60 * 1000;
+function stableUrl(id: string, url: string | null): string | null {
+  if (!url) return null;
+  const had = shown.get(id);
+  if (had && Date.now() - had.at < REUSE_MS) return had.url;
+  shown.set(id, { url, at: Date.now() });
+  return url;
+}
+
 /** "app" inside the iPhone app, a social app's name in its browser, else "web". */
 function downloadEnv(): string {
   if (nativeSaveToPhotos()) return "app";
@@ -47,7 +65,7 @@ function hasSwiped(): boolean {
 /** Sheets rise from the bottom on a phone; on a wide screen a full-width
     sheet read as a phone layout stretched, so they become a centred card. */
 const SHEET =
-  "absolute inset-x-0 bottom-0 z-10 rounded-t-[26px] bg-[color:var(--kb-cream)] shadow-[0_-18px_40px_rgba(0,0,0,0.45)] sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[480px] sm:max-w-[calc(100%-48px)] sm:-translate-x-1/2 sm:rounded-[26px]";
+  "absolute inset-x-0 bottom-0 z-10 rounded-t-[26px] bg-[color:var(--kb-cream)] text-ink shadow-[0_-18px_40px_rgba(0,0,0,0.45)] sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[480px] sm:max-w-[calc(100%-48px)] sm:-translate-x-1/2 sm:rounded-[26px]";
 
 /** A bottom-bar action: save or download, details, removal. */
 function Action({
@@ -100,6 +118,7 @@ export function Viewer({
   faceMatchId,
   itemHrefs,
   countNoun,
+  neighbours,
 }: {
   albumHref: string;
   albumTitle: string;
@@ -121,9 +140,10 @@ export function Viewer({
   itemHrefs?: Record<string, string>;
   /** "photos of you" in the counter, when the sequence isn't the album. */
   countNoun?: string;
+  /** The photos either side at display size, so a swipe can slide one in straight away. */
+  neighbours?: { prev: Slide | null; next: Slide | null };
 }) {
   const router = useRouter();
-  const touchX = useRef<number | null>(null);
   const root = useRef<HTMLElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -137,6 +157,28 @@ export function Viewer({
   const [matched, setMatched] = useState(faceMatchId);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  // Swiping: the strip of three follows the finger, then slides the
+  // neighbour in and stays there until its page arrives.
+  const stage = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; y: number; t: number; axis: "x" | "y" | null; pinch: boolean } | null>(null);
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+  const [dx, setDx] = useState(0);
+  const [sliding, setSliding] = useState<"prev" | "next" | null>(null);
+  const [settling, setSettling] = useState(false);
+  const [heart, setHeart] = useState(0);
+  // A new photo's page arrived: centre the strip on it again, and take its
+  // own state rather than the last photo's.
+  const [shownId, setShownId] = useState(current.id);
+  if (shownId !== current.id) {
+    setShownId(current.id);
+    setSliding(null);
+    setSettling(false);
+    setDx(0);
+    setHeart(0);
+    setSaved(favourited);
+    setAsked(alreadyAsked);
+    setMatched(faceMatchId);
+  }
 
   // Confirmations fade; the sheet-free viewer shouldn't keep a pill up.
   useEffect(() => {
@@ -223,27 +265,104 @@ export function Viewer({
       if (e.defaultPrevented || e.altKey || e.metaKey || e.ctrlKey) return;
       if (e.target instanceof HTMLElement && e.target.closest("video, [role=dialog]") && e.key !== "Escape") return;
       if (e.key === "Escape" && sheet !== "none") return setSheet("none");
-      if (e.key === "ArrowLeft" && prevHref) router.replace(prevHref, { scroll: false });
-      if (e.key === "ArrowRight" && nextHref) router.replace(nextHref, { scroll: false });
+      if (e.key === "ArrowLeft") go("prev");
+      if (e.key === "ArrowRight") go("next");
       if (e.key === "Escape") router.push(albumHref);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router, prevHref, nextHref, albumHref, sheet]);
+  });
 
-  const onTouchEnd = (x: number) => {
-    if (touchX.current === null) return;
-    const dx = x - touchX.current;
-    touchX.current = null;
-    if (Math.abs(dx) < 50) return;
+  /** Slide to the neighbour, then load its page behind the picture already showing. */
+  function go(direction: "prev" | "next") {
+    const href = direction === "prev" ? prevHref : nextHref;
+    if (!href || sliding) return;
     try {
       localStorage.setItem(SWIPED_KEY, "1");
     } catch {
       // Private mode: the hint just fades on its own.
     }
-    if (dx > 0 && prevHref) router.replace(prevHref, { scroll: false });
-    if (dx < 0 && nextHref) router.replace(nextHref, { scroll: false });
+    setSettling(true);
+    setDx(0);
+    setSliding(direction);
+    // The slide takes 260ms; the page is asked for at once so it's often
+    // there by the time the picture lands.
+    router.replace(href, { scroll: false });
+  }
+
+  /** Double tap likes, the way photo apps do. It never unlikes. */
+  function like() {
+    setHeart((n) => n + 1);
+    if (saved) return;
+    setSaved(true);
+    startTransition(async () => {
+      try {
+        setSaved((await toggleFavouriteAction(current.id)).favourited);
+      } catch {
+        setSaved(false);
+        setMessage("Couldn't save that. Check your connection and try again.");
+      }
+    });
+  }
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (sliding) return;
+    const touch = e.touches[0];
+    drag.current = { x: touch.clientX, y: touch.clientY, t: Date.now(), axis: null, pinch: e.touches.length > 1 };
+    setSettling(false);
   };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const d = drag.current;
+    if (!d || sliding) return;
+    if (e.touches.length > 1) d.pinch = true;
+    if (d.pinch) return;
+    const touch = e.touches[0];
+    const moveX = touch.clientX - d.x;
+    const moveY = touch.clientY - d.y;
+    if (!d.axis && Math.max(Math.abs(moveX), Math.abs(moveY)) > 8) d.axis = Math.abs(moveX) > Math.abs(moveY) ? "x" : "y";
+    if (d.axis !== "x") return;
+    // Past the first or last photo it gives, but only a little.
+    const edge = (moveX > 0 && !prevHref) || (moveX < 0 && !nextHref);
+    setDx(edge ? moveX / 4 : moveX);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || sliding) return;
+    const touch = e.changedTouches[0];
+    const moveX = touch.clientX - d.x;
+    const moveY = touch.clientY - d.y;
+    const width = stage.current?.clientWidth ?? 360;
+    const fast = Math.abs(moveX) / Math.max(1, Date.now() - d.t) > 0.45;
+    if (!d.pinch && d.axis === "x" && (Math.abs(moveX) > width * 0.22 || (fast && Math.abs(moveX) > 30))) {
+      const direction = moveX > 0 ? "prev" : "next";
+      if ((direction === "prev" && prevHref) || (direction === "next" && nextHref)) return go(direction);
+    }
+    setSettling(true);
+    setDx(0);
+    // A still tap: two within 300ms, close together, is a like.
+    if (!d.pinch && Math.abs(moveX) < 10 && Math.abs(moveY) < 10) {
+      const now = Date.now();
+      const last = lastTap.current;
+      if (last && now - last.t < 300 && Math.abs(touch.clientX - last.x) < 40 && Math.abs(touch.clientY - last.y) < 40) {
+        lastTap.current = null;
+        like();
+      } else {
+        lastTap.current = { t: now, x: touch.clientX, y: touch.clientY };
+      }
+    }
+  };
+
+  const offset = sliding === "next" ? "-200%" : sliding === "prev" ? "0%" : "-100%";
+  const prevSlide = neighbours?.prev ?? (prevId ? { id: prevId, kind: "photo", url: strip.find((s) => s.id === prevId)?.thumbUrl ?? null } : null);
+  const nextSlide = neighbours?.next ?? (nextId ? { id: nextId, kind: "photo", url: strip.find((s) => s.id === nextId)?.thumbUrl ?? null } : null);
+  const sideImage = (slide: Slide | null) =>
+    slide?.url ? (
+      // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
+      <img src={stableUrl(slide.id, slide.url) ?? undefined} alt="" className="max-h-full w-auto max-w-full object-contain" draggable={false} />
+    ) : null;
 
   const round =
     "absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border-0 bg-[rgb(11_12_15/0.6)] text-white no-underline transition-colors hover:bg-[#22252c]";
@@ -295,17 +414,32 @@ export function Viewer({
       </div>
 
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center"
-        onTouchStart={(e) => (touchX.current = e.touches[0]?.clientX ?? null)}
-        onTouchEnd={(e) => onTouchEnd(e.changedTouches[0]?.clientX ?? 0)}
+        ref={stage}
+        className="relative flex min-h-0 flex-1 touch-pan-y items-center justify-center overflow-hidden"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={() => {
+          drag.current = null;
+          setSettling(true);
+          setDx(0);
+        }}
       >
+        <div
+          className={`flex h-full w-full ${settling || sliding ? "transition-transform duration-[260ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none" : ""}`}
+          style={{ transform: `translate3d(calc(${offset} + ${dx}px), 0, 0)` }}
+        >
+          <div className="flex h-full w-full flex-none items-center justify-center" aria-hidden>
+            {sideImage(prevSlide)}
+          </div>
+          <div className="relative flex h-full w-full flex-none items-center justify-center" onDoubleClick={like}>
         {current.kind === "video" && current.videoUrl ? (
           <video
             key={current.id}
             // Without a poster, starting at 0.1s makes iOS paint the first
             // frame instead of a black box.
             src={current.posterUrl ? current.videoUrl : `${current.videoUrl}#t=0.1`}
-            poster={current.posterUrl ?? undefined}
+            poster={stableUrl(current.id, current.posterUrl) ?? undefined}
             controls
             playsInline
             preload="metadata"
@@ -315,24 +449,63 @@ export function Viewer({
           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
           <img
             key={current.id}
-            src={current.displayUrl}
+            src={stableUrl(current.id, current.displayUrl) ?? undefined}
             alt={`${current.kind === "video" ? "Video" : "Photo"} ${position} of ${total} in ${albumTitle}`}
             className="max-h-full w-auto max-w-full object-contain"
             width={current.width ?? undefined}
             height={current.height ?? undefined}
+            draggable={false}
           />
         ) : (
           <div className="text-[#c4c7cf]">This item can&apos;t be previewed.</div>
         )}
+            {heart ? (
+              <svg
+                key={heart}
+                width="96"
+                height="96"
+                viewBox="0 0 24 24"
+                fill="#ff8a7a"
+                className="kb-heart-pop pointer-events-none absolute left-1/2 top-1/2 -ml-12 -mt-12 drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]"
+                aria-hidden
+              >
+                <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />
+              </svg>
+            ) : null}
+          </div>
+          <div className="flex h-full w-full flex-none items-center justify-center" aria-hidden>
+            {sideImage(nextSlide)}
+          </div>
+        </div>
         {prevHref ? (
-          <Link href={prevHref} replace scroll={false} className={`${round} left-2.5 max-sm:hidden`} aria-label="Previous">
+          <Link
+            href={prevHref}
+            replace
+            scroll={false}
+            className={`${round} left-2.5 max-sm:hidden`}
+            aria-label="Previous"
+            onClick={(e) => {
+              e.preventDefault();
+              go("prev");
+            }}
+          >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
               <path d="M14 6l-6 6 6 6" />
             </svg>
           </Link>
         ) : null}
         {nextHref ? (
-          <Link href={nextHref} replace scroll={false} className={`${round} right-2.5 max-sm:hidden`} aria-label="Next">
+          <Link
+            href={nextHref}
+            replace
+            scroll={false}
+            className={`${round} right-2.5 max-sm:hidden`}
+            aria-label="Next"
+            onClick={(e) => {
+              e.preventDefault();
+              go("next");
+            }}
+          >
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
               <path d="M10 6l6 6-6 6" />
             </svg>

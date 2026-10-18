@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Brand } from "@/components/ui";
 import { PRICE } from "@/lib/copy/site";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type SiteSection = "how" | "features" | "pricing" | "faq" | "privacy" | null;
 
@@ -16,8 +17,8 @@ const LINKS: { key: Exclude<SiteSection, null>; href: string; label: string }[] 
 
 /**
  * The one nav for Home, Features, Pricing, FAQ and the legal pages: sticky, on
- * paper. Below 1024px the links fold into the Menu sheet, and below 640px the
- * two buttons go too, so nothing can wrap.
+ * paper. Below 1024px the links fold into the Menu sheet, and below 640px
+ * Create an event goes too; Sign in stays, so a phone can always sign in.
  */
 export function SiteNav({ current = null, inApp = false }: { current?: SiteSection; inApp?: boolean }) {
   const links = inApp ? LINKS.filter((link) => link.key !== "pricing") : LINKS;
@@ -60,7 +61,7 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
 
   return (
     <header className="sticky top-0 z-40 border-b border-[color:var(--kb-line)] bg-[rgb(247_247_245/0.94)] backdrop-blur-[6px]">
-      <div className="kb-wrap flex h-16 items-center justify-between gap-6 sm:h-[72px]">
+      <div className="kb-wrap flex h-16 items-center justify-between gap-3 sm:h-[72px] sm:gap-6">
         <Brand size={18} />
 
         <nav aria-label="Main" className="hidden items-center gap-7 lg:flex">
@@ -80,8 +81,8 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <Link href="/signin" className="btn btn-quiet hidden no-underline sm:inline-flex">
+        <div className="flex flex-none items-center gap-2">
+          <Link href="/signin" className="btn btn-quiet no-underline max-sm:!px-3">
             Sign in
           </Link>
           <Link href="/start" className="btn btn-primary hidden no-underline sm:inline-flex">
@@ -90,7 +91,8 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
           <button
             ref={menuButton}
             type="button"
-            className="btn btn-secondary lg:hidden"
+            className="btn btn-secondary max-sm:!w-11 max-sm:!px-0 lg:hidden"
+            aria-label="Menu"
             aria-expanded={open}
             aria-controls="site-menu"
             onClick={() => setOpen(true)}
@@ -98,54 +100,61 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden>
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
-            Menu
+            {/* Next to Sign in on a phone there's room for the icon only. */}
+            <span className="max-sm:hidden">Menu</span>
           </button>
         </div>
       </div>
 
-      {open ? (
-        <div
-          ref={sheet}
-          id="site-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu"
-          className="fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] lg:hidden"
-        >
-          <div className="kb-wrap flex h-16 flex-none items-center">
-            <span onClick={() => setOpen(false)}>
-              <Brand />
-            </span>
-            <button type="button" className="kb-icon-btn ml-auto" aria-label="Close menu" onClick={() => setOpen(false)}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-                <path d="M6 6l12 12M18 6 6 18" />
-              </svg>
-            </button>
-          </div>
-          <nav aria-label="Main" className="kb-wrap mt-4 flex flex-col">
-            {[...links, { key: "privacy", href: "/privacy", label: "Privacy" }].map((link) => (
-              <Link
-                key={link.key}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                aria-current={current === link.key ? "page" : undefined}
-                className="flex min-h-[68px] items-center border-b border-[color:var(--kb-line)] serif text-[32px] text-[color:var(--kb-ink)] no-underline"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="kb-wrap mt-auto flex flex-col gap-3 pb-[max(24px,env(safe-area-inset-bottom))]">
-            <Link href="/start" className="btn btn-primary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
-              Create an event
-            </Link>
-            <Link href="/signin" className="btn btn-secondary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
-              Sign in
-            </Link>
-            {inApp ? null : <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.line}. No subscription.</p>}
-          </div>
-        </div>
-      ) : null}
+      {/* On the page, not in the header: the header's blur makes it the
+          containing box for anything fixed inside it, which squeezed the
+          full-screen menu into a 64px strip. */}
+      {open
+        ? createPortal(
+            <div
+              ref={sheet}
+              id="site-menu"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu"
+              className="theme-soft kb-branded fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] lg:hidden"
+            >
+              <div className="kb-wrap flex h-16 flex-none items-center">
+                <span onClick={() => setOpen(false)}>
+                  <Brand />
+                </span>
+                <button type="button" className="kb-icon-btn ml-auto" aria-label="Close menu" onClick={() => setOpen(false)}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+                    <path d="M6 6l12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
+              <nav aria-label="Main" className="kb-wrap mt-4 flex flex-col">
+                {[...links, { key: "privacy", href: "/privacy", label: "Privacy" }].map((link) => (
+                  <Link
+                    key={link.key}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    aria-current={current === link.key ? "page" : undefined}
+                    className="flex min-h-[68px] items-center border-b border-[color:var(--kb-line)] serif text-[32px] text-[color:var(--kb-ink)] no-underline"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+              <div className="kb-wrap mt-auto flex flex-col gap-3 pb-[max(24px,env(safe-area-inset-bottom))]">
+                <Link href="/start" className="btn btn-primary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
+                  Create an event
+                </Link>
+                <Link href="/signin" className="btn btn-secondary !min-h-[54px] w-full" onClick={() => setOpen(false)}>
+                  Sign in
+                </Link>
+                {inApp ? null : <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">{PRICE.line}. No subscription.</p>}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }
