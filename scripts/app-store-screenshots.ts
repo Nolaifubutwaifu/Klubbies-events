@@ -1,5 +1,6 @@
 /**
- * App Store screenshots for the 6.9 inch iPhone (1320 × 2868), from the demo
+ * App Store screenshots for the 6.3 inch iPhone (1206 × 2622), the size App Store
+ * Connect asks for ("iPhone with Dynamic Island, medium display"), from the demo
  * event on a local dev server, as the iPhone app shows them (its user agent,
  * so no payment prompts and the QR scanner button).
  *
@@ -134,7 +135,8 @@ async function shoot(page: Page, name: string, path: string, prepare?: (page: Pa
 async function main() {
   await mkdir(OUT, { recursive: true });
   const browser = await chromium.launch();
-  const device = { viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: APP_UA };
+  // 402 × 874 points at 3x: 1206 × 2622, iPhone 17 / 16 Pro.
+  const device = { viewport: { width: 402, height: 874 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: APP_UA };
 
   // Signed out first: the event's join screen, which the QR scanner opens.
   const guest = await browser.newContext(device);
