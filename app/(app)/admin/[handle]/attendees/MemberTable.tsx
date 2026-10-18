@@ -6,6 +6,7 @@ import { Dialog } from "@/components/Dialog";
 import { FormMessage } from "@/components/forms";
 import { formatDateTime } from "@/lib/format";
 import {
+  approveNameAction,
   removeMembersAction,
   restoreMemberAction,
   setMemberRoleAction,
@@ -18,6 +19,8 @@ export type MemberRow = {
   email: string;
   claimedName: string | null;
   nameMismatch: boolean;
+  /** Signed in under a name that doesn't match the list; waits for approval. */
+  nameReview: boolean;
   status: string;
   roleId: string | null;
   roleName: string;
@@ -33,6 +36,7 @@ export type MemberRow = {
 
 const FILTERS = [
   { key: "all", label: "All" },
+  { key: "review", label: "To approve" },
   { key: "signed_in", label: "Joined" },
   { key: "invited", label: "Not joined yet" },
   { key: "team", label: "Organisers" },
@@ -44,7 +48,9 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 function matches(m: MemberRow, filter: FilterKey): boolean {
   return filter === "all"
     ? m.status !== "revoked"
-    : filter === "team"
+    : filter === "review"
+      ? m.nameReview && m.status !== "revoked"
+      : filter === "team"
       ? m.status !== "revoked" && m.roleName !== "Attendee"
       : filter === "signed_in"
         ? Boolean(m.firstSeenAt) && m.status === "active"
@@ -122,7 +128,7 @@ export function MemberTable({
         </label>
         {FILTERS.map((f) => {
           const count = members.filter((m) => matches(m, f.key)).length;
-          if (f.key === "revoked" && count === 0) return null;
+          if ((f.key === "revoked" || f.key === "review") && count === 0) return null;
           return (
             <button
               key={f.key}
@@ -232,7 +238,9 @@ export function MemberTable({
                         </span>
                       ) : null}
                     </span>
-                    {member.status === "revoked" ? (
+                    {member.nameReview && member.status !== "revoked" ? (
+                      <span className="kb-chip bg-[color:var(--kb-warn-tint)] text-[color:var(--kb-warn)]">To approve</span>
+                    ) : member.status === "revoked" ? (
                       <span className="kb-chip bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">Removed</span>
                     ) : member.paused ? (
                       <span className="kb-chip bg-[color:var(--kb-warn-tint)] text-[color:var(--kb-warn)]">Paused</span>
@@ -270,6 +278,28 @@ export function MemberTable({
                     <button type="button" className="btn btn-sm btn-secondary" disabled={pending} onClick={() => run(() => restoreMemberAction(eventId, member.id))}>
                       Restore
                     </button>
+                  ) : member.nameReview ? (
+                    // Signed in under another name: the organiser decides if it's them.
+                    <span className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        disabled={pending}
+                        aria-label={`Approve ${member.name}, signed in as ${member.claimedName ?? ""}`}
+                        onClick={() => run(() => approveNameAction(eventId, member.id))}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-secondary"
+                        disabled={pending}
+                        aria-label={`Remove ${member.name}`}
+                        onClick={() => run(() => removeMembersAction(eventId, [member.id]))}
+                      >
+                        Remove
+                      </button>
+                    </span>
                   ) : null}
                 </td>
               </tr>

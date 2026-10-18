@@ -11,6 +11,9 @@ describe("namesLooselyMatch", () => {
     ["Priya Raman", "Priya Ramen"],
     ["Mary-Jane O'Neil", "Maryjane ONeil"],
     ["Alexander Smith", "Alex Smith"],
+    ["Maximilian Umschaden", "Max"],
+    ["Serena", "Serena Cheung"],
+    ["Samantha Lee", "Sam Lee"],
   ])("%s ≈ %s", (roster, claimed) => {
     expect(namesLooselyMatch(roster, claimed)).toBe(true);
   });
@@ -19,6 +22,9 @@ describe("namesLooselyMatch", () => {
     ["Mara Lindqvist", "Jonas Weber"],
     ["Priya Raman", "Someone Else"],
     ["Lena Brandt", ""],
+    ["Serena", "higgi"],
+    ["Maximilian Umschaden", "Max Smith"],
+    ["Serena Cheung", "Se"],
   ])("%s ≠ %s", (roster, claimed) => {
     expect(namesLooselyMatch(roster, claimed)).toBe(false);
   });

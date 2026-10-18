@@ -128,11 +128,10 @@ Answer the questionnaire with: no violence, no mature themes, no gambling, no un
 
 Klubbies Events signs in with an emailed code, which a reviewer can't receive. They use **Use a password instead** on the sign-in screen with a demo account that already belongs to an event with photos.
 
-To set it up once the live site works (Claude can do this with your OK, since it writes to the live database):
+Set up on 18 Oct 2026: `appreview@klubbies.app` (forwards to Max's inbox) is on the guest list of the event "TESTING" as "Reviewer", has signed in once under that name and has a password. Its published albums have about 300 photos.
 
-1. Create a demo event on the live site under your own account, with two or three albums of photos you are happy to show.
-2. Add `appreview@klubbies.app` to it as an attendee, sign in once as that address, and set a password on its profile page.
-3. Put the address and password in the fields below. Keep the event comped (no payment needed).
+- Keep the list name "Reviewer": since migration 36, someone who signs in under a name that doesn't match the list waits for organiser approval and sees no photos. The password sign-in doesn't re-check the name, and this account already matched, so it won't be held.
+- Before submitting, consider renaming the event and the album "test 2" to something presentable, and check you're happy for Apple's reviewer to see those photos.
 
 | Field | Value |
 | --- | --- |

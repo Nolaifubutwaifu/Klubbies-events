@@ -42,7 +42,9 @@ async function findEligibleMemberships(email: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("memberships")
-    .select("id, event_id, role, roster_name, claimed_name, status, first_seen_at, grace_ends_at, events!inner(name, handle, status)")
+    .select(
+      "id, event_id, role, roster_name, claimed_name, status, first_seen_at, grace_ends_at, name_review_at, name_approved_at, events!inner(name, handle, status)",
+    )
     .eq("roster_email", email)
     .in("status", ["pending", "active", "grace"])
     .eq("events.status", "active")
@@ -235,10 +237,15 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   await Promise.all(
     memberships.map(async (m) => {
       const nameToCompare = m.claimed_name ?? claimedName;
+      const mismatch = nameToCompare ? !namesLooselyMatch(m.roster_name, nameToCompare) : false;
+      // A name that doesn't match the list waits for an organiser (migration
+      // 36), unless one already approved this person. Organisers never wait.
+      const hold = mismatch && m.role !== "event_admin" && !m.name_approved_at;
       const identity = {
         user_id: userId,
         claimed_name: nameToCompare,
-        name_mismatch: nameToCompare ? !namesLooselyMatch(m.roster_name, nameToCompare) : false,
+        name_mismatch: mismatch,
+        name_review_at: hold ? (m.name_review_at ?? now) : null,
       };
       const { error } = await admin
         .from("memberships")

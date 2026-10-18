@@ -51,11 +51,12 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
   const supabase = await createClient();
   const faceState = await faceStateFor(supabase, ctx.event.id, ctx.userId);
 
-  if (ctx.accessClosed || ctx.paused) {
+  if (ctx.accessClosed || ctx.paused || ctx.nameReview) {
     const logo = ctx.event.logo_path
       ? ((await signLogoMarks(supabase, [ctx.event.logo_path])).get(ctx.event.logo_path) ?? null)
       : null;
     const closed = ctx.accessClosed;
+    const review = !closed && !ctx.paused && ctx.nameReview;
     const host = ctx.event.organisation ?? "the organiser";
     return (
       <div className="flex flex-1 flex-col bg-[color:var(--kb-cream)]" style={eventToneStyle(ctx.event.accent_colour)}>
@@ -73,10 +74,18 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
               <rect x="4" y="10" width="16" height="11" rx="2" />
               <path d="M8 10V7a4 4 0 0 1 8 0v3" />
             </svg>
-            {closed ? `Closed on ${formatLongDate(ctx.event.access_ends_at)}` : "Full for now"}
+            {closed ? `Closed on ${formatLongDate(ctx.event.access_ends_at)}` : review ? "Waiting for the organiser" : "Full for now"}
           </span>
-          <h1 className="serif text-[40px] leading-[1.02] sm:text-[48px]">{closed ? "This gallery has closed" : "This gallery is full for now"}</h1>
-          {closed ? (
+          <h1 className="serif text-[40px] leading-[1.02] sm:text-[48px]">
+            {closed ? "This gallery has closed" : review ? "The organiser will let you in" : "This gallery is full for now"}
+          </h1>
+          {review ? (
+            <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
+              You signed in as &ldquo;{ctx.membership?.claimed_name}&rdquo;, which isn&apos;t the name on the guest list for{" "}
+              {ctx.event.name}. We&apos;ve asked {host} to confirm it&apos;s you. Once they do, the photos open here; you
+              don&apos;t need to sign in again.
+            </p>
+          ) : closed ? (
             <>
               <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
                 {ctx.event.name} is no longer open to attendees. Photos you saved or downloaded are still yours, and your

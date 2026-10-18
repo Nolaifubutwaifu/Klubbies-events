@@ -28,7 +28,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
     supabase
       .from("memberships")
       .select(
-        "id, roster_name, roster_email, claimed_name, name_mismatch, status, role, role_id, first_seen_at, paused_at, invited_at, created_at, user_id, event_roles(id, name, manage_event)",
+        "id, roster_name, roster_email, claimed_name, name_mismatch, name_review_at, status, role, role_id, first_seen_at, paused_at, invited_at, created_at, user_id, event_roles(id, name, manage_event)",
       )
       .eq("event_id", event.id)
       .order("roster_name", { ascending: true })
@@ -50,10 +50,13 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
   const findableUsers = new Set((findable ?? []).map((row) => row.user_id));
   const rows: MemberRow[] = (members ?? []).map((m) => ({
     id: m.id,
-    name: m.claimed_name ?? m.roster_name,
+    // The list's name when they signed in as someone else, so the row reads
+    // "Serena · Signed in as “higgi”" rather than naming them twice.
+    name: m.name_mismatch ? m.roster_name : (m.claimed_name ?? m.roster_name),
     email: m.roster_email,
     claimedName: m.claimed_name,
     nameMismatch: m.name_mismatch,
+    nameReview: Boolean(m.name_review_at),
     status: m.status,
     roleId: m.role_id,
     roleName: m.event_roles?.name ?? (m.role === "event_admin" ? "Organiser" : "Attendee"),

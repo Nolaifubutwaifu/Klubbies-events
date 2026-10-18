@@ -11,7 +11,16 @@ import { createClient } from "@/lib/supabase/server";
  * part of, one tap away. Organisers land on the side they're on now (an
  * organiser browsing the gallery goes to other galleries, and so on).
  */
-export async function EventSwitcher({ currentEventId, area }: { currentEventId: string; area: "attendee" | "organiser" }) {
+export async function EventSwitcher({
+  currentEventId,
+  area,
+  inRail = false,
+}: {
+  currentEventId: string;
+  area: "attendee" | "organiser";
+  /** In the organiser's side rail: the list opens under the event's name, as wide as the rail. */
+  inRail?: boolean;
+}) {
   const events = await listMyEvents();
   const logos = await signLogoMarks(await createClient(), events.map((event) => event.logoPath));
 
@@ -21,7 +30,7 @@ export async function EventSwitcher({ currentEventId, area }: { currentEventId: 
       // Placed against the header row, not the button, so on a phone the
       // list starts at the screen's left edge instead of running off the right.
       rootClassName="inline-flex"
-      menuClassName="left-3 sm:left-auto"
+      menuClassName={inRail ? "inset-x-0" : "left-3 sm:left-auto"}
       triggerClassName="flex h-11 w-11 flex-none items-center justify-center rounded-[8px] text-[color:var(--kb-ink)] hover:bg-[color:var(--kb-sand)]"
       trigger={
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -30,7 +39,7 @@ export async function EventSwitcher({ currentEventId, area }: { currentEventId: 
       }
     >
       <span className="block px-2.5 pb-1 pt-2 text-[14px] font-medium text-[color:var(--kb-ink-3)]">Your events</span>
-      <div className="flex max-h-[min(60vh,420px)] w-[min(86vw,320px)] flex-col overflow-y-auto">
+      <div className={`flex max-h-[min(60vh,420px)] flex-col overflow-y-auto ${inRail ? "w-full" : "w-[min(86vw,320px)]"}`}>
         {events.map((event) => {
           const current = event.eventId === currentEventId;
           const href = area === "organiser" && event.isAdmin ? `/admin/${event.handle}` : `/e/${event.handle}`;

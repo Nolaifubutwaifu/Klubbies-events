@@ -26,7 +26,9 @@ function levenshtein(a: string, b: string): number {
 
 /**
  * Loose comparison between the roster name and the name typed at sign-in.
- * A mismatch never blocks access; it only raises a flag for the admin.
+ * A mismatch holds a guest-list sign-in until an organiser approves it
+ * (migration 36), so this errs towards matching: order, a missing surname,
+ * a short form ("Max" for "Maximilian") and small typos all pass.
  */
 export function namesLooselyMatch(rosterName: string, claimedName: string): boolean {
   const a = tokens(rosterName);
@@ -45,6 +47,9 @@ export function namesLooselyMatch(rosterName: string, claimedName: string): bool
   const [firstB, lastB] = [b[0], b[b.length - 1]];
   if (lastA === lastB && firstA[0] === firstB[0]) return true;
   if (firstA === lastB && lastA === firstB) return true;
+  // A short form of the first name, with the same surname or only one given.
+  const shortForm = (x: string, y: string) => x.length >= 3 && y.startsWith(x);
+  if ((shortForm(firstA, firstB) || shortForm(firstB, firstA)) && (a.length === 1 || b.length === 1 || lastA === lastB)) return true;
 
   return levenshtein(joinedA, joinedB) <= Math.max(1, Math.floor(joinedA.length / 10));
 }

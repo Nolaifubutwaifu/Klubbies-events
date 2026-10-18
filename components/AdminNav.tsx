@@ -209,7 +209,8 @@ export function AdminRail({
       aria-label="Organiser"
       className="sticky top-0 hidden h-dvh w-[256px] flex-none flex-col overflow-y-auto border-r border-[color:var(--kb-line)] bg-white px-3 py-4 lg:flex"
     >
-      <div className="flex items-center gap-3 border-b border-[color:var(--kb-sand)] px-2 pb-4 pt-1">
+      {/* The anchor for the event switcher's list, so it opens right here. */}
+      <div className="relative flex items-center gap-3 border-b border-[color:var(--kb-sand)] px-2 pb-4 pt-1">
         <EventMark name={eventName} logoUrl={logoUrl} accentColour={accentColour} size={40} />
         <span className="flex min-w-0 flex-1 flex-col leading-[1.3]">
           <span className="truncate text-[15px] font-semibold">{eventName}</span>

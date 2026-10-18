@@ -52,6 +52,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     stacked,
     photographerLinks,
     qrSvg,
+    toApprove,
   ] = await Promise.all([
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId).eq("status", "active"),
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("event_id", eventId).in("status", ["pending", "active"]),
@@ -85,6 +86,13 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     listStackedAlbums(supabase, eventId, { includeDrafts: true, limit: 4 }),
     supabase.from("album_guest_links").select("id", { count: "exact", head: true }).eq("event_id", eventId),
     eventQrSvg(handle),
+    // Signed in under a name that doesn't match the list (migration 36).
+    supabase
+      .from("memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId)
+      .eq("status", "active")
+      .not("name_review_at", "is", null),
   ]);
 
   const drafts = (albumCount.count ?? 0) - (published.count ?? 0);
@@ -143,6 +151,16 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             : "Uploading, photographer links and attendee invites unlock after payment.",
           href: `/admin/${handle}/billing`,
           cta: inApp ? "Status" : "Activate",
+          urgent: true,
+        }
+      : null,
+    (toApprove.count ?? 0) > 0
+      ? {
+          key: "approve",
+          title: `${plural(toApprove.count ?? 0, "person", "people")} to approve`,
+          body: "They signed in under a name that isn't the one on your list. They can't see photos until you approve them.",
+          href: `/admin/${handle}/attendees`,
+          cta: "Review",
           urgent: true,
         }
       : null,
