@@ -53,7 +53,9 @@ event photos,conference,QR,selfie,photo sharing,gallery,photographer,corporate,f
 
 The first release of Klubbies Events.
 
-## Screenshots (6.9 inch, 1320 × 2868)
+## Screenshots (6.3 inch, 1206 × 2622)
+
+App Store Connect's required slot is "iPhone with Dynamic Island (medium display)": 1206 × 2622 or 1179 × 2556. It refused 1320 × 2868.
 
 In `docs/app-store/screenshots/`, in this order:
 
