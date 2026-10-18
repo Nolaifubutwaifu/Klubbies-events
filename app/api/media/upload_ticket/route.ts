@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   // Organisers and Photographers upload anywhere; attendees only into albums
   // that invite them. RLS (can_contribute_to_album) says the same thing.
   const ctx = await getEventContextById(album.event_id);
-  const allowed = ctx && !ctx.accessClosed && !ctx.paused && (ctx.perms.upload || (album.contributor_scope === "members" && ctx.membership));
+  const allowed = ctx && !ctx.accessClosed && !ctx.paused && !ctx.nameReview && (ctx.perms.upload || (album.contributor_scope === "members" && ctx.membership));
   if (!ctx || !allowed) return NextResponse.json({ error: "Album not found" }, { status: 404 });
   if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 

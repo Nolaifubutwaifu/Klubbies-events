@@ -104,7 +104,7 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
         status={status}
         counts={counts}
         plan={plan}
-        switcher={<EventSwitcher currentEventId={event.id} area="organiser" />}
+        switcher={<EventSwitcher currentEventId={event.id} area="organiser" inRail />}
         account={{ node: <AccountMenu name={displayName} avatarUrl={avatarUrl} />, name: displayName }}
         next={
           nextStep

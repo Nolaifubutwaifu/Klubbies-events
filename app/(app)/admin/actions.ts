@@ -335,6 +335,25 @@ export async function removeMembersAction(eventId: string, membershipIds: string
   return { ok: true, message: `${targets.length} removed. They can no longer open the event.` };
 }
 
+/**
+ * Lets in someone who signed in under a name that doesn't match the list
+ * (migration 36). Later sign-ins aren't held again, whatever name they type.
+ */
+export async function approveNameAction(eventId: string, membershipId: string): Promise<ActionState> {
+  const ctx = await adminContext(eventId);
+  if (!z.uuid().safeParse(membershipId).success) return { error: "Not found" };
+  const { data, error } = await createAdminClient()
+    .from("memberships")
+    .update({ name_review_at: null, name_approved_at: new Date().toISOString() })
+    .eq("event_id", eventId)
+    .eq("id", membershipId)
+    .select("claimed_name, roster_name")
+    .maybeSingle();
+  if (error || !data) return { error: "Could not approve them" };
+  revalidatePath(`/admin/${ctx.event.handle}`, "layout");
+  return { ok: true, message: `${data.claimed_name ?? data.roster_name} can see the photos now` };
+}
+
 export async function restoreMemberAction(eventId: string, membershipId: string): Promise<ActionState> {
   const ctx = await adminContext(eventId);
   const supabase = await createClient();

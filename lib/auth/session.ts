@@ -40,6 +40,9 @@ export type EventContext = {
   /** Joined in the overflow window, which closed without an upgrade
       (migration 27). RLS already hides every photo; this lets pages say why. */
   paused: boolean;
+  /** Signed in under a name that doesn't match the list, and an organiser
+      hasn't approved it yet (migration 36). RLS hides every photo meanwhile. */
+  nameReview: boolean;
 };
 
 export function accessHasEnded(event: Pick<EventRecord, "access_ends_at">, now = new Date()): boolean {
@@ -93,6 +96,7 @@ async function resolveContext(event: EventRecord, userId: string): Promise<Event
     userId,
     accessClosed: !perms.manage_albums && accessHasEnded(event),
     paused: !perms.manage_albums && Boolean(live?.paused_at),
+    nameReview: !perms.manage_albums && Boolean(live?.name_review_at),
   };
 }
 
