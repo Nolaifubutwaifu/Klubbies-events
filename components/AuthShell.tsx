@@ -17,7 +17,8 @@ export type AuthEvent = {
   accessMode: "link" | "guest_list";
 };
 
-const ART_PHOTOS = ["sq-5", "sq-4", "sq-7", "sq-9", "sq-6", "sq-8"];
+// The panel sits under "Every photo you're in", so these are photos the sample attendee is in.
+const ART_PHOTOS = ["sq-5", "sq-4", "sq-10", "sq-9", "sq-1", "sq-3"];
 
 /** The default panel: Klubbies' own marketing photos fading into night. */
 function PhotoPanel() {

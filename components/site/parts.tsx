@@ -87,7 +87,9 @@ export function Tick({ size = 18, className = "", color = "var(--kb-ok)" }: { si
 
 /** The hero picture: the attendee's Your photos screen on a phone, on a night panel with two notes. */
 export function HeroShowcase() {
-  const grid = ["sq-5", "sq-4", "sq-7", "sq-9", "sq-6", "sq-8", "sq-10", "cover-awards", "sq-1"];
+  // Every tile is a photo the sample attendee (mustard jacket, selfie.webp) is in.
+  // sq-6, sq-7 and sq-8 are other people, so they stay out of a grid that says they are his.
+  const grid = ["sq-5", "sq-4", "sq-9", "sq-10", "sq-1", "cover-awards", "sq-2", "sq-3", "sq-11"];
   return (
     <div
       role="img"

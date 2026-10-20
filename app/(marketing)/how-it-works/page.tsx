@@ -231,7 +231,8 @@ function FindingVisual({ step }: { step: number }) {
   return (
     <div aria-hidden className="flex h-[300px] items-center justify-center rounded-[14px] bg-[color:var(--kb-sand)] p-7">
       <div className="relative grid grid-cols-[repeat(3,72px)] gap-1">
-        {["sq-5", "sq-4", "sq-9", "sq-8", "sq-6", "sq-7"].map((name) => (
+        {/* Download all 23: only photos the sample attendee is in. */}
+        {["sq-5", "sq-4", "sq-9", "sq-10", "sq-1", "sq-2"].map((name) => (
           <Photo key={name} name={name} className="h-[72px] w-[72px] rounded-[6px]" sizes="72px" />
         ))}
         <span className="absolute -bottom-[22px] left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-[8px] bg-[color:var(--kb-ink)] px-4 py-2.5 text-[14px] font-semibold text-white">
