@@ -6,8 +6,13 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { ContactForm } from "./ContactForm";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Support" };
+export const metadata: Metadata = pageMetadata({
+  title: "Support and Contact",
+  description: "Help with sign in codes, photo removal, notifications, billing and deleting your account. Contact Klubbies Events and hear back in two working days.",
+  path: "/support",
+});
 
 type Topic = { id: string; title: string; short: ReactNode; body: ReactNode; icon: ReactNode };
 

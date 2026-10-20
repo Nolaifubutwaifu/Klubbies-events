@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactLine, LegalPage } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Terms of service" };
+export const metadata: Metadata = pageMetadata({
+  title: "Terms of Service",
+  description: "Terms for organisers, photographers and attendees using Klubbies Events, a private event photo gallery service run from Queensland, Australia.",
+  path: "/terms",
+});
 
 // A draft written to match what the product does, for a lawyer to check.
 export default function TermsPage() {

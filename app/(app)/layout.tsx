@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppFooter } from "@/components/AppFooter";
+import { NO_INDEX } from "@/lib/seo";
 import { UploadProvider } from "./UploadProvider";
 import { UploadTray } from "./UploadTray";
+
+// Galleries, admin and account pages never appear in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (

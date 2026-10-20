@@ -8,11 +8,13 @@ import { SiteNav } from "@/components/site/SiteNav";
 import { TIER_ORDER, TIERS } from "@/lib/billing/plans";
 import { FAQS, PRICE } from "@/lib/copy/site";
 import { isNativeAppRequest } from "@/lib/native-app-server";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Pricing",
-  description: `Free for up to ${TIERS.free.guests} guests. Bigger events pay once, from A$${TIERS.small.price.standard}.`,
-};
+export const metadata: Metadata = pageMetadata({
+  title: `Pricing: Free up to ${TIERS.free.guests} Guests, From A$${TIERS.small.price.standard}`,
+  description: `Free for up to ${TIERS.free.guests} guests and ${TIERS.free.photos} photos. Bigger events pay once: A$${TIERS.small.price.standard}, A$${TIERS.medium.price.standard} or A$${TIERS.large.price.standard} by size. No subscription, no limit on photographers.`,
+  path: "/pricing",
+});
 
 function Spec({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (

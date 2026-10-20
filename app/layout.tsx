@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { TIERS } from "@/lib/billing/plans";
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 /* Geist carries everything functional; Instrument Serif is the display voice
@@ -24,12 +26,19 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 });
 
+const DESCRIPTION = `Private photo galleries for Australian events. Attendees scan a QR code, take a selfie and get every photo they're in. Free for up to ${TIERS.free.guests} guests.`;
+
+// Public by default so the marketing pages can rank. Private routes opt out
+// with NO_INDEX from lib/seo: (app), (auth), /g and the print pages.
 export const metadata: Metadata = {
-  title: { default: "Klubbies Events", template: "%s · Klubbies Events" },
-  description: "Private event photos. Every attendee finds the ones they're in.",
-  applicationName: "Klubbies Events",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  description: DESCRIPTION,
+  applicationName: SITE_NAME,
   manifest: "/manifest.webmanifest",
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
+  openGraph: { type: "website", siteName: SITE_NAME, locale: "en_AU", description: DESCRIPTION },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
@@ -42,7 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // The iPhone app adds "kb-splash" here before React loads, while its
     // loading screen is up (ios/KlubbiesEvents/WebViewController.swift).
-    <html lang="en" className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
+    <html lang="en-AU" className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
       <body className="min-h-dvh flex flex-col">{children}</body>
     </html>
   );

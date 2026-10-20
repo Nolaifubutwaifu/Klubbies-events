@@ -4,11 +4,13 @@ import { NightCta, Photo } from "@/components/site/parts";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { isNativeAppRequest } from "@/lib/native-app-server";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "How it works",
-  description: "From setting up the event to every attendee holding the photos they're in: the whole flow, step by step.",
-};
+export const metadata: Metadata = pageMetadata({
+  title: "How Event Photo Sharing Works",
+  description: "Set up in about ten minutes. Photographers upload through their own links, and attendees scan a QR code to find the photos they're in. No app needed.",
+  path: "/how-it-works",
+});
 
 const TEAL = "#0e6e66";
 

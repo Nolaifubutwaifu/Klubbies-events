@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { ContactLine, LegalPage } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Refunds" };
+export const metadata: Metadata = pageMetadata({
+  title: "Refund Policy",
+  description: "When Klubbies Events refunds an event payment, including before photos are uploaded and for mistakes or faults. How to ask for a refund.",
+  path: "/refunds",
+});
 
 export default function RefundsPage() {
   return (

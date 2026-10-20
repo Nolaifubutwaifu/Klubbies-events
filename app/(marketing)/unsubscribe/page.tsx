@@ -5,8 +5,9 @@ import { announcementOptOutToken } from "@/lib/events/announcements";
 import { unsubscribeToken, type NotifyKind } from "@/lib/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnnouncementOptOutButton, UnsubscribeButton } from "./UnsubscribeButton";
+import { NO_INDEX } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Email settings" };
+export const metadata: Metadata = { title: "Email settings", robots: NO_INDEX };
 
 const LABELS: Record<NotifyKind, string> = {
   notify_new_album: "emails about new albums",

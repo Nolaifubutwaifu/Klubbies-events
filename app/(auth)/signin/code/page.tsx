@@ -6,8 +6,9 @@ import { AuthHeading, AuthShell } from "@/components/AuthShell";
 import { SIGNIN_COOKIE } from "@/lib/auth/flow";
 import { authEventPreview } from "@/lib/auth/preview";
 import { CodeForm } from "./CodeForm";
+import { NO_INDEX } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Enter your code" };
+export const metadata: Metadata = { title: "Enter your code", robots: NO_INDEX };
 
 export default async function CodePage(props: PageProps<"/signin/code">) {
   const params = await props.searchParams;

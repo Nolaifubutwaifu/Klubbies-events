@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   // ffmpeg runs as a separate binary for server-side video previews
   // (lib/media/video-previews.ts): keep it out of the bundle and ship the file.
   serverExternalPackages: ["ffmpeg-static"],
+  // /index served a second copy of the home page (SEO audit F8).
+  redirects: async () => [{ source: "/index", destination: "/", permanent: true }],
   outputFileTracingIncludes: {
     // The real file under .pnpm: the node_modules/ffmpeg-static symlink made
     // Vercel reject the function package.
