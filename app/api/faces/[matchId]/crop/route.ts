@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { z } from "zod";
 import { faceSquare } from "@/lib/faces/crop";
+import { isDecodablePhoto, sharpDecodeOptions } from "@/lib/media/logo-file";
 import { asBox } from "@/lib/faces/queries";
 import { BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -38,15 +39,17 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/faces/[matc
 
   const { data: file, error } = await supabase.storage.from(BUCKET).download(path);
   if (error || !file) return new Response(null, { status: 404 });
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!isDecodablePhoto(bytes)) return new Response(null, { status: 422 });
 
   try {
     // rotate() first, the same as the indexer, so the box and the pixels agree
     // on which way is up when the fallback is an original with EXIF rotation.
-    const upright = await sharp(Buffer.from(await file.arrayBuffer()))
+    const upright = await sharp(bytes, sharpDecodeOptions)
       .rotate()
       .toBuffer({ resolveWithObject: true });
     const { left, top, size } = faceSquare(box, upright.info.width, upright.info.height);
-    const crop = await sharp(upright.data)
+    const crop = await sharp(upright.data, sharpDecodeOptions)
       .extract({ left, top, width: size, height: size })
       .resize(CROP_SIZE, CROP_SIZE)
       .webp({ quality: 80 })
