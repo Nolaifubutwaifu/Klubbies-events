@@ -10,6 +10,7 @@
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import type { Database } from "../lib/db/types";
+import { isRasterLogo } from "../lib/media/logo-file";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,10 +37,14 @@ async function main() {
       console.warn(`${event.handle}: logo missing at ${path}`);
       continue;
     }
-    const mark = await sharp(Buffer.from(await file.arrayBuffer()), { density: 300 })
-      .resize(SIZE, SIZE, { fit: "cover" })
-      .webp({ quality: 88 })
-      .toBuffer();
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    // SVG stays on the original file. Decoding it here is the same librsvg path
+    // the upload action no longer uses.
+    if (!isRasterLogo(bytes)) {
+      console.warn(`${event.handle}: skipped ${path} (not a PNG, JPG or WebP)`);
+      continue;
+    }
+    const mark = await sharp(bytes, { density: 300 }).resize(SIZE, SIZE, { fit: "cover" }).webp({ quality: 88 }).toBuffer();
     const { error: uploadError } = await db.storage
       .from(BUCKET)
       .upload(markPath(path), new Uint8Array(mark), { upsert: true, contentType: "image/webp" });

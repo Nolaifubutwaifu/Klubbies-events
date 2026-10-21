@@ -1,6 +1,6 @@
 import "server-only";
 import { DeleteFacesCommand, IndexFacesCommand, type FaceRecord } from "@aws-sdk/client-rekognition";
-import sharp from "sharp";
+import sharp from "@/lib/media/sharp";
 import { BUCKET } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { countFaceCalls } from "@/lib/usage/faces";

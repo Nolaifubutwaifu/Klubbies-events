@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp from "@/lib/media/sharp";
 import { z } from "zod";
 import { faceSquare } from "@/lib/faces/crop";
 import { asBox } from "@/lib/faces/queries";
