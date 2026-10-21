@@ -8,6 +8,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { namesLooselyMatch } from "./names";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "./rate-limit";
+import { NAME_STEP_PATH, knownSignInName, requestCodeSchema, type NameStep, type RequestCodeInput } from "./sign-in-name";
+
+export { NAME_STEP_PATH, requestCodeSchema };
+export type { RequestCodeInput };
 
 export const SIGNIN_COOKIE = "kb_signin";
 export const CODE_TTL_MS = 10 * 60 * 1000;
@@ -17,22 +21,12 @@ export const NEUTRAL_MESSAGE =
   "If that address can open this event, we've sent it a sign-in code. It expires in 10 minutes.";
 export const CODE_REJECTED = "That code didn't match. Check the latest email or send a new code.";
 
-export const requestCodeSchema = z.object({
-  fullName: z.string().trim().min(1, "Enter your full name").max(200),
-  email: z.string().trim().min(3, "Enter your email").max(254),
-  flow: z.enum(["member", "create", "signup", "join"]).default("member"),
-  /** The event whose link this came from. Required for "join". */
-  event: z.string().regex(/^[a-z0-9_]{1,48}$/i).optional(),
-});
-
 export const verifyCodeSchema = z.object({
   // Supabase issues 6 to 10 digit codes depending on the project setting.
   code: z.string().trim().regex(/^\d{6,10}$/, "Enter the code from the email"),
   /** The event the member arrived for, so they land back in it. */
   event: z.string().regex(/^[a-z0-9_]{1,48}$/i).optional(),
 });
-
-export type RequestCodeInput = z.infer<typeof requestCodeSchema>;
 
 function nowIso() {
   return new Date().toISOString();
@@ -152,11 +146,12 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
   }
 
   const code = await issueOtp(email);
+  const claimedName = input.fullName?.trim() || null;
   const { error } = await createAdminClient()
     .from("pending_sign_ins")
     .upsert({
       email,
-      claimed_name: input.fullName,
+      claimed_name: claimedName,
       flow: input.flow,
       event_id: eventId,
       attempts: 0,
@@ -164,7 +159,8 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
     });
   if (error) throw error;
 
-  await sendSignInCode(email, { code, name: input.fullName, eventName });
+  // No name yet (the usual sign-in): the email greets them without one.
+  await sendSignInCode(email, { code, name: claimedName || "there", eventName });
 }
 
 /**
@@ -195,43 +191,51 @@ export async function resendCode(rawEmail: string): Promise<void> {
     event = data?.handle ?? undefined;
   }
   const flow = requestCodeSchema.shape.flow.safeParse(pending.flow);
-  await processCodeRequest({ fullName: pending.claimed_name ?? "", email, flow: flow.success ? flow.data : "member", event });
+  await processCodeRequest({
+    fullName: pending.claimed_name?.trim() || undefined,
+    email,
+    flow: flow.success ? flow.data : "member",
+    event,
+  });
 }
 
 export const EMAIL_LIMITED =
   "You've asked for a few codes already. Use the newest email (check spam too), or wait a few minutes and try again.";
 
-export type VerifyResult = { ok: true; redirectTo: string } | { ok: false; error: string };
+export type VerifyResult =
+  | { ok: true; redirectTo: string; namePending?: NameStep }
+  | { ok: false; error: string };
 
-export async function verifyCode(rawEmail: string, code: string, eventHandle?: string): Promise<VerifyResult> {
-  const email = normaliseEmail(rawEmail);
+type CompletedSignIn = {
+  userId: string;
+  email: string;
+  claimedName: string;
+  flow: string;
+  eventId: string | null;
+  eventHandle?: string;
+};
+
+/**
+ * Links the verified email to its events and, for a guest list, holds the
+ * sign-in when the name doesn't match (migration 36). Callers only reach
+ * this with a name in hand, so a new account can't see photos before that
+ * check runs.
+ */
+async function completeSignIn(input: CompletedSignIn): Promise<VerifyResult> {
   const admin = createAdminClient();
-
-  const { data: pending } = await admin.from("pending_sign_ins").select("*").eq("email", email).maybeSingle();
-  if (!pending || pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
-    return { ok: false, error: CODE_REJECTED };
+  const { userId, email, claimedName } = input;
+  let handle = input.eventHandle?.toLowerCase();
+  if (input.eventId) {
+    const { data } = await admin.from("events").select("handle").eq("id", input.eventId).maybeSingle();
+    if (data?.handle) handle = data.handle;
   }
-  await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
-  if (error || !data.user) return { ok: false, error: CODE_REJECTED };
-  const userId = data.user.id;
-
-  await admin.from("pending_sign_ins").delete().eq("email", email);
-
-  // Joining through the link happens before the roster pass below, so the
-  // new row gets the same first-sign-in treatment as everyone else's.
   let joinedHandle: string | null = null;
-  if (pending.flow === "join" && pending.event_id) {
-    if ((await joinByLink(pending.event_id, userId, email, pending.claimed_name)) === "joined") {
-      const { data: joined } = await admin.from("events").select("handle").eq("id", pending.event_id).maybeSingle();
-      joinedHandle = joined?.handle ?? null;
-    }
+  if (input.flow === "join" && input.eventId) {
+    if ((await joinByLink(input.eventId, userId, email, claimedName)) === "joined") joinedHandle = handle ?? null;
   }
 
   const memberships = await findEligibleMemberships(email);
-  const claimedName = pending.claimed_name;
   const now = nowIso();
 
   await Promise.all(
@@ -262,24 +266,77 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
     }),
   );
 
-  if (claimedName) {
-    await admin.from("users").update({ display_name: claimedName }).eq("id", userId).is("display_name", null);
-  }
+  await admin.from("users").update({ display_name: claimedName }).eq("id", userId).is("display_name", null);
 
-  if (pending.flow === "create") return { ok: true, redirectTo: "/admin/new" };
+  if (input.flow === "create") return { ok: true, redirectTo: "/admin/new" };
   if (joinedHandle) return { ok: true, redirectTo: `/e/${joinedHandle}` };
   // A join that was refused (the event filled up, or they were removed) goes
   // to the event anyway, whose page explains why, instead of an empty list.
-  if (pending.flow === "join" && eventHandle) return { ok: true, redirectTo: `/e/${eventHandle.toLowerCase()}` };
+  if (input.flow === "join" && handle) return { ok: true, redirectTo: `/e/${handle}` };
   // Someone who came in through an event's own link goes back to that event,
   // but only if they are actually on its list.
-  const wanted = eventHandle?.toLowerCase();
-  if (wanted && memberships.some((m) => m.events.handle === wanted)) return { ok: true, redirectTo: `/e/${wanted}` };
-  if (pending.flow === "signup") return { ok: true, redirectTo: memberships.length === 1 ? `/e/${memberships[0].events.handle}` : "/events" };
+  if (handle && memberships.some((m) => m.events.handle === handle)) return { ok: true, redirectTo: `/e/${handle}` };
+  if (input.flow === "signup") return { ok: true, redirectTo: memberships.length === 1 ? `/e/${memberships[0].events.handle}` : "/events" };
   // An organiser with one event lands on its overview, everyone else on the photos.
   if (memberships.length === 1) {
     const only = memberships[0];
     return { ok: true, redirectTo: only.role === "event_admin" ? `/admin/${only.events.handle}` : `/e/${only.events.handle}` };
   }
   return { ok: true, redirectTo: "/events" };
+}
+
+export async function verifyCode(rawEmail: string, code: string, eventHandle?: string): Promise<VerifyResult> {
+  const email = normaliseEmail(rawEmail);
+  const admin = createAdminClient();
+
+  const { data: pending } = await admin.from("pending_sign_ins").select("*").eq("email", email).maybeSingle();
+  if (!pending || pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
+    return { ok: false, error: CODE_REJECTED };
+  }
+  await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+  if (error || !data.user) return { ok: false, error: CODE_REJECTED };
+  const userId = data.user.id;
+
+  const { data: profile } = await admin.from("users").select("display_name").eq("id", userId).maybeSingle();
+  const claimedName = knownSignInName(pending.claimed_name, profile?.display_name);
+  // A new account has no name yet. Don't link the guest list or join the
+  // event until they give one, or the mismatch hold (migration 36) never runs.
+  const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
+  const namePending: NameStep | undefined = claimedName
+    ? undefined
+    : { flow: parsedFlow.success ? parsedFlow.data : "member", eventId: pending.event_id };
+
+  await admin.from("pending_sign_ins").delete().eq("email", email);
+
+  if (!claimedName) return { ok: true, redirectTo: NAME_STEP_PATH, namePending };
+
+  return completeSignIn({
+    userId,
+    email,
+    claimedName,
+    flow: pending.flow,
+    eventId: pending.event_id,
+    eventHandle,
+  });
+}
+
+/** Saves the name from the post-verify screen and finishes the sign-in. */
+export async function claimSignInName(input: {
+  userId: string;
+  email: string;
+  name: string;
+  pending: NameStep | null;
+}): Promise<VerifyResult> {
+  const claimedName = input.name.trim();
+  if (!claimedName || claimedName.length > 200) return { ok: false, error: "Enter your name" };
+  return completeSignIn({
+    userId: input.userId,
+    email: normaliseEmail(input.email),
+    claimedName,
+    flow: input.pending?.flow ?? "member",
+    eventId: input.pending?.eventId ?? null,
+  });
 }

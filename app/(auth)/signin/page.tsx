@@ -69,7 +69,7 @@ export default async function SignInPage(props: PageProps<"/signin">) {
       }
     >
       <AuthHeading>Sign in</AuthHeading>
-      <p className="mt-2.5 text-[17px] text-[color:var(--kb-ink-2)]">We&apos;ll email you a code. There&apos;s no password to remember.</p>
+      <p className="mt-2.5 text-[17px] text-[color:var(--kb-ink-2)]">Enter your email and we&apos;ll send you a code. No password needed.</p>
       <div className="mt-6 flex flex-col gap-3">
         {inApp ? null : <ScanEventButton />}
         <SignInForm flow="member" />

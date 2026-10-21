@@ -4,6 +4,7 @@ import { CODE_REJECTED, SIGNIN_COOKIE, verifyCode, verifyCodeSchema } from "@/li
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
+import { NAME_STEP_COOKIE, encodeNameStep } from "@/lib/auth/sign-in-name";
 
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => null);
@@ -27,6 +28,19 @@ export async function POST(request: Request) {
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   cookieStore.delete(SIGNIN_COOKIE);
+  // A new account still has to give a name. Keep the "where they were going"
+  // cookie until that step saves the name and runs the guest-list check.
+  if (result.namePending) {
+    cookieStore.set(NAME_STEP_COOKIE, encodeNameStep(result.namePending), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 15 * 60,
+    });
+    return NextResponse.json({ ok: true, redirectTo: result.redirectTo });
+  }
+
   // A page that sent them here to sign in wins, except for a new organiser,
   // who has an event to set up first.
   const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
