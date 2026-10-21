@@ -14,6 +14,22 @@ export const CROP_PAD = 0.6;
  * works in pixels, keeps the square inside the image, and centres the face
  * wherever the edges allow.
  */
+/**
+ * Width and height after sharp's rotate(). EXIF orientations 5–8 are the
+ * sideways ones, so the stored width and height are swapped once the pixels
+ * are upright. The face box is in that upright space.
+ */
+export function uprightDimensions(
+  width: number,
+  height: number,
+  orientation?: number,
+): { width: number; height: number } {
+  if (orientation !== undefined && orientation >= 5 && orientation <= 8) {
+    return { width: height, height: width };
+  }
+  return { width, height };
+}
+
 export function faceSquare(
   box: BoundingBox,
   imageWidth: number,

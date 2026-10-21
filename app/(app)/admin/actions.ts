@@ -19,7 +19,7 @@ import { brisbaneInputToIso } from "@/lib/format";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { generateHandleBase } from "@/lib/roster/handle";
-import { COVER_MAX_BYTES, isAlbumCoverPath, isEventLogoPath, isRasterLogo, logoRejection, looksLikeSvg, rasterLogoMark } from "@/lib/media/logo-file";
+import { COVER_MAX_BYTES, isAlbumCoverPath, isDeletableStorageKey, isEventLogoPath, isRasterLogo, logoRejection, looksLikeSvg, rasterLogoMark } from "@/lib/media/logo-file";
 import { BUCKET, LOGO_MARK_SIZE, logoMarkPath, removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -204,6 +204,13 @@ export async function setEventPrivacyAction(
  * it the badge falls back to the original, which is how every logo worked before.
  * SVG is not rasterised here. The bytes have already been checked.
  */
+/** Deletes only keys under prefix. A `..` segment is left in the bucket. */
+async function removeOwned(paths: string[], prefix: string, label: string) {
+  const keys = paths.filter((path) => isDeletableStorageKey(path, prefix));
+  if (keys.length === 0) return;
+  await removeObjects(keys).catch((removeError) => console.error(label, keys, removeError));
+}
+
 async function makeLogoMark(supabase: Awaited<ReturnType<typeof createClient>>, path: string, bytes: Uint8Array) {
   try {
     const mark = await rasterLogoMark(bytes, LOGO_MARK_SIZE);
@@ -218,12 +225,11 @@ async function makeLogoMark(supabase: Awaited<ReturnType<typeof createClient>>, 
 export async function setEventLogoAction(eventId: string, path: string | null): Promise<ActionState> {
   const ctx = await adminContext(eventId);
   const supabase = await createClient();
+  const logoPrefix = `events/${eventId}/logo/`;
   if (path !== null && !isEventLogoPath(eventId, path)) {
     // Only delete a file we know is this event's logo attempt. A path outside
-    // that folder is refused and left where it is.
-    if (path.startsWith(`events/${eventId}/logo/`)) {
-      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected logo", path, removeError));
-    }
+    // that folder, or one that climbs out of it with `..`, is left where it is.
+    await removeOwned([path], logoPrefix, "could not remove rejected logo");
     return { error: "Invalid logo path" };
   }
   if (path) {
@@ -235,7 +241,7 @@ export async function setEventLogoAction(eventId: string, path: string | null): 
     // hand to librsvg) before decoding, and drop the object so it is not left
     // behind as the event logo.
     if (logoRejection(path, bytes)) {
-      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected logo", path, removeError));
+      await removeOwned([path], logoPrefix, "could not remove rejected logo");
       return { error: "Use a PNG, JPG or WebP logo" };
     }
     await makeLogoMark(supabase, path, bytes);
@@ -248,9 +254,7 @@ export async function setEventLogoAction(eventId: string, path: string | null): 
   // cached URL. Clear the one it replaced, and its mark.
   const previous = ctx.event.logo_path;
   if (previous && previous !== path) {
-    await removeObjects([previous, logoMarkPath(previous)]).catch((removeError) =>
-      console.error("could not remove old logo", previous, removeError),
-    );
+    await removeOwned([previous, logoMarkPath(previous)], logoPrefix, "could not remove old logo");
   }
   revalidatePath(`/admin/${ctx.event.handle}`, "layout");
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
@@ -546,6 +550,16 @@ export async function setAlbumCoverAction(albumId: string, mediaId: string): Pro
   const { data: album } = await supabase.from("albums").select("id, event_id").eq("id", albumId).maybeSingle();
   if (!album) return { error: "Album not found" };
   const ctx = await permContext(album.event_id, "manage_albums");
+  // The write below uses the service role and bypasses RLS, so the photo has
+  // to be checked here. A media id from another event must not become the cover.
+  if (!z.uuid().safeParse(mediaId).success) return { error: "That photo isn't in this event" };
+  const { data: media } = await supabase
+    .from("media")
+    .select("id")
+    .eq("id", mediaId)
+    .eq("event_id", album.event_id)
+    .maybeSingle();
+  if (!media) return { error: "That photo isn't in this event" };
   // cover_path changes are refused for the signed-in role (migration 37).
   const { error } = await createAdminClient().from("albums").update({ cover_media_id: mediaId, cover_path: null }).eq("id", albumId);
   if (error) return { error: "Could not set the cover" };
@@ -559,10 +573,9 @@ export async function setAlbumCoverImageAction(albumId: string, path: string | n
   const { data: album } = await supabase.from("albums").select("id, event_id").eq("id", albumId).maybeSingle();
   if (!album) return { error: "Album not found" };
   const ctx = await permContext(album.event_id, "manage_albums");
+  const coverPrefix = `events/${album.event_id}/covers/${albumId}`;
   if (path !== null && !isAlbumCoverPath(album.event_id, albumId, path)) {
-    if (path.startsWith(`events/${album.event_id}/covers/`)) {
-      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected cover", path, removeError));
-    }
+    await removeOwned([path], coverPrefix, "could not remove rejected cover");
     return { error: "Invalid cover path" };
   }
   if (path) {
@@ -570,7 +583,7 @@ export async function setAlbumCoverImageAction(albumId: string, path: string | n
     if (!file) return { error: "Upload failed. Try again." };
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (bytes.byteLength > COVER_MAX_BYTES || !isRasterLogo(bytes) || looksLikeSvg(bytes)) {
-      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected cover", path, removeError));
+      await removeOwned([path], coverPrefix, "could not remove rejected cover");
       return { error: "Use a PNG, JPG or WebP image" };
     }
   }
@@ -581,9 +594,7 @@ export async function setAlbumCoverImageAction(albumId: string, path: string | n
   // Covers are uploaded under a new name each time (so a cached URL can't
   // show the old one); clear the file this replaced.
   if (before?.cover_path && before.cover_path !== path) {
-    await removeObjects([before.cover_path]).catch((removeError) =>
-      console.error("could not remove old cover", before.cover_path, removeError),
-    );
+    await removeOwned([before.cover_path], coverPrefix, "could not remove old cover");
   }
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
   return { ok: true, message: path ? "Cover updated" : "Cover cleared" };

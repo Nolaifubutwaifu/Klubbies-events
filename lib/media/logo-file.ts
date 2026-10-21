@@ -13,15 +13,40 @@ export const COVER_MAX_BYTES = 10 * 1024 * 1024;
 /**
  * Sharp's default cap is 268402689 pixels (16383²). A current full-frame file
  * is about 45–61MP — a Sony A7R V frame is 9504×6336 = 60,217,344 — so 40
- * million would reject ordinary camera photos. 80 million clears that frame
- * with room to spare and still refuses a small file that claims a far larger
- * canvas.
+ * million would reject ordinary camera photos. Gallery indexing uses 80
+ * million: it clears that frame and still refuses a small file that claims a
+ * far larger canvas.
+ *
+ * Logos are badges, not camera frames. 25 million is about a 5000px square,
+ * which is past any logo we would keep, and stops a small file from claiming
+ * a huge canvas inside rasterLogoMark.
+ *
+ * The face crop route is separate again (CROP_MAX_INPUT_PIXELS). It runs on
+ * the request, several at a time, so it does not borrow the gallery cap.
  */
-export const MAX_INPUT_PIXELS = 80_000_000;
+export const GALLERY_MAX_INPUT_PIXELS = 80_000_000;
+export const LOGO_MAX_INPUT_PIXELS = 25_000_000;
+export const CROP_MAX_INPUT_PIXELS = 40_000_000;
 
-/** Shared by the logo badge and the photo pipelines that decode uploads. */
+/** Gallery indexing, including the hourly job and scripts/backfill-faces.ts. */
 export const sharpDecodeOptions = {
-  limitInputPixels: MAX_INPUT_PIXELS,
+  limitInputPixels: GALLERY_MAX_INPUT_PIXELS,
+  failOn: "error" as const,
+};
+
+/** Logo badge only. */
+export const logoDecodeOptions = {
+  limitInputPixels: LOGO_MAX_INPUT_PIXELS,
+  failOn: "error" as const,
+};
+
+/**
+ * Face crops. 40 million pixels is 160 MB of RGBA. Four parallel crops stay
+ * around 640 MB of pixel buffers, and under about 1.3 GB if rotate keeps a
+ * second buffer, which is the headroom under a 2 GB function.
+ */
+export const cropDecodeOptions = {
+  limitInputPixels: CROP_MAX_INPUT_PIXELS,
   failOn: "error" as const,
 };
 
@@ -102,6 +127,15 @@ export function isAlbumCoverPath(eventId: string, albumId: string, path: string)
 }
 
 /**
+ * A storage key removeObjects may be given. `..` climbs out of the prefix,
+ * so those keys are left in the bucket rather than deleted.
+ */
+export function isDeletableStorageKey(path: string, prefix: string): boolean {
+  if (prefix.length === 0 || path.length === 0 || path.includes("..")) return false;
+  return path.startsWith(prefix);
+}
+
+/**
  * SVG/XML sniff for the logo path. Raster magic wins, so a PNG whose metadata
  * happens to contain the characters "<svg" is still a PNG.
  */
@@ -130,7 +164,7 @@ export function logoRejection(path: string, bytes: Uint8Array): string | null {
 
 /** The 96px badge. Callers pass bytes that already cleared logoRejection. */
 export async function rasterLogoMark(bytes: Uint8Array, size: number): Promise<Buffer> {
-  return sharp(bytes, { ...sharpDecodeOptions, density: 300 })
+  return sharp(bytes, { ...logoDecodeOptions, density: 300 })
     .resize(size, size, { fit: "cover" })
     .webp({ quality: 88 })
     .toBuffer();
