@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Privacy" };
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: "How Klubbies Events stores photos, guest lists and faceprints in Sydney, who can see them, and how long they are kept before deletion.",
+  path: "/privacy",
+});
 
 // A draft written to match what the code does, for a lawyer to check. Not
 // legal advice. Keep it in step with lib/copy/site.ts and lib/faces/copy.ts.

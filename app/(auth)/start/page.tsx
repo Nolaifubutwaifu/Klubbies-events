@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { SignInForm } from "../signin/SignInForm";
 
-export const metadata: Metadata = { title: "Create an event" };
+export const metadata: Metadata = { title: "Create an event", robots: { index: false, follow: true } };
 
 const PANEL: { line: string; icon: React.ReactNode }[] = [
   { line: "Your logo and colour on every screen", icon: <path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z" /> },

@@ -7,8 +7,9 @@ import { eventLink, eventQrSvg } from "@/lib/share";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { readableAccent } from "@/lib/theme";
+import { NO_INDEX } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Poster" };
+export const metadata: Metadata = { title: "Poster", robots: NO_INDEX };
 
 /**
  * An A4 poster for the venue: the event, a big QR code, and three steps. Sits

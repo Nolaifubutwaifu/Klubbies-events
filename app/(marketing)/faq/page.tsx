@@ -7,8 +7,13 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { FAQS, type FaqGroup } from "@/lib/copy/site";
 import { isNativeAppRequest } from "@/lib/native-app-server";
+import { JsonLd, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Frequently asked questions" };
+export const metadata: Metadata = pageMetadata({
+  title: "Event Photo Gallery FAQs",
+  description: "Answers on apps, privacy, face search consent, pricing, guest lists and photographer uploads for Klubbies Events private photo galleries.",
+  path: "/faq",
+});
 
 const GROUPS: FaqGroup[] = ["Getting started", "Photos and privacy", "Pricing"];
 
@@ -21,8 +26,20 @@ export default async function FaqPage() {
     items: FAQS.filter((item) => item.group === group),
   }));
 
+  // The same questions as the page shows, word for word, as schema.org markup.
+  const faqPage = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: groups.flatMap((group) => group.items).map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+
   return (
     <>
+      <JsonLd data={faqPage} />
       <SiteNav current="faq" inApp={inApp} />
       <main>
         <section className="border-b border-[color:var(--kb-line)] pb-14 pt-12 sm:pb-16 sm:pt-24">

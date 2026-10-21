@@ -10,7 +10,7 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { AppLanding } from "./AppLanding";
 import { SignInForm } from "./SignInForm";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = { title: "Sign in", robots: { index: false, follow: true } };
 
 export default async function SignInPage(props: PageProps<"/signin">) {
   const params = await props.searchParams;

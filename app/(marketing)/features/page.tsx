@@ -5,8 +5,13 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { ATTENDEE_FEATURES, ORGANISER_FEATURES, ORGANISERS, PAID_SIZES_NOTE, PRIVACY_PROMISES } from "@/lib/copy/site";
 import { isNativeAppRequest } from "@/lib/native-app-server";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Features" };
+export const metadata: Metadata = pageMetadata({
+  title: "Features: Face Search, QR Access, Branding",
+  description: "Face search, guest lists, photographer upload links, your logo and colour, full quality downloads. Data stored in Sydney. See every feature.",
+  path: "/features",
+});
 
 /** One photo per attendee feature, in ATTENDEE_FEATURES order. */
 const ATTENDEE_PHOTOS = ["selfie", "sq-5", "sq-4", "sq-7"];
@@ -14,7 +19,7 @@ const ATTENDEE_PHOTOS = ["selfie", "sq-5", "sq-4", "sq-7"];
 function GroupLabel({ id, n, children }: { id: string; n: string; children: string }) {
   return (
     <h2 id={id} className="flex items-center gap-3 text-[15px] font-semibold tracking-normal text-[color:var(--kb-ink-2)]">
-      <span className="mono text-[color:var(--kb-brand)]">{n}</span>
+      <span className="mono text-[color:var(--kb-brand)]">{n}</span>{" "}
       {children}
     </h2>
   );

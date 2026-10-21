@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NoticePage } from "@/components/NoticePage";
+import { NO_INDEX } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Account deleted" };
+export const metadata: Metadata = { title: "Account deleted", robots: NO_INDEX };
 
 export default function AccountDeletedPage() {
   return (
