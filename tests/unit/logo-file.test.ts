@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { isRasterLogo, isWebp, logoRejection, looksLikeSvg, rasterLogoMark } from "@/lib/media/logo-file";
+import { isPng, isRasterLogo, isWebp, logoRejection, looksLikeSvg, rasterLogoMark } from "@/lib/media/logo-file";
 
 const svg = new TextEncoder().encode(
   `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="#ec3013"/></svg>`,
@@ -59,7 +59,11 @@ describe("logo file gate", () => {
     expect(logoRejection("events/abc/logo/logo.png", big)).toBe("Use a PNG, JPG or WebP logo");
   });
 
-  it("blocks the SVG loader the logo path used to call", async () => {
-    await expect(sharp(svg, { density: 300 }).resize(96, 96).webp().toBuffer()).rejects.toThrow();
+  it("leaves sharp able to rasterise a trusted SVG, and still refuses it as a logo", async () => {
+    // next/og draws opengraph-image as SVG and rasterises it with sharp.
+    // A process-wide block breaks that build. The logo gate is the boundary.
+    const png = await sharp(svg, { density: 72 }).png().toBuffer();
+    expect(isPng(new Uint8Array(png))).toBe(true);
+    expect(logoRejection("events/abc/logo/logo.svg", svg)).toBe("Use a PNG, JPG or WebP logo");
   });
 });

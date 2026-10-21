@@ -1,7 +1,7 @@
 import "server-only";
 import { spawn } from "node:child_process";
 import ffmpegPath from "ffmpeg-static";
-import sharp from "@/lib/media/sharp";
+import sharp from "sharp";
 import { r2Url } from "@/lib/backup/r2";
 import { BUCKET, derivativePaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";

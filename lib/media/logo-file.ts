@@ -1,4 +1,8 @@
-import sharp from "./sharp";
+import sharp from "sharp";
+
+// Do not call sharp.block({ operation: ["VipsForeignLoadSvg"] }) from the app.
+// The block is process-wide, and next/og rasterises its own SVG for
+// opengraph-image. User SVG is refused below, before sharp is called.
 
 /** Same ceiling the uploader enforces. The browser check is not the boundary. */
 export const LOGO_MAX_BYTES = 5 * 1024 * 1024;
