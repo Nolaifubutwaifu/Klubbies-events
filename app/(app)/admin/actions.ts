@@ -19,7 +19,7 @@ import { brisbaneInputToIso } from "@/lib/format";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { generateHandleBase } from "@/lib/roster/handle";
-import { logoRejection, rasterLogoMark } from "@/lib/media/logo-file";
+import { COVER_MAX_BYTES, isAlbumCoverPath, isEventLogoPath, isRasterLogo, logoRejection, looksLikeSvg, rasterLogoMark } from "@/lib/media/logo-file";
 import { BUCKET, LOGO_MARK_SIZE, logoMarkPath, removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -217,8 +217,15 @@ async function makeLogoMark(supabase: Awaited<ReturnType<typeof createClient>>, 
 
 export async function setEventLogoAction(eventId: string, path: string | null): Promise<ActionState> {
   const ctx = await adminContext(eventId);
-  if (path !== null && !path.startsWith(`events/${eventId}/logo/`)) return { error: "Invalid logo path" };
   const supabase = await createClient();
+  if (path !== null && !isEventLogoPath(eventId, path)) {
+    // Only delete a file we know is this event's logo attempt. A path outside
+    // that folder is refused and left where it is.
+    if (path.startsWith(`events/${eventId}/logo/`)) {
+      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected logo", path, removeError));
+    }
+    return { error: "Invalid logo path" };
+  }
   if (path) {
     const { data: file } = await supabase.storage.from(BUCKET).download(path);
     if (!file) return { error: "Upload failed. Try again." };
@@ -233,7 +240,9 @@ export async function setEventLogoAction(eventId: string, path: string | null): 
     }
     await makeLogoMark(supabase, path, bytes);
   }
-  const { error } = await supabase.from("events").update({ logo_path: path }).eq("id", eventId);
+  // logo_path is not granted to authenticated (migration 37). The admin check
+  // above is the authorisation; the service role only writes the column.
+  const { error } = await createAdminClient().from("events").update({ logo_path: path }).eq("id", eventId);
   if (error) return { error: "Could not save the logo" };
   // Each upload has its own name, so a replaced logo can't be served from a
   // cached URL. Clear the one it replaced, and its mark.
@@ -537,7 +546,8 @@ export async function setAlbumCoverAction(albumId: string, mediaId: string): Pro
   const { data: album } = await supabase.from("albums").select("id, event_id").eq("id", albumId).maybeSingle();
   if (!album) return { error: "Album not found" };
   const ctx = await permContext(album.event_id, "manage_albums");
-  const { error } = await supabase.from("albums").update({ cover_media_id: mediaId, cover_path: null }).eq("id", albumId);
+  // cover_path changes are refused for the signed-in role (migration 37).
+  const { error } = await createAdminClient().from("albums").update({ cover_media_id: mediaId, cover_path: null }).eq("id", albumId);
   if (error) return { error: "Could not set the cover" };
   revalidatePath(`/admin/${ctx.event.handle}/albums/${albumId}`);
   revalidatePath(`/e/${ctx.event.handle}`, "layout");
@@ -549,10 +559,24 @@ export async function setAlbumCoverImageAction(albumId: string, path: string | n
   const { data: album } = await supabase.from("albums").select("id, event_id").eq("id", albumId).maybeSingle();
   if (!album) return { error: "Album not found" };
   const ctx = await permContext(album.event_id, "manage_albums");
-  if (path !== null && !path.startsWith(`events/${album.event_id}/covers/`)) return { error: "Invalid cover path" };
+  if (path !== null && !isAlbumCoverPath(album.event_id, albumId, path)) {
+    if (path.startsWith(`events/${album.event_id}/covers/`)) {
+      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected cover", path, removeError));
+    }
+    return { error: "Invalid cover path" };
+  }
+  if (path) {
+    const { data: file } = await supabase.storage.from(BUCKET).download(path);
+    if (!file) return { error: "Upload failed. Try again." };
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.byteLength > COVER_MAX_BYTES || !isRasterLogo(bytes) || looksLikeSvg(bytes)) {
+      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected cover", path, removeError));
+      return { error: "Use a PNG, JPG or WebP image" };
+    }
+  }
 
   const { data: before } = await supabase.from("albums").select("cover_path").eq("id", albumId).maybeSingle();
-  const { error } = await supabase.from("albums").update({ cover_path: path, cover_media_id: null }).eq("id", albumId);
+  const { error } = await createAdminClient().from("albums").update({ cover_path: path, cover_media_id: null }).eq("id", albumId);
   if (error) return { error: "Could not save the cover" };
   // Covers are uploaded under a new name each time (so a cached URL can't
   // show the old one); clear the file this replaced.

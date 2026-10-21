@@ -1,6 +1,21 @@
+import { readFileSync } from "node:fs";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { isPng, isRasterLogo, isWebp, logoRejection, looksLikeSvg, rasterLogoMark } from "@/lib/media/logo-file";
+import { ACCEPTED_TYPES, EVENT_MEDIA_MIME_TYPES } from "@/lib/media/constants";
+import {
+  MAX_INPUT_PIXELS,
+  isAlbumCoverPath,
+  isDecodablePhoto,
+  isEventLogoPath,
+  isHeic,
+  isPng,
+  isRasterLogo,
+  isWebp,
+  logoRejection,
+  looksLikeSvg,
+  rasterLogoMark,
+  sharpDecodeOptions,
+} from "@/lib/media/logo-file";
 
 const svg = new TextEncoder().encode(
   `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="#ec3013"/></svg>`,
@@ -65,5 +80,95 @@ describe("logo file gate", () => {
     const png = await sharp(svg, { density: 72 }).png().toBuffer();
     expect(isPng(new Uint8Array(png))).toBe(true);
     expect(logoRejection("events/abc/logo/logo.svg", svg)).toBe("Use a PNG, JPG or WebP logo");
+  });
+
+  it("accepts only the logo and cover paths the uploaders write", () => {
+    const eventId = "11111111-1111-4111-8111-111111111111";
+    const albumId = "22222222-2222-4222-8222-222222222222";
+    expect(isEventLogoPath(eventId, `events/${eventId}/logo/logo-1727000000000.png`)).toBe(true);
+    expect(isEventLogoPath(eventId, `events/${eventId}/logo/logo-1.jpeg`)).toBe(true);
+    expect(isEventLogoPath(eventId, `events/${eventId}/logo/logo-1.webp`)).toBe(true);
+    expect(isEventLogoPath(eventId, `events/${eventId}/logo/logo.png`)).toBe(false);
+    expect(isEventLogoPath(eventId, `events/${eventId}/logo/logo-1.svg`)).toBe(false);
+    expect(isEventLogoPath(eventId, `events/${eventId}/logo/logo-1.png/../../other.png`)).toBe(false);
+    expect(isEventLogoPath(eventId, `events/other/logo/logo-1.png`)).toBe(false);
+
+    expect(isAlbumCoverPath(eventId, albumId, `events/${eventId}/covers/${albumId}-1727000000000.jpg`)).toBe(true);
+    expect(isAlbumCoverPath(eventId, albumId, `events/${eventId}/covers/${albumId}-1.png`)).toBe(true);
+    expect(isAlbumCoverPath(eventId, albumId, `events/${eventId}/covers/cover.png`)).toBe(false);
+    expect(isAlbumCoverPath(eventId, albumId, `events/${eventId}/covers/${albumId}-1.svg`)).toBe(false);
+  });
+
+  it("treats photo signatures as decodable and SVG as not", () => {
+    const heic = new Uint8Array(12);
+    heic.set([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63]);
+    expect(isHeic(heic)).toBe(true);
+    expect(isDecodablePhoto(heic)).toBe(true);
+    expect(isDecodablePhoto(svg)).toBe(false);
+    expect(isRasterLogo(svg)).toBe(false);
+  });
+
+  it("caps input pixels above a 60MP frame and below sharp's default", async () => {
+    // 9504×6336 is a current 60MP full-frame file. 40 million would reject it.
+    expect(MAX_INPUT_PIXELS).toBeGreaterThanOrEqual(9504 * 6336);
+    expect(MAX_INPUT_PIXELS).toBe(80_000_000);
+    expect(MAX_INPUT_PIXELS).toBeLessThan(268_402_689);
+    expect(sharpDecodeOptions).toEqual({ limitInputPixels: MAX_INPUT_PIXELS, failOn: "error" });
+
+    const png = await sample("png");
+    const mark = await rasterLogoMark(png, 16);
+    expect(isWebp(new Uint8Array(mark))).toBe(true);
+
+    const wide = await sharp({ create: { width: 200, height: 50, channels: 3, background: "#fff" } }).jpeg().toBuffer();
+    await expect(sharp(wide, { limitInputPixels: 100, failOn: "error" }).metadata()).rejects.toThrow();
+  });
+});
+
+describe("raster media migration", () => {
+  const sql = readFileSync("supabase/migrations/20261021000037_raster_media.sql", "utf8");
+
+  it("revokes logo_path and constrains raster extensions without validating old rows", () => {
+    expect(sql).toContain("revoke update (logo_path) on table public.events from authenticated");
+    expect(sql).toContain("check (logo_path ~ '\\.(png|jpe?g|webp)$') not valid");
+    expect(sql).toContain("check (cover_path ~ '\\.(png|jpe?g|webp)$') not valid");
+    expect(sql).toContain("cover_path is set by the server");
+  });
+
+  it("allow-lists the gallery MIME types and leaves SVG out", () => {
+    for (const type of EVENT_MEDIA_MIME_TYPES) expect(sql).toContain(`'${type}'`);
+    for (const type of Object.keys(ACCEPTED_TYPES)) expect(EVENT_MEDIA_MIME_TYPES).toContain(type);
+    expect(sql).not.toContain("'image/svg+xml'");
+    expect(EVENT_MEDIA_MIME_TYPES).toEqual([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/heic",
+      "image/heif",
+      "video/mp4",
+      "video/quicktime",
+    ]);
+  });
+});
+
+describe("photo pipeline gates", () => {
+  const indexMedia = readFileSync("lib/faces/index-media.ts", "utf8");
+  const crop = readFileSync("app/api/faces/[matchId]/crop/route.ts", "utf8");
+  const actions = readFileSync("app/(app)/admin/actions.ts", "utf8");
+
+  it("checks a photo signature before sharp in the face job and the crop route", () => {
+    for (const source of [indexMedia, crop]) {
+      expect(source).toContain("isDecodablePhoto");
+      expect(source).toContain("sharpDecodeOptions");
+      expect(source).not.toMatch(/sharp\(\s*bytes\s*\)/);
+    }
+  });
+
+  it("writes logo and cover paths with the admin client after the path check", () => {
+    expect(actions).toContain("isEventLogoPath");
+    expect(actions).toContain("isAlbumCoverPath");
+    expect(actions).toContain('.update({ logo_path: path })');
+    expect(actions).toContain('.update({ cover_path: path, cover_media_id: null })');
+    expect(actions).toContain("createAdminClient().from(\"events\").update({ logo_path: path })");
+    expect(actions).toContain("createAdminClient().from(\"albums\").update({ cover_path: path, cover_media_id: null })");
   });
 });

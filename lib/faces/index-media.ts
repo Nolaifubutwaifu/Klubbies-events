@@ -1,6 +1,7 @@
 import "server-only";
 import { DeleteFacesCommand, IndexFacesCommand, type FaceRecord } from "@aws-sdk/client-rekognition";
 import sharp from "sharp";
+import { isDecodablePhoto, sharpDecodeOptions } from "@/lib/media/logo-file";
 import { BUCKET } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { countFaceCalls } from "@/lib/usage/faces";
@@ -21,7 +22,7 @@ export type IndexResult = { faces: number; skipped?: string };
  * keeps the request well inside the 5 MB inline-bytes limit.
  */
 async function toJpeg(bytes: Uint8Array): Promise<Uint8Array> {
-  const out = await sharp(bytes)
+  const out = await sharp(bytes, sharpDecodeOptions)
     .rotate()
     .resize(TRANSCODE_MAX_EDGE, TRANSCODE_MAX_EDGE, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: TRANSCODE_QUALITY })
@@ -68,7 +69,11 @@ export async function indexMedia(eventId: string, mediaId: string): Promise<Inde
   const path = media.display_path ?? media.storage_path;
   const { data: blob, error: downloadError } = await admin.storage.from(BUCKET).download(path);
   if (downloadError || !blob) throw new Error(`could not download ${path}: ${downloadError?.message ?? "no body"}`);
-  const jpeg = await toJpeg(new Uint8Array(await blob.arrayBuffer()));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  // Guest and organiser uploads land here. SVG and anything else that is not
+  // a photo signature never reaches sharp; the job completes without a retry.
+  if (!isDecodablePhoto(bytes)) return { faces: 0, skipped: "not a png, jpeg, webp or heic" };
+  const jpeg = await toJpeg(bytes);
 
   // Idempotency: the old rows go before the new ones are created.
   await admin.from("media_faces").delete().eq("media_id", mediaId);

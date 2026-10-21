@@ -22,6 +22,22 @@ const EXTENSION_TYPES: Record<string, string> = {
 export const ACCEPT_ATTRIBUTE = ".jpg,.jpeg,.png,.heic,.heif,.webp,.mp4,.mov,image/jpeg,image/png,image/heic,image/webp,video/mp4,video/quicktime";
 
 /**
+ * Content-Types written to the event_media bucket. The storage allow-list in
+ * migration 37 must stay in step with this: gallery originals (including HEIC
+ * and tus), WebP or JPEG derivatives, video posters, logos, covers, avatars
+ * and face selfies. SVG is intentionally absent.
+ */
+export const EVENT_MEDIA_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "video/mp4",
+  "video/quicktime",
+] as const;
+
+/**
  * The largest file anyone can upload. The product allows 500 MB (pricing
  * handoff §4), but Storage enforces its own per-file ceiling: 50 MB on the
  * Supabase Free plan. Anything above it was accepted here and then rejected

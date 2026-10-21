@@ -7,6 +7,24 @@ import sharp from "sharp";
 /** Same ceiling the uploader enforces. The browser check is not the boundary. */
 export const LOGO_MAX_BYTES = 5 * 1024 * 1024;
 
+/** Album cover uploads (AlbumEditPanel) stop at 10 MB. */
+export const COVER_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Sharp's default cap is 268402689 pixels (16383²). A current full-frame file
+ * is about 45–61MP — a Sony A7R V frame is 9504×6336 = 60,217,344 — so 40
+ * million would reject ordinary camera photos. 80 million clears that frame
+ * with room to spare and still refuses a small file that claims a far larger
+ * canvas.
+ */
+export const MAX_INPUT_PIXELS = 80_000_000;
+
+/** Shared by the logo badge and the photo pipelines that decode uploads. */
+export const sharpDecodeOptions = {
+  limitInputPixels: MAX_INPUT_PIXELS,
+  failOn: "error" as const,
+};
+
 const RASTER_EXT = /\.(png|jpe?g|webp)$/i;
 
 export function isRasterLogoPath(path: string): boolean {
@@ -50,6 +68,39 @@ export function isRasterLogo(bytes: Uint8Array): boolean {
   return isPng(bytes) || isJpeg(bytes) || isWebp(bytes);
 }
 
+/** ISO-BMFF brands sharp can decode for a HEIC/HEIF original. */
+const HEIF_BRANDS = new Set(["heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs", "mif1", "msf1"]);
+
+export function isHeic(bytes: Uint8Array): boolean {
+  if (bytes.length < 12) return false;
+  if (bytes[4] !== 0x66 || bytes[5] !== 0x74 || bytes[6] !== 0x79 || bytes[7] !== 0x70) return false;
+  const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
+  return HEIF_BRANDS.has(brand);
+}
+
+/**
+ * Bytes a photo pipeline may hand to sharp: the gallery's PNG, JPEG, WebP and
+ * HEIC/HEIF, and not SVG. Display copies are WebP (JPEG if the browser could
+ * not encode WebP). The original is the fallback when that copy is missing.
+ */
+export function isDecodablePhoto(bytes: Uint8Array): boolean {
+  return isRasterLogo(bytes) || isHeic(bytes);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** `events/<id>/logo/logo-<digits>.png|jpg|jpeg|webp`, as LogoUploader writes it. */
+export function isEventLogoPath(eventId: string, path: string): boolean {
+  return new RegExp(`^events/${escapeRegExp(eventId)}/logo/logo-\\d+\\.(png|jpe?g|webp)$`).test(path);
+}
+
+/** `events/<eventId>/covers/<albumId>-<digits>.png|jpg|jpeg|webp`. */
+export function isAlbumCoverPath(eventId: string, albumId: string, path: string): boolean {
+  return new RegExp(`^events/${escapeRegExp(eventId)}/covers/${escapeRegExp(albumId)}-\\d+\\.(png|jpe?g|webp)$`).test(path);
+}
+
 /**
  * SVG/XML sniff for the logo path. Raster magic wins, so a PNG whose metadata
  * happens to contain the characters "<svg" is still a PNG.
@@ -79,5 +130,8 @@ export function logoRejection(path: string, bytes: Uint8Array): string | null {
 
 /** The 96px badge. Callers pass bytes that already cleared logoRejection. */
 export async function rasterLogoMark(bytes: Uint8Array, size: number): Promise<Buffer> {
-  return sharp(bytes, { density: 300 }).resize(size, size, { fit: "cover" }).webp({ quality: 88 }).toBuffer();
+  return sharp(bytes, { ...sharpDecodeOptions, density: 300 })
+    .resize(size, size, { fit: "cover" })
+    .webp({ quality: 88 })
+    .toBuffer();
 }

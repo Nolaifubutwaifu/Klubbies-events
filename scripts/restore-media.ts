@@ -39,7 +39,7 @@ async function toBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
 function contentTypeOf(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase();
   return (
-    { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", mp4: "video/mp4", mov: "video/quicktime" }[
+    { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", heif: "image/heif", mp4: "video/mp4", mov: "video/quicktime" }[
       ext ?? ""
     ] ?? "application/octet-stream"
   );
