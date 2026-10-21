@@ -4,9 +4,31 @@ import type { Metadata } from "next";
 // the production host so canonicals and the sitemap never point at a preview.
 export const SITE_URL = "https://events.klubbies.app";
 export const SITE_NAME = "Klubbies Events";
+export const INSTAGRAM_URL = "https://www.instagram.com/klubbies.events/";
 
 /** Every page that should be in Google, for app/sitemap.ts. */
-export const PUBLIC_PATHS = ["/", "/how-it-works", "/features", "/pricing", "/faq", "/support", "/privacy", "/terms", "/refunds"];
+export const PUBLIC_PATHS = [
+  "/",
+  "/how-it-works",
+  "/features",
+  "/pricing",
+  "/faq",
+  "/support",
+  "/privacy",
+  "/terms",
+  "/refunds",
+  // Written to be found (audit F18 to F20); each also has a card in lib/copy/pages.ts.
+  "/about",
+  "/brisbane",
+  "/conferences",
+  "/student-clubs",
+  "/photographers",
+  "/face-search-privacy",
+  "/guides",
+  "/guides/share-photos-after-a-conference",
+  "/guides/google-drive-vs-private-event-gallery",
+  "/guides/get-event-photos-to-attendees-fast",
+];
 
 /** Signed-in, private and one-off pages: kept out of search results. */
 export const NO_INDEX: Metadata["robots"] = { index: false, follow: false };

@@ -5,10 +5,13 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 /* Geist carries everything functional; Instrument Serif is the display voice
-   for event names and attendee page titles, and ships one weight (400). */
+   for event names and attendee page titles, and ships one weight (400).
+   `subsets` only picks what is preloaded: latin-ext files are still served,
+   on demand, for names that need them. Mono is never above the fold, so it
+   isn't preloaded at all (audit F22: seven preloads became three). */
 const geist = Geist({
   variable: "--font-geist",
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -16,11 +19,12 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
   weight: "400",
   style: ["normal", "italic"],
   display: "swap",

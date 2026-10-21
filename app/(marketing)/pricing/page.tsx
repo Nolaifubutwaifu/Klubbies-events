@@ -108,13 +108,22 @@ export default async function PricingPage() {
           <div className="kb-wrap grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { title: "More guests than you planned?", body: "They can usually keep joining for a short while, and we'll email you. Moving up before that point costs less than after it." },
-              { title: "Student clubs", body: `Club prices from A$${TIERS.small.price.club} with your campus club code. Enter it when you choose your event's size.` },
+              {
+                title: "Student clubs",
+                body: `Club prices from A$${TIERS.small.price.club} with your campus club code. Enter it when you choose your event's size.`,
+                link: { href: "/student-clubs", label: "For student clubs" },
+              },
               { title: "Announcement email, sent for you", body: "On paid sizes we send your announcement to every guest, in your own words." },
               { title: "Videos", body: "Video counts by length: 1 photo per 6 seconds, so a minute counts as 10." },
             ].map((card) => (
               <div key={card.title} className="flex flex-col gap-2.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-7">
                 <h3 className="text-[18px] font-semibold">{card.title}</h3>
                 <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">{card.body}</p>
+                {"link" in card && card.link ? (
+                  <Link href={card.link.href} className="mt-auto text-[15px] font-semibold">
+                    {card.link.label}
+                  </Link>
+                ) : null}
               </div>
             ))}
           </div>
