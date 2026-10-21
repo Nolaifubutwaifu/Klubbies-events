@@ -178,10 +178,10 @@ export default async function ChristmasPartiesPage() {
       path="/christmas-parties"
       inApp={inApp}
       wideTitle
-      eyebrow="For Christmas parties and end-of-year functions"
+      eyebrow={<>For Christmas parties and end&#8209;of&#8209;year functions</>}
       title={
         <>
-          Work Christmas party photos. Each guest finds theirs with <em className="kb-accent">one selfie</em>.
+          Work Christmas party photos. Each&nbsp;guest finds theirs with <em className="kb-accent">one selfie</em>.
         </>
       }
       lead="A private gallery under your brand for the end-of-year party. Your photographer uploads through their own link, guests scan the QR code and take a selfie, and each of them finds the photos they're in, at full quality. Nothing is public."

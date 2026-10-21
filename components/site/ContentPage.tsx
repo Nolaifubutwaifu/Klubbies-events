@@ -36,7 +36,7 @@ export function ContentPage({
   wideTitle = false,
 }: {
   path: string;
-  eyebrow: string;
+  eyebrow: ReactNode;
   title: ReactNode;
   lead: ReactNode;
   /** Up to four photos beside the heading. */
@@ -100,7 +100,7 @@ export function ContentPage({
         <section className="pb-14 pt-12 sm:pb-20 sm:pt-24">
           <div className="kb-wrap flex flex-col gap-6">
             {titleAbove ? heading : null}
-            <div className={`grid ${titleAbove ? "items-start" : "items-center"} ${photos?.length ? "gap-14 lg:grid-cols-[1.1fr_1fr]" : ""}`}>
+            <div className={`grid ${titleAbove ? "items-start lg:mt-4" : "items-center"} ${photos?.length ? "gap-14 lg:grid-cols-[1.1fr_1fr]" : ""}`}>
               <div className="flex flex-col gap-6">
                 {titleAbove ? null : heading}
                 <p className="kb-lead m-0 max-w-[56ch]">{lead}</p>
@@ -144,7 +144,9 @@ export function ContentPage({
               {sections.map((section) => (
                 <section key={section.title} className="flex flex-col gap-4 border-t border-[color:var(--kb-line)] py-9 first:border-t-0 first:pt-0">
                   <h2 className="text-[28px] font-semibold tracking-[-0.015em] max-sm:text-[24px]">{section.title}</h2>
-                  <div className="flex flex-col gap-4 text-[17px] leading-[1.65] text-[color:var(--kb-ink-2)]">{section.body}</div>
+                  <div className="flex flex-col gap-4 text-[17px] leading-[1.65] text-[color:var(--kb-ink-2)] [&_a:not(.btn)]:underline [&_a:not(.btn)]:underline-offset-4">
+                    {section.body}
+                  </div>
                 </section>
               ))}
             </article>

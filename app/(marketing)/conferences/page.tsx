@@ -73,7 +73,7 @@ export default async function ConferencesPage() {
       eyebrow="For conferences, awards nights and work functions"
       title={
         <>
-          Conference and corporate event photo sharing, with every guest&apos;s photos <em className="kb-accent">found</em>.
+          Conference and corporate event <span className="sm:whitespace-nowrap">photo sharing</span>, with every guest&apos;s photos <em className="kb-accent">found</em>.
         </>
       }
       lead="A private gallery under your brand for conferences, awards nights, Christmas parties and other work functions. Photographers upload through their own links as the event runs, and each guest takes a selfie to find the photos they're in, at full quality."
@@ -209,7 +209,7 @@ export default async function ConferencesPage() {
         },
       ]}
       faqs={faqs}
-      related={cards("/christmas-parties", "/guides/share-photos-after-a-conference", "/photographers")}
+      related={cards("/christmas-parties", "/photographers", "/guides/share-photos-after-a-conference")}
       cta={{
         title: "Ready for your next event?",
         lead: "Create the event now and add the photographers later.",
