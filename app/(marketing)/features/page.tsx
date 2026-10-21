@@ -121,9 +121,14 @@ export default async function FeaturesPage() {
                 </div>
               ))}
             </div>
-            <Link href="/privacy" className="self-start font-semibold !text-white">
-              Read the privacy policy
-            </Link>
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
+              <Link href="/face-search-privacy" className="font-semibold !text-white">
+                How face search works
+              </Link>
+              <Link href="/privacy" className="font-semibold !text-white">
+                Read the privacy policy
+              </Link>
+            </div>
           </div>
         </section>
 

@@ -48,7 +48,7 @@ export const PRICE = {
 
 export const FACE = {
   title: "Every attendee finds their own photos",
-  lead: "One selfie and Klubbies Events shows each attendee the photos they're in, across every album. Nobody scrolls through 2,000 photos looking for themselves.",
+  lead: "One selfie and facial recognition shows each attendee the event photos they're in, across every album. Nobody scrolls through 2,000 photos looking for themselves.",
   points: [
     {
       title: "Their choice",
@@ -173,7 +173,7 @@ export const FAQS: { q: string; a: string; group: FaqGroup }[] = [
   {
     q: "How does face search handle consent?",
     group: "Photos and privacy",
-    a: "Every attendee sees a notice that faces are analysed before they see any photos. Being findable is separate and optional: only attendees who add their own selfie are matched, and only they see the results.",
+    a: "Face search uses facial recognition, so every attendee sees a notice that faces are analysed before they see any photos. Being findable is separate and optional: only attendees who add their own selfie are matched, and only they see the results.",
   },
   {
     q: "What does it cost?",

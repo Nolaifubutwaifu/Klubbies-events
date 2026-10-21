@@ -12,19 +12,19 @@ The sample attendee ("you") is the man in the mustard jacket. `selfie.webp` is h
 | File | Size | Pexels photo page | Title on Pexels | Photographer | Licence | Role on the site |
 | --- | --- | --- | --- | --- | --- | --- |
 | selfie.webp | 480x480 | https://www.pexels.com/photo/36729935/ | Young Friends Taking a Sunset Selfie Outdoors | Vitaly Gariev | Pexels License | Selfie avatar: face crop of the recurring person (mustard jacket). Displays up to 170px, so the file is 480px square. |
-| sq-5.webp | 600x600 | https://www.pexels.com/photo/36729902/ | Group of Friends Enjoying Rooftop Party | Vitaly Gariev | Pexels License | You: hero grid, face search match, sign-in, upload row, features, how it works download |
-| sq-4.webp | 600x600 | https://www.pexels.com/photo/36729937/ | Friends Taking Selfie on Urban Rooftop | Vitaly Gariev | Pexels License | You: hero grid, face search match, photo strip, sign-in, features, how it works download |
-| sq-9.webp | 600x600 | https://www.pexels.com/photo/36729907/ | Group of Friends Celebrating Outdoors Together | Vitaly Gariev | Pexels License | You: hero grid, face search match, photo strip, sign-in, how it works download |
-| sq-10.webp | 600x600 | https://www.pexels.com/photo/36729900/ | Cheerful Friends Enjoying Rooftop Party with City View | Vitaly Gariev | Pexels License | You: hero grid, sign-in panel, how it works download |
-| sq-1.webp | 600x600 | https://www.pexels.com/photo/36729889/ | Group of Friends Enjoying Rooftop Gathering | Vitaly Gariev | Pexels License | You: hero grid, sign-in panel, how it works download |
+| sq-5.webp | 600x600 | https://www.pexels.com/photo/36729902/ | Group of Friends Enjoying Rooftop Party | Vitaly Gariev | Pexels License | You: hero grid, face search match, sign-in, upload row, features, how it works download, /student-clubs |
+| sq-4.webp | 600x600 | https://www.pexels.com/photo/36729937/ | Friends Taking Selfie on Urban Rooftop | Vitaly Gariev | Pexels License | You: hero grid, face search match, photo strip, sign-in, features, how it works download, /student-clubs |
+| sq-9.webp | 600x600 | https://www.pexels.com/photo/36729907/ | Group of Friends Celebrating Outdoors Together | Vitaly Gariev | Pexels License | You: hero grid, face search match, photo strip, sign-in, how it works download, /student-clubs |
+| sq-10.webp | 600x600 | https://www.pexels.com/photo/36729900/ | Cheerful Friends Enjoying Rooftop Party with City View | Vitaly Gariev | Pexels License | You: hero grid, sign-in panel, how it works download, /student-clubs, /brisbane |
+| sq-1.webp | 600x600 | https://www.pexels.com/photo/36729889/ | Group of Friends Enjoying Rooftop Gathering | Vitaly Gariev | Pexels License | You: hero grid, sign-in panel, how it works download, /brisbane |
 | cover-awards.webp | 800x600 | https://www.pexels.com/photo/36729905/ | Cheerful Group of Friends Taking a Selfie Outdoors | Vitaly Gariev | Pexels License | You: hero grid, first tile of the photo strip |
-| sq-2.webp | 600x600 | https://www.pexels.com/photo/36729931/ | Group of Friends Celebrating on Rooftop Party | Vitaly Gariev | Pexels License | You: hero grid, how it works download |
-| sq-3.webp | 600x600 | https://www.pexels.com/photo/36729918/ | Joyful Group Selfie at Sunset Outdoors | Vitaly Gariev | Pexels License | You: hero grid, sign-in panel |
+| sq-2.webp | 600x600 | https://www.pexels.com/photo/36729931/ | Group of Friends Celebrating on Rooftop Party | Vitaly Gariev | Pexels License | You: hero grid, how it works download, /brisbane |
+| sq-3.webp | 600x600 | https://www.pexels.com/photo/36729918/ | Joyful Group Selfie at Sunset Outdoors | Vitaly Gariev | Pexels License | You: hero grid, sign-in panel, /brisbane |
 | sq-11.webp | 600x600 | https://www.pexels.com/photo/36729914/ | Diverse Group of Friends Taking a Selfie Outdoors | Vitaly Gariev | Pexels License | You: hero grid |
-| sq-6.webp | 600x600 | https://www.pexels.com/photo/36729893/ | Friends Enjoying Rooftop Party in Summer | Vitaly Gariev | Pexels License | Not you: face search (dimmed), photo strip, upload row |
-| sq-7.webp | 600x600 | https://www.pexels.com/photo/36729885/ | Friends Having Fun at Rooftop Party | Vitaly Gariev | Pexels License | Not you: face search (dimmed), photo strip, features card, upload row |
-| sq-8.webp | 600x600 | https://www.pexels.com/photo/36729894/ | Group of Friends Enjoying Rooftop Party | Vitaly Gariev | Pexels License | Not you: face search (dimmed), photo strip |
-| cover-drinks.webp | 800x600 | https://www.pexels.com/photo/36729927/ | Friends Enjoying Rooftop Party with Music | Vitaly Gariev | Pexels License | You, spare: not referenced by the site today |
+| sq-6.webp | 600x600 | https://www.pexels.com/photo/36729893/ | Friends Enjoying Rooftop Party in Summer | Vitaly Gariev | Pexels License | Not you: face search (dimmed), photo strip, upload row, /photographers |
+| sq-7.webp | 600x600 | https://www.pexels.com/photo/36729885/ | Friends Having Fun at Rooftop Party | Vitaly Gariev | Pexels License | Not you: face search (dimmed), photo strip, features card, upload row, /photographers |
+| sq-8.webp | 600x600 | https://www.pexels.com/photo/36729894/ | Group of Friends Enjoying Rooftop Party | Vitaly Gariev | Pexels License | Not you: face search (dimmed), photo strip, /photographers |
+| cover-drinks.webp | 800x600 | https://www.pexels.com/photo/36729927/ | Friends Enjoying Rooftop Party with Music | Vitaly Gariev | Pexels License | /photographers photo grid |
 | sq-12.webp | 600x600 | https://www.pexels.com/photo/36729929/ | Friends Enjoying Rooftop Party with Guitar | Vitaly Gariev | Pexels License | You, spare: not referenced by the site today |
 
 Optional credit line if wanted (not required): "Sample photos: Vitaly Gariev on Pexels".

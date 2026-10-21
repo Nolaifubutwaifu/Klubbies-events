@@ -45,13 +45,15 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
         <section className="pb-16 pt-12 sm:pb-24 sm:pt-[88px]">
           <div className="kb-wrap grid items-center gap-16 lg:grid-cols-2">
             <div className="flex flex-col gap-7">
-              <span className="kb-eyebrow">Private photo galleries for events</span>
-              <h1 className="kb-h1 max-w-[13ch]">
+              {/* The search words sit in the h1 (audit F14); the headline keeps its look as the line under it. */}
+              <h1 className="kb-eyebrow">Event photo sharing with face search</h1>
+              <p className="kb-h1 max-w-[13ch]">
                 Every photo from your event, in every <em className="kb-accent">attendee&apos;s</em> hands.
-              </h1>
+              </p>
               <p className="kb-lead m-0 max-w-[50ch]">
-                Photographers upload through their own links. Attendees scan a QR code and take a selfie, and each of
-                them gets the photos they&apos;re in, at full quality, under your brand.
+                A private photo gallery for your event. Photographers upload through their own links. Attendees scan a
+                QR code and take a selfie, and facial recognition shows each of them the photos they&apos;re in, at full
+                quality, under your brand.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/start" className="btn btn-primary btn-lg no-underline">
@@ -158,7 +160,9 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                   </li>
                 ))}
               </ul>
-              <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">{FACE.caveat}</p>
+              <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
+                {FACE.caveat} <Link href="/face-search-privacy">How face search handles privacy</Link>.
+              </p>
             </div>
           </div>
         </section>

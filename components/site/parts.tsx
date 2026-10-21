@@ -68,11 +68,14 @@ export function FeatureIcon({ icon }: { icon: Feature["icon"] }) {
 
 const EVENT_TEAL = "#0e6e66";
 
-/** A marketing photo by name (public/marketing). */
-export function Photo({ name, className = "", sizes = "160px" }: { name: string; className?: string; sizes?: string }) {
+/**
+ * A marketing photo by name (public/marketing). Decorative unless it gets alt
+ * text; give it some where the photo stands on its own, for image search.
+ */
+export function Photo({ name, alt, className = "", sizes = "160px" }: { name: string; alt?: string; className?: string; sizes?: string }) {
   return (
-    <span className={`relative block overflow-hidden bg-[color:var(--kb-mist)] ${className}`} aria-hidden>
-      <Image src={`/marketing/${name}.webp`} alt="" fill sizes={sizes} className="object-cover" />
+    <span className={`relative block overflow-hidden bg-[color:var(--kb-mist)] ${className}`} aria-hidden={alt ? undefined : true}>
+      <Image src={`/marketing/${name}.webp`} alt={alt ?? ""} fill sizes={sizes} className="object-cover" />
     </span>
   );
 }
@@ -93,7 +96,7 @@ export function HeroShowcase() {
   return (
     <div
       role="img"
-      aria-label="The attendee's Your photos screen on a phone"
+      aria-label="An attendee's event photo gallery on a phone, showing the photos face search found for them"
       className="relative flex h-[520px] items-center justify-center overflow-hidden rounded-[20px] bg-[color:var(--kb-night)] sm:h-[620px]"
     >
       <span
@@ -315,7 +318,11 @@ export function NightCta({
 /** The share kit, drawn: a tilted A4 poster and the announcement email. */
 export function ShareKitVisual() {
   return (
-    <div aria-hidden className="relative h-[460px] min-w-0 overflow-hidden rounded-[20px] bg-[color:var(--kb-sand)] sm:h-[520px]">
+    <div
+      role="img"
+      aria-label="A QR code poster and announcement email that send attendees to the event's photo gallery"
+      className="relative h-[460px] min-w-0 overflow-hidden rounded-[20px] bg-[color:var(--kb-sand)] sm:h-[520px]"
+    >
       <div className="absolute left-6 top-8 flex h-[410px] w-[290px] -rotate-3 flex-col items-center gap-3.5 rounded-[4px] bg-white p-7 text-center shadow-[0_30px_60px_-30px_rgb(22_24_29/0.4)] sm:left-12 sm:top-12">
         <span className="flex h-12 w-12 items-center justify-center rounded-[10px] font-bold text-white" style={{ background: EVENT_TEAL }}>
           BPS
