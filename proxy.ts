@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SOURCE_COOKIE, SOURCE_TAG } from "@/lib/attribution";
 import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, safeNextPath } from "@/lib/auth/next-path";
+import { buildCsp, permissionsPolicy, reportingEndpoints } from "@/lib/security/csp";
 import { SESSION_COOKIE_OPTIONS, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
 const PROTECTED = /^\/(c|admin|events|account|ops)(\/|$)/;
@@ -11,6 +12,16 @@ const DOWNLOADS = /^\/api\/(albums\/[^/]+\/zip|events\/[^/]+\/me\/zip)$/;
 // Deeper event pages (an album, a photo) that the event layout sends to
 // sign-in; remembered so the visitor lands back on them.
 const EVENT_DEEP = /^\/e\/[^/]+\/.+/;
+
+// Phase 1 reports only. Phase 2: "Content-Security-Policy".
+const CSP_HEADER = "Content-Security-Policy-Report-Only";
+
+function secure(response: NextResponse, csp: string, pathname: string): NextResponse {
+  response.headers.set(CSP_HEADER, csp);
+  response.headers.set("Reporting-Endpoints", reportingEndpoints());
+  response.headers.set("Permissions-Policy", permissionsPolicy(pathname));
+  return response;
+}
 
 function remember(response: NextResponse, path: string | null): NextResponse {
   const safe = safeNextPath(path);
@@ -28,9 +39,18 @@ function remember(response: NextResponse, path: string | null): NextResponse {
 
 // Refreshes the Supabase session cookie on every navigation and does an
 // optimistic redirect for signed-out visitors. Real authorisation happens in
-// pages, route handlers and RLS.
+// pages, route handlers and RLS. Also attaches the per-request CSP nonce.
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildCsp(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  // Next reads the nonce from Content-Security-Policy, then from this
+  // Report-Only header (app-render parseRequestHeaders).
+  requestHeaders.set(CSP_HEADER, csp);
+  const next = () => NextResponse.next({ request: { headers: requestHeaders } });
+
+  let response = next();
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookieOptions: SESSION_COOKIE_OPTIONS,
@@ -38,7 +58,10 @@ export async function proxy(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll: (toSet) => {
         for (const { name, value } of toSet) request.cookies.set(name, value);
-        response = NextResponse.next({ request });
+        // next() copies requestHeaders, not the mutated request, so the
+        // refreshed session has to be on that header or this render misses it.
+        requestHeaders.set("cookie", request.cookies.toString());
+        response = next();
         for (const { name, value, options } of toSet) response.cookies.set(name, value, options);
       },
     },
@@ -54,13 +77,13 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     url.search = "";
-    return rememberSource(request, remember(NextResponse.redirect(url), here));
+    return secure(rememberSource(request, remember(NextResponse.redirect(url), here)), csp, pathname);
   }
   if (!data?.claims && navigating && EVENT_DEEP.test(pathname)) remember(response, here);
   // requireUser() sends people to /signin?next=…
   if (pathname === "/signin") remember(response, request.nextUrl.searchParams.get("next"));
 
-  return rememberSource(request, response);
+  return secure(rememberSource(request, response), csp, pathname);
 }
 
 /**
@@ -78,6 +101,6 @@ function rememberSource(request: NextRequest, response: NextResponse): NextRespo
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|api/cron|api/stripe|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|api/cron|api/stripe|api/csp-report|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)",
   ],
 };

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { TIERS } from "@/lib/billing/plans";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -51,7 +52,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // The nonce is chosen per request. A prerendered document (the 404, the
+  // account-deleted page) has no nonce on its scripts, so every page renders
+  // when the request arrives.
+  await connection();
   return (
     // The iPhone app adds "kb-splash" here before React loads, while its
     // loading screen is up (ios/KlubbiesEvents/WebViewController.swift).
