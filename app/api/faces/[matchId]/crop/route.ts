@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { z } from "zod";
-import { faceSquare } from "@/lib/faces/crop";
-import { isDecodablePhoto, sharpDecodeOptions } from "@/lib/media/logo-file";
+import { faceSquare, uprightDimensions } from "@/lib/faces/crop";
+import { cropDecodeOptions, isDecodablePhoto } from "@/lib/media/logo-file";
 import { asBox } from "@/lib/faces/queries";
 import { BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -43,13 +43,17 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/faces/[matc
   if (!isDecodablePhoto(bytes)) return new Response(null, { status: 422 });
 
   try {
-    // rotate() first, the same as the indexer, so the box and the pixels agree
-    // on which way is up when the fallback is an original with EXIF rotation.
-    const upright = await sharp(bytes, sharpDecodeOptions)
+    // Header only, then one decode. Rotating into a buffer and decoding it
+    // again held two copies of the frame. Four of those at the gallery cap
+    // sit over 2 GB. The box is in upright pixels, so a sideways EXIF
+    // orientation swaps the axes before rotate+extract run in one pipeline.
+    // 40 million pixels keeps four parallel crops well under 2 GB.
+    const header = await sharp(bytes, cropDecodeOptions).metadata();
+    if (!header.width || !header.height) return new Response(null, { status: 422 });
+    const upright = uprightDimensions(header.width, header.height, header.orientation);
+    const { left, top, size } = faceSquare(box, upright.width, upright.height);
+    const crop = await sharp(bytes, cropDecodeOptions)
       .rotate()
-      .toBuffer({ resolveWithObject: true });
-    const { left, top, size } = faceSquare(box, upright.info.width, upright.info.height);
-    const crop = await sharp(upright.data, sharpDecodeOptions)
       .extract({ left, top, width: size, height: size })
       .resize(CROP_SIZE, CROP_SIZE)
       .webp({ quality: 80 })

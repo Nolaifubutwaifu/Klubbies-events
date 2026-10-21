@@ -160,10 +160,18 @@ export async function runBackupDrain(budgetMs: number): Promise<BackupDrainResul
         await copyPath(event.logo_path);
         const mark = logoMarkPath(event.logo_path);
         await copyPath(mark).catch(() => undefined); // older logos have no mark
-        await admin.from("events").update({ logo_backed_up_path: event.logo_path }).eq("id", event.id);
+        // The client does not throw. Counting this as copied when the mark
+        // failed left logo_path !== logo_backed_up_path, so the next hour
+        // copied the file again and logged nothing.
+        const { error: markError } = await admin
+          .from("events")
+          .update({ logo_backed_up_path: event.logo_path })
+          .eq("id", event.id);
+        if (markError) throw markError;
         result.logos += 1;
       } catch (error) {
         console.error("logo backup failed", event.id, error);
+        result.failed += 1;
       }
     }
   }
