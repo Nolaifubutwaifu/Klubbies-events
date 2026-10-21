@@ -7,12 +7,13 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Conference Photo Sharing and Event Galleries",
-  description: "A private, branded photo gallery for conferences and corporate events in Australia. Delegates scan a QR code, take a selfie and download every photo they're in.",
+  title: "Conference and Corporate Event Photos",
+  description:
+    "Private, branded galleries for conference and corporate event photos. Guests scan a QR code, take a selfie and download every photo they're in.",
   path: "/conferences",
 });
 
-/** Conferences and corporate events: the revenue lane (docs/handoff-marketing.md, section 2). */
+/** Conferences, awards nights and work functions (SEO plan, 21 Oct 2026). */
 export default async function ConferencesPage() {
   const inApp = await isNativeAppRequest();
   const { free, small, medium, large } = TIERS;
@@ -38,19 +39,44 @@ export default async function ConferencesPage() {
             a: `By the number of delegates who join the gallery, one payment per event: A$${small.price.standard} for up to ${small.guests}, A$${medium.price.standard} for up to ${medium.guests} and A$${large.price.standard} for up to ${large.guests.toLocaleString("en-AU")}. Up to ${free.guests} is free. For more than ${large.guests.toLocaleString("en-AU")}, ask us for a quote.`,
           },
         ]),
+    {
+      q: "Can we use it for a Christmas party or awards night?",
+      a: "Yes. It works the same way for any work function: one link and QR code, photographers upload through their own links, and each guest finds their own photos with a selfie.",
+    },
+    ...(inApp
+      ? []
+      : [
+          {
+            q: "Do guests pay or need an app?",
+            a: "No. Guests never pay, and everything works in a phone or laptop browser.",
+          },
+        ]),
+    {
+      q: "How soon do guests get their photos?",
+      a: "Photos appear in the gallery as the photographer uploads them, so guests can have them the same night.",
+    },
+    {
+      q: "Can someone have a photo of themselves taken down?",
+      a: "Yes. It's hidden as soon as they ask, and the organiser decides within 7 days.",
+    },
+    {
+      q: "Can we see who has looked at the photos?",
+      a: "Yes. Every view, download and zip download is logged, and the event's activity page shows who opened what.",
+    },
   ];
 
   return (
     <ContentPage
       path="/conferences"
       inApp={inApp}
-      eyebrow="For conferences and corporate events"
+      wideTitle
+      eyebrow="For conferences, awards nights and work functions"
       title={
         <>
-          Conference photo sharing, with every delegate&apos;s photos <em className="kb-accent">found</em>.
+          Conference and corporate event <span className="sm:whitespace-nowrap">photo sharing</span>, with every guest&apos;s photos <em className="kb-accent">found</em>.
         </>
       }
-      lead="A private gallery under your brand. Photographers upload through their own links during the event, and each delegate takes a selfie to find the photos they're in: keynote, breakouts, drinks and headshots."
+      lead="A private gallery under your brand for conferences, awards nights, Christmas parties and other work functions. Photographers upload through their own links as the event runs, and each guest takes a selfie to find the photos they're in, at full quality."
       facts={[
         { label: "Access", title: "Registered delegates only", body: "Import the list from your ticketing platform." },
         { label: "Brand", title: "Your logo and colour", body: "On the join page, gallery and poster." },
@@ -63,9 +89,10 @@ export default async function ConferencesPage() {
           body: (
             <>
               <p>
-                A two-day conference can produce 3,000 photos. Most organisers post a handful to LinkedIn, send a Dropbox
-                link in the wrap-up email, and that&apos;s where the photos stop. Delegates don&apos;t scroll through 3,000
-                images to find the one of them on stage, and sponsors never see the shots of their booth.
+                A conference produces hundreds or thousands of photos. Most organisers post a handful to LinkedIn, send a
+                Dropbox link in the wrap-up email, and that&apos;s where the photos stop. Delegates don&apos;t scroll
+                through the whole folder to find the one of them on stage, and sponsors never see the shots of their
+                booth.
               </p>
               <p>
                 Klubbies Events turns that folder into a gallery each delegate can search for themselves. One selfie, and
@@ -87,9 +114,48 @@ export default async function ConferencesPage() {
                 the photographer who took it.
               </p>
               <p>
-                Publish an album when it&apos;s ready, or schedule it. Delegates get an email each time a new album is
-                published, so the keynote photos can go out on day one while the drinks photos are still coming in.
+                Publish an album when it&apos;s ready, or schedule an album to go live. Delegates get an email each time a
+                new album is published, so the keynote photos can go out on day one while the drinks photos are still
+                coming in.
               </p>
+            </>
+          ),
+        },
+        {
+          title: "Christmas parties and end-of-year functions",
+          body: (
+            <p>
+              The end-of-year party is where most staff photos get taken, and where a shared Drive link is the worst fit.
+              Only confirmed emails get in, face search is opt in, and anyone can ask for a photo of themselves to come
+              down. Photos land in the gallery as the photographer uploads them, so guests can have them the same night.
+              More on <Link href="/christmas-parties">work Christmas party photos</Link>.
+            </p>
+          ),
+        },
+        {
+          title: "Awards nights and product launches",
+          body: (
+            <p>
+              Make one album per part of the night: arrivals, presentations, winners, dance floor. Each photographer gets
+              their own upload link, and every photo is credited to them by name. Winners find their photos on stage with
+              one selfie, at full quality, under your brand rather than ours.
+            </p>
+          ),
+        },
+        {
+          title: "Who it's for",
+          body: (
+            <>
+              <p>
+                Event managers, marketing and HR leads, and the agencies who run events for them, in Brisbane and across
+                Australia. See <Link href="/brisbane">event photo sharing in Brisbane</Link>.
+              </p>
+              {inApp ? null : (
+                <p>
+                  You pay once per event, sized by the guests who join. Guests never pay. Up to {free.guests} guests and{" "}
+                  {free.photos} photos is free. See <Link href="/pricing">pricing</Link>.
+                </p>
+              )}
             </>
           ),
         },
@@ -98,13 +164,13 @@ export default async function ConferencesPage() {
           body: (
             <>
               <p>
-                Every event has one link and one QR code that never change. The share kit gives you the code as PNG and
-                SVG for your slides, a printable A4 poster for the registration desk, and an announcement email you can
-                edit for the wrap-up.
+                Every event has one link and one QR code. The share kit gives you the code as PNG and SVG for your slides,
+                a printable A4 poster for the registration desk, and an announcement email you can edit for the wrap-up.
               </p>
               <p>
-                Delegates scan the code, enter their name and email, and type the 8-digit code we send them. No password
-                and no app to install. If you imported a guest list, only registered emails get a code.
+                Delegates scan the code, enter their name and email, and type the 8-digit code we send them. It works in
+                any phone or laptop browser, with no password and no app to install. If you imported a guest list, only
+                registered emails get a code.
               </p>
             </>
           ),
@@ -115,13 +181,14 @@ export default async function ConferencesPage() {
             <>
               <p>
                 Photos, attendee details and faceprints are stored in Sydney, Australia. Nothing is public or indexed by
-                search engines. Every view and download is logged, so you can see who opened what.
+                search engines. Every view, download and zip download is logged, and the event&apos;s activity page shows
+                you who opened what.
               </p>
               <p>
-                Face search can be switched off for the whole event in its settings. When it&apos;s on, every attendee sees
-                a notice before any photos, and anyone can ask for a photo to come down: it hides straight away while you
-                decide. The full detail is on <Link href="/face-search-privacy">face search and privacy</Link> and in the{" "}
-                <Link href="/privacy">privacy policy</Link>.
+                Face search is opt in, and only you see your matches: nobody can search for another person, not even the
+                organiser. Anyone can ask for a photo of themselves to come down. It&apos;s hidden at once, and the
+                organiser decides within 7 days. The full detail is on <Link href="/face-search-privacy">face search and privacy</Link>{" "}
+                and in the <Link href="/privacy">privacy policy</Link>.
               </p>
             </>
           ),
@@ -134,19 +201,19 @@ export default async function ConferencesPage() {
                 "Create the event with its name, dates and venue. Add your logo and brand colour.",
                 "Import the delegate list, or leave it open to anyone with the link.",
                 "Create the albums and send each photographer their upload links.",
-                "Put the QR code on the closing slide and the registration desk poster.",
-                "Publish albums as they're ready, and watch joins and downloads per album.",
+                "Put the QR code on the closing slide and the A4 poster on the registration desk.",
+                "Publish albums as they're ready, or schedule an album to go live, and watch joins and downloads per album on the activity page.",
               ]}
             />
           ),
         },
       ]}
       faqs={faqs}
-      related={cards("/guides/share-photos-after-a-conference", "/brisbane", "/photographers")}
+      related={cards("/christmas-parties", "/photographers", "/guides/share-photos-after-a-conference")}
       cta={{
-        title: "Ready for your next conference?",
-        lead: "Create the event now and add the photographers later. Nothing goes out until you publish an album.",
-        points: ["Delegate list import", "Your logo and colour on every screen", "Gallery open for 12 months"],
+        title: "Ready for your next event?",
+        lead: "Create the event now and add the photographers later.",
+        points: ["Guest list import", "Your logo and colour on every screen", "Gallery open for 12 months"],
         secondary: { href: inApp ? "/features" : "/pricing", label: inApp ? "See all features" : "See pricing" },
       }}
     />

@@ -21,6 +21,7 @@ export const PUBLIC_PATHS = [
   "/about",
   "/brisbane",
   "/conferences",
+  "/christmas-parties",
   "/student-clubs",
   "/photographers",
   "/face-search-privacy",
