@@ -81,7 +81,8 @@ export function ContentPage({
 
   const titleClass = `kb-h1 !text-[68px] !leading-[1.02] max-sm:!text-[44px] ${wideTitle ? "max-w-[40ch] text-balance" : "max-w-[16ch]"}`;
   // Photos sit in a half column. A long title has to span the full content
-  // width, or that column puts it back on four lines.
+  // width, or that column puts it back on four lines. The intro then starts
+  // at the top of the photos instead of centering against them.
   const titleAbove = wideTitle && Boolean(photos?.length);
   const heading = (
     <>
@@ -99,7 +100,7 @@ export function ContentPage({
         <section className="pb-14 pt-12 sm:pb-20 sm:pt-24">
           <div className="kb-wrap flex flex-col gap-6">
             {titleAbove ? heading : null}
-            <div className={`grid items-center ${photos?.length ? "gap-14 lg:grid-cols-[1.1fr_1fr]" : ""}`}>
+            <div className={`grid ${titleAbove ? "items-start" : "items-center"} ${photos?.length ? "gap-14 lg:grid-cols-[1.1fr_1fr]" : ""}`}>
               <div className="flex flex-col gap-6">
                 {titleAbove ? null : heading}
                 <p className="kb-lead m-0 max-w-[56ch]">{lead}</p>
