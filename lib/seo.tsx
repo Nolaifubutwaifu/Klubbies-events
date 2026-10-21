@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 // the production host so canonicals and the sitemap never point at a preview.
 export const SITE_URL = "https://events.klubbies.app";
 export const SITE_NAME = "Klubbies Events";
+export const INSTAGRAM_URL = "https://www.instagram.com/klubbies.events/";
 
 /** Every page that should be in Google, for app/sitemap.ts. */
 export const PUBLIC_PATHS = [

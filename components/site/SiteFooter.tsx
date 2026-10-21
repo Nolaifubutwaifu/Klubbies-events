@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/components/ui";
+import { INSTAGRAM_URL } from "@/lib/seo";
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
@@ -59,6 +60,20 @@ export function SiteFooter({ inApp = false }: { inApp?: boolean }) {
           <div className="col-span-2 flex max-w-[420px] flex-col gap-4 sm:col-span-3 lg:col-span-1">
             <Brand size={18} tone="light" />
             <p className="text-[15px] text-[color:var(--kb-night-ink)]">Private event photo sharing with face search, for conferences, uni clubs and meetups.</p>
+            <a
+              href={INSTAGRAM_URL}
+              rel="me noopener"
+              aria-label="Klubbies Events on Instagram"
+              target="_blank"
+              className="flex min-h-[36px] items-center gap-2 self-start text-[15px] text-[color:var(--kb-night-ink)] no-underline hover:text-white"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
+              </svg>
+              @klubbies.events
+            </a>
           </div>
           {columns.map((column) => (
             <nav key={column.title} aria-label={column.title} className="flex flex-col gap-1">

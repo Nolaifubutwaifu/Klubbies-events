@@ -21,6 +21,7 @@ The audit itself is the PDF "Klubbies Events SEO audit, 20 October 2026" (not in
 | Task 17 three guides with Article JSON-LD, plus a `/guides` index | `app/(marketing)/guides` | this PR |
 | F16 in-body links: pricing to student clubs, features and how it works to face search privacy, home to face search privacy, footer columns for every new page | | this PR |
 | F15 alt text on the new pages' photos; hero and share kit visuals described | `components/site/parts.tsx` | this PR |
+| F26 Instagram @klubbies.events in the footer and the Organization `sameAs` | `components/site/SiteFooter.tsx`, `app/(marketing)/page.tsx` | this PR |
 | F10 favicon.ico, apple-icon.png, 192 and 512 PNG manifest icons | `app/`, `public/` | this PR |
 | F22 font preloads cut from seven to three (latin only, mono not preloaded; latin-ext files still load on demand) | `app/layout.tsx` | this PR |
 
@@ -29,7 +30,6 @@ New pages go in `PUBLIC_PATHS` (`lib/seo.tsx`) for the sitemap and get a card in
 ## Deliberately not done
 
 - **Public email and phone (F19, F23).** The support address was taken off the site because of spam (`docs/decisions.md`, 109). Every page points to the contact form instead.
-- **Instagram link and `sameAs` (F26).** Waiting on confirmation that @klubbies.events is the account to link.
 - **Founder's full name in JSON-LD.** `/about` uses "Max" only.
 - **Static homepage (F22).** Moving the signed-in redirect to `proxy.ts` isn't enough: the page also reads the user agent to hide prices inside the iPhone app, so it stays dynamic.
 - **Case studies (task 18).** None exist yet. Add them once founding clubs agree to be named.

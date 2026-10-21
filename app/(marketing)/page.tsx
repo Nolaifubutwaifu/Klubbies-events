@@ -4,7 +4,7 @@ import { Home } from "@/components/site/Home";
 import { getSessionUser } from "@/lib/auth/session";
 import { TIER_ORDER, TIERS } from "@/lib/billing/plans";
 import { isNativeAppRequest } from "@/lib/native-app-server";
-import { JsonLd, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { INSTAGRAM_URL, JsonLd, pageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Event Photo Sharing with Face Search",
@@ -25,6 +25,7 @@ const STRUCTURED_DATA = {
       description: "Private photo galleries for events. Attendees take a selfie and find the photos they're in.",
       address: { "@type": "PostalAddress", addressLocality: "Brisbane", addressRegion: "QLD", addressCountry: "AU" },
       areaServed: { "@type": "Country", name: "Australia" },
+      sameAs: [INSTAGRAM_URL],
     },
     {
       "@type": "WebSite",
