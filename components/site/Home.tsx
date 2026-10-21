@@ -55,6 +55,10 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                 QR code and take a selfie, and facial recognition shows each of them the photos they&apos;re in, at full
                 quality, under your brand.
               </p>
+              <p className="m-0 max-w-[52ch] text-[16px] leading-[1.6]">
+                Built for <Link href="/christmas-parties">work Christmas parties</Link>,{" "}
+                <Link href="/conferences">conferences and corporate events</Link> and <Link href="/student-clubs">club nights</Link>.
+              </p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/start" className="btn btn-primary btn-lg no-underline">
                   Create an event

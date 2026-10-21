@@ -15,6 +15,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Use cases",
     links: [
+      { href: "/christmas-parties", label: "Christmas parties" },
       { href: "/conferences", label: "Conferences" },
       { href: "/student-clubs", label: "Student clubs" },
       { href: "/photographers", label: "Photographers" },

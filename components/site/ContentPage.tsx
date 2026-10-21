@@ -33,6 +33,7 @@ export function ContentPage({
   cta,
   article,
   inApp,
+  wideTitle = false,
 }: {
   path: string;
   eyebrow: string;
@@ -49,6 +50,12 @@ export function ContentPage({
   /** Guides: the headline and dates for Article markup. */
   article?: { headline: string; description: string; published: string; modified?: string };
   inApp: boolean;
+  /**
+   * Long search headings. The default 16ch cap is for short editorial titles;
+   * these use the content column so they sit on two or three lines at desktop
+   * size. Other pages keep the narrow measure.
+   */
+  wideTitle?: boolean;
 }) {
   const faqPage = faqs.length
     ? {
@@ -72,6 +79,17 @@ export function ContentPage({
       }
     : null;
 
+  const titleClass = `kb-h1 !text-[68px] !leading-[1.02] max-sm:!text-[44px] ${wideTitle ? "max-w-[40ch] text-balance" : "max-w-[16ch]"}`;
+  // Photos sit in a half column. A long title has to span the full content
+  // width, or that column puts it back on four lines.
+  const titleAbove = wideTitle && Boolean(photos?.length);
+  const heading = (
+    <>
+      <span className="kb-eyebrow">{eyebrow}</span>
+      <h1 className={titleClass}>{title}</h1>
+    </>
+  );
+
   return (
     <>
       {faqPage ? <JsonLd data={faqPage} /> : null}
@@ -79,27 +97,29 @@ export function ContentPage({
       <SiteNav inApp={inApp} />
       <main>
         <section className="pb-14 pt-12 sm:pb-20 sm:pt-24">
-          <div className={`kb-wrap grid items-center gap-14 ${photos?.length ? "lg:grid-cols-[1.1fr_1fr]" : ""}`}>
-            <div className="flex flex-col gap-6">
-              <span className="kb-eyebrow">{eyebrow}</span>
-              <h1 className="kb-h1 max-w-[16ch] !text-[68px] !leading-[1.02] max-sm:!text-[44px]">{title}</h1>
-              <p className="kb-lead m-0 max-w-[56ch]">{lead}</p>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/start" className="btn btn-primary btn-lg no-underline">
-                  Create an event
-                </Link>
-                <Link href="/how-it-works" className="btn btn-secondary btn-lg no-underline">
-                  How it works
-                </Link>
+          <div className="kb-wrap flex flex-col gap-6">
+            {titleAbove ? heading : null}
+            <div className={`grid items-center ${photos?.length ? "gap-14 lg:grid-cols-[1.1fr_1fr]" : ""}`}>
+              <div className="flex flex-col gap-6">
+                {titleAbove ? null : heading}
+                <p className="kb-lead m-0 max-w-[56ch]">{lead}</p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/start" className="btn btn-primary btn-lg no-underline">
+                    Create an event
+                  </Link>
+                  <Link href="/how-it-works" className="btn btn-secondary btn-lg no-underline">
+                    How it works
+                  </Link>
+                </div>
               </div>
+              {photos?.length ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {photos.slice(0, 4).map((photo) => (
+                    <Photo key={photo.name} name={photo.name} alt={photo.alt} className="aspect-square w-full rounded-[10px]" sizes="(max-width: 1024px) 50vw, 280px" />
+                  ))}
+                </div>
+              ) : null}
             </div>
-            {photos?.length ? (
-              <div className="grid grid-cols-2 gap-2">
-                {photos.slice(0, 4).map((photo) => (
-                  <Photo key={photo.name} name={photo.name} alt={photo.alt} className="aspect-square w-full rounded-[10px]" sizes="(max-width: 1024px) 50vw, 280px" />
-                ))}
-              </div>
-            ) : null}
           </div>
         </section>
 

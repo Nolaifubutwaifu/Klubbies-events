@@ -5,9 +5,13 @@ import type { RelatedLink } from "@/components/site/ContentPage";
 // lib/copy/site.ts: only claim what is live.
 
 export const PAGE_CARDS = {
+  "/christmas-parties": {
+    title: "For Christmas parties",
+    body: "Private work party photos under your brand. Each guest finds theirs with a selfie.",
+  },
   "/conferences": {
-    title: "For conferences",
-    body: "Get photos to every delegate before the follow-up email, under your brand.",
+    title: "For conferences and work events",
+    body: "Get photos to every guest before the follow-up email, under your brand.",
   },
   "/student-clubs": {
     title: "For student clubs",

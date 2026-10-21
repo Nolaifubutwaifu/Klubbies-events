@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContentPage, Points } from "@/components/site/ContentPage";
+import { TIERS } from "@/lib/billing/plans";
 import { cards } from "@/lib/copy/pages";
 import { UPLOAD_MAX_MB } from "@/lib/media/constants";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Event Photo Delivery for Photographers",
-  description: "Deliver event photos to every attendee without a shared drive. Upload full resolution through your own link, credited by name, and each guest finds their own photos.",
+  title: "Photo Delivery for Event Photographers",
+  description:
+    "Get conference, awards night and Christmas party photos to every guest. Upload full resolution through your own link, credited by name. No shared drive.",
   path: "/photographers",
 });
 
-/** Event and portrait photographers: the channel (docs/handoff-marketing.md, section 2). */
+/** Event photographers delivering corporate and work-function photos (SEO plan, 21 Oct 2026). */
 export default async function PhotographersPage() {
   const inApp = await isNativeAppRequest();
+  const { free, small, medium, large } = TIERS;
 
   const faqs = [
     {
@@ -33,19 +36,36 @@ export default async function PhotographersPage() {
       q: "Can I run the event gallery myself?",
       a: "Yes. A photographer can create the event as its organiser, add the client's logo and colour, and share the QR code with the client to pass on to guests.",
     },
+    {
+      q: "Is it private enough for corporate clients?",
+      a: "Yes. Galleries are private by default, only confirmed emails get in, face search is opt in, only each guest sees their own matches, and data is stored in Sydney.",
+    },
+    {
+      q: "Can I upload during the event?",
+      a: "Yes. Uploads appear in the gallery as they land, and they resume if the venue connection drops.",
+    },
+    ...(inApp
+      ? []
+      : [
+          {
+            q: "What does my client pay?",
+            a: `One payment per event, sized by the guests who join: free up to ${free.guests}, A$${small.price.standard} up to ${small.guests}, A$${medium.price.standard} up to ${medium.guests} and A$${large.price.standard} up to ${large.guests.toLocaleString("en-AU")}. Guests never pay.`,
+          },
+        ]),
   ];
 
   return (
     <ContentPage
       path="/photographers"
       inApp={inApp}
+      wideTitle
       eyebrow="For event photographers"
       title={
         <>
-          Event photo delivery that gets every photo to its <em className="kb-accent">people</em>.
+          Corporate event photo delivery. Every guest finds their <em className="kb-accent">own photos</em>.
         </>
       }
-      lead="Upload full resolution through your own link, straight into the right album, credited by name. Every guest takes a selfie and finds the photos they're in, so your work gets seen and downloaded instead of sitting in a folder."
+      lead="Conferences, awards nights, Christmas parties: upload full resolution through your own link, straight into the right album, credited by name. Every guest takes a selfie and finds the photos they're in, so your work gets seen and downloaded instead of sitting in a folder."
       photos={[
         { name: "sq-6", alt: "Event photo of friends at a rooftop party in summer" },
         { name: "sq-7", alt: "Candid photo of friends having fun at a rooftop party" },
@@ -101,7 +121,29 @@ export default async function PhotographersPage() {
           ),
         },
         {
-          title: "Offering it to your clients",
+          title: "What your client's event manager gets",
+          body: (
+            <p>
+              Their logo and colour on every screen, not ours. A guest list import from Eventbrite, Humanitix, Luma or a
+              spreadsheet, or an open link. A name check on the guest list. Removal requests that hide a photo at once,
+              with the organiser deciding within 7 days. Photos, guest details and faceprints stored in Sydney. Only each
+              guest sees their own face search matches. It&apos;s an easy yes for HR and marketing teams who worry about
+              staff photos on a public link.
+            </p>
+          ),
+        },
+        {
+          title: "Christmas party season",
+          body: (
+            <p>
+              November and December are full of work functions. Upload during the event and photos appear in the gallery
+              as they land, so guests can have them the same night. The A4 QR poster and announcement email are ready to
+              hand to the client. Send them to the page on <Link href="/christmas-parties">work Christmas party photos</Link>.
+            </p>
+          ),
+        },
+        {
+          title: "Offering it to your corporate clients",
           body: (
             <>
               <p>
@@ -123,7 +165,7 @@ export default async function PhotographersPage() {
         },
       ]}
       faqs={faqs}
-      related={cards("/guides/get-event-photos-to-attendees-fast", "/guides/google-drive-vs-private-event-gallery", "/student-clubs")}
+      related={cards("/christmas-parties", "/conferences", "/guides/get-event-photos-to-attendees-fast")}
       cta={{
         title: "Deliver your next event this way.",
         lead: "Set the event up for a client, or send this page to the organiser and ask for an upload link.",
