@@ -65,7 +65,9 @@ All read `.env.local` and use the service role. Nothing destructive happens with
 
 ## Deploying
 
-Vercel deploys `main` to production. Every variable from `.env.example` is set in the Vercel project, pointed at the cloud Supabase project. Apply new migrations to Supabase, in order, before the code that needs them goes live.
+Vercel deploys `main` to production. Every variable from `.env.example` is set in the Vercel project, pointed at the cloud Supabase project. Migrations are applied by hand, through the Supabase connector, one file at a time, in order. Apply a migration before the code that needs it goes live.
+
+`20261021000037_raster_media.sql` is the exception: ship that code first, then apply the file by hand. The app writes `logo_path` and `cover_path` with the service role. Applying the migration first stops logo saves and cover changes until that code is live. An SVG logo or cover already stored is left in place; only a new non-raster path is refused.
 
 `CRON_SECRET` enables the hourly job at `/api/cron/hourly`: it publishes scheduled albums, sweeps unanswered removal requests, sends the "gallery closes in a week" email, clears uploads that never finished, and works through the face search queue.
 

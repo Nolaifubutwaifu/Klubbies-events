@@ -24,6 +24,7 @@ import {
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import type { Database } from "../lib/db/types";
+import { isDecodablePhoto, sharpDecodeOptions } from "../lib/media/logo-file";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -88,7 +89,14 @@ async function processOne(eventId: string, collectionId: string, mediaId: string
   if (error || !blob) throw new Error(`download failed for ${path}`);
 
   // Rekognition takes JPEG and PNG only; our display copies are WebP.
-  const jpeg = await sharp(new Uint8Array(await blob.arrayBuffer()))
+  // Same signature gate as the hourly job: SVG and anything else that is not
+  // a photo never reaches sharp, and the job is marked done rather than retried.
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  if (!isDecodablePhoto(bytes)) {
+    console.warn("skipping non-photo bytes", path);
+    return;
+  }
+  const jpeg = await sharp(bytes, sharpDecodeOptions)
     .rotate()
     .resize(TRANSCODE_MAX_EDGE, TRANSCODE_MAX_EDGE, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: TRANSCODE_QUALITY })
