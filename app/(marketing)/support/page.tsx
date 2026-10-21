@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/support",
 });
 
-type Topic = { id: string; title: string; short: ReactNode; body: ReactNode; icon: ReactNode };
+type Topic = { id: string; title: string; short: ReactNode | null; body: ReactNode; icon: ReactNode };
 
 // Also the App Store listing's support URL, so it has to answer the things
 // Apple's reviewers look for: how to get help, how to report content, how to
@@ -77,11 +77,7 @@ const TOPICS: Topic[] = [
   {
     id: "billing",
     title: "Billing and refunds",
-    short: (
-      <>
-        Receipts are on the event&apos;s Plan screen. See the <Link href="/refunds">refund policy</Link> for when we refund.
-      </>
-    ),
+    short: null,
     icon: (
       <>
         <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -89,27 +85,33 @@ const TOPICS: Topic[] = [
       </>
     ),
     body: (
-      <p>
-        The app doesn&apos;t sell anything. Organisers pay once per event on the website; refunds are covered in the{" "}
-        <Link href="/refunds">refund policy</Link>.
-      </p>
+      <>
+        <p>
+          Receipts are on the event&apos;s Plan screen. See the <Link href="/refunds">refund policy</Link> for when we refund.
+        </p>
+        <p>
+          The app doesn&apos;t sell anything. Organisers pay once per event on the website; refunds are covered in the{" "}
+          <Link href="/refunds">refund policy</Link>.
+        </p>
+      </>
     ),
   },
   {
     id: "delete",
     title: "Delete your account",
-    short: (
-      <>
-        From You, at the bottom of the page. Your selfies and faceprints go with it. Read the{" "}
-        <Link href="/privacy">privacy policy</Link>.
-      </>
-    ),
+    short: null,
     icon: <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />,
     body: (
-      <p>
-        Open your profile and choose Delete my account, in the app or on the website. The{" "}
-        <Link href="/privacy">privacy policy</Link> explains what that deletes and what stays with the event.
-      </p>
+      <>
+        <p>
+          From You, at the bottom of the page. Your selfies and faceprints go with it. Read the{" "}
+          <Link href="/privacy">privacy policy</Link>.
+        </p>
+        <p>
+          Open your profile and choose Delete my account, in the app or on the website. The{" "}
+          <Link href="/privacy">privacy policy</Link> explains what that deletes and what stays with the event.
+        </p>
+      </>
     ),
   },
 ];
@@ -148,7 +150,7 @@ export default async function SupportPage() {
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
                       <span className="text-[18px] font-semibold group-hover:text-[color:var(--kb-brand-deep)]">{topic.title}</span>
-                      <span className="text-[color:var(--kb-ink-2)]">{topic.short}</span>
+                      {topic.short ? <span className="text-[color:var(--kb-ink-2)]">{topic.short}</span> : null}
                     </span>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden className="mt-2.5 flex-none transition-transform group-open:rotate-45">
                       <path d="M5 12h14M12 5v14" />

@@ -17,10 +17,18 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
   const [error, setError] = useState("");
 
   async function requestCode(form: FormData) {
+    const fullName = form.get("fullName");
     const res = await fetch("/api/auth/request_code", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ fullName: form.get("fullName"), email: form.get("email"), flow, event }),
+      body: JSON.stringify({
+        // Sign-in and event links ask for a name only after the code, and only
+        // for a new account. Creating an event still collects it here.
+        ...(typeof fullName === "string" && fullName.trim() ? { fullName } : {}),
+        email: form.get("email"),
+        flow,
+        event,
+      }),
     });
     if (!res.ok) {
       const body: { error?: string } = await res.json().catch(() => ({}));
@@ -79,26 +87,37 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate={false}>
-      {mode === "code" ? (
+      {mode === "code" && flow === "create" ? (
         <div className="flex flex-col gap-2">
           <label htmlFor="fullName" className="kb-label !text-[15px] !font-semibold">
             Your name
           </label>
           <input id="fullName" className="input !min-h-[52px]" name="fullName" autoComplete="name" required maxLength={200} aria-describedby="fullName-help" />
           <span id="fullName-help" className="kb-help">
-            {flow === "create"
-              ? "Shown to attendees and photographers as the organiser."
-              : flow === "join"
-                ? "So the organiser knows who you are."
-                : "As you gave it when you joined."}
+            Shown to attendees and photographers as the organiser.
           </span>
         </div>
       ) : null}
       <div className="flex flex-col gap-2">
         <label htmlFor="email" className="kb-label !text-[15px] !font-semibold">
-          {flow === "create" ? "Work email" : "Email"}
+          Email
         </label>
-        <input id="email" className="input !min-h-[52px]" name="email" type="email" inputMode="email" autoComplete="email" required maxLength={254} />
+        <input
+          id="email"
+          className="input !min-h-[52px]"
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          required
+          maxLength={254}
+          aria-describedby={flow === "create" ? "email-help" : undefined}
+        />
+        {flow === "create" ? (
+          <span id="email-help" className="kb-help">
+            We&apos;ll send a code here to confirm it&apos;s you.
+          </span>
+        ) : null}
       </div>
       {mode === "password" ? (
         <div className="flex flex-col gap-2">
