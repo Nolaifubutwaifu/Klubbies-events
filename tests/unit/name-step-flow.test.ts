@@ -11,12 +11,17 @@ function valueAt(row: Row, key: string): unknown {
   return key.split(".").reduce<unknown>((obj, part) => (obj && typeof obj === "object" ? (obj as Row)[part] : undefined), row);
 }
 
+function unnamed(value: unknown): boolean {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
+
 function matches(row: Row, filters: { op: string; col: string; val: unknown }[]) {
   return filters.every((filter) => {
     const current = valueAt(row, filter.col);
     if (filter.op === "eq") return current === filter.val;
     if (filter.op === "in") return Array.isArray(filter.val) && filter.val.includes(current);
     if (filter.op === "is") return filter.val === null ? current == null : current === filter.val;
+    if (filter.op === "unnamed") return unnamed(current);
     return true;
   });
 }
@@ -43,6 +48,9 @@ function from(name: string) {
     },
     maybeSingle: async () => ({ data: found()[0] ?? null, error: null }),
     insert: async (row: Row) => {
+      if (name === "pending_sign_ins" && rows().some((existing) => existing.email === row.email)) {
+        return { data: null, error: { code: "23505", message: "duplicate key" } };
+      }
       rows().push({ id: crypto.randomUUID(), ...row });
       return { data: null, error: null };
     },
@@ -58,10 +66,15 @@ function from(name: string) {
       // Apply inside then(), before the promise yields, so a second claim
       // resumed just after this one already sees the written name.
       const run = () => {
-        if (ran) return { data: null, error: null };
+        if (ran) return { data: [] as Row[], error: null };
         ran = true;
-        for (const row of rows()) if (matches(row, narrowing)) Object.assign(row, patch);
-        return { data: null, error: null };
+        const touched: Row[] = [];
+        for (const row of rows()) {
+          if (!matches(row, narrowing)) continue;
+          Object.assign(row, patch);
+          touched.push(row);
+        }
+        return { data: touched, error: null };
       };
       const chain = () => {
         const thenable = {
@@ -73,7 +86,14 @@ function from(name: string) {
             narrowing.push({ op: "is", col, val });
             return chain();
           },
-          then(resolve: (value: { data: null; error: null }) => unknown, reject: (reason: unknown) => unknown) {
+          or(expression: string) {
+            if (expression.includes("display_name.is.null")) narrowing.push({ op: "unnamed", col: "display_name", val: null });
+            return chain();
+          },
+          select() {
+            return chain();
+          },
+          then(resolve: (value: { data: Row[]; error: null }) => unknown, reject: (reason: unknown) => unknown) {
             return Promise.resolve(run()).then(resolve, reject);
           },
         };
@@ -260,17 +280,38 @@ describe("claimSignInName", () => {
     expect(tables.current.memberships).toHaveLength(0);
   });
 
-  it("does not clear a verified user when a second code is requested", async () => {
-    tables.current.events = [event()];
+  it("does not retarget a bound name-step row when another code is requested", async () => {
+    const other = "33333333-3333-4333-8333-333333333333";
+    const expires = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString();
+    tables.current.events = [event(), event({ id: other, handle: "other", name: "Other" })];
     tables.current.pending_sign_ins = [
       pending({
         flow: "join",
         event_id: EVENT,
+        claimed_name: null,
         user_id: USER,
         attempts: MAX_VERIFY_ATTEMPTS,
-        expires_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+        expires_at: expires,
       }),
     ];
+    await processCodeRequest({ email: "Ada@Example.com", flow: "join", event: "other", fullName: "Attacker" });
+    expect(tables.current.pending_sign_ins[0]).toMatchObject({
+      user_id: USER,
+      flow: "join",
+      event_id: EVENT,
+      claimed_name: null,
+      attempts: MAX_VERIFY_ATTEMPTS,
+      expires_at: expires,
+    });
+    const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
+    expect(result).toMatchObject({ ok: true, redirectTo: "/e/summit" });
+    expect(tables.current.memberships).toHaveLength(1);
+    expect(tables.current.memberships[0].event_id).toBe(EVENT);
+  });
+
+  it("still refreshes a code request that is not bound to a user", async () => {
+    tables.current.events = [event()];
+    tables.current.pending_sign_ins = [pending({ flow: "join", event_id: EVENT, user_id: null, attempts: 2 })];
     tables.current.memberships = [
       {
         id: "m1",
@@ -278,7 +319,7 @@ describe("claimSignInName", () => {
         role: "event_member",
         roster_email: "ada@example.com",
         roster_name: "Ada Lovelace",
-        claimed_name: "Ada Lovelace",
+        claimed_name: null,
         status: "active",
         first_seen_at: "2026-01-01T00:00:00.000Z",
         name_approved_at: null,
@@ -287,9 +328,18 @@ describe("claimSignInName", () => {
       },
     ];
     await processCodeRequest({ email: "ada@example.com", flow: "member" });
-    expect(tables.current.pending_sign_ins[0].user_id).toBe(USER);
+    expect(tables.current.pending_sign_ins).toHaveLength(1);
+    expect(tables.current.pending_sign_ins[0]).toMatchObject({ user_id: null, flow: "member", event_id: null, attempts: 0 });
+  });
+
+  it("saves a name when the account's display name is blank", async () => {
+    tables.current.users[0].display_name = "   ";
+    tables.current.pending_sign_ins = [
+      pending({ user_id: USER, expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() }),
+    ];
     const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
     expect(result.ok).toBe(true);
+    expect(tables.current.users[0].display_name).toBe("Ada Lovelace");
   });
 
   it("lets only one of two parallel claims finish the join", async () => {

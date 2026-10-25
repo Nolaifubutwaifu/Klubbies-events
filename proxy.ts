@@ -8,7 +8,9 @@ import {
   NAMED_COOKIE_TTL_MS,
   appPathNeedsName,
   encodeNamedCookie,
+  hasDisplayName,
   namedCookieMatches,
+  returnPathForNameGate,
 } from "@/lib/auth/sign-in-name";
 import { serverEnv } from "@/lib/env";
 import { buildCsp, permissionsPolicy, reportingEndpoints } from "@/lib/security/csp";
@@ -102,7 +104,7 @@ export async function proxy(request: NextRequest) {
     const alreadyNamed = namedCookieMatches(request.cookies.get(NAMED_COOKIE)?.value, userId, secret);
     if (!alreadyNamed) {
       const { data: profile, error } = await createAdminClient().from("users").select("display_name").eq("id", userId).maybeSingle();
-      if (!error && profile?.display_name?.trim()) {
+      if (!error && hasDisplayName(profile?.display_name)) {
         const exp = Math.floor((Date.now() + NAMED_COOKIE_TTL_MS) / 1000);
         response.cookies.set(NAMED_COOKIE, encodeNamedCookie(userId, exp, secret), {
           httpOnly: true,
@@ -115,7 +117,14 @@ export async function proxy(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = NAME_STEP_PATH;
         url.search = "";
-        return rememberSource(request, remember(NextResponse.redirect(url, 303), here));
+        const redirect = NextResponse.redirect(url, 303);
+        const existing = request.cookies.get(NEXT_COOKIE)?.value;
+        const next = returnPathForNameGate(existing, here);
+        // Keep a return path that is already valid. Replacing it with this
+        // gated page would send a new account to /events instead of the
+        // album or photo they were opening.
+        if (next && next !== safeNextPath(existing)) remember(redirect, next);
+        return rememberSource(request, redirect);
       } else {
         // The name gate deliberately fails open on a DB error.
       }

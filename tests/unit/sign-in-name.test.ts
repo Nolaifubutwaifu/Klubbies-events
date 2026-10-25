@@ -5,9 +5,11 @@ import {
   appPathNeedsName,
   codeRequestFieldError,
   encodeNamedCookie,
+  hasDisplayName,
   knownSignInName,
   namedCookieMatches,
   requestCodeSchema,
+  returnPathForNameGate,
   rosterNameForLinkJoin,
 } from "@/lib/auth/sign-in-name";
 
@@ -88,6 +90,24 @@ describe("rosterNameForLinkJoin", () => {
     expect(rosterNameForLinkJoin("  Ada Lovelace  ")).toBe("Ada Lovelace");
     expect(rosterNameForLinkJoin(null)).toBeNull();
     expect(rosterNameForLinkJoin("   ")).toBeNull();
+  });
+});
+
+describe("hasDisplayName", () => {
+  it("treats null and blank as unnamed", () => {
+    expect(hasDisplayName(null)).toBe(false);
+    expect(hasDisplayName(undefined)).toBe(false);
+    expect(hasDisplayName("")).toBe(false);
+    expect(hasDisplayName("   ")).toBe(false);
+    expect(hasDisplayName("Ada Lovelace")).toBe(true);
+  });
+});
+
+describe("returnPathForNameGate", () => {
+  it("keeps an existing valid return path", () => {
+    expect(returnPathForNameGate("/e/summit/a/album", "/events")).toBe("/e/summit/a/album");
+    expect(returnPathForNameGate(undefined, "/events")).toBe("/events");
+    expect(returnPathForNameGate("/signin/name", "/events")).toBe("/events");
   });
 });
 

@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { safeNextPath } from "./next-path";
+
+export { NAME_STEP_PATH, pathAfterVerify } from "./verify-destination";
 
 function blankToUndefined(value: unknown): unknown {
   if (typeof value !== "string") return value;
@@ -23,12 +26,11 @@ export const requestCodeSchema = z.object({
 
 export type RequestCodeInput = z.infer<typeof requestCodeSchema>;
 
-/** Where a new account types a name, after the email code has been accepted. */
-export const NAME_STEP_PATH = "/signin/name";
 /**
  * Leftover from an earlier draft that signed the name step into the browser.
  * The pending row is the source of truth, so this cookie is no longer set.
  * Claim and sign-out still delete it.
+ * TODO: delete the NAME_STEP_COOKIE cleanup once old cookies have expired.
  */
 export const NAME_STEP_COOKIE = "kb_name_step";
 /** How long a verified code can wait for a name. Well past the old 15 minute cookie. */
@@ -54,6 +56,20 @@ export function codeRequestFieldError(input: { flow: string; fullName?: string }
  */
 export function knownSignInName(claimed: string | null | undefined, displayName: string | null | undefined): string {
   return claimed?.trim() || displayName?.trim() || "";
+}
+
+/** A saved name. Null and whitespace still have to go through the name step. */
+export function hasDisplayName(name: string | null | undefined): boolean {
+  return Boolean(name?.trim());
+}
+
+/**
+ * Return path to keep when the name gate bounces someone to /signin/name.
+ * An existing valid kb_next wins, so the bounce cannot replace the album
+ * they were opening with the page that happened to be gated.
+ */
+export function returnPathForNameGate(existing: string | null | undefined, here: string): string | null {
+  return safeNextPath(existing) ?? safeNextPath(here);
 }
 
 /** Link joins have no guest-list name. An empty claim must not fall back to the mailbox. */

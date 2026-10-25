@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeading, AuthShell } from "@/components/AuthShell";
-import { NAME_STEP_PATH } from "@/lib/auth/sign-in-name";
+import { NAME_STEP_PATH, hasDisplayName } from "@/lib/auth/sign-in-name";
 import { getProfile, getSessionUser } from "@/lib/auth/session";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { SignInForm } from "../signin/SignInForm";
@@ -58,7 +58,7 @@ function Preview() {
 export default async function StartPage() {
   if (await getSessionUser()) {
     const profile = await getProfile();
-    if (!profile?.display_name?.trim()) redirect(NAME_STEP_PATH);
+    if (!hasDisplayName(profile?.display_name)) redirect(NAME_STEP_PATH);
     redirect("/admin/new");
   }
   const inApp = await isNativeAppRequest();

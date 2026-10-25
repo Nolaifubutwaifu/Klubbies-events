@@ -159,21 +159,29 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
 
   const code = await issueOtp(email);
   const claimedName = input.fullName?.trim() || null;
-  // Leave user_id off the write. A new row stores null; a row already bound
-  // to a verified user (the name step) keeps that id. Writing null here let a
-  // second code request, including one for someone else's email, unbind them
-  // and trap a nameless account on the name screen.
-  const { error } = await createAdminClient()
+  const admin = createAdminClient();
+  const pending = {
+    claimed_name: claimedName,
+    flow: input.flow,
+    event_id: eventId,
+    attempts: 0,
+    expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
+  };
+  // A row already bound to a verified user is the name step. Insert only:
+  // on conflict, do nothing, so this request cannot retarget its flow, event,
+  // name or the 7-day window.
+  const { data: updated, error: updateError } = await admin
     .from("pending_sign_ins")
-    .upsert({
-      email,
-      claimed_name: claimedName,
-      flow: input.flow,
-      event_id: eventId,
-      attempts: 0,
-      expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
-    });
-  if (error) throw error;
+    .update(pending)
+    .eq("email", email)
+    .is("user_id", null)
+    .select("email");
+  if (updateError) throw updateError;
+  if (!updated?.length) {
+    const { error: insertError } = await admin.from("pending_sign_ins").insert({ email, ...pending });
+    if (insertError?.code === "23505") return;
+    if (insertError) throw insertError;
+  }
 
   // No name yet (the usual sign-in): the email greets them without one.
   await sendSignInCode(email, { code, name: claimedName || "there", eventName });
@@ -288,7 +296,7 @@ async function completeSignIn(input: CompletedSignIn): Promise<VerifyResult> {
     }),
   );
 
-  await admin.from("users").update({ display_name: claimedName }).eq("id", userId).is("display_name", null);
+  await saveDisplayNameIfBlank(userId, claimedName);
 
   if (input.flow === "create") return { ok: true, redirectTo: "/admin/new" };
   if (joinedHandle) return { ok: true, redirectTo: `/e/${joinedHandle}` };
@@ -356,6 +364,23 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
 
 export const ALREADY_NAMED = "This account already has a name.";
 
+/**
+ * `update users set display_name = $name where id = $1 and (display_name is null or btrim(display_name) = '') returning`.
+ * Null or only spaces counts as unnamed. The caller that receives a row owns the name.
+ */
+const UNNAMED_DISPLAY_NAME = "display_name.is.null,display_name.eq.,display_name.match.^ *$";
+
+async function saveDisplayNameIfBlank(userId: string, displayName: string): Promise<boolean> {
+  const { data, error } = await createAdminClient()
+    .from("users")
+    .update({ display_name: displayName })
+    .eq("id", userId)
+    .or(UNNAMED_DISPLAY_NAME)
+    .select("id");
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
 export type ClaimNameResult = { ok: true; redirectTo: string } | { ok: false; error: string; status: 400 | 401 | 409 };
 
 /**
@@ -373,43 +398,26 @@ export async function claimSignInName(input: { userId: string; email: string; na
 
   const admin = createAdminClient();
   const email = normaliseEmail(input.email);
-  const { data: profile } = await admin.from("users").select("display_name").eq("id", input.userId).maybeSingle();
-  if (profile?.display_name?.trim()) {
+  // The name write is the lock. A parallel claim updates zero rows and stops,
+  // so it cannot finish a second time with its own name.
+  const won = await saveDisplayNameIfBlank(input.userId, claimedName);
+  if (!won) {
     await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
     return { ok: false, status: 409, error: ALREADY_NAMED };
   }
 
-  // delete … where user_id = $1 returning *. Only one caller receives the row.
+  // delete … where user_id = $1 returning *. Only this caller still has the row.
   const { data: taken, error } = await admin.from("pending_sign_ins").delete().eq("user_id", input.userId).select("*");
   if (error) throw error;
   const pending = taken?.[0] ?? null;
   const usable = pending != null && pending.expires_at >= nowIso() && normaliseEmail(pending.email) === email;
-
-  if (usable && pending) {
-    // Land the name before the next await so the claim that lost the row
-    // observes it and stops, instead of finishing a second time.
-    await admin.from("users").update({ display_name: claimedName }).eq("id", input.userId).is("display_name", null);
-    const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
-    const result = await completeSignIn({
-      userId: input.userId,
-      email,
-      claimedName,
-      flow: parsedFlow.success ? parsedFlow.data : "member",
-      eventId: pending.event_id,
-    });
-    if (!result.ok) return { ok: false, status: 400, error: result.error };
-    return result;
-  }
-
-  const { data: again } = await admin.from("users").select("display_name").eq("id", input.userId).maybeSingle();
-  if (again?.display_name?.trim()) return { ok: false, status: 409, error: ALREADY_NAMED };
-
+  const parsedFlow = usable && pending ? requestCodeSchema.shape.flow.safeParse(pending.flow) : null;
   const result = await completeSignIn({
     userId: input.userId,
     email,
     claimedName,
-    flow: "member",
-    eventId: null,
+    flow: parsedFlow?.success ? parsedFlow.data : "member",
+    eventId: usable && pending ? pending.event_id : null,
   });
   if (!result.ok) return { ok: false, status: 400, error: result.error };
   return result;

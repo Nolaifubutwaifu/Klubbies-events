@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { CODE_REJECTED, SIGNIN_COOKIE, verifyCode, verifyCodeSchema } from "@/lib/auth/flow";
+import { NAME_STEP_PATH } from "@/lib/auth/sign-in-name";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
   // cookie until that step saves the name and runs the guest-list check.
   // The pending row, not a cookie, remembers who verified.
   if (result.namePending) {
-    return NextResponse.json({ ok: true, redirectTo: result.redirectTo });
+    return NextResponse.json({ ok: true, needsName: true, redirectTo: NAME_STEP_PATH });
   }
 
   // A page that sent them here to sign in wins, except for a new organiser,
