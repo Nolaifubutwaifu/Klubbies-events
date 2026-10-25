@@ -124,7 +124,7 @@ export async function proxy(request: NextRequest) {
         // gated page would send a new account to /events instead of the
         // album or photo they were opening.
         if (next && next !== safeNextPath(existing)) remember(redirect, next);
-        return rememberSource(request, redirect);
+        return secure(rememberSource(request, redirect), csp, pathname);
       } else {
         // The name gate deliberately fails open on a DB error.
       }
