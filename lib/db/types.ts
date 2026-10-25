@@ -601,13 +601,13 @@ isOneToOne: false
                   ]
                 },"pending_sign_ins": {
                   Row: {
-                    "attempts": number,"claimed_name": string | null,"created_at": string,"email": string,"event_id": string | null,"expires_at": string,"flow": string,"updated_at": string
+                    "attempts": number,"claimed_name": string | null,"created_at": string,"email": string,"event_id": string | null,"expires_at": string,"flow": string,"updated_at": string,"user_id": string | null
                   }
                   Insert: {
-                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email": string,"event_id"?: string | null,"expires_at": string,"flow": string,"updated_at"?: string
+                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email": string,"event_id"?: string | null,"expires_at": string,"flow": string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email"?: string,"event_id"?: string | null,"expires_at"?: string,"flow"?: string,"updated_at"?: string
+                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email"?: string,"event_id"?: string | null,"expires_at"?: string,"flow"?: string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {

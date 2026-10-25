@@ -5,7 +5,8 @@ import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
 import { ScanEventButton } from "@/components/ScanEventButton";
 import { safeNextPath } from "@/lib/auth/next-path";
 import { authEventPreview } from "@/lib/auth/preview";
-import { getPublicEvent, getSessionUser } from "@/lib/auth/session";
+import { NAME_STEP_PATH } from "@/lib/auth/sign-in-name";
+import { getProfile, getPublicEvent, getSessionUser } from "@/lib/auth/session";
 import { EVENT_FULL_MESSAGE, eventIsFull } from "@/lib/billing/usage";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { AppLanding } from "./AppLanding";
@@ -17,7 +18,11 @@ export default async function SignInPage(props: PageProps<"/signin">) {
   const params = await props.searchParams;
   const eventHandle = typeof params.event === "string" ? params.event : undefined;
   const user = await getSessionUser();
-  if (user) redirect(safeNextPath(eventHandle ? `/e/${eventHandle}` : "/events") ?? "/events");
+  if (user) {
+    const profile = await getProfile();
+    if (!profile?.display_name?.trim()) redirect(NAME_STEP_PATH);
+    redirect(safeNextPath(eventHandle ? `/e/${eventHandle}` : "/events") ?? "/events");
+  }
 
   const event = await authEventPreview(eventHandle);
 

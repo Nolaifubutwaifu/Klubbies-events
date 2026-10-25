@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeading, AuthShell } from "@/components/AuthShell";
-import { getSessionUser } from "@/lib/auth/session";
+import { NAME_STEP_PATH } from "@/lib/auth/sign-in-name";
+import { getProfile, getSessionUser } from "@/lib/auth/session";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { SignInForm } from "../signin/SignInForm";
 
@@ -55,7 +56,11 @@ function Preview() {
 }
 
 export default async function StartPage() {
-  if (await getSessionUser()) redirect("/admin/new");
+  if (await getSessionUser()) {
+    const profile = await getProfile();
+    if (!profile?.display_name?.trim()) redirect(NAME_STEP_PATH);
+    redirect("/admin/new");
+  }
   const inApp = await isNativeAppRequest();
 
   return (

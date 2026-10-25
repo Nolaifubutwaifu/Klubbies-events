@@ -6,9 +6,17 @@ import { kickPlanNotices } from "@/lib/billing/notices";
 import { eventIsFull, GUESTS_FULL } from "@/lib/billing/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { namesLooselyMatch } from "./names";
+import { holdsForNameMismatch } from "./names";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "./rate-limit";
-import { NAME_STEP_PATH, knownSignInName, requestCodeSchema, type NameStep, type RequestCodeInput } from "./sign-in-name";
+import {
+  NAME_STEP_PATH,
+  NAME_STEP_TTL_MS,
+  knownSignInName,
+  requestCodeSchema,
+  rosterNameForLinkJoin,
+  type NameStep,
+  type RequestCodeInput,
+} from "./sign-in-name";
 
 export { NAME_STEP_PATH, requestCodeSchema };
 export type { RequestCodeInput };
@@ -80,14 +88,19 @@ export async function joinByLink(eventId: string, userId: string, email: string,
     .maybeSingle();
   if (existing) return existing.status === "active" ? "joined" : "refused";
 
+  // No organiser typed this name. Never invent one from the mailbox: that
+  // string would then fail the guest-list check, or pass as if it were real.
+  const rosterName = rosterNameForLinkJoin(name);
+  if (!rosterName) return "refused";
+
   const { data: role } = await admin.from("event_roles").select("id").eq("event_id", eventId).eq("key", "member").maybeSingle();
   const now = nowIso();
   const { error } = await admin.from("memberships").insert({
     event_id: eventId,
     user_id: userId,
     roster_email: email,
-    roster_name: name?.trim() || email.split("@")[0],
-    claimed_name: name,
+    roster_name: rosterName,
+    claimed_name: rosterName,
     role: "event_member",
     role_id: role?.id ?? null,
     status: "active",
@@ -154,6 +167,7 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
       claimed_name: claimedName,
       flow: input.flow,
       event_id: eventId,
+      user_id: null,
       attempts: 0,
       expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
     });
@@ -231,8 +245,12 @@ async function completeSignIn(input: CompletedSignIn): Promise<VerifyResult> {
   }
 
   let joinedHandle: string | null = null;
+  let linkedEventId: string | null = null;
   if (input.flow === "join" && input.eventId) {
-    if ((await joinByLink(input.eventId, userId, email, claimedName)) === "joined") joinedHandle = handle ?? null;
+    if ((await joinByLink(input.eventId, userId, email, claimedName)) === "joined") {
+      joinedHandle = handle ?? null;
+      linkedEventId = input.eventId;
+    }
   }
 
   const memberships = await findEligibleMemberships(email);
@@ -241,7 +259,9 @@ async function completeSignIn(input: CompletedSignIn): Promise<VerifyResult> {
   await Promise.all(
     memberships.map(async (m) => {
       const nameToCompare = m.claimed_name ?? claimedName;
-      const mismatch = nameToCompare ? !namesLooselyMatch(m.roster_name, nameToCompare) : false;
+      // The row joinByLink just wrote took its name from this person, not from
+      // a guest list, so it cannot be "wrong" and must not be held.
+      const mismatch = holdsForNameMismatch(linkedEventId === m.event_id, m.roster_name, nameToCompare);
       // A name that doesn't match the list waits for an organiser (migration
       // 36), unless one already approved this person. Organisers never wait.
       const hold = mismatch && m.role !== "event_admin" && !m.name_approved_at;
@@ -305,13 +325,30 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   // A new account has no name yet. Don't link the guest list or join the
   // event until they give one, or the mismatch hold (migration 36) never runs.
   const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
-  const namePending: NameStep | undefined = claimedName
-    ? undefined
-    : { flow: parsedFlow.success ? parsedFlow.data : "member", eventId: pending.event_id };
+  const flow = parsedFlow.success ? parsedFlow.data : "member";
+  // Keep the row until the name is saved. The code itself is spent, and the
+  // wait is much longer than the code's ten minutes, so a slow join still lands.
+  if (!claimedName) {
+    const exp = Date.now() + NAME_STEP_TTL_MS;
+    const { error: keepError } = await admin
+      .from("pending_sign_ins")
+      .update({
+        user_id: userId,
+        attempts: MAX_VERIFY_ATTEMPTS,
+        expires_at: new Date(exp).toISOString(),
+      })
+      .eq("email", email);
+    if (keepError) throw keepError;
+    const namePending: NameStep = {
+      userId,
+      flow,
+      eventId: pending.event_id,
+      exp: Math.floor(exp / 1000),
+    };
+    return { ok: true, redirectTo: NAME_STEP_PATH, namePending };
+  }
 
   await admin.from("pending_sign_ins").delete().eq("email", email);
-
-  if (!claimedName) return { ok: true, redirectTo: NAME_STEP_PATH, namePending };
 
   return completeSignIn({
     userId,
@@ -323,20 +360,45 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   });
 }
 
-/** Saves the name from the post-verify screen and finishes the sign-in. */
-export async function claimSignInName(input: {
-  userId: string;
-  email: string;
-  name: string;
-  pending: NameStep | null;
-}): Promise<VerifyResult> {
+export const CLAIM_EXPIRED = "Your sign in timed out. Start again.";
+export const ALREADY_NAMED = "This account already has a name.";
+
+export type ClaimNameResult = { ok: true; redirectTo: string } | { ok: false; error: string; status: 400 | 401 | 409 };
+
+/**
+ * Saves the name from the post-verify screen and finishes the sign-in.
+ * The join comes from the pending row bound to this user at verification.
+ * A cookie cannot choose the event, and an account that already has a name
+ * cannot run this again.
+ */
+export async function claimSignInName(input: { userId: string; email: string; name: string }): Promise<ClaimNameResult> {
   const claimedName = input.name.trim();
-  if (!claimedName || claimedName.length > 200) return { ok: false, error: "Enter your name" };
-  return completeSignIn({
+  if (!claimedName || claimedName.length > 200) return { ok: false, status: 400, error: "Enter your name" };
+
+  const admin = createAdminClient();
+  const email = normaliseEmail(input.email);
+  const { data: profile } = await admin.from("users").select("display_name").eq("id", input.userId).maybeSingle();
+  if (profile?.display_name?.trim()) {
+    await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
+    return { ok: false, status: 409, error: ALREADY_NAMED };
+  }
+
+  const { data: pending } = await admin.from("pending_sign_ins").select("*").eq("user_id", input.userId).maybeSingle();
+  const expired = !pending || pending.expires_at < nowIso() || normaliseEmail(pending.email) !== email;
+  if (expired || !pending) {
+    if (pending) await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
+    return { ok: false, status: 401, error: CLAIM_EXPIRED };
+  }
+
+  const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
+  const result = await completeSignIn({
     userId: input.userId,
-    email: normaliseEmail(input.email),
+    email,
     claimedName,
-    flow: input.pending?.flow ?? "member",
-    eventId: input.pending?.eventId ?? null,
+    flow: parsedFlow.success ? parsedFlow.data : "member",
+    eventId: pending.event_id,
   });
+  await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
+  if (!result.ok) return { ok: false, status: 400, error: result.error };
+  return result;
 }

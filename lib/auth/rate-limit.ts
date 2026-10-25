@@ -10,6 +10,10 @@ export const LIMITS = {
   codeRequestPerIp: { bucket: "request_code:ip", limit: 400, windowSeconds: 3600 },
   verifyPerIp: { bucket: "verify_code:ip", limit: 1200, windowSeconds: 3600 },
   passwordPerEmail: { bucket: "password:email", limit: 10, windowSeconds: 3600 },
+  // A signed-in caller can otherwise post names all day. Per user is the real
+  // cap; per IP is only a flood guard, same as code requests at a venue.
+  claimNamePerUser: { bucket: "claim_name:user", limit: 10, windowSeconds: 3600 },
+  claimNamePerIp: { bucket: "claim_name:ip", limit: 400, windowSeconds: 3600 },
   contactPerIp: { bucket: "contact:ip", limit: 5, windowSeconds: 3600 },
   contactPerEmail: { bucket: "contact:email", limit: 5, windowSeconds: 3600 },
   // Flood guard for the public CSP collector. A venue shares one address, and
