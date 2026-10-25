@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { safeNextPath } from "@/lib/auth/next-path";
 
 type Mode = "code" | "password";
 
@@ -46,7 +47,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
       setPending(false);
       return;
     }
-    router.replace(body.redirectTo);
+    router.replace(safeNextPath(body.redirectTo) ?? "/events");
     router.refresh();
   }
 

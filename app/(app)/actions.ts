@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { MEMBER_NOTICE_VERSION } from "@/lib/faces/constants";
 import { AREA_COOKIE } from "@/lib/area";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { getSessionUser, requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,7 +25,7 @@ export async function setAreaAction(area: "member" | "admin", path: string): Pro
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  const safePath = path.startsWith("/") ? path : "/events";
+  const safePath = safeNextPath(path) ?? "/events";
   revalidatePath(safePath, "layout");
   redirect(safePath);
 }

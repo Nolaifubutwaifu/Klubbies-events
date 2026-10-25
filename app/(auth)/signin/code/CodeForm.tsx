@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { safeNextPath } from "@/lib/auth/next-path";
 
 /** Supabase mints eight digits for this project, so there are eight boxes. */
 const LENGTH = 8;
@@ -80,7 +81,7 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
         setRefocus((n) => n + 1);
         return;
       }
-      router.replace(body.redirectTo);
+      router.replace(safeNextPath(body.redirectTo) ?? "/events");
       router.refresh();
     } catch {
       setError("You seem to be offline. Try again.");
