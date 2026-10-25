@@ -280,6 +280,87 @@ describe("csp report endpoint", () => {
     warn.mockRestore();
   });
 
+  it("masks a guest token that ends on a quote or a space, and strips the sample query", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const token = "7hK2-wRq9-mB4t";
+    const body = JSON.stringify({
+      "csp-report": {
+        "document-uri": "https://events.klubbies.app/pricing",
+        "script-sample": `fetch("/g/${token}") /g/${token} rest /api/guest/${token}?token=sample-secret`,
+      },
+    });
+    const res = await post(body);
+    expect(res.status).toBe(204);
+    const logged = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(logged.sample).toBe('fetch("/g/[redacted]") /g/[redacted] rest /api/guest/[redacted]');
+    const serialized = JSON.stringify(logged);
+    expect(serialized).not.toContain(token);
+    expect(serialized).not.toContain("sample-secret");
+    warn.mockRestore();
+  });
+
+  it("coerces the line to a number and the disposition to a short string", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const junk = "z".repeat(400);
+    const res = await post(
+      JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://events.klubbies.app/pricing",
+          "line-number": { leak: junk },
+          disposition: junk,
+        },
+      }),
+    );
+    expect(res.status).toBe(204);
+    const logged = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(logged.line).toBeNull();
+    expect(logged.disposition).toBe("z".repeat(32));
+    expect(JSON.stringify(logged)).not.toContain(junk);
+
+    warn.mockClear();
+    await post(
+      JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://events.klubbies.app/pricing",
+          "line-number": "12",
+          disposition: "  report  ",
+        },
+      }),
+    );
+    const clean = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(clean.line).toBe(12);
+    expect(clean.disposition).toBe("report");
+
+    warn.mockClear();
+    await post(
+      JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://events.klubbies.app/pricing",
+          "line-number": "12abc",
+          disposition: ["enforce", junk],
+        },
+      }),
+    );
+    const rejected = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(rejected.line).toBeNull();
+    expect(rejected.disposition).toBeNull();
+    expect(JSON.stringify(rejected)).not.toContain(junk);
+    warn.mockRestore();
+  });
+
+  it("answers 204 and logs nothing when the rate-limit check fails", async () => {
+    hitRateLimit.mockRejectedValueOnce(new Error("auth_rate_events down\n    at hitRateLimit (/lib/auth/rate-limit.ts:38:11)"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await post("not-json", { "x-forwarded-for": "203.0.113.9" });
+    expect(res.status).toBe(204);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(hitRateLimit).toHaveBeenCalledWith(LIMITS.cspReportPerIp, "203.0.113.9");
+    warn.mockRestore();
+    error.mockRestore();
+  });
+
   it("rate limits per IP before reading the body and does not log when limited", async () => {
     hitRateLimit.mockResolvedValueOnce(true);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

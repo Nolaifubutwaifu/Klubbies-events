@@ -5,14 +5,15 @@ const MAX_BYTES = 16 * 1024;
 const ACCEPTED = ["application/csp-report", "application/reports+json", "application/json"];
 
 // Guest upload links are the credential. The token is a path segment on
-// /g/<token> and /api/guest/<token>/…, so dropping the query string does not
-// hide it. Same shape resolveGuestLink accepts: 4–64 of [A-Za-z0-9-].
-const GUEST_TOKEN = "[A-Za-z0-9-]{4,64}";
+// /g/<token> and /api/guest/<token>/…. It runs until the first character
+// outside [A-Za-z0-9-], so a quote or a space ends it the same way / ? # do.
+// At least four characters, the shortest token resolveGuestLink will accept.
+const GUEST_TOKEN = "[A-Za-z0-9-]{4,}";
 
 function redactPathSecrets(value: string): string {
   return value
-    .replaceAll(new RegExp(`/api/guest/${GUEST_TOKEN}(?=[/?#]|$)`, "g"), "/api/guest/[redacted]")
-    .replaceAll(new RegExp(`/g/${GUEST_TOKEN}(?=[/?#]|$)`, "g"), "/g/[redacted]");
+    .replaceAll(new RegExp(`/api/guest/${GUEST_TOKEN}`, "g"), "/api/guest/[redacted]")
+    .replaceAll(new RegExp(`/g/${GUEST_TOKEN}`, "g"), "/g/[redacted]");
 }
 
 // Signed Supabase and R2 URLs, and the unsubscribe links, carry their token
@@ -25,6 +26,19 @@ function loggedUrl(value: unknown, max: number): string {
 
 function loggedText(value: unknown, max: number): string {
   return redactPathSecrets(String(value ?? "")).slice(0, max);
+}
+
+function loggedLine(value: unknown): number | null {
+  if (typeof value === "string" && value.trim() === "") return null;
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value.trim()) : NaN;
+  if (!Number.isSafeInteger(n) || n < 0) return null;
+  return n;
+}
+
+function loggedDisposition(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 32);
+  return cleaned || null;
 }
 
 // Same first-hop rule as clientFingerprint. Read it off this request: the
@@ -44,8 +58,14 @@ export async function POST(request: Request) {
   if (declared > MAX_BYTES) return new NextResponse(null, { status: 413 });
 
   // Before the body is read, so a flood never reaches the log or the parser.
-  if (await hitRateLimit(LIMITS.cspReportPerIp, clientIp(request))) {
-    return new NextResponse(null, { status: 429 });
+  // A database error must not become a 500: the platform would log the stack
+  // for every report a browser sends while the database is down.
+  try {
+    if (await hitRateLimit(LIMITS.cspReportPerIp, clientIp(request))) {
+      return new NextResponse(null, { status: 429 });
+    }
+  } catch {
+    return new NextResponse(null, { status: 204 });
   }
 
   const reader = request.body?.getReader();
@@ -86,9 +106,9 @@ export async function POST(request: Request) {
         directive: loggedText(fields["effective-directive"] ?? fields.effectiveDirective ?? fields["violated-directive"], 100),
         blocked: loggedUrl(fields["blocked-uri"] ?? fields.blockedURL, 300),
         source: loggedUrl(fields["source-file"] ?? fields.sourceFile, 300),
-        line: fields["line-number"] ?? fields.lineNumber ?? null,
-        sample: loggedText(fields["script-sample"] ?? fields.sample, 120),
-        disposition: fields.disposition ?? null,
+        line: loggedLine(fields["line-number"] ?? fields.lineNumber),
+        sample: loggedUrl(fields["script-sample"] ?? fields.sample, 120),
+        disposition: loggedDisposition(fields.disposition),
       }),
     );
   }
