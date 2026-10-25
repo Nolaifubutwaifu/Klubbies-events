@@ -78,10 +78,11 @@ async function decodeImage(file: File, mimeType: string): Promise<ImageBitmap> {
     return await createImageBitmap(file, { imageOrientation: "from-image" });
   } catch (error) {
     if (mimeType !== "image/heic" && mimeType !== "image/heif") throw error;
-    const heic2any = (await import("heic2any")).default;
-    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-    const blob = Array.isArray(converted) ? converted[0] : converted;
-    return createImageBitmap(blob, { imageOrientation: "from-image" });
+    // Fetched only when the browser cannot decode the file. heic-to/csp is the
+    // LGPL-3.0 libheif build with no eval; it decodes inside a blob worker.
+    const { heicTo } = await import("heic-to/csp");
+    const converted = await heicTo({ blob: file, type: "image/jpeg", quality: 0.9 });
+    return createImageBitmap(converted, { imageOrientation: "from-image" });
   }
 }
 

@@ -16,7 +16,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/events/[id]/
   const headers = { "content-disposition": `attachment; filename="${name}"`, "cache-control": "private, no-store" };
 
   if (format === "svg") {
-    return new NextResponse(await eventQrSvg(event.event.handle), { headers: { ...headers, "content-type": "image/svg+xml" } });
+    return new NextResponse(await eventQrSvg(event.event.handle), {
+      headers: {
+        ...headers,
+        "content-type": "image/svg+xml",
+        // The SVG is the event handle drawn as vectors. If someone opens the
+        // download, it still cannot script or load anything.
+        "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        "x-content-type-options": "nosniff",
+      },
+    });
   }
   const png = await eventQrPng(event.event.handle);
   return new NextResponse(new Uint8Array(png), { headers: { ...headers, "content-type": "image/png" } });

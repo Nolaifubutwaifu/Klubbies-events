@@ -12,6 +12,10 @@ export const LIMITS = {
   passwordPerEmail: { bucket: "password:email", limit: 10, windowSeconds: 3600 },
   contactPerIp: { bucket: "contact:ip", limit: 5, windowSeconds: 3600 },
   contactPerEmail: { bucket: "contact:email", limit: 5, windowSeconds: 3600 },
+  // Flood guard for the public CSP collector. A venue shares one address, and
+  // one broken page can emit a burst, so this only stops a log flood (the
+  // headers spec's 60/min example). It is not a per-person limit.
+  cspReportPerIp: { bucket: "csp_report:ip", limit: 60, windowSeconds: 60 },
 } as const;
 
 type Limit = (typeof LIMITS)[keyof typeof LIMITS];
