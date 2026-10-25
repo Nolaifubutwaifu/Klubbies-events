@@ -1,5 +1,5 @@
 -- Name review (migration 36) stayed off the membership update guard
--- (migration 37). A held guest could clear it themselves.
+-- (migration 38). A held guest could clear it themselves.
 --
 --   As a held member, clearing name_review_at fails with 42501.
 --   As a held member, setting name_approved_at fails with 42501.

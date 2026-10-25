@@ -3,7 +3,7 @@
 -- Migration 36 added name_review_at and name_approved_at. Photos stay hidden
 -- while name_review_at is set (private.can_view_event_item). The self-update
 -- policy still allows a member to update any column of their own row, and
--- private.guard_membership_update — last replaced in migration 29 — never
+-- private.guard_membership_update, last replaced in migration 29, never
 -- learned the two new columns. As authenticated, with their own JWT, a held
 -- guest could set name_review_at back to null or stamp name_approved_at, and
 -- the next read of can_view_event_item would let them in. Stamping
