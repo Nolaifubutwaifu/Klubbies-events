@@ -38,7 +38,7 @@ export default async function ChristmasPartiesPage() {
     },
     {
       q: "How soon can guests see the photos?",
-      a: "Photos appear in the gallery as the photographer uploads them, so guests can have them the same night. It depends on when your photographer uploads.",
+      a: "Albums start as drafts. Once the photographer has uploaded, you publish the album, or schedule an album to go live, so guests can have them the same night. It depends on when your photographer uploads.",
     },
     {
       q: "How long do the photos stay up?",
@@ -50,7 +50,7 @@ export default async function ChristmasPartiesPage() {
     },
     {
       q: "Does our photographer need an account?",
-      a: "No. You send them their own upload link. They upload in any browser at full quality, uploads resume if the connection drops, and every photo is credited to them by name.",
+      a: "No. You send them their own upload link. They upload in any browser at full quality, failed files can be retried, and every photo is credited to them by name.",
     },
     ...(inApp
       ? []
@@ -86,8 +86,8 @@ export default async function ChristmasPartiesPage() {
         <Points
           items={[
             "One link and one QR code for the whole event. Print the A4 QR poster for the entry or the bar, or download the code as PNG or SVG for screens and slides.",
-            "Your photographer uploads through their own link, with no account to create. If the venue connection drops, uploads pick up where they stopped.",
-            "Photos appear in the gallery as they land, so guests can have them the same night.",
+            "Your photographer uploads through their own link, with no account to create. If the venue connection drops, failed files can be retried.",
+            "You publish the album, or schedule an album to go live, so guests can have them the same night.",
             "Guests type the 8-digit code we email them, take a selfie and download the photos they're in, from a phone or laptop browser. No app needed.",
             "Publish the album when it's ready, or schedule an album to go live. Guests get an email when a new album is published.",
             "Use the ready-made announcement email the next morning to reach anyone who didn't scan on the night.",

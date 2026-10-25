@@ -17,7 +17,7 @@ export default async function FastDeliveryGuide() {
     <ContentPage
       path={PATH}
       inApp={inApp}
-      article={{ headline: PAGE_CARDS[PATH].title, description: DESCRIPTION, published: GUIDES_PUBLISHED }}
+      article={{ headline: PAGE_CARDS[PATH].title, description: DESCRIPTION, published: GUIDES_PUBLISHED, modified: "2026-10-25" }}
       eyebrow="Guide"
       title={PAGE_CARDS[PATH].title}
       lead="Photos get the most attention while the event is still fresh. Delivered the same night, they end up on people's profiles with the event's name on them. Delivered a fortnight later, most go unseen."
@@ -64,13 +64,13 @@ export default async function FastDeliveryGuide() {
                 items={[
                   "Make one album per part of the event: arrivals, speeches, dance floor.",
                   "Give each photographer their own upload destination for each album, so nobody sorts photos later.",
-                  "Check the venue Wi-Fi or plan for a phone hotspot, and use an upload tool that resumes after a dropped connection.",
+                  "Check the venue Wi-Fi or plan for a phone hotspot, and use an upload tool that lets you retry any file that fails.",
                   "Have the photographer shoot JPEG alongside RAW, or set up a quick export preset, so the first upload doesn't wait for a full edit.",
                 ]}
               />
               <p>
                 In Klubbies Events, each photographer gets an upload link per album that works in any browser, with no
-                account. Uploads run in the background at full resolution and resume if the connection drops, so a laptop
+                account. Uploads run in the background at full resolution, and any file that fails can be retried, so a laptop
                 in the corner of the venue can upload while the photographer keeps shooting.
               </p>
             </>

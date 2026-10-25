@@ -42,7 +42,7 @@ export default async function PhotographersPage() {
     },
     {
       q: "Can I upload during the event?",
-      a: "Yes. Uploads appear in the gallery as they land, and they resume if the venue connection drops.",
+      a: "Yes. Upload through your own link while the event runs. If a file fails because the venue connection drops, you can retry it. Guests see the photos once the organiser publishes the album.",
     },
     ...(inApp
       ? []
@@ -102,7 +102,7 @@ export default async function PhotographersPage() {
                 items={[
                   "No account to create and no app to install.",
                   "Full resolution, kept exactly as you uploaded it.",
-                  "Uploads run in the background and resume if the connection drops.",
+                  "Uploads run in the background, and any file that fails can be retried.",
                   "Each photo is credited to you by name, so guests know who took it.",
                   `Videos up to ${UPLOAD_MAX_MB} MB per file, in the same album.`,
                 ]}
@@ -136,8 +136,8 @@ export default async function PhotographersPage() {
           title: "Christmas party season",
           body: (
             <p>
-              November and December are full of work functions. Upload during the event and photos appear in the gallery
-              as they land, so guests can have them the same night. The A4 QR poster and announcement email are ready to
+              November and December are full of work functions. Upload during the event and once the organiser publishes
+              the album, or schedules an album to go live, guests can have them the same night. The A4 QR poster and announcement email are ready to
               hand to the client. Send them to the page on <Link href="/christmas-parties">work Christmas party photos</Link>.
             </p>
           ),

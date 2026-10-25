@@ -106,7 +106,7 @@ export const ORGANISER_FEATURES: Feature[] = [
   {
     icon: "upload",
     title: "Photographer links",
-    body: "One link per photographer, per album. Uploads resume after a dropped connection, and you see who sent what.",
+    body: "One link per photographer, per album. Failed files can be retried, and you see who sent what.",
   },
   {
     icon: "qr",

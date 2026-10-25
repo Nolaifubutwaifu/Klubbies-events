@@ -53,7 +53,7 @@ export default async function ConferencesPage() {
         ]),
     {
       q: "How soon do guests get their photos?",
-      a: "Photos appear in the gallery as the photographer uploads them, so guests can have them the same night.",
+      a: "Albums start as drafts. Once the photographer has uploaded, you publish the album, or schedule an album to go live, so guests can have them the same night.",
     },
     {
       q: "Can someone have a photo of themselves taken down?",
@@ -110,7 +110,7 @@ export default async function ConferencesPage() {
               <Points items={["Keynotes", "Breakout sessions", "Expo floor and sponsors", "Networking drinks", "Headshot station"]} />
               <p>
                 Each photographer gets an upload link per album, with no account to create. Uploads run in the background
-                at full resolution and pick up where they left off if the venue Wi-Fi drops. Every photo is credited to
+                at full resolution, and any file that fails when the venue Wi-Fi drops can be retried. Every photo is credited to
                 the photographer who took it.
               </p>
               <p>
@@ -127,7 +127,7 @@ export default async function ConferencesPage() {
             <p>
               The end-of-year party is where most staff photos get taken, and where a shared Drive link is the worst fit.
               Only confirmed emails get in, face search is opt in, and anyone can ask for a photo of themselves to come
-              down. Photos land in the gallery as the photographer uploads them, so guests can have them the same night.
+              down. Albums start as drafts. You publish the album, or schedule an album to go live, so guests can have them the same night.
               More on <Link href="/christmas-parties">work Christmas party photos</Link>.
             </p>
           ),
