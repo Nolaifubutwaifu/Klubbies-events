@@ -26,6 +26,10 @@ export type ParsedSheet = {
 };
 
 export const MAX_ROSTER_ROWS = 20000;
+/** A guest list is a few columns. Wider sheets are refused rather than parsed. */
+export const MAX_ROSTER_COLUMNS = 64;
+/** One cell. Long enough for a name or email, short of a pasted document. */
+export const MAX_ROSTER_CELL = 2000;
 
 const HEADER_WORDS =
   /^(full[\s_-]*name|name|names|member|member[\s_-]*name|student[\s_-]*name|display[\s_-]*name|first[\s_-]*name|given[\s_-]*name|forename|preferred[\s_-]*name|vorname|last[\s_-]*name|surname|family[\s_-]*name|nachname|e[\s_-]*mail|email[\s_-]*address|e[\s_-]*mail[\s_-]*address|mail|uni[\s_-]*email|student[\s_-]*email|student[\s_-]*id|id|phone|mobile|role|position|year|degree|status|joined|membership)$/i;

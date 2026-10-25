@@ -4,6 +4,8 @@ import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import type { Json } from "@/lib/db/types";
 import {
+  MAX_ROSTER_CELL,
+  MAX_ROSTER_COLUMNS,
   MAX_ROSTER_ROWS,
   applySavedMapping,
   guessMapping,
@@ -57,6 +59,15 @@ export async function POST(request: Request) {
   }
   if (sheet.dataRows.length > MAX_ROSTER_ROWS) {
     return NextResponse.json({ error: `Rosters are limited to ${MAX_ROSTER_ROWS.toLocaleString()} rows per import` }, { status: 413 });
+  }
+  if (sheet.columns.length > MAX_ROSTER_COLUMNS) {
+    return NextResponse.json({ error: "That file has too many columns. Export just the name and email columns." }, { status: 413 });
+  }
+  const oversizedCell =
+    sheet.columns.some((cell) => cell.length > MAX_ROSTER_CELL) ||
+    sheet.dataRows.some((row) => row.some((cell) => cell.length > MAX_ROSTER_CELL));
+  if (oversizedCell) {
+    return NextResponse.json({ error: "A cell in that file is too long. Export just the name and email columns." }, { status: 413 });
   }
 
   const saved = savedMappingSchema.safeParse(ctx.event.roster_mapping);
