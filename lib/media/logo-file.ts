@@ -28,7 +28,7 @@ export const GALLERY_MAX_INPUT_PIXELS = 80_000_000;
 export const LOGO_MAX_INPUT_PIXELS = 25_000_000;
 export const CROP_MAX_INPUT_PIXELS = 40_000_000;
 
-/** Gallery indexing, including the hourly job and scripts/backfill-faces.ts. */
+/** Gallery indexing, video frames, restore rebuilds, and the face scripts. */
 export const sharpDecodeOptions = {
   limitInputPixels: GALLERY_MAX_INPUT_PIXELS,
   failOn: "error" as const,

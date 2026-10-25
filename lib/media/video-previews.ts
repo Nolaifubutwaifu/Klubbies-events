@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { r2Url } from "@/lib/backup/r2";
+import { sharpDecodeOptions } from "@/lib/media/logo-file";
 import { BUCKET, derivativePaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -77,7 +78,7 @@ export async function runVideoPreviewBackfill(budgetMs: number): Promise<number>
       if (!url) throw new Error("no readable copy");
       // A second in, past any black first frame; very short clips start at 0.
       const frame = await grabFrame(url, 1).catch(() => grabFrame(url, 0));
-      const image = sharp(frame.jpeg);
+      const image = sharp(frame.jpeg, sharpDecodeOptions);
       const { width, height } = await image.metadata();
       if (!width || !height) throw new Error("frame has no size");
 

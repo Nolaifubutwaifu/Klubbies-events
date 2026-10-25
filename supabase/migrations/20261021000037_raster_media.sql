@@ -9,8 +9,9 @@
 -- column-scoped, and AlbumEditPanel only checks the file type in the browser.
 --
 -- logo_path is now written by the service role, after the action has checked
--- the caller runs the event. cover_path stays a normal column for reads, but
--- a trigger refuses changes from the authenticated role. Both columns grow a
+-- the caller runs the event. cover_path stays a normal column for reads.
+-- Only service_role, postgres and supabase_admin may set or change it.
+-- anon, authenticated and every other role get 42501. Both columns grow a
 -- trigger, not a check constraint: a NOT VALID check still fires on every
 -- later UPDATE of a row that already holds an .svg path, including a service
 -- role update of an unrelated column (Stripe, backup, retention, notify,
@@ -93,8 +94,10 @@ begin
     return new;
   end if;
 
-  -- Service role and migrations may set a raster path, or clear it.
-  if current_user <> 'authenticated' then
+  -- The admin client connects as service_role. Migrations and the table
+  -- owner connect as postgres or supabase_admin. Everyone else, anon
+  -- included, is refused even when the path is a raster file.
+  if current_user in ('service_role', 'postgres', 'supabase_admin') then
     if new.cover_path is not null and new.cover_path !~ '\.(png|jpe?g|webp)$' then
       raise exception 'cover_path must be a png, jpg, jpeg or webp' using errcode = '23514';
     end if;

@@ -158,7 +158,8 @@ describe("raster media migration", () => {
     expect(sql).toContain("new.logo_path is not distinct from old.logo_path");
     expect(sql).toContain("new.cover_path is not distinct from old.cover_path");
     expect(sql).toContain("security invoker");
-    expect(sql).toContain("current_user <> 'authenticated'");
+    expect(sql).toContain("current_user in ('service_role', 'postgres', 'supabase_admin')");
+    expect(sql).not.toContain("current_user <> 'authenticated'");
     expect(sql).toContain("cover_path is set by the server");
     expect(sql).not.toContain("security definer");
   });

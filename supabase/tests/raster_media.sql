@@ -1,6 +1,7 @@
--- Migration 37: logo_path is not client-writable, cover_path changes from the
--- authenticated role are refused, and a new path must be a raster extension.
--- An SVG already stored does not block updates of other columns.
+-- Migration 37: logo_path is not client-writable. cover_path may be set only
+-- by service_role, postgres or supabase_admin, and a new path must be a
+-- raster extension. anon and authenticated are refused. An SVG already stored
+-- does not block updates of other columns.
 --
 -- Run it against a database that has the migrations applied. It rolls back.
 --
@@ -189,10 +190,60 @@ begin
     where id = v_album;
     raise exception 'authenticated was able to change cover_path';
   exception
-    when insufficient_privilege then null;
+    when insufficient_privilege then
+      if sqlerrm not like '%cover_path is set by the server%' then
+        raise exception 'authenticated was not refused by the cover guard: %', sqlerrm;
+      end if;
   end;
 
   reset role;
+
+  -- Anon has no table grant and no albums policy, so a plain update never
+  -- reaches the guard. Grant the write (select is what an update's where
+  -- clause needs) and turn row security off for this assertion only, so a
+  -- refusal is the trigger and not the grant or RLS.
+  grant select, insert, update on table public.albums to anon;
+  alter table public.albums disable row level security;
+  set local role anon;
+
+  begin
+    update public.albums
+    set cover_path = 'events/' || v_event || '/covers/' || v_album || '-4.png'
+    where id = v_album;
+    raise exception 'anon was able to change cover_path';
+  exception
+    when insufficient_privilege then
+      if sqlerrm not like '%cover_path is set by the server%' then
+        raise exception 'anon was not refused by the cover guard: %', sqlerrm;
+      end if;
+  end;
+
+  begin
+    insert into public.albums (event_id, title, cover_path)
+    values (v_event, 'Anon cover', 'events/' || v_event || '/covers/anon-1.png');
+    raise exception 'anon was able to insert a cover_path';
+  exception
+    when insufficient_privilege then
+      if sqlerrm not like '%cover_path is set by the server%' then
+        raise exception 'anon insert was not refused by the cover guard: %', sqlerrm;
+      end if;
+  end;
+
+  -- A null cover and an unchanged path return before the role check.
+  -- The cover here is the jpg the service role stored earlier in this test.
+  insert into public.albums (event_id, title) values (v_event, 'Anon album');
+  update public.albums set title = 'Anon retitle' where id = v_album;
+  if not exists (
+    select 1 from public.albums
+    where id = v_album
+      and title = 'Anon retitle'
+      and cover_path = 'events/' || v_event || '/covers/' || v_album || '-2.jpg'
+  ) then
+    raise exception 'anon could not retitle an album while leaving cover_path alone';
+  end if;
+
+  reset role;
+  alter table public.albums enable row level security;
   raise notice 'raster media: all checks passed';
 end;
 $$;
