@@ -63,7 +63,7 @@ const SETUP: { title: string; body: string; icon: ReactNode }[] = [
 
 const UPLOADING = [
   { title: "Send each photographer a link", body: "Copy it, email it from the app, or let them scan a QR code. Each link uploads into one album until the date you set." },
-  { title: "Full resolution, in the background", body: "Photos and videos upload at full quality and pick up where they left off if the connection drops." },
+  { title: "Full resolution, in the background", body: "Photos and videos upload at full quality, and any file that fails can be retried." },
   { title: "Credited by name", body: "Every photo carries the photographer's name, so attendees know who took it." },
 ];
 
