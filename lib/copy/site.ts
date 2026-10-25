@@ -48,7 +48,9 @@ export const PRICE = {
 
 export const FACE = {
   title: "Every attendee finds their own photos",
-  lead: "With face recognition photo sharing, one selfie shows each attendee the event photos they're in, across every album. Nobody scrolls through 2,000 photos looking for themselves.",
+  leadBefore: "With ",
+  leadLink: "face recognition photo sharing",
+  leadAfter: ", one selfie shows each attendee the event photos they're in, across every album. Nobody scrolls through 2,000 photos looking for themselves.",
   points: [
     {
       title: "Their choice",

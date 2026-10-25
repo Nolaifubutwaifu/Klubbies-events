@@ -34,7 +34,6 @@ const FACE_ICONS = [
 
 /** Inside the iPhone app prices and the pricing band are left out: Apple allows no payment prompts there. */
 export function Home({ inApp = false }: { inApp?: boolean }) {
-  const [faceLeadBefore, faceLeadAfter] = FACE.lead.split("face recognition photo sharing");
   const faqs = HOME_QUESTIONS.map((q) => FAQS.find((item) => item.q === q)).filter(
     (item): item is (typeof FAQS)[number] => Boolean(item) && !(inApp && item?.group === "Pricing"),
   );
@@ -151,9 +150,9 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                 {FACE.title}.
               </h2>
               <p className="m-0 text-[18px] text-[color:var(--kb-ink-2)] [&_a]:underline [&_a]:underline-offset-4">
-                {faceLeadBefore}
-                <Link href="/features">face recognition photo sharing</Link>
-                {faceLeadAfter}
+                {FACE.leadBefore}
+                <Link href="/features">{FACE.leadLink}</Link>
+                {FACE.leadAfter}
               </p>
               <ul className="m-0 flex list-none flex-col border-t border-[color:var(--kb-line)] p-0">
                 {FACE.points.map((point, index) => (

@@ -15,7 +15,7 @@ const FEATURE_FAQS = [
   },
   {
     q: "Do guests have to agree before face search runs?",
-    a: "Yes. Guests acknowledge a notice about face search before they see any photos, and face search is opt in.",
+    a: "Yes. Guests acknowledge a notice about face search before they see any photos, and face search is opt-in.",
   },
   {
     q: "Where are photos and faceprints stored?",

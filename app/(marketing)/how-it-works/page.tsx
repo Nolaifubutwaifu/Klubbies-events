@@ -370,8 +370,8 @@ export default async function HowItWorksPage() {
               </h2>
               <p className="m-0 text-[18px] text-[color:var(--kb-ink-2)]">
                 Only people you let in can open the gallery. Face search is optional for every attendee and only ever
-                shows them their own photos. See <a href="/face-search-privacy">how face search works</a>, or{" "}
-                <a href="/privacy">read the privacy policy</a>.
+                shows them their own photos. See <a href="/face-search-privacy" className="underline underline-offset-2">how face search works</a>, or{" "}
+                <a href="/privacy" className="underline underline-offset-2">read the privacy policy</a>.
               </p>
             </div>
             <div className="grid flex-[1_1_420px] gap-3 sm:grid-cols-3">
