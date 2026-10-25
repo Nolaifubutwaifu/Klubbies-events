@@ -27,13 +27,16 @@ function pathPortion(value: string): string {
   return cut === -1 ? value : value.slice(0, cut);
 }
 
-/** Pathname only, with one percent-decode so `/%73ignin` is `/signin`. */
-function decodedPathname(value: string): string {
+/**
+ * Pathname only, with one percent-decode so `/%73ignin` is `/signin`.
+ * A broken escape (`/start%`, `/%73ignin/%ff`) cannot be checked, so it is refused.
+ */
+function decodedPathname(value: string): string | null {
   const path = pathPortion(value);
   try {
     return decodeURIComponent(path);
   } catch {
-    return path;
+    return null;
   }
 }
 
@@ -45,12 +48,14 @@ function pathHasUserinfo(value: string): boolean {
 
 function blocked(value: string): boolean {
   const path = pathPortion(value);
+  const decoded = decodedPathname(value);
+  if (decoded === null) return true;
   return (
     UNSAFE.test(value) ||
     !startsWithSingleSlash(value) ||
     pathHasUserinfo(value) ||
     ENCODED_UNSAFE.test(path) ||
-    SIGN_IN.test(decodedPathname(value))
+    SIGN_IN.test(decoded)
   );
 }
 
