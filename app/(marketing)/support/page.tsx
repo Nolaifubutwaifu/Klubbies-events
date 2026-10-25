@@ -90,8 +90,7 @@ const TOPICS: Topic[] = [
           Receipts are on the event&apos;s Plan screen. See the <Link href="/refunds">refund policy</Link> for when we refund.
         </p>
         <p>
-          The app doesn&apos;t sell anything. Organisers pay once per event on the website; refunds are covered in the{" "}
-          <Link href="/refunds">refund policy</Link>.
+          The app doesn&apos;t sell anything. Organisers pay once per event on the website; refunds are covered in the refund policy.
         </p>
       </>
     ),
@@ -108,8 +107,7 @@ const TOPICS: Topic[] = [
           <Link href="/privacy">privacy policy</Link>.
         </p>
         <p>
-          Open your profile and choose Delete my account, in the app or on the website. The{" "}
-          <Link href="/privacy">privacy policy</Link> explains what that deletes and what stays with the event.
+          Open your profile and choose Delete my account, in the app or on the website. The privacy policy explains what that deletes and what stays with the event.
         </p>
       </>
     ),

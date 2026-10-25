@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { safeNextPath } from "@/lib/auth/next-path";
 
 type Mode = "code" | "password";
@@ -15,6 +15,20 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
   const [mode, setMode] = useState<Mode>("code");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [errorTick, setErrorTick] = useState(0);
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  // Disabling the submit button while the request is in flight drops focus to
+  // the page. Put it back on the email field once the error is in the DOM.
+  useEffect(() => {
+    if (errorTick) emailRef.current?.focus();
+  }, [errorTick]);
+
+  function showError(message: string) {
+    setError(message);
+    setPending(false);
+    setErrorTick((tick) => tick + 1);
+  }
 
   async function requestCode(form: FormData) {
     const fullName = form.get("fullName");
@@ -32,8 +46,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
     });
     if (!res.ok) {
       const body: { error?: string } = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong. Try again.");
-      setPending(false);
+      showError(body.error ?? "Something went wrong. Try again.");
       return;
     }
     const params = new URLSearchParams();
@@ -51,8 +64,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
     });
     const body: { error?: string; redirectTo?: string } = await res.json().catch(() => ({}));
     if (!res.ok || !body.redirectTo) {
-      setError(body.error ?? "That didn't work. Try a code instead.");
-      setPending(false);
+      showError(body.error ?? "That didn't work. Try a code instead.");
       return;
     }
     router.replace(safeNextPath(body.redirectTo) ?? "/events");
@@ -68,8 +80,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
       if (mode === "password") await signInWithPassword(form);
       else await requestCode(form);
     } catch {
-      setError("You seem to be offline. Try again.");
-      setPending(false);
+      showError("You seem to be offline. Try again.");
     }
   }
 
@@ -103,6 +114,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
           Email
         </label>
         <input
+          ref={emailRef}
           id="email"
           className="input !min-h-[52px]"
           name="email"
@@ -111,7 +123,10 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
           autoComplete="email"
           required
           maxLength={254}
-          aria-describedby={flow === "create" ? "email-help" : undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={
+            [flow === "create" ? "email-help" : null, error ? "email-error" : null].filter(Boolean).join(" ") || undefined
+          }
         />
         {flow === "create" ? (
           <span id="email-help" className="kb-help">
@@ -128,7 +143,7 @@ export function SignInForm({ flow, event }: { flow: "member" | "create" | "join"
         </div>
       ) : null}
       {error ? (
-        <p className="kb-error m-0" role="alert">
+        <p id="email-error" className="kb-error m-0" role="alert">
           {error}
         </p>
       ) : null}

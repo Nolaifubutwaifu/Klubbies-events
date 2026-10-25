@@ -1,13 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 /** Asked once, after the email code, and only when the account has no name yet. */
 export function NameForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [errorTick, setErrorTick] = useState(0);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  // Disabling the submit button while the request is in flight drops focus to
+  // the page. Put it back on the field once the error is in the DOM, including
+  // when a second attempt fails with the same message.
+  useEffect(() => {
+    if (errorTick) nameRef.current?.focus();
+  }, [errorTick]);
+
+  function showError(message: string) {
+    setError(message);
+    setPending(false);
+    setErrorTick((tick) => tick + 1);
+  }
 
   async function onSubmit(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
@@ -22,15 +37,13 @@ export function NameForm() {
       });
       const body: { error?: string; redirectTo?: string } = await res.json().catch(() => ({}));
       if (!res.ok || !body.redirectTo) {
-        setError(body.error ?? "Something went wrong. Try again.");
-        setPending(false);
+        showError(body.error ?? "Something went wrong. Try again.");
         return;
       }
       router.replace(body.redirectTo);
       router.refresh();
     } catch {
-      setError("You seem to be offline. Try again.");
-      setPending(false);
+      showError("You seem to be offline. Try again.");
     }
   }
 
@@ -41,20 +54,22 @@ export function NameForm() {
           Your name
         </label>
         <input
+          ref={nameRef}
           id="name"
           className="input !min-h-[52px]"
           name="name"
           autoComplete="name"
           required
           maxLength={200}
-          aria-describedby="name-help"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "name-help name-error" : "name-help"}
         />
         <span id="name-help" className="kb-help">
           Organisers and photographers see this.
         </span>
       </div>
       {error ? (
-        <p className="kb-error m-0" role="alert">
+        <p id="name-error" className="kb-error m-0" role="alert">
           {error}
         </p>
       ) : null}
