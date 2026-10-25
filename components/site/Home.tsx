@@ -55,9 +55,10 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                 QR code and take a selfie, and facial recognition shows each of them the photos they&apos;re in, at full
                 quality, under your brand.
               </p>
-              <p className="m-0 max-w-[52ch] text-[16px] leading-[1.6]">
+              <p className="m-0 max-w-[62ch] text-[16px] leading-[1.6] [&_a]:underline [&_a]:underline-offset-4">
                 Built for <Link href="/christmas-parties">work Christmas parties</Link>,{" "}
-                <Link href="/conferences">conferences and corporate events</Link> and <Link href="/student-clubs">club nights</Link>.
+                <Link href="/conferences">conferences and corporate events</Link>, <Link href="/student-clubs">club nights</Link>,{" "}
+                <Link href="/brisbane">Brisbane events</Link> and <Link href="/photographers">event photographers</Link>.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/start" className="btn btn-primary btn-lg no-underline">
@@ -120,9 +121,9 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                   Three steps, and the photos find their people.
                 </h2>
               </div>
-              <Link href="/how-it-works" className="text-[15px] font-semibold">
-                See the full walkthrough
-              </Link>
+              <span className="text-[15px] font-semibold [&_a]:underline [&_a]:underline-offset-4">
+                See <Link href="/how-it-works">how QR code photo sharing works</Link>
+              </span>
             </div>
             <ol className="m-0 grid list-none gap-6 p-0 md:grid-cols-3">
               {STEPS.map((step, index) => (
@@ -148,7 +149,11 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
               <h2 id="face" className="kb-h2">
                 {FACE.title}.
               </h2>
-              <p className="m-0 text-[18px] text-[color:var(--kb-ink-2)]">{FACE.lead}</p>
+              <p className="m-0 text-[18px] text-[color:var(--kb-ink-2)] [&_a]:underline [&_a]:underline-offset-4">
+                {FACE.leadBefore}
+                <Link href="/features">{FACE.leadLink}</Link>
+                {FACE.leadAfter}
+              </p>
               <ul className="m-0 flex list-none flex-col border-t border-[color:var(--kb-line)] p-0">
                 {FACE.points.map((point, index) => (
                   <li key={point.title} className="flex gap-4 border-b border-[color:var(--kb-line)] py-5">
@@ -164,7 +169,7 @@ export function Home({ inApp = false }: { inApp?: boolean }) {
                   </li>
                 ))}
               </ul>
-              <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
+              <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)] [&_a]:underline [&_a]:underline-offset-4">
                 {FACE.caveat} <Link href="/face-search-privacy">How face search handles privacy</Link>.
               </p>
             </div>

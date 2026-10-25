@@ -6,8 +6,8 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Face Search Privacy: Facial Recognition Explained",
-  description: "How Klubbies Events uses facial recognition to help attendees find their own event photos: consent, faceprints, who can see matches, and when everything is deleted.",
+  title: "Face Search Privacy and Facial Recognition",
+  description: "How face search finds your event photos: consent first, faceprints stored in Sydney, only you see your matches, and when everything is deleted.",
   path: "/face-search-privacy",
 });
 

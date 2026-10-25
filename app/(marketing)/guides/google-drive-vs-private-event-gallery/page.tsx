@@ -7,7 +7,7 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 const PATH = "/guides/google-drive-vs-private-event-gallery";
-const DESCRIPTION = "An honest comparison of sharing event photos through a Google Drive folder and through a private event gallery: privacy, finding yourself, quality, branding and cost.";
+const DESCRIPTION = "Sharing event photos through a Google Drive folder or a private event gallery, compared on privacy, finding yourself, quality, branding and cost.";
 
 export const metadata: Metadata = pageMetadata({ title: PAGE_CARDS[PATH].title, description: DESCRIPTION, path: PATH });
 

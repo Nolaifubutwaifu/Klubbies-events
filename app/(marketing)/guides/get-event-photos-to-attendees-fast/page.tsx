@@ -6,9 +6,10 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 const PATH = "/guides/get-event-photos-to-attendees-fast";
+const TITLE = "How to Get Event Photos Out the Same Night";
 const DESCRIPTION = "How to get event photos to attendees the same night: upload during the event, cull lightly, publish album by album and tell guests where to look.";
 
-export const metadata: Metadata = pageMetadata({ title: PAGE_CARDS[PATH].title, description: DESCRIPTION, path: PATH });
+export const metadata: Metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: PATH });
 
 export default async function FastDeliveryGuide() {
   const inApp = await isNativeAppRequest();

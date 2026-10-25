@@ -7,7 +7,7 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Photo Sharing for Uni Balls and Student Clubs",
+  title: "Photo Sharing for Uni Balls and Clubs",
   description: `Private photo galleries for uni balls, formals and club nights. Members take a selfie and find every photo they're in. Club prices from A$${TIERS.small.price.club} per event.`,
   path: "/student-clubs",
 });

@@ -109,7 +109,7 @@ export default async function ConferencesPage() {
               <p>Make one album per part of the program, for example:</p>
               <Points items={["Keynotes", "Breakout sessions", "Expo floor and sponsors", "Networking drinks", "Headshot station"]} />
               <p>
-                Each photographer gets an upload link per album, with no account to create. Uploads run in the background
+                Each of your <Link href="/photographers">event photographers</Link> gets an upload link per album, with no account to create. Uploads run in the background
                 at full resolution, and any file that fails when the venue Wi-Fi drops can be retried. Every photo is credited to
                 the photographer who took it.
               </p>

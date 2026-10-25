@@ -6,7 +6,7 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 const PATH = "/guides/share-photos-after-a-conference";
-const DESCRIPTION = "A practical plan for sharing conference photos with delegates: before the event, on the day and in the follow-up email, so photos get seen instead of sitting in a folder.";
+const DESCRIPTION = "A plan for sharing conference photos with delegates, before the event, on the day and in the follow-up email, so photos get seen, not left in a folder.";
 
 export const metadata: Metadata = pageMetadata({ title: PAGE_CARDS[PATH].title, description: DESCRIPTION, path: PATH });
 
