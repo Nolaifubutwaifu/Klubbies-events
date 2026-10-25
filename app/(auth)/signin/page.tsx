@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeading, AuthNote, AuthShell } from "@/components/AuthShell";
 import { ScanEventButton } from "@/components/ScanEventButton";
+import { safeNextPath } from "@/lib/auth/next-path";
 import { authEventPreview } from "@/lib/auth/preview";
 import { getPublicEvent, getSessionUser } from "@/lib/auth/session";
 import { EVENT_FULL_MESSAGE, eventIsFull } from "@/lib/billing/usage";
@@ -16,7 +17,7 @@ export default async function SignInPage(props: PageProps<"/signin">) {
   const params = await props.searchParams;
   const eventHandle = typeof params.event === "string" ? params.event : undefined;
   const user = await getSessionUser();
-  if (user) redirect(eventHandle ? `/e/${eventHandle}` : "/events");
+  if (user) redirect(safeNextPath(eventHandle ? `/e/${eventHandle}` : "/events") ?? "/events");
 
   const event = await authEventPreview(eventHandle);
 
