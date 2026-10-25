@@ -55,9 +55,9 @@ grant execute on function public.claim_display_name(uuid, text) to service_role;
 -- same update, so two guesses at once cannot both pass a counter they read
 -- as 4. Five is MAX_VERIFY_ATTEMPTS in lib/auth/flow.ts. A bound row counts
 -- code_attempts and must still be inside the name-step window. An unbound
--- row counts attempts. extensions is on the search path so citext's =
--- operator is visible; without it the email compare is case-sensitive text.
--- Tables stay schema-qualified.
+-- row counts attempts. There is no citext = text operator, so a text
+-- parameter would cast the column to text and compare case-sensitively.
+-- Cast the parameter to citext instead. Tables stay schema-qualified.
 create or replace function public.spend_sign_in_attempt(p_email text)
 returns boolean
 language plpgsql
@@ -69,7 +69,7 @@ declare
 begin
   update public.pending_sign_ins
   set code_attempts = code_attempts + 1
-  where email = p_email
+  where email = p_email::extensions.citext
     and user_id is not null
     and expires_at >= now()
     and code_expires_at is not null
@@ -82,7 +82,7 @@ begin
 
   update public.pending_sign_ins
   set attempts = attempts + 1
-  where email = p_email
+  where email = p_email::extensions.citext
     and user_id is null
     and expires_at >= now()
     and attempts < 5

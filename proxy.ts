@@ -118,6 +118,9 @@ export async function proxy(request: NextRequest) {
         url.pathname = NAME_STEP_PATH;
         url.search = "";
         const redirect = NextResponse.redirect(url, 303);
+        // This redirect is a new response. The session cookies refreshed onto
+        // `response` would otherwise be dropped.
+        for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
         const existing = request.cookies.get(NEXT_COOKIE)?.value;
         const next = returnPathForNameGate(existing, here);
         // Keep a return path that is already valid. Replacing it with this
