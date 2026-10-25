@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/csp-report/route";
+import { LIMITS } from "@/lib/auth/rate-limit";
 import { presignR2, r2Client, type R2Config } from "@/lib/backup/r2-core";
 import { buildCsp, permissionsPolicy, reportingEndpoints } from "@/lib/security/csp";
+
+const { hitRateLimit } = vi.hoisted(() => ({
+  hitRateLimit: vi.fn(async () => false),
+}));
+
+vi.mock("@/lib/auth/rate-limit", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth/rate-limit")>("@/lib/auth/rate-limit");
+  return { ...actual, hitRateLimit };
+});
 
 const ENV_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -24,6 +34,8 @@ function setEnv(key: string, value: string | undefined) {
 
 afterEach(() => {
   for (const key of ENV_KEYS) setEnv(key, saved[key]);
+  hitRateLimit.mockReset();
+  hitRateLimit.mockResolvedValue(false);
 });
 
 function useEnv(values: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>>) {
@@ -220,5 +232,69 @@ describe("csp report endpoint", () => {
       } as RequestInit),
     );
     expect(res.status).toBe(413);
+  });
+
+  it("masks guest capability tokens in logged paths and leaves other paths alone", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const token = "7hK2-wRq9-mB4t";
+    const mediaId = "11111111-1111-4111-8111-111111111111";
+    const body = JSON.stringify({
+      "csp-report": {
+        "document-uri": `https://events.klubbies.app/g/${token}?src=flyer`,
+        "blocked-uri": `https://events.klubbies.app/api/guest/${token}/ticket?token=query-secret`,
+        "source-file": `https://events.klubbies.app/api/guest/${token}/finalize/${mediaId}#preview`,
+        "script-sample": `fetch("/g/${token}#top")`,
+        "effective-directive": "connect-src",
+      },
+    });
+    const res = await post(body);
+    expect(res.status).toBe(204);
+    const logged = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(logged.doc).toBe("https://events.klubbies.app/g/[redacted]");
+    expect(logged.blocked).toBe("https://events.klubbies.app/api/guest/[redacted]/ticket");
+    expect(logged.source).toBe(`https://events.klubbies.app/api/guest/[redacted]/finalize/${mediaId}#preview`);
+    expect(logged.sample).toBe('fetch("/g/[redacted]#top")');
+    const serialized = JSON.stringify(logged);
+    expect(serialized).not.toContain(token);
+    expect(serialized).not.toContain("query-secret");
+    expect(serialized).toContain(mediaId);
+
+    warn.mockClear();
+    const ordinary = JSON.stringify({
+      "csp-report": {
+        "document-uri": "https://events.klubbies.app/guides/getting-started",
+        "blocked-uri": "https://events.klubbies.app/e/uq_vb/me",
+        "source-file": "https://events.klubbies.app/gallery",
+      },
+    });
+    await post(ordinary);
+    const plain = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(plain.doc).toBe("https://events.klubbies.app/guides/getting-started");
+    expect(plain.blocked).toBe("https://events.klubbies.app/e/uq_vb/me");
+    expect(plain.source).toBe("https://events.klubbies.app/gallery");
+    warn.mockRestore();
+  });
+
+  it("rate limits per IP before reading the body and does not log when limited", async () => {
+    hitRateLimit.mockResolvedValueOnce(true);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await post("not-json", { "x-forwarded-for": "203.0.113.9, 10.0.0.1" });
+    expect(res.status).toBe(429);
+    expect(warn).not.toHaveBeenCalled();
+    expect(hitRateLimit).toHaveBeenCalledTimes(1);
+    expect(hitRateLimit).toHaveBeenCalledWith(LIMITS.cspReportPerIp, "203.0.113.9");
+    expect(LIMITS.cspReportPerIp).toEqual({ bucket: "csp_report:ip", limit: 60, windowSeconds: 60 });
+    warn.mockRestore();
+  });
+
+  it("logs when the IP is under the limit, using x-real-ip if nothing was forwarded", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await post(JSON.stringify({ "csp-report": { "document-uri": "https://events.klubbies.app/" } }), {
+      "x-real-ip": "198.51.100.4",
+    });
+    expect(res.status).toBe(204);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(hitRateLimit).toHaveBeenCalledWith(LIMITS.cspReportPerIp, "198.51.100.4");
+    warn.mockRestore();
   });
 });
