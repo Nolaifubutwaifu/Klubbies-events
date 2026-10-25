@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_ROSTER_CELL, MAX_ROSTER_COLUMNS, MAX_ROSTER_ROWS } from "./parse";
 
 export const columnMappingSchema = z.object({
   email: z.number().int().min(0),
@@ -14,9 +15,11 @@ export const savedMappingSchema = z.object({
   lastName: z.string().nullable(),
 });
 
+const rosterCell = z.string().max(MAX_ROSTER_CELL);
+
 export const previewReportSchema = z.object({
-  columns: z.array(z.string()),
-  rows: z.array(z.array(z.string())),
+  columns: z.array(rosterCell).max(MAX_ROSTER_COLUMNS),
+  rows: z.array(z.array(rosterCell).max(MAX_ROSTER_COLUMNS)).max(MAX_ROSTER_ROWS),
   firstDataRowNumber: z.number().int(),
   headerRowIndex: z.number().int(),
 });

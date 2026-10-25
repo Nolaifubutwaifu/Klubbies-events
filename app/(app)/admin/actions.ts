@@ -19,7 +19,7 @@ import { brisbaneInputToIso } from "@/lib/format";
 import { notifyNewAlbum } from "@/lib/notify";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
 import { generateHandleBase } from "@/lib/roster/handle";
-import sharp from "sharp";
+import { logoRejection, rasterLogoMark } from "@/lib/media/logo-file";
 import { BUCKET, LOGO_MARK_SIZE, logoMarkPath, removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -200,18 +200,13 @@ export async function setEventPrivacyAction(
 }
 
 /**
- * Makes the 96px badge rendition beside an uploaded logo. Done here rather than
- * in the browser so SVG logos get one too. Best effort: without it the badge
- * falls back to the original, which is how every logo worked before.
+ * Makes the 96px badge rendition beside an uploaded logo. Best effort: without
+ * it the badge falls back to the original, which is how every logo worked before.
+ * SVG is not rasterised here. The bytes have already been checked.
  */
-async function makeLogoMark(supabase: Awaited<ReturnType<typeof createClient>>, path: string) {
+async function makeLogoMark(supabase: Awaited<ReturnType<typeof createClient>>, path: string, bytes: Uint8Array) {
   try {
-    const { data: file } = await supabase.storage.from(BUCKET).download(path);
-    if (!file) return;
-    const mark = await sharp(Buffer.from(await file.arrayBuffer()), { density: 300 })
-      .resize(LOGO_MARK_SIZE, LOGO_MARK_SIZE, { fit: "cover" })
-      .webp({ quality: 88 })
-      .toBuffer();
+    const mark = await rasterLogoMark(bytes, LOGO_MARK_SIZE);
     await supabase.storage
       .from(BUCKET)
       .upload(logoMarkPath(path), new Uint8Array(mark), { upsert: true, contentType: "image/webp" });
@@ -224,7 +219,20 @@ export async function setEventLogoAction(eventId: string, path: string | null): 
   const ctx = await adminContext(eventId);
   if (path !== null && !path.startsWith(`events/${eventId}/logo/`)) return { error: "Invalid logo path" };
   const supabase = await createClient();
-  if (path) await makeLogoMark(supabase, path);
+  if (path) {
+    const { data: file } = await supabase.storage.from(BUCKET).download(path);
+    if (!file) return { error: "Upload failed. Try again." };
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    // The file is already in the bucket by the time this runs, and the browser
+    // type check can be skipped. Refuse SVG (and anything else sharp would
+    // hand to librsvg) before decoding, and drop the object so it is not left
+    // behind as the event logo.
+    if (logoRejection(path, bytes)) {
+      await removeObjects([path]).catch((removeError) => console.error("could not remove rejected logo", path, removeError));
+      return { error: "Use a PNG, JPG or WebP logo" };
+    }
+    await makeLogoMark(supabase, path, bytes);
+  }
   const { error } = await supabase.from("events").update({ logo_path: path }).eq("id", eventId);
   if (error) return { error: "Could not save the logo" };
   // Each upload has its own name, so a replaced logo can't be served from a

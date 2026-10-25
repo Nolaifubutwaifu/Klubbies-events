@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { setEventLogoAction } from "../../actions";
 
-const TYPES: Record<string, string> = { "image/png": "png", "image/svg+xml": "svg", "image/jpeg": "jpg", "image/webp": "webp" };
+const TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
 
 export function LogoUploader({ eventId, logoUrl }: { eventId: string; logoUrl: string | null }) {
   const router = useRouter();
@@ -16,7 +16,7 @@ export function LogoUploader({ eventId, logoUrl }: { eventId: string; logoUrl: s
   async function onFile(file: File | undefined) {
     if (!file) return;
     const ext = TYPES[file.type];
-    if (!ext) return setError("Use a PNG, SVG, JPG or WebP file");
+    if (!ext) return setError("Use a PNG, JPG or WebP file");
     if (file.size > 5 * 1024 * 1024) return setError("Logos must be under 5 MB");
     setBusy(true);
     setError("");
@@ -48,10 +48,10 @@ export function LogoUploader({ eventId, logoUrl }: { eventId: string; logoUrl: s
       ) : null}
       <span className="text-[15px] font-medium text-ink-70">{busy ? "Uploading…" : logoUrl ? "Replace logo" : "Choose your logo"}</span>
       <span className="text-[14px] text-[color:var(--ink-70)]">
-        PNG or SVG, at least 400px<span className="hidden [@media(pointer:fine)]:inline">. Or drop it here.</span>
+        PNG, JPG or WebP, at least 400px<span className="hidden [@media(pointer:fine)]:inline">. Or drop it here.</span>
       </span>
       {error ? <span className="notice">{error}</span> : null}
-      <input ref={input} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
     </div>
   );
 }

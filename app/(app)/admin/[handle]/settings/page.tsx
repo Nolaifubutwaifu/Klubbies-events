@@ -89,8 +89,8 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
         <Disclosure card id="brand" title="Logo" hint="Shown on every attendee screen and the poster" aside={event.logo_path ? "Logo added" : "No logo yet"} className="scroll-mt-24">
           <LogoUploader eventId={event.id} logoUrl={logoUrl} />
           <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">
-            Shown on the join page, the gallery, emails and the poster. A square PNG or SVG at least 512 pixels wide, with a
-            transparent background, works best.
+            Shown on the join page, the gallery, emails and the poster. A square PNG, JPG or WebP at least 512 pixels wide
+            works best. PNG or WebP can keep a transparent background.
           </p>
         </Disclosure>
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isValidEmail, normaliseEmail } from "@/lib/roster/email";
+import { MAX_ROSTER_COLUMNS, MAX_ROSTER_ROWS } from "@/lib/roster/parse";
+import { previewReportSchema } from "@/lib/roster/schemas";
 import { buildRosterPlan, problemsToCsv } from "@/lib/roster/normalise";
 import {
   applySavedMapping,
@@ -29,6 +31,35 @@ describe("emails", () => {
       expect(isValidEmail(e)).toBe(false);
     },
   );
+});
+
+describe("roster report bounds", () => {
+  it("accepts a normal sheet and refuses an unbounded one", () => {
+    expect(
+      previewReportSchema.safeParse({
+        columns: ["Name", "Email"],
+        rows: [["Ada", "ada@uni.edu"]],
+        firstDataRowNumber: 2,
+        headerRowIndex: 0,
+      }).success,
+    ).toBe(true);
+    expect(
+      previewReportSchema.safeParse({
+        columns: Array.from({ length: MAX_ROSTER_COLUMNS + 1 }, () => "c"),
+        rows: [],
+        firstDataRowNumber: 2,
+        headerRowIndex: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      previewReportSchema.safeParse({
+        columns: ["Email"],
+        rows: Array.from({ length: MAX_ROSTER_ROWS + 1 }, () => ["a@b.co"]),
+        firstDataRowNumber: 2,
+        headerRowIndex: 0,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("header detection", () => {

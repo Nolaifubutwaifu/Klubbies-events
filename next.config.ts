@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Omit the x-powered-by header. Next.js adds it unless this is false.
+  poweredByHeader: false,
   // ffmpeg runs as a separate binary for server-side video previews
   // (lib/media/video-previews.ts): keep it out of the bundle and ship the file.
   serverExternalPackages: ["ffmpeg-static"],
