@@ -113,6 +113,15 @@ describe("POST /api/auth/claim_name", () => {
     await expect(response.json()).resolves.toMatchObject({ redirectTo: "/account" });
   });
 
+  it("returns to the photo that was open before the name step", async () => {
+    const photo = "/e/abc/a/123?photo=9";
+    jar.current.set("kb_next", photo);
+    const response = await call(JSON.stringify({ name: "Ada Lovelace" }));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, redirectTo: photo });
+    expect(jar.current.has("kb_next")).toBe(false);
+  });
+
   it("sends an already-named account to the return path", async () => {
     claim.current = async () => ({ ok: false, status: 409, error: "This account already has a name." });
     jar.current.set("kb_next", "/e/summit");

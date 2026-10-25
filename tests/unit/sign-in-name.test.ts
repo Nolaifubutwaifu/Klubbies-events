@@ -109,6 +109,10 @@ describe("returnPathForNameGate", () => {
     expect(returnPathForNameGate(undefined, "/events")).toBe("/events");
     expect(returnPathForNameGate("/signin/name", "/events")).toBe("/events");
   });
+
+  it("keeps a photo link instead of the page that bounced to the name step", () => {
+    expect(returnPathForNameGate("/e/abc/a/123?photo=9", "/e/abc")).toBe("/e/abc/a/123?photo=9");
+  });
 });
 
 describe("appPathNeedsName", () => {
