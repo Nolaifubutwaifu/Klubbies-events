@@ -17,11 +17,19 @@ function redactPathSecrets(value: string): string {
 }
 
 // Signed Supabase and R2 URLs, and the unsubscribe links, carry their token
-// in the query string. Reports name those URLs as the document or the blocked
-// resource. Drop the query, then mask any guest token still sitting in the path.
+// in the query string. A report can also name `a&sig=…` with no `?`. Cut at
+// the first `?` or `&`, then mask any secret assignment still in what remains.
+const SECRET_ASSIGNMENT =
+  /((?:x-amz-signature|x-amz-credential|x-amz-security-token|access_token|refresh_token|id_token|signature|secret|password|api_key|apikey|token|sig))=[^&\s#?'"]*/gi;
+
+function stripSecrets(value: string): string {
+  const cut = value.search(/[?&]/);
+  const head = cut === -1 ? value : value.slice(0, cut);
+  return head.replace(SECRET_ASSIGNMENT, "$1=[redacted]");
+}
+
 function loggedUrl(value: unknown, max: number): string {
-  const stripped = String(value ?? "").split("?")[0];
-  return redactPathSecrets(stripped).slice(0, max);
+  return redactPathSecrets(stripSecrets(String(value ?? ""))).slice(0, max);
 }
 
 function loggedText(value: unknown, max: number): string {
@@ -29,10 +37,12 @@ function loggedText(value: unknown, max: number): string {
 }
 
 function loggedLine(value: unknown): number | null {
-  if (typeof value === "string" && value.trim() === "") return null;
-  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value.trim()) : NaN;
-  if (!Number.isSafeInteger(n) || n < 0) return null;
-  return n;
+  if (typeof value === "string") {
+    if (!/^\d+$/.test(value.trim())) return null;
+    value = Number(value);
+  }
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return null;
+  return value;
 }
 
 function loggedDisposition(value: unknown): string | null {

@@ -299,6 +299,31 @@ describe("csp report endpoint", () => {
     warn.mockRestore();
   });
 
+  it("drops a secret that follows & and redacts token= and sig= with no question mark", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const body = JSON.stringify({
+      "csp-report": {
+        "document-uri": "https://events.klubbies.app/e/demo&sig=SECRET",
+        "blocked-uri": "a&token=OTHER-SECRET",
+        "source-file": "https://bucket.example/a.jpg&X-Amz-Signature=amz-secret",
+        "script-sample": "use token=sample-secret&ignored=1",
+      },
+    });
+    const res = await post(body);
+    expect(res.status).toBe(204);
+    const logged = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(logged.doc).toBe("https://events.klubbies.app/e/demo");
+    expect(logged.blocked).toBe("a");
+    expect(logged.source).toBe("https://bucket.example/a.jpg");
+    expect(logged.sample).toBe("use token=[redacted]");
+    const serialized = JSON.stringify(logged);
+    expect(serialized).not.toContain("SECRET");
+    expect(serialized).not.toContain("sample-secret");
+    expect(serialized).not.toContain("amz-secret");
+    expect(serialized).not.toContain("ignored");
+    warn.mockRestore();
+  });
+
   it("coerces the line to a number and the disposition to a short string", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const junk = "z".repeat(400);
@@ -330,6 +355,41 @@ describe("csp report endpoint", () => {
     const clean = JSON.parse(String(warn.mock.calls[0][1]));
     expect(clean.line).toBe(12);
     expect(clean.disposition).toBe("report");
+
+    warn.mockClear();
+    await post(
+      JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://events.klubbies.app/pricing",
+          "line-number": "0x10",
+        },
+      }),
+    );
+    expect(JSON.parse(String(warn.mock.calls[0][1])).line).toBeNull();
+
+    warn.mockClear();
+    await post(
+      JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://events.klubbies.app/pricing",
+          "line-number": "1e3",
+        },
+      }),
+    );
+    const scientific = JSON.parse(String(warn.mock.calls[0][1]));
+    expect(scientific.line).toBeNull();
+    expect(JSON.stringify(scientific)).not.toContain("1e3");
+
+    warn.mockClear();
+    await post(
+      JSON.stringify({
+        "csp-report": {
+          "document-uri": "https://events.klubbies.app/pricing",
+          "line-number": 1000,
+        },
+      }),
+    );
+    expect(JSON.parse(String(warn.mock.calls[0][1])).line).toBe(1000);
 
     warn.mockClear();
     await post(
