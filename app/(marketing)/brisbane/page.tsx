@@ -8,7 +8,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Event Photo Sharing in Brisbane",
-  description: `Private photo galleries for Brisbane conferences, awards nights, uni balls and meetups. Attendees find their own photos with one selfie. Free up to ${TIERS.free.guests} guests.`,
+  description: "Photo galleries for Brisbane conferences, Christmas parties and awards nights. Guests find every photo they're in with one selfie. Free up to 50 guests.",
   path: "/brisbane",
 });
 
