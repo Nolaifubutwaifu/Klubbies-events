@@ -601,13 +601,13 @@ isOneToOne: false
                   ]
                 },"pending_sign_ins": {
                   Row: {
-                    "attempts": number,"claimed_name": string | null,"created_at": string,"email": string,"event_id": string | null,"expires_at": string,"flow": string,"updated_at": string,"user_id": string | null
+                    "attempts": number,"claimed_name": string | null,"code_attempts": number | null,"code_expires_at": string | null,"created_at": string,"email": string,"event_id": string | null,"expires_at": string,"flow": string,"updated_at": string,"user_id": string | null
                   }
                   Insert: {
-                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email": string,"event_id"?: string | null,"expires_at": string,"flow": string,"updated_at"?: string,"user_id"?: string | null
+                    "attempts"?: number,"claimed_name"?: string | null,"code_attempts"?: number | null,"code_expires_at"?: string | null,"created_at"?: string,"email": string,"event_id"?: string | null,"expires_at": string,"flow": string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Update: {
-                    "attempts"?: number,"claimed_name"?: string | null,"created_at"?: string,"email"?: string,"event_id"?: string | null,"expires_at"?: string,"flow"?: string,"updated_at"?: string,"user_id"?: string | null
+                    "attempts"?: number,"claimed_name"?: string | null,"code_attempts"?: number | null,"code_expires_at"?: string | null,"created_at"?: string,"email"?: string,"event_id"?: string | null,"expires_at"?: string,"flow"?: string,"updated_at"?: string,"user_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -783,6 +783,9 @@ isOneToOne: false
                 }
           }
           Functions: {
+            "claim_display_name":
+{ Args: { "p_user_id": string, "p_name": string }; Returns: boolean
+                           },
             "apply_event_plan":
 { Args: { "p_event_id": string, "p_plan": string, "p_rate": string | null, "p_guest_limit": number | null, "p_photo_limit": number | null }; Returns: undefined
                            },

@@ -135,6 +135,20 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
   const email = normaliseEmail(input.email);
   if (!isValidEmail(email)) return;
 
+  const admin = createAdminClient();
+  const { data: existing } = await admin.from("pending_sign_ins").select("*").eq("email", email).maybeSingle();
+  // The route has already answered. A live name-step row still gets a code,
+  // so signing out does not lock the account out, and the reply stays the
+  // same whichever row was here. An expired bound row is simply gone.
+  if (existing?.user_id) {
+    if (existing.expires_at < nowIso()) {
+      await admin.from("pending_sign_ins").delete().eq("email", email);
+    } else {
+      await sendCodeForBoundRow(existing);
+      return;
+    }
+  }
+
   let eventName: string | null = null;
   let eventId: string | null = null;
   if (input.flow === "join") {
@@ -159,7 +173,6 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
 
   const code = await issueOtp(email);
   const claimedName = input.fullName?.trim() || null;
-  const admin = createAdminClient();
   const pending = {
     claimed_name: claimedName,
     flow: input.flow,
@@ -167,9 +180,8 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
     attempts: 0,
     expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
   };
-  // A row already bound to a verified user is the name step. Insert only:
-  // on conflict, do nothing, so this request cannot retarget its flow, event,
-  // name or the 7-day window.
+  // Only an unbound row is replaced. A bound row was handled above, and this
+  // update's user_id filter keeps a race from retargeting one.
   const { data: updated, error: updateError } = await admin
     .from("pending_sign_ins")
     .update(pending)
@@ -185,6 +197,32 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
 
   // No name yet (the usual sign-in): the email greets them without one.
   await sendSignInCode(email, { code, name: claimedName || "there", eventName });
+}
+
+/** A new code for someone already waiting on the name step. The join stays. */
+async function sendCodeForBoundRow(existing: {
+  email: string;
+  claimed_name: string | null;
+  event_id: string | null;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const code = await issueOtp(existing.email);
+  const codeExpires = new Date(Date.now() + CODE_TTL_MS).toISOString();
+  const { data: updated, error } = await admin
+    .from("pending_sign_ins")
+    .update({ code_attempts: 0, code_expires_at: codeExpires })
+    .eq("email", existing.email)
+    .not("user_id", "is", null)
+    .select("email");
+  if (error) throw error;
+  if (!updated?.length) return;
+
+  let eventName: string | null = null;
+  if (existing.event_id) {
+    const { data } = await admin.from("events").select("name").eq("id", existing.event_id).maybeSingle();
+    eventName = data?.name ?? null;
+  }
+  await sendSignInCode(existing.email, { code, name: existing.claimed_name?.trim() || "there", eventName });
 }
 
 /**
@@ -320,10 +358,21 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   const admin = createAdminClient();
 
   const { data: pending } = await admin.from("pending_sign_ins").select("*").eq("email", email).maybeSingle();
-  if (!pending || pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
+  if (!pending) return { ok: false, error: CODE_REJECTED };
+  const bound = pending.user_id != null;
+  if (bound) {
+    // The name-step window is expires_at. The code itself is the other pair,
+    // so attempts sitting at the maximum does not lock this person out.
+    const codeExpired = !pending.code_expires_at || pending.code_expires_at < nowIso();
+    if (pending.expires_at < nowIso() || codeExpired || (pending.code_attempts ?? MAX_VERIFY_ATTEMPTS) >= MAX_VERIFY_ATTEMPTS) {
+      return { ok: false, error: CODE_REJECTED };
+    }
+    await admin.from("pending_sign_ins").update({ code_attempts: (pending.code_attempts ?? 0) + 1 }).eq("email", email);
+  } else if (pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
     return { ok: false, error: CODE_REJECTED };
+  } else {
+    await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
   }
-  await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
@@ -337,6 +386,16 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   // Keep the row until the name is saved. The code itself is spent, and the
   // wait is much longer than the code's ten minutes, so a slow join still lands.
   if (!claimedName) {
+    if (bound) {
+      // Same account, still waiting for a name. Do not rebind or retarget.
+      if (pending.user_id !== userId) return { ok: false, error: CODE_REJECTED };
+      const { error: spendError } = await admin
+        .from("pending_sign_ins")
+        .update({ code_attempts: MAX_VERIFY_ATTEMPTS })
+        .eq("email", email);
+      if (spendError) throw spendError;
+      return { ok: true, redirectTo: NAME_STEP_PATH, namePending: true };
+    }
     const exp = Date.now() + NAME_STEP_TTL_MS;
     const { error: keepError } = await admin
       .from("pending_sign_ins")
@@ -344,6 +403,8 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
         user_id: userId,
         attempts: MAX_VERIFY_ATTEMPTS,
         expires_at: new Date(exp).toISOString(),
+        code_attempts: MAX_VERIFY_ATTEMPTS,
+        code_expires_at: nowIso(),
       })
       .eq("email", email);
     if (keepError) throw keepError;
@@ -364,21 +425,11 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
 
 export const ALREADY_NAMED = "This account already has a name.";
 
-/**
- * `update users set display_name = $name where id = $1 and (display_name is null or btrim(display_name) = '') returning`.
- * Null or only spaces counts as unnamed. The caller that receives a row owns the name.
- */
-const UNNAMED_DISPLAY_NAME = "display_name.is.null,display_name.eq.,display_name.match.^ *$";
-
+/** True when claim_display_name wrote the name. Null, spaces, tabs and NBSP are unnamed. */
 async function saveDisplayNameIfBlank(userId: string, displayName: string): Promise<boolean> {
-  const { data, error } = await createAdminClient()
-    .from("users")
-    .update({ display_name: displayName })
-    .eq("id", userId)
-    .or(UNNAMED_DISPLAY_NAME)
-    .select("id");
+  const { data, error } = await createAdminClient().rpc("claim_display_name", { p_user_id: userId, p_name: displayName });
   if (error) throw error;
-  return (data?.length ?? 0) > 0;
+  return data === true;
 }
 
 export type ClaimNameResult = { ok: true; redirectTo: string } | { ok: false; error: string; status: 400 | 401 | 409 };
@@ -401,10 +452,9 @@ export async function claimSignInName(input: { userId: string; email: string; na
   // The name write is the lock. A parallel claim updates zero rows and stops,
   // so it cannot finish a second time with its own name.
   const won = await saveDisplayNameIfBlank(input.userId, claimedName);
-  if (!won) {
-    await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
-    return { ok: false, status: 409, error: ALREADY_NAMED };
-  }
+  // Leave the row. The claim that won the name is the one that deletes it;
+  // deleting here can land first and drop the join.
+  if (!won) return { ok: false, status: 409, error: ALREADY_NAMED };
 
   // delete … where user_id = $1 returning *. Only this caller still has the row.
   const { data: taken, error } = await admin.from("pending_sign_ins").delete().eq("user_id", input.userId).select("*");
@@ -419,6 +469,9 @@ export async function claimSignInName(input: { userId: string; email: string; na
     flow: parsedFlow?.success ? parsedFlow.data : "member",
     eventId: usable && pending ? pending.event_id : null,
   });
+  // The name is already saved. A failure here is 400 once; the next claim is
+  // 409, and that response redirects to the return path or /events
+  // (docs/decisions.md, 2026-10-25).
   if (!result.ok) return { ok: false, status: 400, error: result.error };
   return result;
 }

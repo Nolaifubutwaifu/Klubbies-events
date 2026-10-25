@@ -6,6 +6,10 @@ const EVENT = "22222222-2222-4222-8222-222222222222";
 
 type Row = Record<string, unknown>;
 const tables = vi.hoisted(() => ({ current: {} as Record<string, Row[]> }));
+const sentCodes = vi.hoisted(() => ({ current: [] as string[] }));
+
+/** Mirrors claim_display_name: POSIX space plus NBSP, the same set as JS trim for those. */
+const BLANK_NAME = /^[ \t\n\r\f\v\u00a0]*$/;
 
 function valueAt(row: Row, key: string): unknown {
   return key.split(".").reduce<unknown>((obj, part) => (obj && typeof obj === "object" ? (obj as Row)[part] : undefined), row);
@@ -22,6 +26,7 @@ function matches(row: Row, filters: { op: string; col: string; val: unknown }[])
     if (filter.op === "in") return Array.isArray(filter.val) && filter.val.includes(current);
     if (filter.op === "is") return filter.val === null ? current == null : current === filter.val;
     if (filter.op === "unnamed") return unnamed(current);
+    if (filter.op === "not-is") return filter.val === null ? current != null : current !== filter.val;
     return true;
   });
 }
@@ -86,8 +91,8 @@ function from(name: string) {
             narrowing.push({ op: "is", col, val });
             return chain();
           },
-          or(expression: string) {
-            if (expression.includes("display_name.is.null")) narrowing.push({ op: "unnamed", col: "display_name", val: null });
+          not(col: string, op: string, val: unknown) {
+            if (op === "is") narrowing.push({ op: "not-is", col, val });
             return chain();
           },
           select() {
@@ -147,6 +152,16 @@ vi.mock("@/lib/supabase/admin", () => ({
         generateLink: async () => ({ data: { properties: { email_otp: "12345678" } }, error: null }),
       },
     },
+    rpc: async (fn: string, args: { p_user_id: string; p_name: string }) => {
+      if (fn !== "claim_display_name") return { data: null, error: { message: "unknown" } };
+      const user = (tables.current.users ?? []).find((row) => row.id === args.p_user_id);
+      if (!user) return { data: false, error: null };
+      const current = user.display_name;
+      const blank = typeof current !== "string" || BLANK_NAME.test(current);
+      if (!blank) return { data: false, error: null };
+      user.display_name = args.p_name;
+      return { data: true, error: null };
+    },
   }),
 }));
 
@@ -158,7 +173,11 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/billing/notices", () => ({ kickPlanNotices: () => {} }));
 vi.mock("@/lib/billing/usage", () => ({ eventIsFull: async () => false, GUESTS_FULL: "KB002" }));
-vi.mock("@/lib/email/send", () => ({ sendSignInCode: async () => {} }));
+vi.mock("@/lib/email/send", () => ({
+  sendSignInCode: async (email: string) => {
+    sentCodes.current.push(email);
+  },
+}));
 
 const { verifyCode, claimSignInName, joinByLink, processCodeRequest, MAX_VERIFY_ATTEMPTS } = await import("@/lib/auth/flow");
 
@@ -188,6 +207,7 @@ function event(overrides: Row = {}): Row {
 }
 
 beforeEach(() => {
+  sentCodes.current = [];
   tables.current = { pending_sign_ins: [], users: [{ id: USER, email: "ada@example.com", display_name: null }], memberships: [], events: [], event_roles: [] };
 });
 
@@ -199,6 +219,7 @@ describe("verifyCode", () => {
     const row = tables.current.pending_sign_ins[0];
     expect(row.user_id).toBe(USER);
     expect(row.attempts).toBe(MAX_VERIFY_ATTEMPTS);
+    expect(row.code_attempts).toBe(MAX_VERIFY_ATTEMPTS);
     expect(new Date(String(row.expires_at)).getTime()).toBeGreaterThan(Date.now() + 15 * 60 * 1000);
     expect(tables.current.memberships).toHaveLength(0);
   });
@@ -280,21 +301,16 @@ describe("claimSignInName", () => {
     expect(tables.current.memberships).toHaveLength(0);
   });
 
-  it("does not retarget a bound name-step row when another code is requested", async () => {
-    const other = "33333333-3333-4333-8333-333333333333";
-    const expires = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString();
-    tables.current.events = [event(), event({ id: other, handle: "other", name: "Other" })];
-    tables.current.pending_sign_ins = [
-      pending({
-        flow: "join",
-        event_id: EVENT,
-        claimed_name: null,
-        user_id: USER,
-        attempts: MAX_VERIFY_ATTEMPTS,
-        expires_at: expires,
-      }),
-    ];
-    await processCodeRequest({ email: "Ada@Example.com", flow: "join", event: "other", fullName: "Attacker" });
+  it("signs back in after leaving the name step and keeps the original join", async () => {
+    tables.current.events = [event()];
+    tables.current.pending_sign_ins = [pending({ flow: "join", event_id: EVENT })];
+    const first = await verifyCode("ada@example.com", "12345678");
+    expect(first).toMatchObject({ ok: true, redirectTo: NAME_STEP_PATH, namePending: true });
+    const saved = tables.current.pending_sign_ins[0];
+    const expires = saved.expires_at;
+
+    await processCodeRequest({ email: "ada@example.com", flow: "member" });
+    expect(sentCodes.current).toEqual(["ada@example.com"]);
     expect(tables.current.pending_sign_ins[0]).toMatchObject({
       user_id: USER,
       flow: "join",
@@ -302,11 +318,44 @@ describe("claimSignInName", () => {
       claimed_name: null,
       attempts: MAX_VERIFY_ATTEMPTS,
       expires_at: expires,
+      code_attempts: 0,
     });
-    const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
-    expect(result).toMatchObject({ ok: true, redirectTo: "/e/summit" });
-    expect(tables.current.memberships).toHaveLength(1);
-    expect(tables.current.memberships[0].event_id).toBe(EVENT);
+    expect(new Date(String(tables.current.pending_sign_ins[0].code_expires_at)).getTime()).toBeGreaterThan(Date.now());
+
+    const second = await verifyCode("ada@example.com", "12345678");
+    expect(second).toMatchObject({ ok: true, redirectTo: NAME_STEP_PATH, namePending: true });
+    expect(tables.current.pending_sign_ins[0]).toMatchObject({
+      user_id: USER,
+      flow: "join",
+      event_id: EVENT,
+      expires_at: expires,
+      code_attempts: MAX_VERIFY_ATTEMPTS,
+    });
+    expect(tables.current.memberships).toHaveLength(0);
+  });
+
+  it("replaces an expired bound row with a fresh code", async () => {
+    const other = "33333333-3333-4333-8333-333333333333";
+    tables.current.events = [event(), event({ id: other, handle: "other", name: "Other" })];
+    tables.current.pending_sign_ins = [
+      pending({
+        flow: "join",
+        event_id: EVENT,
+        user_id: USER,
+        attempts: MAX_VERIFY_ATTEMPTS,
+        code_attempts: MAX_VERIFY_ATTEMPTS,
+        expires_at: new Date(Date.now() - 1000).toISOString(),
+      }),
+    ];
+    await processCodeRequest({ email: "ada@example.com", flow: "join", event: "other" });
+    expect(sentCodes.current).toEqual(["ada@example.com"]);
+    const row = tables.current.pending_sign_ins[0];
+    expect(row.user_id ?? null).toBeNull();
+    expect(row).toMatchObject({ flow: "join", event_id: other, attempts: 0, claimed_name: null });
+    expect(new Date(String(row.expires_at)).getTime()).toBeLessThan(Date.now() + 11 * 60 * 1000);
+    const verified = await verifyCode("ada@example.com", "12345678");
+    expect(verified).toMatchObject({ ok: true, redirectTo: NAME_STEP_PATH });
+    expect(tables.current.pending_sign_ins[0]).toMatchObject({ user_id: USER, flow: "join", event_id: other });
   });
 
   it("still refreshes a code request that is not bound to a user", async () => {
@@ -333,13 +382,17 @@ describe("claimSignInName", () => {
   });
 
   it("saves a name when the account's display name is blank", async () => {
-    tables.current.users[0].display_name = "   ";
-    tables.current.pending_sign_ins = [
-      pending({ user_id: USER, expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() }),
-    ];
-    const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
-    expect(result.ok).toBe(true);
-    expect(tables.current.users[0].display_name).toBe("Ada Lovelace");
+    for (const blank of ["   ", "\t", "\u00a0"]) {
+      tables.current.users[0].display_name = blank;
+      tables.current.pending_sign_ins = [
+        pending({ user_id: USER, expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() }),
+      ];
+      const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
+      expect(result.ok).toBe(true);
+      expect(tables.current.users[0].display_name).toBe("Ada Lovelace");
+      tables.current.users[0].display_name = null;
+      tables.current.memberships = [];
+    }
   });
 
   it("lets only one of two parallel claims finish the join", async () => {
@@ -369,7 +422,7 @@ describe("claimSignInName", () => {
     tables.current.pending_sign_ins = [pending({ user_id: USER, flow: "join", event_id: EVENT })];
     const named = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Someone Else" });
     expect(named).toMatchObject({ ok: false, status: 409 });
-    expect(tables.current.pending_sign_ins).toHaveLength(0);
+    expect(tables.current.pending_sign_ins).toHaveLength(1);
     expect(tables.current.memberships).toHaveLength(0);
   });
 

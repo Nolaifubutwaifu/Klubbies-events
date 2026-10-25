@@ -16,7 +16,9 @@ describe("pathAfterVerify", () => {
 
       expect(pathAfterVerify({ redirectTo: NAME_STEP_PATH })).toBe(NAME_STEP_PATH);
       expect(pathAfterVerify({ redirectTo: "/e/summit" })).toBe("/e/summit");
-      expect(pathAfterVerify({})).toBeNull();
+      expect(pathAfterVerify({ redirectTo: "https://evil.example" })).toBe("/events");
+      expect(pathAfterVerify({ redirectTo: "/signin/code" })).toBe("/events");
+      expect(pathAfterVerify({})).toBe("/events");
     }
   });
 });
