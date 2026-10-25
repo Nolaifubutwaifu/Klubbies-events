@@ -79,6 +79,17 @@ begin
   if v_ok then raise exception 'an empty name was claimed'; end if;
   select public.claim_display_name(v_user, repeat('a', 201)) into v_ok;
   if v_ok then raise exception 'a 201-character name was claimed'; end if;
+  select public.claim_display_name(v_user, '   ') into v_ok;
+  if v_ok then raise exception 'a blank name was claimed'; end if;
+  select public.claim_display_name(v_user, chr(9) || chr(160) || chr(65279)) into v_ok;
+  if v_ok then raise exception 'a whitespace-only name was claimed'; end if;
+  reset role;
+  select display_name into v_name from public.users where id = v_user;
+  if v_name is not null then
+    raise exception 'a blank name was stored: %', v_name;
+  end if;
+
+  set local role service_role;
   select public.claim_display_name(v_user, 'Ada Lovelace') into v_ok;
   if not v_ok then raise exception 'service_role could not claim a blank name'; end if;
   reset role;
@@ -139,6 +150,25 @@ begin
   if v_ok then raise exception 'a code was accepted after the name-step window'; end if;
   select code_attempts into v_attempts from public.pending_sign_ins where email = 'bound@test.invalid';
   if v_attempts <> 0 then raise exception 'an expired window still counted a guess: %', v_attempts; end if;
+
+  -- citext compare, not text: a different case still finds the row.
+  insert into public.pending_sign_ins (email, flow, attempts, expires_at)
+  values ('Mixed@test.invalid', 'member', 0, now() + interval '10 minutes');
+  set local role service_role;
+  select public.spend_sign_in_attempt('mixed@test.invalid') into v_ok;
+  reset role;
+  if not v_ok then raise exception 'a differently cased email did not match the unbound row'; end if;
+  select attempts into v_attempts from public.pending_sign_ins where email = 'mixed@test.invalid';
+  if v_attempts <> 1 then raise exception 'cased unbound email left attempts at %', v_attempts; end if;
+
+  insert into public.pending_sign_ins (email, flow, attempts, expires_at, user_id, code_attempts, code_expires_at)
+  values ('BoundMixed@test.invalid', 'member', 5, now() + interval '6 days', v_user, 0, now() + interval '10 minutes');
+  set local role service_role;
+  select public.spend_sign_in_attempt('boundmixed@test.invalid') into v_ok;
+  reset role;
+  if not v_ok then raise exception 'a differently cased email did not match the bound row'; end if;
+  select code_attempts into v_attempts from public.pending_sign_ins where email = 'boundmixed@test.invalid';
+  if v_attempts <> 1 then raise exception 'cased bound email left code_attempts at %', v_attempts; end if;
 
   raise notice 'claim_display_name: all checks passed';
 end;

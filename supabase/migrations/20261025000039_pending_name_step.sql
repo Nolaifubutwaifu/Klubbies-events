@@ -15,9 +15,9 @@ create index pending_sign_ins_user_id_idx
   where user_id is not null;
 
 -- One claim owns the name. Null, POSIX space (tab, newline, …), NBSP and
--- U+FEFF count as unnamed, which is what JS trim() treats as blank. The name
--- being written has to be 1 to 200 characters. The caller that gets true
--- continues; the other gets nothing.
+-- U+FEFF count as unnamed, which is what JS trim() treats as blank. A name
+-- that is only those characters is rejected, and so is one outside 1 to 200
+-- characters. The caller that gets true continues; the other gets nothing.
 --
 -- Supabase grants execute on a new public function to anon and authenticated.
 -- `revoke from public` does not remove those grants, and this function is
@@ -32,7 +32,8 @@ as $$
 declare
   claimed uuid;
 begin
-  if coalesce(length(p_name), 0) not between 1 and 200 then
+  if coalesce(length(p_name), 0) not between 1 and 200
+     or p_name ~ ('^[[:space:]' || chr(160) || chr(65279) || ']*$') then
     return false;
   end if;
   update public.users
@@ -54,12 +55,14 @@ grant execute on function public.claim_display_name(uuid, text) to service_role;
 -- same update, so two guesses at once cannot both pass a counter they read
 -- as 4. Five is MAX_VERIFY_ATTEMPTS in lib/auth/flow.ts. A bound row counts
 -- code_attempts and must still be inside the name-step window. An unbound
--- row counts attempts.
+-- row counts attempts. extensions is on the search path so citext's =
+-- operator is visible; without it the email compare is case-sensitive text.
+-- Tables stay schema-qualified.
 create or replace function public.spend_sign_in_attempt(p_email text)
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   spent text;

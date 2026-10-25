@@ -201,7 +201,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       if (fn !== "claim_display_name") return { data: null, error: { message: "unknown" } };
       const name = args.p_name;
-      if (typeof name !== "string" || name.length < 1 || name.length > 200) return { data: false, error: null };
+      if (typeof name !== "string" || name.length < 1 || name.length > 200 || BLANK_NAME.test(name)) return { data: false, error: null };
       const user = (tables.current.users ?? []).find((row) => row.id === args.p_user_id);
       if (!user) return { data: false, error: null };
       const current = user.display_name;
