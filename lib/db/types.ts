@@ -786,6 +786,9 @@ isOneToOne: false
             "claim_display_name":
 { Args: { "p_user_id": string, "p_name": string }; Returns: boolean
                            },
+            "spend_sign_in_attempt":
+{ Args: { "p_email": string }; Returns: boolean
+                           },
             "apply_event_plan":
 { Args: { "p_event_id": string, "p_plan": string, "p_rate": string | null, "p_guest_limit": number | null, "p_photo_limit": number | null }; Returns: undefined
                            },

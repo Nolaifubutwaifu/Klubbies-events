@@ -141,8 +141,17 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
   // so signing out does not lock the account out, and the reply stays the
   // same whichever row was here. An expired bound row is simply gone.
   if (existing?.user_id) {
-    if (existing.expires_at < nowIso()) {
-      await admin.from("pending_sign_ins").delete().eq("email", email);
+    const now = nowIso();
+    if (existing.expires_at < now) {
+      // Match the expired bound row only. A code request that already
+      // replaced it has a later expiry, or no user yet, and must stay.
+      const { error: deleteError } = await admin
+        .from("pending_sign_ins")
+        .delete()
+        .eq("email", email)
+        .lt("expires_at", now)
+        .not("user_id", "is", null);
+      if (deleteError) throw deleteError;
     } else {
       await sendCodeForBoundRow(existing);
       return;
@@ -357,22 +366,16 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   const email = normaliseEmail(rawEmail);
   const admin = createAdminClient();
 
+  // spend_sign_in_attempt increments the live counter in the same update that
+  // checks the cap, so parallel guesses cannot all pass a counter they read
+  // earlier. A bound row uses code_attempts; an unbound row uses attempts.
+  const { data: allowed, error: spendError } = await admin.rpc("spend_sign_in_attempt", { p_email: email });
+  if (spendError) throw spendError;
+  if (allowed !== true) return { ok: false, error: CODE_REJECTED };
+
   const { data: pending } = await admin.from("pending_sign_ins").select("*").eq("email", email).maybeSingle();
   if (!pending) return { ok: false, error: CODE_REJECTED };
   const bound = pending.user_id != null;
-  if (bound) {
-    // The name-step window is expires_at. The code itself is the other pair,
-    // so attempts sitting at the maximum does not lock this person out.
-    const codeExpired = !pending.code_expires_at || pending.code_expires_at < nowIso();
-    if (pending.expires_at < nowIso() || codeExpired || (pending.code_attempts ?? MAX_VERIFY_ATTEMPTS) >= MAX_VERIFY_ATTEMPTS) {
-      return { ok: false, error: CODE_REJECTED };
-    }
-    await admin.from("pending_sign_ins").update({ code_attempts: (pending.code_attempts ?? 0) + 1 }).eq("email", email);
-  } else if (pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
-    return { ok: false, error: CODE_REJECTED };
-  } else {
-    await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
-  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
