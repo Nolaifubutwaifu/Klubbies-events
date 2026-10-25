@@ -53,17 +53,15 @@ export function buildCsp(nonce: string): string {
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
-    // 'unsafe-eval' is required in production, not only in dev. heic2any 0.0.4
-    // starts a blob worker that calls new Function (emscripten dynCall) as the
-    // module loads. Chrome reports script-src eval and, once this policy is
-    // enforcing, throws EvalError before a HEIC can be decoded. 'wasm-unsafe-eval'
-    // does not allow new Function. strict-dynamic does not ignore unsafe-eval.
+    // No 'unsafe-eval'. HEIC previews use heic-to/csp, which is a blob worker
+    // (worker-src) and does not call eval or WebAssembly. Do not add
+    // 'wasm-unsafe-eval' unless a browser build of that package starts
+    // compiling WASM.
     "script-src": [
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
       "'report-sample'",
-      "'unsafe-eval'",
       ...vercelLive,
     ],
     // No nonce here. A nonce makes browsers ignore 'unsafe-inline', and React

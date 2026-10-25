@@ -59,7 +59,7 @@ describe("content security policy", () => {
 
     expect(buildCsp("NONCE")).toBe(
       "default-src 'self'; " +
-        "script-src 'self' 'nonce-NONCE' 'strict-dynamic' 'report-sample' 'unsafe-eval'; " +
+        "script-src 'self' 'nonce-NONCE' 'strict-dynamic' 'report-sample'; " +
         "style-src 'self' 'unsafe-inline'; " +
         `img-src 'self' data: blob: ${SUPABASE} https://yfdglvhhakbuahyfrihs.storage.supabase.co https://${BUCKET}.${ACCOUNT}.r2.cloudflarestorage.com; ` +
         `media-src 'self' blob: ${SUPABASE} https://yfdglvhhakbuahyfrihs.storage.supabase.co https://${BUCKET}.${ACCOUNT}.r2.cloudflarestorage.com; ` +
@@ -78,6 +78,9 @@ describe("content security policy", () => {
         "upgrade-insecure-requests",
     );
     expect(buildCsp("NONCE")).not.toMatch(/style-src[^;]*nonce-/);
+    expect(buildCsp("NONCE")).not.toContain("'unsafe-eval'");
+    expect(buildCsp("NONCE")).not.toContain("'wasm-unsafe-eval'");
+    expect(buildCsp("NONCE")).toContain("worker-src 'self' blob:");
   });
 
   it("allows the host the R2 client signs, which a one-label wildcard does not", async () => {
@@ -119,13 +122,15 @@ describe("content security policy", () => {
     const csp = buildCsp("n");
     expect(csp).toContain("connect-src 'self' https://*.r2.cloudflarestorage.com ws:");
     expect(csp).not.toContain("upgrade-insecure-requests");
-    expect(csp).toContain("'unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-eval'");
+    expect(csp).not.toContain("'wasm-unsafe-eval'");
   });
 
   it("allows the Vercel toolbar on preview deployments", () => {
     useEnv({ VERCEL_ENV: "preview", NODE_ENV: "production" });
     const csp = buildCsp("n");
-    expect(csp).toContain("script-src 'self' 'nonce-n' 'strict-dynamic' 'report-sample' 'unsafe-eval' https://vercel.live");
+    expect(csp).toContain("script-src 'self' 'nonce-n' 'strict-dynamic' 'report-sample' https://vercel.live");
+    expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain("https://vercel.com");
     expect(csp).toContain("https://assets.vercel.com");
     expect(csp).toContain("wss://ws-us3.pusher.com");
