@@ -31,7 +31,7 @@ describe("safeNextPath", () => {
     expect(safeNextPath(value)).toBeNull();
   });
 
-  it.each(["/events", "/e/abc/me?x=1#y", "/admin/new"] as const)("allows %s", (path) => {
+  it.each(["/events", "/e/abc/me?x=1#y", "/admin/new", "/e/abc?q=a%2Fb"] as const)("allows %s", (path) => {
     expect(safeNextPath(path)).toBe(path);
   });
 
@@ -42,7 +42,12 @@ describe("safeNextPath", () => {
   it.each([
     "/signin",
     "/signin/code",
+    "/signin/name",
     "/signin?x=1",
+    "/signin#x",
+    "/SIGNIN",
+    "/signin%23x",
+    "/%73ignin",
     "/start",
     "/start/club",
     "/api/auth",
