@@ -165,7 +165,7 @@ export default async function ChristmasPartiesPage() {
           <p>
             Planning a conference for next year too? The same setup works for{" "}
             <Link href="/conferences">conference and corporate event photos</Link>. If your photographer would rather run
-            it for you, send them the <Link href="/photographers">page for photographers</Link>. Based in Queensland? See{" "}
+            it for you, send them the page for <Link href="/photographers">event photographers</Link>. Based in Queensland? See{" "}
             <Link href="/brisbane">event photo sharing in Brisbane</Link>.
           </p>
         </>

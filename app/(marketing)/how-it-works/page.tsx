@@ -7,8 +7,8 @@ import { isNativeAppRequest } from "@/lib/native-app-server";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "How Event Photo Sharing Works",
-  description: "Set up in about ten minutes. Photographers upload through their own links, and attendees scan a QR code to find the photos they're in. No app needed.",
+  title: "QR Code Photo Sharing: How It Works",
+  description: "Set up in about ten minutes. Photographers upload through their own links, and guests scan one QR code and find the photos they're in with a selfie.",
   path: "/how-it-works",
 });
 
@@ -259,8 +259,8 @@ export default async function HowItWorksPage() {
         <section className="pb-14 pt-12 sm:pb-[72px] sm:pt-24">
           <div className="kb-wrap flex flex-col items-center gap-6 text-center">
             <span className="kb-eyebrow">How it works</span>
-            <h1 className="kb-h1 max-w-[15ch] !text-[80px] !leading-none max-sm:!text-[50px]">
-              From the first click to every <em className="kb-accent">attendee&apos;s</em> camera roll.
+            <h1 className="kb-h1 max-w-[22ch] text-balance !text-[68px] !leading-[1.02] max-sm:!text-[44px]">
+              How QR code photo sharing works, from setup to every guest&apos;s camera roll.
             </h1>
             <p className="kb-lead m-0 max-w-[56ch]">
               From setting up the event to every attendee holding the photos they&apos;re in: the whole flow, step by step.

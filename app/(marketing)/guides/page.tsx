@@ -8,7 +8,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Event Photo Sharing Guides",
-  description: "Practical guides for organisers and photographers: sharing photos after a conference, Google Drive vs a private gallery, and getting photos out the same night.",
+  description: "Guides for organisers and photographers: sharing conference photos, Google Drive vs a private gallery, and getting photos out the same night.",
   path: "/guides",
 });
 

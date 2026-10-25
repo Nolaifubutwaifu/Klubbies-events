@@ -1,15 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Faq } from "@/components/site/Faq";
 import { FeatureIcon, Photo, ShareKitVisual, Tick } from "@/components/site/parts";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { ATTENDEE_FEATURES, ORGANISER_FEATURES, ORGANISERS, PAID_SIZES_NOTE, PRIVACY_PROMISES } from "@/lib/copy/site";
 import { isNativeAppRequest } from "@/lib/native-app-server";
-import { pageMetadata } from "@/lib/seo";
+import { JsonLd, pageMetadata } from "@/lib/seo";
+
+const FEATURE_FAQS = [
+  {
+    q: "How does face recognition photo sharing work?",
+    a: "Each guest takes a selfie in their browser, and face search shows them only the photos they're in. Only you see your matches.",
+  },
+  {
+    q: "Do guests have to agree before face search runs?",
+    a: "Yes. Guests acknowledge a notice about face search before they see any photos, and face search is opt in.",
+  },
+  {
+    q: "Where are photos and faceprints stored?",
+    a: "In Sydney. Galleries stay open for 12 months, and anyone can ask for a photo of themselves to be removed.",
+  },
+];
 
 export const metadata: Metadata = pageMetadata({
-  title: "Features: Face Search, QR Access, Branding",
-  description: "Face search, guest lists, photographer upload links, your logo and colour, full quality downloads. Data stored in Sydney. See every feature.",
+  title: "Face Recognition Photo Sharing Features",
+  description: "Face search, QR code access, guest lists, photographer upload links, your logo and colour, full-quality downloads. Data stored in Sydney.",
   path: "/features",
 });
 
@@ -31,12 +47,23 @@ export default async function FeaturesPage() {
   return (
     <>
       <SiteNav current="features" inApp={inApp} />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: FEATURE_FAQS.map((item) => ({
+            "@type": "Question",
+            name: item.q,
+            acceptedAnswer: { "@type": "Answer", text: item.a },
+          })),
+        }}
+      />
       <main>
         <section className="py-14 sm:py-24">
           <div className="kb-wrap flex flex-wrap items-end justify-between gap-14">
             <div className="flex flex-[1_1_560px] flex-col gap-6">
               <span className="kb-eyebrow">Features</span>
-              <h1 className="kb-h1 max-w-[13ch] !text-[80px] !leading-none max-sm:!text-[50px]">{ORGANISERS.title}</h1>
+              <h1 className="kb-h1 max-w-[18ch] text-balance !text-[68px] !leading-[1.02] max-sm:!text-[44px]">{ORGANISERS.title}</h1>
             </div>
             <p className="kb-lead m-0 max-w-[44ch] flex-[1_1_360px]">
               Everything an organiser needs to look professional in front of a client, and everything an attendee needs
@@ -128,6 +155,23 @@ export default async function FeaturesPage() {
               <Link href="/privacy" className="font-semibold !text-white">
                 Read the privacy policy
               </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-[color:var(--kb-line)] bg-white py-14 sm:py-20" aria-labelledby="questions">
+          <div className="kb-wrap flex flex-wrap gap-14">
+            <div className="flex flex-[1_1_280px] flex-col items-start gap-4">
+              <span className="kb-eyebrow">Questions</span>
+              <h2 id="questions" className="kb-h2 !text-[44px] max-sm:!text-[34px]">
+                Asked before
+              </h2>
+              <Link href="/faq" className="text-[15px] font-semibold">
+                See every question
+              </Link>
+            </div>
+            <div className="min-w-0 flex-[2_1_560px]">
+              <Faq items={FEATURE_FAQS} />
             </div>
           </div>
         </section>
