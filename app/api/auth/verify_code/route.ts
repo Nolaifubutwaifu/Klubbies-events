@@ -4,8 +4,6 @@ import { CODE_REJECTED, SIGNIN_COOKIE, verifyCode, verifyCodeSchema } from "@/li
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
-import { NAME_STEP_COOKIE, NAME_STEP_TTL_MS, encodeNameStep } from "@/lib/auth/sign-in-name";
-import { serverEnv } from "@/lib/env";
 
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => null);
@@ -31,14 +29,8 @@ export async function POST(request: Request) {
   cookieStore.delete(SIGNIN_COOKIE);
   // A new account still has to give a name. Keep the "where they were going"
   // cookie until that step saves the name and runs the guest-list check.
+  // The pending row, not a cookie, remembers who verified.
   if (result.namePending) {
-    cookieStore.set(NAME_STEP_COOKIE, encodeNameStep(result.namePending, serverEnv().SIGNED_URL_SECRET), {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: Math.floor(NAME_STEP_TTL_MS / 1000),
-    });
     return NextResponse.json({ ok: true, redirectTo: result.redirectTo });
   }
 

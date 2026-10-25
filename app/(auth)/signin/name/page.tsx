@@ -6,6 +6,7 @@ import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { getProfile, getSessionUser } from "@/lib/auth/session";
 import { NO_INDEX } from "@/lib/seo";
 import { NameForm } from "./NameForm";
+import { NameStepSignOut } from "./NameStepSignOut";
 
 export const metadata: Metadata = { title: "What should we call you?", robots: NO_INDEX };
 
@@ -23,6 +24,7 @@ export default async function NamePage() {
     <AuthShell>
       <AuthHeading>What should we call you?</AuthHeading>
       <NameForm />
+      <NameStepSignOut />
     </AuthShell>
   );
 }

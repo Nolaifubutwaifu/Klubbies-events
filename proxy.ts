@@ -116,6 +116,8 @@ export async function proxy(request: NextRequest) {
         url.pathname = NAME_STEP_PATH;
         url.search = "";
         return rememberSource(request, remember(NextResponse.redirect(url, 303), here));
+      } else {
+        // The name gate deliberately fails open on a DB error.
       }
     }
   }

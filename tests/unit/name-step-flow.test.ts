@@ -54,13 +54,17 @@ function from(name: string) {
     },
     update(patch: Row) {
       const narrowing = [...filters];
+      let ran = false;
+      // Apply inside then(), before the promise yields, so a second claim
+      // resumed just after this one already sees the written name.
       const run = () => {
+        if (ran) return { data: null, error: null };
+        ran = true;
         for (const row of rows()) if (matches(row, narrowing)) Object.assign(row, patch);
         return { data: null, error: null };
       };
       const chain = () => {
-        const promise = Promise.resolve().then(run);
-        return Object.assign(promise, {
+        const thenable = {
           eq(col: string, val: unknown) {
             narrowing.push({ op: "eq", col, val });
             return chain();
@@ -69,7 +73,11 @@ function from(name: string) {
             narrowing.push({ op: "is", col, val });
             return chain();
           },
-        });
+          then(resolve: (value: { data: null; error: null }) => unknown, reject: (reason: unknown) => unknown) {
+            return Promise.resolve(run()).then(resolve, reject);
+          },
+        };
+        return thenable;
       };
       return {
         eq(col: string, val: unknown) {
@@ -79,12 +87,29 @@ function from(name: string) {
       };
     },
     delete() {
-      return {
-        eq: async (col: string, val: unknown) => {
-          tables.current[name] = rows().filter((row) => row[col] !== val);
-          return { data: null, error: null };
-        },
+      const narrowing = [...filters];
+      let removed: Row[] | null = null;
+      const run = () => {
+        if (!removed) {
+          const all = rows();
+          removed = all.filter((row) => matches(row, narrowing));
+          tables.current[name] = all.filter((row) => !matches(row, narrowing));
+        }
+        return { data: removed, error: null };
       };
+      const chain = () => ({
+        eq(col: string, val: unknown) {
+          narrowing.push({ op: "eq", col, val });
+          return chain();
+        },
+        select() {
+          return chain();
+        },
+        then(resolve: (value: { data: Row[]; error: null }) => unknown, reject: (reason: unknown) => unknown) {
+          return Promise.resolve(run()).then(resolve, reject);
+        },
+      });
+      return chain();
     },
     then(resolve: (value: { data: Row[]; error: null }) => unknown, reject: (reason: unknown) => unknown) {
       return Promise.resolve({ data: found(), error: null }).then(resolve, reject);
@@ -94,7 +119,15 @@ function from(name: string) {
 }
 
 vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({ from }),
+  createAdminClient: () => ({
+    from,
+    auth: {
+      admin: {
+        createUser: async () => ({ data: { user: { id: USER } }, error: null }),
+        generateLink: async () => ({ data: { properties: { email_otp: "12345678" } }, error: null }),
+      },
+    },
+  }),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -107,7 +140,7 @@ vi.mock("@/lib/billing/notices", () => ({ kickPlanNotices: () => {} }));
 vi.mock("@/lib/billing/usage", () => ({ eventIsFull: async () => false, GUESTS_FULL: "KB002" }));
 vi.mock("@/lib/email/send", () => ({ sendSignInCode: async () => {} }));
 
-const { verifyCode, claimSignInName, joinByLink, MAX_VERIFY_ATTEMPTS } = await import("@/lib/auth/flow");
+const { verifyCode, claimSignInName, joinByLink, processCodeRequest, MAX_VERIFY_ATTEMPTS } = await import("@/lib/auth/flow");
 
 function pending(overrides: Row = {}): Row {
   return {
@@ -202,11 +235,86 @@ describe("claimSignInName", () => {
     expect(tables.current.memberships[0].name_review_at ?? null).toBeNull();
   });
 
-  it("refuses an expired step and a second claim after a name is saved", async () => {
-    tables.current.pending_sign_ins = [pending({ user_id: USER, expires_at: new Date(Date.now() - 1000).toISOString() })];
+  it("saves the name and finishes as a member when the row has expired", async () => {
+    tables.current.events = [event()];
+    tables.current.pending_sign_ins = [
+      pending({
+        user_id: USER,
+        flow: "join",
+        event_id: EVENT,
+        expires_at: new Date(Date.now() - 1000).toISOString(),
+      }),
+    ];
     const expired = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
-    expect(expired).toMatchObject({ ok: false, status: 401 });
+    expect(expired).toMatchObject({ ok: true, redirectTo: "/events" });
+    expect(tables.current.users[0].display_name).toBe("Ada Lovelace");
+    expect(tables.current.memberships).toHaveLength(0);
+    expect(tables.current.pending_sign_ins).toHaveLength(0);
+  });
 
+  it("saves the name for a password sign-in that never wrote a pending row", async () => {
+    tables.current.events = [event()];
+    const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
+    expect(result).toMatchObject({ ok: true, redirectTo: "/events" });
+    expect(tables.current.users[0].display_name).toBe("Ada Lovelace");
+    expect(tables.current.memberships).toHaveLength(0);
+  });
+
+  it("does not clear a verified user when a second code is requested", async () => {
+    tables.current.events = [event()];
+    tables.current.pending_sign_ins = [
+      pending({
+        flow: "join",
+        event_id: EVENT,
+        user_id: USER,
+        attempts: MAX_VERIFY_ATTEMPTS,
+        expires_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    ];
+    tables.current.memberships = [
+      {
+        id: "m1",
+        event_id: EVENT,
+        role: "event_member",
+        roster_email: "ada@example.com",
+        roster_name: "Ada Lovelace",
+        claimed_name: "Ada Lovelace",
+        status: "active",
+        first_seen_at: "2026-01-01T00:00:00.000Z",
+        name_approved_at: null,
+        name_review_at: null,
+        events: { name: "Summit", handle: "summit", status: "active", deleted_at: null },
+      },
+    ];
+    await processCodeRequest({ email: "ada@example.com", flow: "member" });
+    expect(tables.current.pending_sign_ins[0].user_id).toBe(USER);
+    const result = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("lets only one of two parallel claims finish the join", async () => {
+    tables.current.events = [event()];
+    tables.current.pending_sign_ins = [
+      pending({
+        flow: "join",
+        event_id: EVENT,
+        user_id: USER,
+        attempts: MAX_VERIFY_ATTEMPTS,
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    ];
+    const [first, second] = await Promise.all([
+      claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" }),
+      claimSignInName({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" }),
+    ]);
+    const results = [first, second];
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(results.filter((result) => !result.ok && result.status === 409)).toHaveLength(1);
+    expect(results.find((result) => result.ok)).toMatchObject({ redirectTo: "/e/summit" });
+    expect(tables.current.memberships).toHaveLength(1);
+  });
+
+  it("refuses a second claim after a name is saved", async () => {
     tables.current.users[0].display_name = "Ada Lovelace";
     tables.current.pending_sign_ins = [pending({ user_id: USER, flow: "join", event_id: EVENT })];
     const named = await claimSignInName({ userId: USER, email: "ada@example.com", name: "Someone Else" });

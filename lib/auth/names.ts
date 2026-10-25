@@ -3,7 +3,8 @@ function tokens(name: string): string[] {
     .toLowerCase()
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
-    .replace(/['’.-]/g, "")
+    .replace(/['’-]/g, "")
+    .replace(/\./g, " ")
     .replace(/[^\p{L}\s]/gu, " ")
     .split(/\s+/)
     .filter(Boolean);
@@ -13,7 +14,7 @@ function firstChar(token: string): string {
   return [...token][0] ?? "";
 }
 
-/** A written initial ("A", or "J." once the dot is stripped), not a given name. */
+/** A written initial ("A", or "J." once the dot is its own word), not a given name. */
 function isInitial(token: string): boolean {
   return [...token].length === 1;
 }
@@ -36,7 +37,8 @@ function levenshtein(a: string, b: string): number {
 /**
  * Loose comparison between the roster name and the name typed at sign-in.
  * A mismatch holds a guest-list sign-in until an organiser approves it
- * (migration 36). Case, accents and a first initial ("A Smith") still match.
+ * (migration 36). Case, accents, dots ("alice.smith") and a first initial
+ * ("A Smith") still match.
  * One token of a longer name does not, and neither does a different given
  * name that merely shares an initial ("Aaron Smith").
  */

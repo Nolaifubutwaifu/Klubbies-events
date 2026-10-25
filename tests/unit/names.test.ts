@@ -12,6 +12,7 @@ describe("namesLooselyMatch", () => {
     ["Alexander Smith", "Alex Smith"],
     ["Samantha Lee", "Sam Lee"],
     ["Alice Smith", "A Smith"],
+    ["Alice Smith", "alice.smith"],
     ["张伟", "张伟"],
   ])("%s ≈ %s", (roster, claimed) => {
     expect(namesLooselyMatch(roster, claimed)).toBe(true);

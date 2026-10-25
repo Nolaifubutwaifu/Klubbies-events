@@ -36,12 +36,14 @@ export function NameForm() {
         body: JSON.stringify({ name: form.get("name") }),
       });
       const body: { error?: string; redirectTo?: string } = await res.json().catch(() => ({}));
-      if (!res.ok || !body.redirectTo) {
-        showError(body.error ?? "Something went wrong. Try again.");
+      // 409 means the account already has a name: follow the return path
+      // instead of showing that as an error on this screen.
+      if (body.redirectTo && (res.ok || res.status === 409)) {
+        router.replace(body.redirectTo);
+        router.refresh();
         return;
       }
-      router.replace(body.redirectTo);
-      router.refresh();
+      showError(body.error ?? "Something went wrong. Try again.");
     } catch {
       showError("You seem to be offline. Try again.");
     }

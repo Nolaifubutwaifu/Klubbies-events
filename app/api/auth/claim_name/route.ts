@@ -46,15 +46,27 @@ export async function POST(request: Request) {
   }
 
   const result = await claimSignInName({ userId: user.id, email: user.email, name: parsed.data.name });
+  // Already named: send them on to where they were going, instead of an error
+  // that leaves them on this screen.
+  if (!result.ok && result.status === 409) {
+    const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
+    cookieStore.delete(NEXT_COOKIE);
+    rememberNamed(cookieStore, user.id);
+    return finish(NextResponse.json({ redirectTo: next ?? "/events" }, { status: 409 }));
+  }
   if (!result.ok) return finish(NextResponse.json({ error: result.error }, { status: result.status }));
 
   const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
   cookieStore.delete(NEXT_COOKIE);
+  rememberNamed(cookieStore, user.id);
+  const redirectTo = next && result.redirectTo !== "/admin/new" ? next : result.redirectTo;
+  return finish(NextResponse.json({ ok: true, redirectTo }));
+}
+
+function rememberNamed(cookieStore: Awaited<ReturnType<typeof cookies>>, userId: string) {
   const exp = Math.floor((Date.now() + NAMED_COOKIE_TTL_MS) / 1000);
-  cookieStore.set(NAMED_COOKIE, encodeNamedCookie(user.id, exp, serverEnv().SIGNED_URL_SECRET), {
+  cookieStore.set(NAMED_COOKIE, encodeNamedCookie(userId, exp, serverEnv().SIGNED_URL_SECRET), {
     ...cookieBase(),
     maxAge: Math.floor(NAMED_COOKIE_TTL_MS / 1000),
   });
-  const redirectTo = next && result.redirectTo !== "/admin/new" ? next : result.redirectTo;
-  return finish(NextResponse.json({ ok: true, redirectTo }));
 }

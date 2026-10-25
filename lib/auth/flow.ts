@@ -14,7 +14,6 @@ import {
   knownSignInName,
   requestCodeSchema,
   rosterNameForLinkJoin,
-  type NameStep,
   type RequestCodeInput,
 } from "./sign-in-name";
 
@@ -160,6 +159,10 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
 
   const code = await issueOtp(email);
   const claimedName = input.fullName?.trim() || null;
+  // Leave user_id off the write. A new row stores null; a row already bound
+  // to a verified user (the name step) keeps that id. Writing null here let a
+  // second code request, including one for someone else's email, unbind them
+  // and trap a nameless account on the name screen.
   const { error } = await createAdminClient()
     .from("pending_sign_ins")
     .upsert({
@@ -167,7 +170,6 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
       claimed_name: claimedName,
       flow: input.flow,
       event_id: eventId,
-      user_id: null,
       attempts: 0,
       expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
     });
@@ -217,7 +219,7 @@ export const EMAIL_LIMITED =
   "You've asked for a few codes already. Use the newest email (check spam too), or wait a few minutes and try again.";
 
 export type VerifyResult =
-  | { ok: true; redirectTo: string; namePending?: NameStep }
+  | { ok: true; redirectTo: string; namePending?: boolean }
   | { ok: false; error: string };
 
 type CompletedSignIn = {
@@ -324,8 +326,6 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   const claimedName = knownSignInName(pending.claimed_name, profile?.display_name);
   // A new account has no name yet. Don't link the guest list or join the
   // event until they give one, or the mismatch hold (migration 36) never runs.
-  const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
-  const flow = parsedFlow.success ? parsedFlow.data : "member";
   // Keep the row until the name is saved. The code itself is spent, and the
   // wait is much longer than the code's ten minutes, so a slow join still lands.
   if (!claimedName) {
@@ -339,13 +339,7 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
       })
       .eq("email", email);
     if (keepError) throw keepError;
-    const namePending: NameStep = {
-      userId,
-      flow,
-      eventId: pending.event_id,
-      exp: Math.floor(exp / 1000),
-    };
-    return { ok: true, redirectTo: NAME_STEP_PATH, namePending };
+    return { ok: true, redirectTo: NAME_STEP_PATH, namePending: true };
   }
 
   await admin.from("pending_sign_ins").delete().eq("email", email);
@@ -360,16 +354,18 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   });
 }
 
-export const CLAIM_EXPIRED = "Your sign in timed out. Start again.";
 export const ALREADY_NAMED = "This account already has a name.";
 
 export type ClaimNameResult = { ok: true; redirectTo: string } | { ok: false; error: string; status: 400 | 401 | 409 };
 
 /**
  * Saves the name from the post-verify screen and finishes the sign-in.
- * The join comes from the pending row bound to this user at verification.
- * A cookie cannot choose the event, and an account that already has a name
- * cannot run this again.
+ * The pending row is taken with one delete, so two claims cannot both join.
+ * The winner uses that row's flow and event. No row (it expired, a password
+ * sign-in never wrote one, or a later code request replaced it) still saves
+ * the name and finishes as a member with no event, so a nameless account
+ * cannot get stuck on this screen. An account that already has a name cannot
+ * run this again.
  */
 export async function claimSignInName(input: { userId: string; email: string; name: string }): Promise<ClaimNameResult> {
   const claimedName = input.name.trim();
@@ -383,22 +379,38 @@ export async function claimSignInName(input: { userId: string; email: string; na
     return { ok: false, status: 409, error: ALREADY_NAMED };
   }
 
-  const { data: pending } = await admin.from("pending_sign_ins").select("*").eq("user_id", input.userId).maybeSingle();
-  const expired = !pending || pending.expires_at < nowIso() || normaliseEmail(pending.email) !== email;
-  if (expired || !pending) {
-    if (pending) await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
-    return { ok: false, status: 401, error: CLAIM_EXPIRED };
+  // delete … where user_id = $1 returning *. Only one caller receives the row.
+  const { data: taken, error } = await admin.from("pending_sign_ins").delete().eq("user_id", input.userId).select("*");
+  if (error) throw error;
+  const pending = taken?.[0] ?? null;
+  const usable = pending != null && pending.expires_at >= nowIso() && normaliseEmail(pending.email) === email;
+
+  if (usable && pending) {
+    // Land the name before the next await so the claim that lost the row
+    // observes it and stops, instead of finishing a second time.
+    await admin.from("users").update({ display_name: claimedName }).eq("id", input.userId).is("display_name", null);
+    const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
+    const result = await completeSignIn({
+      userId: input.userId,
+      email,
+      claimedName,
+      flow: parsedFlow.success ? parsedFlow.data : "member",
+      eventId: pending.event_id,
+    });
+    if (!result.ok) return { ok: false, status: 400, error: result.error };
+    return result;
   }
 
-  const parsedFlow = requestCodeSchema.shape.flow.safeParse(pending.flow);
+  const { data: again } = await admin.from("users").select("display_name").eq("id", input.userId).maybeSingle();
+  if (again?.display_name?.trim()) return { ok: false, status: 409, error: ALREADY_NAMED };
+
   const result = await completeSignIn({
     userId: input.userId,
     email,
     claimedName,
-    flow: parsedFlow.success ? parsedFlow.data : "member",
-    eventId: pending.event_id,
+    flow: "member",
+    eventId: null,
   });
-  await admin.from("pending_sign_ins").delete().eq("user_id", input.userId);
   if (!result.ok) return { ok: false, status: 400, error: result.error };
   return result;
 }

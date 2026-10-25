@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const jar = vi.hoisted(() => ({ current: new Map<string, string>() }));
 const session = vi.hoisted(() => ({ current: null as { id: string; email: string } | null }));
-const limited = vi.hoisted(() => ({ current: false, keys: [] as string[] }));
+const limited = vi.hoisted(() => ({ current: false, keys: [] as string[], counts: new Map<string, number>() }));
 const claim = vi.hoisted(() => ({
   current: (async () => ({ ok: true as const, redirectTo: "/events" })) as (input: {
     userId: string;
@@ -33,9 +33,14 @@ vi.mock("@/lib/auth/rate-limit", () => ({
     claimNamePerIp: { bucket: "claim_name:ip", limit: 400, windowSeconds: 3600 },
   },
   RATE_LIMITED: "Too many sign-ins from here right now. Wait a minute and try again.",
-  hitRateLimit: async (limit: { bucket: string }, key: string) => {
-    limited.keys.push(`${limit.bucket}:${key}`);
-    return limited.current;
+  hitRateLimit: async (limit: { bucket: string; limit: number }, key: string) => {
+    const id = `${limit.bucket}:${key}`;
+    limited.keys.push(id);
+    if (limited.current) return true;
+    const seen = limited.counts.get(id) ?? 0;
+    if (seen >= limit.limit) return true;
+    limited.counts.set(id, seen + 1);
+    return false;
   },
 }));
 
@@ -59,6 +64,7 @@ beforeEach(() => {
   session.current = { id: USER, email: "ada@example.com" };
   limited.current = false;
   limited.keys = [];
+  limited.counts = new Map();
   claim.current = async () => ({ ok: true, redirectTo: "/events" });
 });
 
@@ -105,6 +111,24 @@ describe("POST /api/auth/claim_name", () => {
     expect(received).toEqual({ userId: USER, email: "ada@example.com", name: "Ada Lovelace" });
     expect(jar.current.has("kb_name_step")).toBe(false);
     await expect(response.json()).resolves.toMatchObject({ redirectTo: "/account" });
+  });
+
+  it("sends an already-named account to the return path", async () => {
+    claim.current = async () => ({ ok: false, status: 409, error: "This account already has a name." });
+    jar.current.set("kb_next", "/e/summit");
+    const response = await call(JSON.stringify({ name: "Ada Lovelace" }));
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ redirectTo: "/e/summit" });
+    expect(jar.current.has("kb_next")).toBe(false);
+    expect(jar.current.has("kb_named")).toBe(true);
+    expect(jar.current.has("kb_name_step")).toBe(false);
+  });
+
+  it("returns 429 on the 11th claim in an hour", async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) statuses.push((await call(JSON.stringify({ name: "Ada Lovelace" }))).status);
+    expect(statuses.slice(0, 10)).toEqual(Array.from({ length: 10 }, () => 200));
+    expect(statuses[10]).toBe(429);
   });
 
   it("returns the claim status for an expired step", async () => {

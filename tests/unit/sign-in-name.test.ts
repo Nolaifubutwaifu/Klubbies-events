@@ -1,10 +1,9 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   NAME_STEP_TTL_MS,
   appPathNeedsName,
   codeRequestFieldError,
-  decodeNameStep,
-  encodeNameStep,
   encodeNamedCookie,
   knownSignInName,
   namedCookieMatches,
@@ -14,18 +13,7 @@ import {
 
 const SECRET = "test-secret-test-secret";
 const USER = "11111111-1111-4111-8111-111111111111";
-const EVENT = "22222222-2222-4222-8222-222222222222";
 const OTHER = "33333333-3333-4333-8333-333333333333";
-
-function step(overrides: Partial<{ userId: string; flow: "member" | "join" | "create" | "signup"; eventId: string | null; exp: number }> = {}) {
-  return {
-    userId: USER,
-    flow: "join" as const,
-    eventId: EVENT,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-    ...overrides,
-  };
-}
 
 describe("requestCodeSchema", () => {
   it("accepts an email on its own for sign-in", () => {
@@ -71,25 +59,7 @@ describe("knownSignInName", () => {
   });
 });
 
-describe("name step cookie", () => {
-  it("round-trips a signed step and ignores a forged one", () => {
-    const value = encodeNameStep(step(), SECRET);
-    expect(decodeNameStep(value, SECRET)).toMatchObject({ userId: USER, flow: "join", eventId: EVENT });
-    expect(decodeNameStep(value, "other-secret-other-secret")).toBeNull();
-
-    const [payload, sig] = value.split(".");
-    const forged = Buffer.from(JSON.stringify({ userId: USER, flow: "join", eventId: OTHER, exp: step().exp })).toString("base64url");
-    expect(decodeNameStep(`${forged}.${sig}`, SECRET)).toBeNull();
-    expect(decodeNameStep(`${payload}.not-the-signature`, SECRET)).toBeNull();
-    expect(decodeNameStep(JSON.stringify({ flow: "join", eventId: EVENT }), SECRET)).toBeNull();
-    expect(decodeNameStep(null, SECRET)).toBeNull();
-  });
-
-  it("rejects an expired signature", () => {
-    const value = encodeNameStep(step({ exp: Math.floor(Date.now() / 1000) - 10 }), SECRET);
-    expect(decodeNameStep(value, SECRET)).toBeNull();
-  });
-
+describe("name step", () => {
   it("waits longer than fifteen minutes for the name", () => {
     expect(NAME_STEP_TTL_MS).toBeGreaterThan(15 * 60 * 1000);
   });
@@ -103,6 +73,13 @@ describe("named cookie", () => {
     expect(namedCookieMatches(value, OTHER, SECRET)).toBe(false);
     expect(namedCookieMatches(`${USER}.${exp}.forged`, USER, SECRET)).toBe(false);
     expect(namedCookieMatches(encodeNamedCookie(USER, Math.floor(Date.now() / 1000) - 5, SECRET), USER, SECRET)).toBe(false);
+  });
+
+  it("rejects a signature made with the raw secret", () => {
+    const exp = Math.floor(Date.now() / 1000) + 60;
+    const payload = `${USER}.${exp}`;
+    const raw = createHmac("sha256", SECRET).update(`named:${payload}`).digest("base64url");
+    expect(namedCookieMatches(`${payload}.${raw}`, USER, SECRET)).toBe(false);
   });
 });
 
@@ -119,7 +96,8 @@ describe("appPathNeedsName", () => {
     expect(appPathNeedsName("/events")).toBe(true);
     expect(appPathNeedsName("/e/summit")).toBe(true);
     expect(appPathNeedsName("/e/summit/a/album")).toBe(true);
-    expect(appPathNeedsName("/account")).toBe(true);
+    expect(appPathNeedsName("/account")).toBe(false);
+    expect(appPathNeedsName("/account/")).toBe(false);
     expect(appPathNeedsName("/admin/new")).toBe(true);
     expect(appPathNeedsName("/signin/name")).toBe(false);
     expect(appPathNeedsName("/signin")).toBe(false);
