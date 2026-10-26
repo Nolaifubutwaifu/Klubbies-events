@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { personName } from "@/lib/auth/display-name";
-import { faceSquare } from "@/lib/faces/crop";
+import { faceSquare, uprightDimensions } from "@/lib/faces/crop";
 import { exifToIso } from "@/lib/media/exif-time";
 import { formatTime } from "@/lib/format";
 import { logoMarkPath } from "@/lib/storage";
@@ -51,6 +51,14 @@ describe("face crop square", () => {
     const crop = faceSquare({ Left: 0.1, Top: 0.1, Width: 0.8, Height: 0.8 }, 2000, 1000);
     expect(crop.size).toBe(1000);
     expect(crop.top).toBe(0);
+  });
+
+  it("swaps axes for a sideways EXIF orientation and leaves the others", () => {
+    expect(uprightDimensions(4000, 3000, 1)).toEqual({ width: 4000, height: 3000 });
+    expect(uprightDimensions(4000, 3000, 3)).toEqual({ width: 4000, height: 3000 });
+    expect(uprightDimensions(4000, 3000, 6)).toEqual({ width: 3000, height: 4000 });
+    expect(uprightDimensions(4000, 3000, 8)).toEqual({ width: 3000, height: 4000 });
+    expect(uprightDimensions(4000, 3000)).toEqual({ width: 4000, height: 3000 });
   });
 });
 

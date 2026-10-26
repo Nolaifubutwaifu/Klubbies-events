@@ -21,6 +21,7 @@ import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import type { Database } from "../lib/db/types";
 import { existsInR2, r2Client, r2ConfigFrom, readFromR2 } from "../lib/backup/r2-core";
+import { sharpDecodeOptions } from "../lib/media/logo-file";
 
 const BUCKET = "event_media";
 const THUMB_SHORT_EDGE = 400;
@@ -39,7 +40,7 @@ async function toBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
 function contentTypeOf(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase();
   return (
-    { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", mp4: "video/mp4", mov: "video/quicktime" }[
+    { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", heif: "image/heif", mp4: "video/mp4", mov: "video/quicktime" }[
       ext ?? ""
     ] ?? "application/octet-stream"
   );
@@ -113,7 +114,7 @@ async function main() {
           lost += 1;
           continue;
         }
-        const image = sharp(original).rotate();
+        const image = sharp(original, sharpDecodeOptions).rotate();
         const meta = await image.metadata();
         const w = meta.autoOrient?.width ?? meta.width ?? DISPLAY_EDGE;
         const h = meta.autoOrient?.height ?? meta.height ?? DISPLAY_EDGE;

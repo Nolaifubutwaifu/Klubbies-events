@@ -14,6 +14,7 @@ import {
 } from "@aws-sdk/client-rekognition";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
+import { sharpDecodeOptions } from "../lib/media/logo-file";
 
 const arg = (name: string) => {
   const at = process.argv.indexOf(`--${name}`);
@@ -32,7 +33,7 @@ const collection = `${process.env.REKOGNITION_COLLECTION_PREFIX ?? "klubbies-dev
 async function jpeg(bytes: ArrayBuffer, edge: number): Promise<{ buf: Buffer; w: number }> {
   let quality = 88;
   for (;;) {
-    const { data, info } = await sharp(Buffer.from(bytes))
+    const { data, info } = await sharp(Buffer.from(bytes), sharpDecodeOptions)
       .rotate()
       .resize(edge, edge, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality })
