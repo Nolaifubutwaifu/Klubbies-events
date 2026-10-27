@@ -16,9 +16,9 @@ export function Brand({ href = "/", size = 17, tone = "dark" }: { href?: string;
 
 /**
  * Stacked album prints, the same drawing as app/icon.svg. The tile is night
- * (#0E1424), which is also the footer, so that surface gets a hairline or the
- * edge disappears. The artwork stays this colour either way: it is not a
- * letter that can turn over.
+ * (#0E1424), which is also the footer, so that surface gets a 1px light edge
+ * or the tile disappears into the page. content-box keeps the edge outside
+ * the artwork. The drawing stays this colour either way.
  */
 export function BrandTile({ size = 24, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
   const light = tone === "light";
@@ -29,7 +29,15 @@ export function BrandTile({ size = 24, tone = "dark" }: { size?: number; tone?: 
       viewBox="0 0 512 512"
       aria-hidden
       className="flex-none"
-      style={light ? { borderRadius: (size * 112) / 512, boxShadow: "0 0 0 1px #2a3350" } : undefined}
+      style={
+        light
+          ? {
+              borderRadius: (size * 112) / 512,
+              boxSizing: "content-box",
+              border: "1px solid rgba(255,255,255,0.12)",
+            }
+          : undefined
+      }
     >
       <rect width="512" height="512" rx="112" fill="#0E1424" />
       <rect x="160" y="138" width="180" height="214" rx="22" fill="#B3C1F6" transform="rotate(-14 250 245)" />

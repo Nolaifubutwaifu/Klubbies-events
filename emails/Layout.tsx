@@ -24,11 +24,29 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+/** 32px hosted mark. Alt and the width/height attributes stay when images are blocked. */
+function Mark() {
+  return <Img src={markUrl} width="32" height="32" alt="Klubbies Events" style={{ display: "block", width: 32, height: 32 }} />;
+}
+
+const credit = (
+  <>
+    <Link href={`${site}/?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
+      Photos by Klubbies Events
+    </Link>
+    {" · "}
+    <Link href={`${site}/start?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
+      Run your own event
+    </Link>
+  </>
+);
+
 /**
- * Every email: the product mark, then the event it's about (its tile and
- * name) when there is one. Emails not about one event carry the Klubbies
- * Events name beside the mark. Then the message, the privacy line and the
- * credit.
+ * Every email: the event it's about at the top (its tile and name) when there
+ * is one, otherwise the Klubbies Events name with the mark. The product mark
+ * sits on the "Photos by Klubbies Events" line for event mail, so it isn't a
+ * second logo beside the event's tile. Then the message, the privacy line and
+ * the credit.
  */
 export function EmailLayout({ preview, eventName = null, children }: { preview: string; eventName?: string | null; children: ReactNode }) {
   return (
@@ -38,38 +56,38 @@ export function EmailLayout({ preview, eventName = null, children }: { preview: 
       <Body style={{ background: "#f7f7f5", color: "#16181d", fontFamily, margin: 0, padding: "32px 0" }}>
         <Container style={{ maxWidth: 520, background: "#ffffff", border: "1px solid #e4e4df", borderRadius: 10 }}>
           <Section style={{ padding: "16px 28px", borderBottom: "1px solid #e4e4df" }}>
-            <Row>
-              <Column style={{ width: 44, verticalAlign: "middle" }}>
-                <Img src={markUrl} width="32" height="32" alt={eventName ? "Klubbies Events" : ""} style={{ display: "block", width: 32, height: 32 }} />
-              </Column>
-              <Column style={{ verticalAlign: "middle" }}>
-                {eventName ? (
-                  <Text style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: "32px" }}>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 28,
-                        height: 28,
-                        lineHeight: "28px",
-                        borderRadius: 7,
-                        background: "#16181d",
-                        color: "#ffffff",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textAlign: "center",
-                        verticalAlign: "middle",
-                        marginRight: 10,
-                      }}
-                    >
-                      {initials(eventName)}
-                    </span>
-                    <span style={{ verticalAlign: "middle" }}>{eventName}</span>
-                  </Text>
-                ) : (
+            {eventName ? (
+              <Text style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: "28px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 28,
+                    height: 28,
+                    lineHeight: "28px",
+                    borderRadius: 7,
+                    background: "#16181d",
+                    color: "#ffffff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    verticalAlign: "middle",
+                    marginRight: 10,
+                  }}
+                >
+                  {initials(eventName)}
+                </span>
+                <span style={{ verticalAlign: "middle" }}>{eventName}</span>
+              </Text>
+            ) : (
+              <Row>
+                <Column style={{ width: 44, verticalAlign: "middle" }}>
+                  <Mark />
+                </Column>
+                <Column style={{ verticalAlign: "middle" }}>
                   <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0, lineHeight: "32px" }}>Klubbies Events</Text>
-                )}
-              </Column>
-            </Row>
+                </Column>
+              </Row>
+            )}
           </Section>
           <Section style={{ padding: "28px" }}>{children}</Section>
           <Hr style={{ borderColor: "#e4e4df", margin: 0 }} />
@@ -78,15 +96,18 @@ export function EmailLayout({ preview, eventName = null, children }: { preview: 
               Klubbies Events keeps event photos private to the people the organiser let in. If you weren&apos;t
               expecting this email you can ignore it.
             </Text>
-            <Text style={{ fontSize: 14, color: "#6b6e76", margin: "8px 0 0", lineHeight: 1.5 }}>
-              <Link href={`${site}/?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
-                Photos by Klubbies Events
-              </Link>
-              {" · "}
-              <Link href={`${site}/start?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
-                Run your own event
-              </Link>
-            </Text>
+            {eventName ? (
+              <Row>
+                <Column style={{ width: 44, verticalAlign: "middle", paddingTop: 12 }}>
+                  <Mark />
+                </Column>
+                <Column style={{ verticalAlign: "middle", paddingTop: 12 }}>
+                  <Text style={{ fontSize: 14, color: "#6b6e76", margin: 0, lineHeight: "32px" }}>{credit}</Text>
+                </Column>
+              </Row>
+            ) : (
+              <Text style={{ fontSize: 14, color: "#6b6e76", margin: "8px 0 0", lineHeight: 1.5 }}>{credit}</Text>
+            )}
           </Section>
         </Container>
       </Body>
