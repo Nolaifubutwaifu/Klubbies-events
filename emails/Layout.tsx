@@ -1,4 +1,4 @@
-import { Body, Container, Head, Hr, Html, Link, Preview, Section, Text } from "@react-email/components";
+import { Body, Column, Container, Head, Hr, Html, Img, Link, Preview, Row, Section, Text } from "@react-email/components";
 import type { ReactNode } from "react";
 
 const fontFamily = "Geist, 'Helvetica Neue', Helvetica, Arial, sans-serif";
@@ -6,6 +6,12 @@ const fontFamily = "Geist, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 // The credit line's links (pricing handoff §5.7), tagged so sign ups from
 // email can be counted.
 const site = (process.env.APP_URL ?? "https://events.klubbies.app").replace(/\/$/, "");
+
+// Hosted PNG, not inline SVG: email clients drop SVG. Flattened on white in
+// public/email-mark.png so a client that ignores PNG alpha still shows the
+// rounded tile on this white card. icon-192.png is the same drawing with a
+// transparent surround, for home screens.
+const markUrl = `${site}/email-mark.png`;
 
 /** "Brisbane Product Summit 2026" → "BPS", for the event's tile in the header. */
 function initials(name: string): string {
@@ -19,9 +25,10 @@ function initials(name: string): string {
 }
 
 /**
- * Every email: the event it's about at the top (its tile and name), the
- * message, then the privacy line and the credit. Emails not about one event
- * carry the Klubbies Events name instead.
+ * Every email: the product mark, then the event it's about (its tile and
+ * name) when there is one. Emails not about one event carry the Klubbies
+ * Events name beside the mark. Then the message, the privacy line and the
+ * credit.
  */
 export function EmailLayout({ preview, eventName = null, children }: { preview: string; eventName?: string | null; children: ReactNode }) {
   return (
@@ -31,31 +38,38 @@ export function EmailLayout({ preview, eventName = null, children }: { preview: 
       <Body style={{ background: "#f7f7f5", color: "#16181d", fontFamily, margin: 0, padding: "32px 0" }}>
         <Container style={{ maxWidth: 520, background: "#ffffff", border: "1px solid #e4e4df", borderRadius: 10 }}>
           <Section style={{ padding: "16px 28px", borderBottom: "1px solid #e4e4df" }}>
-            {eventName ? (
-              <Text style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: "28px" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 28,
-                    height: 28,
-                    lineHeight: "28px",
-                    borderRadius: 7,
-                    background: "#16181d",
-                    color: "#ffffff",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textAlign: "center",
-                    verticalAlign: "middle",
-                    marginRight: 10,
-                  }}
-                >
-                  {initials(eventName)}
-                </span>
-                <span style={{ verticalAlign: "middle" }}>{eventName}</span>
-              </Text>
-            ) : (
-              <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Klubbies Events</Text>
-            )}
+            <Row>
+              <Column style={{ width: 44, verticalAlign: "middle" }}>
+                <Img src={markUrl} width="32" height="32" alt={eventName ? "Klubbies Events" : ""} style={{ display: "block", width: 32, height: 32 }} />
+              </Column>
+              <Column style={{ verticalAlign: "middle" }}>
+                {eventName ? (
+                  <Text style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: "32px" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 28,
+                        height: 28,
+                        lineHeight: "28px",
+                        borderRadius: 7,
+                        background: "#16181d",
+                        color: "#ffffff",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        marginRight: 10,
+                      }}
+                    >
+                      {initials(eventName)}
+                    </span>
+                    <span style={{ verticalAlign: "middle" }}>{eventName}</span>
+                  </Text>
+                ) : (
+                  <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0, lineHeight: "32px" }}>Klubbies Events</Text>
+                )}
+              </Column>
+            </Row>
           </Section>
           <Section style={{ padding: "28px" }}>{children}</Section>
           <Hr style={{ borderColor: "#e4e4df", margin: 0 }} />

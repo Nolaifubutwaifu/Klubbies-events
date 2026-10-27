@@ -48,7 +48,8 @@ enum AppConfig {
     static let ink = UIColor(red: 0.086, green: 0.094, blue: 0.114, alpha: 1)        // #16181D
     static let accent = UIColor(red: 0.169, green: 0.290, blue: 0.796, alpha: 1)     // #2B4ACB
     static let inkSoft = UIColor(red: 0.420, green: 0.431, blue: 0.463, alpha: 1)    // #6B6E76, "Events" in the name
-    static let dot = UIColor(red: 0.357, green: 0.471, blue: 0.941, alpha: 1)        // #5B78F0, the mark's dot
+    /// Scan line and download progress. Not the logo. #5B78F0.
+    static let dot = UIColor(red: 0.357, green: 0.471, blue: 0.941, alpha: 1)
 
     /// Our own pages that belong outside the app, like "How it works" on the
     /// sign-in screen, carry `view=browser`. They open in a Safari sheet,
