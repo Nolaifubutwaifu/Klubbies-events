@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { NEUTRAL_MESSAGE, SIGNIN_COOKIE, codeRequestLimit, processCodeRequest, requestCodeSchema } from "@/lib/auth/flow";
+import { codeRequestFieldError } from "@/lib/auth/sign-in-name";
 import { clientFingerprint } from "@/lib/auth/request";
 import { normaliseEmail } from "@/lib/roster/email";
 
@@ -9,6 +10,8 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Check the form" }, { status: 400 });
   }
+  const fieldError = codeRequestFieldError(parsed.data);
+  if (fieldError) return NextResponse.json({ error: fieldError }, { status: 400 });
 
   const { ip } = await clientFingerprint();
   const limited = await codeRequestLimit(parsed.data.email, ip);

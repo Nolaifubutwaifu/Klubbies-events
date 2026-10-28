@@ -192,7 +192,7 @@ export function AuthHeading({ children, step }: { children: ReactNode; step?: { 
           </span>
         </div>
       ) : null}
-      <h1 className="serif text-[44px] leading-none sm:text-[56px]">{children}</h1>
+      <h1 className="serif text-balance text-[44px] leading-none sm:text-[56px]">{children}</h1>
     </div>
   );
 }
