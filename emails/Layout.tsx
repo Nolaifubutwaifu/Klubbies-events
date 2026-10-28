@@ -1,4 +1,4 @@
-import { Body, Container, Head, Hr, Html, Link, Preview, Section, Text } from "@react-email/components";
+import { Body, Column, Container, Head, Hr, Html, Img, Link, Preview, Row, Section, Text } from "@react-email/components";
 import type { ReactNode } from "react";
 
 const fontFamily = "Geist, 'Helvetica Neue', Helvetica, Arial, sans-serif";
@@ -6,6 +6,12 @@ const fontFamily = "Geist, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 // The credit line's links (pricing handoff §5.7), tagged so sign ups from
 // email can be counted.
 const site = (process.env.APP_URL ?? "https://events.klubbies.app").replace(/\/$/, "");
+
+// Hosted PNG, not inline SVG: email clients drop SVG. Flattened on white in
+// public/email-mark.png so a client that ignores PNG alpha still shows the
+// rounded tile on this white card. icon-192.png is the same drawing with a
+// transparent surround, for home screens.
+const markUrl = `${site}/email-mark.png`;
 
 /** "Brisbane Product Summit 2026" → "BPS", for the event's tile in the header. */
 function initials(name: string): string {
@@ -18,10 +24,29 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+/** 32px hosted mark. Alt and the width/height attributes stay when images are blocked. */
+function Mark() {
+  return <Img src={markUrl} width="32" height="32" alt="Klubbies Events" style={{ display: "block", width: 32, height: 32 }} />;
+}
+
+const credit = (
+  <>
+    <Link href={`${site}/?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
+      Photos by Klubbies Events
+    </Link>
+    {" · "}
+    <Link href={`${site}/start?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
+      Run your own event
+    </Link>
+  </>
+);
+
 /**
- * Every email: the event it's about at the top (its tile and name), the
- * message, then the privacy line and the credit. Emails not about one event
- * carry the Klubbies Events name instead.
+ * Every email: the event it's about at the top (its tile and name) when there
+ * is one, otherwise the Klubbies Events name with the mark. The product mark
+ * sits on the "Photos by Klubbies Events" line for event mail, so it isn't a
+ * second logo beside the event's tile. Then the message, the privacy line and
+ * the credit.
  */
 export function EmailLayout({ preview, eventName = null, children }: { preview: string; eventName?: string | null; children: ReactNode }) {
   return (
@@ -54,7 +79,14 @@ export function EmailLayout({ preview, eventName = null, children }: { preview: 
                 <span style={{ verticalAlign: "middle" }}>{eventName}</span>
               </Text>
             ) : (
-              <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Klubbies Events</Text>
+              <Row>
+                <Column style={{ width: 44, verticalAlign: "middle" }}>
+                  <Mark />
+                </Column>
+                <Column style={{ verticalAlign: "middle" }}>
+                  <Text style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", margin: 0, lineHeight: "32px" }}>Klubbies Events</Text>
+                </Column>
+              </Row>
             )}
           </Section>
           <Section style={{ padding: "28px" }}>{children}</Section>
@@ -64,15 +96,18 @@ export function EmailLayout({ preview, eventName = null, children }: { preview: 
               Klubbies Events keeps event photos private to the people the organiser let in. If you weren&apos;t
               expecting this email you can ignore it.
             </Text>
-            <Text style={{ fontSize: 14, color: "#6b6e76", margin: "8px 0 0", lineHeight: 1.5 }}>
-              <Link href={`${site}/?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
-                Photos by Klubbies Events
-              </Link>
-              {" · "}
-              <Link href={`${site}/start?src=credit-email`} style={{ color: "#4b4e56", textDecoration: "underline" }}>
-                Run your own event
-              </Link>
-            </Text>
+            {eventName ? (
+              <Row>
+                <Column style={{ width: 44, verticalAlign: "middle", paddingTop: 12 }}>
+                  <Mark />
+                </Column>
+                <Column style={{ verticalAlign: "middle", paddingTop: 12 }}>
+                  <Text style={{ fontSize: 14, color: "#6b6e76", margin: 0, lineHeight: "32px" }}>{credit}</Text>
+                </Column>
+              </Row>
+            ) : (
+              <Text style={{ fontSize: 14, color: "#6b6e76", margin: "8px 0 0", lineHeight: 1.5 }}>{credit}</Text>
+            )}
           </Section>
         </Container>
       </Body>

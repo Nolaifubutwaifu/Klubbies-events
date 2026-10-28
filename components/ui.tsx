@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-/** The product's own mark: a small ink tile and the name. */
+/** The product's own mark: stacked album prints and the name. */
 export function Brand({ href = "/", size = 17, tone = "dark" }: { href?: string; size?: number; tone?: "dark" | "light" }) {
   const light = tone === "light";
   return (
@@ -14,14 +14,40 @@ export function Brand({ href = "/", size = 17, tone = "dark" }: { href?: string;
   );
 }
 
-/** The mark. On night (the site footer) it turns over: white tile, night letter. */
+/**
+ * Stacked album prints, the same drawing as app/icon.svg. The tile is night
+ * (#0E1424), which is also the footer, so that surface gets a 1px light edge
+ * or the tile disappears into the page. content-box keeps the edge outside
+ * the artwork. The drawing stays this colour either way.
+ */
 export function BrandTile({ size = 24, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
   const light = tone === "light";
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden className="flex-none">
-      <rect width="64" height="64" rx="14" fill={light ? "#ffffff" : "#16181d"} />
-      <path d="M19 15h8v15l11.5-15h9.5L35 30.5 48.5 49H39l-12-16.5V49h-8z" fill={light ? "#0e1424" : "#f7f7f5"} />
-      <circle cx="48" cy="16" r="5" fill={light ? "#2b4acb" : "#5b78f0"} />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 512 512"
+      aria-hidden
+      className="flex-none"
+      style={
+        light
+          ? {
+              borderRadius: (size * 112) / 512,
+              boxSizing: "content-box",
+              border: "1px solid rgba(255,255,255,0.12)",
+            }
+          : undefined
+      }
+    >
+      <rect width="512" height="512" rx="112" fill="#0E1424" />
+      <rect x="160" y="138" width="180" height="214" rx="22" fill="#B3C1F6" transform="rotate(-14 250 245)" />
+      <path
+        d="M206 168h140a22 22 0 0 1 22 22v170a22 22 0 0 1-22 22H206a22 22 0 0 1-22-22V190a22 22 0 0 1 22-22z M222 196a10 10 0 0 0-10 10v108a10 10 0 0 0 10 10h108a10 10 0 0 0 10-10V206a10 10 0 0 0-10-10z"
+        fill="#F7F7F5"
+        fillRule="evenodd"
+      />
+      <rect x="212" y="196" width="128" height="128" rx="10" fill="#2B4ACB" />
+      <circle cx="276" cy="260" r="30" fill="#F7F7F5" />
     </svg>
   );
 }
