@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthHeading, AuthShell } from "@/components/AuthShell";
+import { GoogleAds } from "@/components/GoogleAds";
 import { getSessionUser } from "@/lib/auth/session";
 import { isNativeAppRequest } from "@/lib/native-app-server";
 import { SignInForm } from "../signin/SignInForm";
@@ -59,40 +60,43 @@ export default async function StartPage() {
   const inApp = await isNativeAppRequest();
 
   return (
-    <AuthShell
-      panel={<Preview />}
-      topLink={
-        <>
-          <span className="hidden sm:inline">Already have an account? </span>
-          <Link href="/signin" className="font-semibold">
-            Sign in
-          </Link>
-        </>
-      }
-      footer={
-        <p className="m-0">
-          <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
-          {inApp ? null : (
-            <>
-              {" "}
-              · <Link href="/refunds">Refunds</Link>
-            </>
-          )}
+    <>
+      <GoogleAds />
+      <AuthShell
+        panel={<Preview />}
+        topLink={
+          <>
+            <span className="hidden sm:inline">Already have an account? </span>
+            <Link href="/signin" className="font-semibold">
+              Sign in
+            </Link>
+          </>
+        }
+        footer={
+          <p className="m-0">
+            <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
+            {inApp ? null : (
+              <>
+                {" "}
+                · <Link href="/refunds">Refunds</Link>
+              </>
+            )}
+          </p>
+        }
+      >
+        <AuthHeading step={{ at: 1, of: 2 }}>Create an event</AuthHeading>
+        <p className="mt-3 text-[17px] text-[color:var(--kb-ink-2)]">
+          First, who&apos;s running it. We&apos;ll email you a code to confirm it&apos;s you.
         </p>
-      }
-    >
-      <AuthHeading step={{ at: 1, of: 2 }}>Create an event</AuthHeading>
-      <p className="mt-3 text-[17px] text-[color:var(--kb-ink-2)]">
-        First, who&apos;s running it. We&apos;ll email you a code to confirm it&apos;s you.
-      </p>
-      <div className="mt-6">
-        <SignInForm flow="create" />
-      </div>
-      {inApp ? null : (
-        <p className="m-0 mt-5 text-[14px] text-[color:var(--kb-ink-3)]">
-          Setting up is free. You only pay if the event needs a bigger size.
-        </p>
-      )}
-    </AuthShell>
+        <div className="mt-6">
+          <SignInForm flow="create" />
+        </div>
+        {inApp ? null : (
+          <p className="m-0 mt-5 text-[14px] text-[color:var(--kb-ink-3)]">
+            Setting up is free. You only pay if the event needs a bigger size.
+          </p>
+        )}
+      </AuthShell>
+    </>
   );
 }

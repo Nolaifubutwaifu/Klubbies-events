@@ -2,6 +2,9 @@
 // Origins come from env so preview, local and production each name their
 // own Supabase project and R2 bucket. Phase 1 sends this as Report-Only;
 // the header name lives in proxy.ts so enforcing is a one-line flip.
+// Google Ads hosts are added only when NEXT_PUBLIC_GOOGLE_ADS_ID is set.
+
+import { googleAdsCsp } from "@/lib/ads";
 
 function origin(value: string | undefined): string | null {
   if (!value) return null;
@@ -50,6 +53,8 @@ export function buildCsp(nonce: string): string {
 
   const storage = [supabase, supabaseStorage, ...r2Origins()].filter((value): value is string => Boolean(value));
   const vercelLive = isPreview ? ["https://vercel.live"] : [];
+  const ads = googleAdsCsp();
+  const frames = [...(isPreview ? ["https://vercel.live"] : []), ...ads.frame];
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
@@ -63,11 +68,12 @@ export function buildCsp(nonce: string): string {
       "'strict-dynamic'",
       "'report-sample'",
       ...vercelLive,
+      ...ads.script,
     ],
     // No nonce here. A nonce makes browsers ignore 'unsafe-inline', and React
     // style attributes cannot carry one.
     "style-src": ["'self'", "'unsafe-inline'", ...vercelLive],
-    "img-src": ["'self'", "data:", "blob:", ...storage, ...(isPreview ? ["https://vercel.live", "https://vercel.com"] : [])],
+    "img-src": ["'self'", "data:", "blob:", ...storage, ...(isPreview ? ["https://vercel.live", "https://vercel.com"] : []), ...ads.img],
     "media-src": ["'self'", "blob:", ...storage],
     "font-src": ["'self'", ...(isPreview ? ["https://vercel.live", "https://assets.vercel.com"] : [])],
     "connect-src": [
@@ -75,10 +81,11 @@ export function buildCsp(nonce: string): string {
       ...storage,
       ...(isPreview ? ["https://vercel.live", "wss://ws-us3.pusher.com"] : []),
       ...(isDev ? ["ws:"] : []),
+      ...ads.connect,
     ],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
-    "frame-src": isPreview ? ["https://vercel.live"] : ["'none'"],
+    "frame-src": frames.length ? frames : ["'none'"],
     "child-src": ["'self'", "blob:"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],

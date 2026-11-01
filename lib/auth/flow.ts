@@ -6,6 +6,7 @@ import { kickPlanNotices } from "@/lib/billing/notices";
 import { eventIsFull, GUESTS_FULL } from "@/lib/billing/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isNewOrganiserSignup } from "@/lib/ads";
 import { namesLooselyMatch } from "./names";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "./rate-limit";
 
@@ -201,7 +202,9 @@ export async function resendCode(rawEmail: string): Promise<void> {
 export const EMAIL_LIMITED =
   "You've asked for a few codes already. Use the newest email (check spam too), or wait a few minutes and try again.";
 
-export type VerifyResult = { ok: true; redirectTo: string } | { ok: false; error: string };
+export type VerifyResult =
+  | { ok: true; redirectTo: string; newAccountId?: string }
+  | { ok: false; error: string };
 
 export async function verifyCode(rawEmail: string, code: string, eventHandle?: string): Promise<VerifyResult> {
   const email = normaliseEmail(rawEmail);
@@ -266,7 +269,17 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
     await admin.from("users").update({ display_name: claimedName }).eq("id", userId).is("display_name", null);
   }
 
-  if (pending.flow === "create") return { ok: true, redirectTo: "/admin/new" };
+  if (pending.flow === "create") {
+    // The account already exists by the time the code is checked (the code
+    // request creates it). Count it once, only when that request created it.
+    const newAccount = isNewOrganiserSignup({
+      flow: pending.flow,
+      userCreatedAt: data.user.created_at,
+      pendingCreatedAt: pending.created_at,
+      membershipCount: memberships.length,
+    });
+    return { ok: true, redirectTo: "/admin/new", ...(newAccount ? { newAccountId: userId } : {}) };
+  }
   if (joinedHandle) return { ok: true, redirectTo: `/e/${joinedHandle}` };
   // A join that was refused (the event filled up, or they were removed) goes
   // to the event anyway, whose page explains why, instead of an empty list.

@@ -5,6 +5,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
+import {
+  ADS_CONVERSION_MAX_AGE,
+  ADS_EVENT_COOKIE,
+  adsCookieOptions,
+  googleAdsEventLabel,
+  isAdsUuid,
+} from "@/lib/ads";
 import { isHeardFrom, SOURCE_COOKIE, SOURCE_TAG } from "@/lib/attribution";
 import { getEventContextById, requireUser } from "@/lib/auth/session";
 import { mediaUnits } from "@/lib/billing/plans";
@@ -108,6 +115,12 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
       .update(origin)
       .eq("id", data.id)
       .then(({ error: originError }) => originError && console.error("could not save where the event came from", originError));
+  }
+
+  // The row exists. The next organiser page fires the conversion once.
+  // A missing label sets no cookie, so nothing is sent.
+  if (googleAdsEventLabel() && isAdsUuid(data.id)) {
+    (await cookies()).set(ADS_EVENT_COOKIE, data.id, adsCookieOptions(ADS_CONVERSION_MAX_AGE));
   }
 
   redirect(`/admin/${data.handle}/setup`);
