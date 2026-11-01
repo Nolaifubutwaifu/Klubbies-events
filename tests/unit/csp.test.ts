@@ -15,6 +15,7 @@ vi.mock("@/lib/auth/rate-limit", async () => {
 
 const ENV_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_GOOGLE_ADS_ID",
   "R2_ENDPOINT",
   "R2_ACCOUNT_ID",
   "R2_BUCKET",
@@ -110,6 +111,30 @@ describe("content security policy", () => {
     const csp = buildCsp("n");
     expect(csp).toContain(endpoint);
     expect(csp).not.toContain("r2.cloudflarestorage.com");
+  });
+
+  it("names Google tag hosts only when the ads id is set", () => {
+    useEnv({ NODE_ENV: "production", NEXT_PUBLIC_GOOGLE_ADS_ID: "AW-1234567890" });
+    const csp = buildCsp("n");
+    expect(csp).toContain("https://www.googletagmanager.com");
+    expect(csp).toContain("https://www.googleadservices.com");
+    expect(csp).toContain("https://www.google.com");
+    expect(csp).toContain("https://www.google.com.au");
+    expect(csp).toContain("https://googleads.g.doubleclick.net");
+    expect(csp).toContain("https://stats.g.doubleclick.net");
+    expect(csp).toContain("https://bid.g.doubleclick.net");
+    expect(csp).toContain("script-src 'self' 'nonce-n' 'strict-dynamic' 'report-sample' https://www.googletagmanager.com");
+    expect(csp).not.toContain("frame-src 'none'");
+
+    useEnv({ NODE_ENV: "production" });
+    const off = buildCsp("n");
+    expect(off).not.toContain("googletagmanager.com");
+    expect(off).not.toContain("googleadservices.com");
+    expect(off).not.toContain("doubleclick.net");
+    expect(off).toContain("frame-src 'none'");
+
+    useEnv({ NODE_ENV: "production", NEXT_PUBLIC_GOOGLE_ADS_ID: "not-an-id" });
+    expect(buildCsp("n")).not.toContain("googletagmanager.com");
   });
 
   it("falls back to the single-label R2 wildcard when R2 is not configured", () => {
