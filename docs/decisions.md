@@ -152,3 +152,7 @@ The retention and pricing handoffs are `docs/handoff-retention-backups.md` and `
 
 115. **Each CSP report costs a count plus an insert through the service role**, and that is acceptable at 60 per minute per IP. `POST /api/csp-report` calls `hitRateLimit` before reading the body: one exact count of recent `auth_rate_events` rows for bucket `csp_report:ip`, then one insert when the address is under the limit. The route is public and the report carries no session, so the service role is the only writer. A database error answers 204 and logs nothing, rather than a 500 with a stack trace for every report.
 
+## 2026-10-25 · The name is saved before the join finishes
+
+116. **A failed claim after the name is saved is not a trap.** `claim_display_name` writes `display_name` first, then the pending row is deleted and the join runs. If that join fails (the event is full, the write errors), the claim returns 400 and the name is already stored, so a retry is 409. The 409 response does not show "already has a name": `/api/auth/claim_name` sends `{ redirectTo }` for `kb_next`, or `/events` when there is no return path, and the form follows it. The losing parallel claim does not delete the pending row, so it cannot take the join away from the claim that won the name. A retry that is only 409 does not join again; someone who still needs the event opens its link.
+

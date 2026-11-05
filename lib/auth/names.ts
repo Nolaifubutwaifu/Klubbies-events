@@ -2,11 +2,21 @@ function tokens(name: string): string[] {
   return name
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/['’.-]/g, "")
-    .replace(/[^a-z\s]/g, " ")
+    .replace(/\p{M}/gu, "")
+    .replace(/['’-]/g, "")
+    .replace(/\./g, " ")
+    .replace(/[^\p{L}\s]/gu, " ")
     .split(/\s+/)
     .filter(Boolean);
+}
+
+function firstChar(token: string): string {
+  return [...token][0] ?? "";
+}
+
+/** A written initial ("A", or "J." once the dot is its own word), not a given name. */
+function isInitial(token: string): boolean {
+  return [...token].length === 1;
 }
 
 function levenshtein(a: string, b: string): number {
@@ -27,8 +37,10 @@ function levenshtein(a: string, b: string): number {
 /**
  * Loose comparison between the roster name and the name typed at sign-in.
  * A mismatch holds a guest-list sign-in until an organiser approves it
- * (migration 36), so this errs towards matching: order, a missing surname,
- * a short form ("Max" for "Maximilian") and small typos all pass.
+ * (migration 36). Case, accents, dots ("alice.smith") and a first initial
+ * ("A Smith") still match.
+ * One token of a longer name does not, and neither does a different given
+ * name that merely shares an initial ("Aaron Smith").
  */
 export function namesLooselyMatch(rosterName: string, claimedName: string): boolean {
   const a = tokens(rosterName);
@@ -38,18 +50,27 @@ export function namesLooselyMatch(rosterName: string, claimedName: string): bool
   const joinedA = a.join(" ");
   const joinedB = b.join(" ");
   if (joinedA === joinedB) return true;
-
-  const setA = new Set(a);
-  const setB = new Set(b);
-  if (b.every((t) => setA.has(t)) || a.every((t) => setB.has(t))) return true;
+  // "Smith" or "Ali" must not pass for "Alice Smith", and a single given name
+  // must not pass for a full roster name.
+  if (a.length === 1 || b.length === 1) return false;
 
   const [firstA, lastA] = [a[0], a[a.length - 1]];
   const [firstB, lastB] = [b[0], b[b.length - 1]];
-  if (lastA === lastB && firstA[0] === firstB[0]) return true;
-  if (firstA === lastB && lastA === firstB) return true;
-  // A short form of the first name, with the same surname or only one given.
+  if (firstA === lastB && lastA === firstB && a.length === 2 && b.length === 2) return true;
+  if (lastA === lastB && (isInitial(firstA) || isInitial(firstB)) && firstChar(firstA) === firstChar(firstB)) return true;
+  // A short form of the first name ("Alex" for "Alexander") with the same surname.
   const shortForm = (x: string, y: string) => x.length >= 3 && y.startsWith(x);
-  if ((shortForm(firstA, firstB) || shortForm(firstB, firstA)) && (a.length === 1 || b.length === 1 || lastA === lastB)) return true;
+  if (lastA === lastB && (shortForm(firstA, firstB) || shortForm(firstB, firstA))) return true;
 
   return levenshtein(joinedA, joinedB) <= Math.max(1, Math.floor(joinedA.length / 10));
+}
+
+/**
+ * Link-mode joins have no organiser-supplied roster name, so the name check
+ * does not apply to the row just created for that event.
+ */
+export function holdsForNameMismatch(linkedByJoin: boolean, rosterName: string | null, claimedName: string): boolean {
+  if (linkedByJoin) return false;
+  if (!claimedName) return false;
+  return !namesLooselyMatch(rosterName ?? "", claimedName);
 }

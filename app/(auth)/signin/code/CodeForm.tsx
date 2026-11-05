@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { safeNextPath } from "@/lib/auth/next-path";
+import { pathAfterVerify } from "@/lib/auth/verify-destination";
 
 /** Supabase mints eight digits for this project, so there are eight boxes. */
 const LENGTH = 8;
@@ -71,8 +71,11 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ code: value, event }),
       });
-      const body: { error?: string; redirectTo?: string } = await res.json().catch(() => ({}));
-      if (!res.ok || !body.redirectTo) {
+      const body: { error?: string; redirectTo?: string; needsName?: boolean } = await res.json().catch(() => ({}));
+      // needsName goes straight to /signin/name. safeNextPath rejects that
+      // path, so it must not be used here.
+      const next = res.ok ? pathAfterVerify(body) : null;
+      if (!next) {
         setError(body.error ?? "That code didn't work.");
         setPending(false);
         // Clear and go back to the first box: retyping beats hunting for the
@@ -81,7 +84,7 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
         setRefocus((n) => n + 1);
         return;
       }
-      router.replace(safeNextPath(body.redirectTo) ?? "/events");
+      router.replace(next);
       router.refresh();
     } catch {
       setError("You seem to be offline. Try again.");

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { EventMark } from "@/components/EventMark";
 import { NoticePage } from "@/components/NoticePage";
 import { formatLongDate } from "@/lib/format";
@@ -47,7 +48,20 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
   if (!session) {
     const copy = DEAD[state as Exclude<GuestLinkState, "ok">] ?? DEAD.unknown;
     return (
-      <NoticePage badge="warn" title={copy.title}>
+      <NoticePage
+        badge="warn"
+        title={copy.title}
+        actions={
+          <>
+            <Link href="/support#contact" className="btn btn-primary no-underline">
+              Ask for help
+            </Link>
+            <Link href="/" className="btn btn-secondary no-underline">
+              Go to Klubbies Events
+            </Link>
+          </>
+        }
+      >
         <p>{copy.body}</p>
       </NoticePage>
     );

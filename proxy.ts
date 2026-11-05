@@ -2,7 +2,19 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SOURCE_COOKIE, SOURCE_TAG } from "@/lib/attribution";
 import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, safeNextPath } from "@/lib/auth/next-path";
+import {
+  NAME_STEP_PATH,
+  NAMED_COOKIE,
+  NAMED_COOKIE_TTL_MS,
+  appPathNeedsName,
+  encodeNamedCookie,
+  hasDisplayName,
+  namedCookieMatches,
+  returnPathForNameGate,
+} from "@/lib/auth/sign-in-name";
+import { serverEnv } from "@/lib/env";
 import { buildCsp, permissionsPolicy, reportingEndpoints } from "@/lib/security/csp";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SESSION_COOKIE_OPTIONS, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
 const PROTECTED = /^\/(c|admin|events|account|ops)(\/|$)/;
@@ -80,8 +92,47 @@ export async function proxy(request: NextRequest) {
     return secure(rememberSource(request, remember(NextResponse.redirect(url), here)), csp, pathname);
   }
   if (!data?.claims && navigating && EVENT_DEEP.test(pathname)) remember(response, here);
-  // requireUser() sends people to /signin?next=…
-  if (pathname === "/signin") remember(response, request.nextUrl.searchParams.get("next"));
+  // requireUser() sends people to /signin?next=…, and a nameless account sent
+  // to the name step can carry the same return path on the query string.
+  if (pathname === "/signin" || pathname === NAME_STEP_PATH) remember(response, request.nextUrl.searchParams.get("next"));
+
+  // A verified account with no name has a session and has not been checked
+  // against the guest list yet. Send them to finish that before the app.
+  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
+  if (userId && appPathNeedsName(pathname)) {
+    const secret = serverEnv().SIGNED_URL_SECRET;
+    const alreadyNamed = namedCookieMatches(request.cookies.get(NAMED_COOKIE)?.value, userId, secret);
+    if (!alreadyNamed) {
+      const { data: profile, error } = await createAdminClient().from("users").select("display_name").eq("id", userId).maybeSingle();
+      if (!error && hasDisplayName(profile?.display_name)) {
+        const exp = Math.floor((Date.now() + NAMED_COOKIE_TTL_MS) / 1000);
+        response.cookies.set(NAMED_COOKIE, encodeNamedCookie(userId, exp, secret), {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+          maxAge: Math.floor(NAMED_COOKIE_TTL_MS / 1000),
+        });
+      } else if (!error) {
+        const url = request.nextUrl.clone();
+        url.pathname = NAME_STEP_PATH;
+        url.search = "";
+        const redirect = NextResponse.redirect(url, 303);
+        // This redirect is a new response. The session cookies refreshed onto
+        // `response` would otherwise be dropped.
+        for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+        const existing = request.cookies.get(NEXT_COOKIE)?.value;
+        const next = returnPathForNameGate(existing, here);
+        // Keep a return path that is already valid. Replacing it with this
+        // gated page would send a new account to /events instead of the
+        // album or photo they were opening.
+        if (next && next !== safeNextPath(existing)) remember(redirect, next);
+        return secure(rememberSource(request, redirect), csp, pathname);
+      } else {
+        // The name gate deliberately fails open on a DB error.
+      }
+    }
+  }
 
   return secure(rememberSource(request, response), csp, pathname);
 }
