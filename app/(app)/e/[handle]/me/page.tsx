@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import { ZipParts } from "@/components/ZipParts";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { GALLERY_THEME_COLOR } from "@/lib/theme";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Placeholder } from "@/components/ui";
@@ -19,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Enrol, ReplaceSelfie, TurnOff } from "./Enrol";
 import { LookingNow } from "./LookingNow";
 import { Suggestions } from "./Suggestions";
+
+export const viewport: Viewport = { themeColor: GALLERY_THEME_COLOR };
 
 export async function generateMetadata(props: PageProps<"/e/[handle]/me">): Promise<Metadata> {
   const { handle } = await props.params;

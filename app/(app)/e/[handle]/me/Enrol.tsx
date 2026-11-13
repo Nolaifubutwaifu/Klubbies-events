@@ -163,7 +163,7 @@ export function TurnOff({ eventId }: { eventId: string }) {
 
   if (!confirming) {
     return (
-      <button type="button" className="kb-link self-start !text-[15px] !font-medium !text-[#b42318]" onClick={() => setConfirming(true)}>
+      <button type="button" className="kb-link self-start !text-[15px] !font-medium !text-[color:var(--kb-danger)]" onClick={() => setConfirming(true)}>
         Turn off face search and delete my face data
       </button>
     );

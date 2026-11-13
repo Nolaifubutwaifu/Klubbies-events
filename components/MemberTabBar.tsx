@@ -70,7 +70,9 @@ export function MemberTabBar({ handle, facesEnabled = false }: { handle: string;
     <nav
       data-tabbar
       aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[color:var(--kb-line)] bg-[color:var(--kb-white)] px-1 pb-[max(14px,env(safe-area-inset-bottom))] pt-1 md:hidden"
+      // A floating bar over the photos rather than a band across the bottom:
+      // the grid runs to the edge of the screen behind it.
+      className="fixed inset-x-3 bottom-[max(10px,env(safe-area-inset-bottom))] z-30 flex rounded-[22px] border border-[color:var(--kb-line)] bg-[color:color-mix(in_srgb,var(--kb-white)_86%,transparent)] p-1 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.5)] backdrop-blur-md md:hidden"
     >
       {tabs.map((tab) => {
         const here = tab.match(pathname);
@@ -81,7 +83,7 @@ export function MemberTabBar({ handle, facesEnabled = false }: { handle: string;
             key={tab.href}
             href={tab.href}
             aria-current={here ? "page" : undefined}
-            className={`flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 text-center text-[14px] leading-[1.15] no-underline ${here ? "font-semibold" : "font-medium"}`}
+            className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[18px] text-center text-[14px] leading-[1.15] no-underline ${here ? "font-semibold" : "font-medium"}`}
             style={{ color: colour }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={colour} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>

@@ -57,7 +57,7 @@ export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: strin
         </details>
         <button
           type="button"
-          className="min-h-[52px] rounded-[8px] bg-[color:var(--kb-ink)] px-4 py-3 text-left text-[15px] font-semibold leading-[1.35] text-white disabled:opacity-60"
+          className="btn btn-primary !h-auto min-h-[52px] !justify-start !whitespace-normal px-4 py-3 text-left text-[15px] leading-[1.35] disabled:opacity-60"
           disabled={pending}
           onClick={() =>
             startTransition(async () => {

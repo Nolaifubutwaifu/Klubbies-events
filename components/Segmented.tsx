@@ -25,7 +25,7 @@ export function Segmented<T extends string>({
             aria-pressed={on}
             onClick={() => onChange(option.value)}
             className={`flex min-h-[40px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] px-2 text-[15px] ${
-              on ? "bg-white font-semibold text-[color:var(--kb-ink)] shadow-[0_1px_2px_rgb(22_24_29/0.1)]" : "font-medium text-[color:var(--kb-ink-2)]"
+              on ? "kb-seg-on font-semibold text-[color:var(--kb-ink)]" : "font-medium text-[color:var(--kb-ink-2)]"
             }`}
           >
             <span className="truncate">{option.label}</span>

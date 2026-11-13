@@ -1,5 +1,6 @@
 import { tileRatio } from "@/lib/media/ratio";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { GALLERY_THEME_COLOR } from "@/lib/theme";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getEventContext } from "@/lib/auth/session";
@@ -7,6 +8,8 @@ import { listFavourites } from "@/lib/media/favourites";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { SavedTabs, type DownloadedItem } from "./SavedTabs";
+
+export const viewport: Viewport = { themeColor: GALLERY_THEME_COLOR };
 
 export async function generateMetadata(props: PageProps<"/e/[handle]/saved">): Promise<Metadata> {
   const { handle } = await props.params;
