@@ -136,7 +136,7 @@ export async function LegalPage({
               {sections.map((section, index) => (
                 <section key={section.title} id={slug(section.title)} className="flex scroll-mt-24 flex-col gap-3 border-t border-[color:var(--kb-line)] py-8">
                   <h2 className="flex items-baseline gap-3.5 text-[22px] font-semibold tracking-[-0.01em]">
-                    <span className="mono text-[15px] font-normal text-[color:var(--kb-brand)]">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="num text-[15px] font-normal text-[color:var(--kb-brand)]">{String(index + 1).padStart(2, "0")}</span>
                     {section.title}
                   </h2>
                   <div className="flex max-w-[68ch] flex-col gap-4 text-[17px] leading-[1.7] text-[#33363d]">{section.body}</div>

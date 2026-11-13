@@ -58,7 +58,7 @@ export function CreateEventForm({ appUrl }: { appUrl: string }) {
       <div className="mx-auto grid w-full max-w-[1100px] gap-10 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
       <div className="flex max-w-[560px] flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <span className="mono text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step {step} of 3</span>
+          <span className="num text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step {step} of 3</span>
           <h1 className="text-[28px] font-semibold tracking-[-0.02em] sm:text-[32px]">{step === 1 ? "Tell us about the event" : "Who can get in?"}</h1>
           <p className="m-0 max-w-[56ch] text-[16px] text-[color:var(--kb-ink-2)]">
             {step === 1
@@ -115,7 +115,7 @@ export function CreateEventForm({ appUrl }: { appUrl: string }) {
           </label>
           <div className="flex flex-col gap-1.5">
             <span className="text-[14px] font-semibold">Event link</span>
-            <span className="mono break-all rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3.5 py-3 text-[15px]">
+            <span className="num break-all rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3.5 py-3 text-[15px]">
               <span className="text-[color:var(--kb-ink-3)]">{host}/e/</span>
               {handle}
             </span>

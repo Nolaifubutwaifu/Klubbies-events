@@ -143,7 +143,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                 <div className="flex flex-col gap-1.5">
                   <span className="flex justify-between text-[14px]">
                     <span className="text-[color:var(--kb-ink-2)]">Checked</span>
-                    <span className="mono">
+                    <span className="num">
                       {(progress.total - progress.remaining).toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")}
                     </span>
                   </span>
@@ -175,7 +175,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                 {selfieUrl ? <img src={selfieUrl} alt="" className="h-12 w-12 flex-none rounded-full object-cover" /> : null}
                 <span className="flex min-w-0 flex-1 flex-col leading-[1.3]">
                   <span className="text-[20px] font-semibold">
-                    <span className="mono">{total.toLocaleString("en-AU")}</span> {total === 1 ? "photo" : "photos"}
+                    <span className="num">{total.toLocaleString("en-AU")}</span> {total === 1 ? "photo" : "photos"}
                   </span>
                   <span className="text-[14px] text-[#c4c7cf]">
                     in {groups.length.toLocaleString("en-AU")} {groups.length === 1 ? "album" : "albums"}
@@ -199,14 +199,15 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                     <h2 id={`g-${group.albumId}`} className="text-[18px] font-semibold">
                       {group.albumTitle}
                     </h2>
-                    <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length.toLocaleString("en-AU")}</span>
+                    <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length.toLocaleString("en-AU")}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-[3px] px-[3px] sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 sm:px-10">
+                  <div className="kb-jgrid px-[3px] sm:px-10">
                     {group.items.slice(0, PREVIEW).map((item) => (
                       <Link
                         key={item.matchId}
                         href={`/e/${handle}/a/${group.albumId}/${item.mediaId}?from=me`}
-                        className="soft-tile block aspect-square !rounded-[3px] no-underline"
+                        style={{ "--r": item.ratio } as React.CSSProperties}
+                        className="soft-tile block no-underline"
                         aria-label={`Photo of you from ${group.albumTitle}`}
                       >
                         {item.thumbUrl ? (

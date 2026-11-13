@@ -151,7 +151,7 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
               autoFocus={index === 0}
               readOnly={pending}
               aria-busy={pending}
-              className="mono h-14 w-full min-w-0 rounded-[8px] bg-white text-center text-[22px] font-medium text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:!border-2 focus-visible:!border-[color:var(--kb-ink)]"
+              className="num h-14 w-full min-w-0 rounded-[8px] bg-white text-center text-[22px] font-medium text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:!border-2 focus-visible:!border-[color:var(--kb-ink)]"
               style={{ border: `1px solid ${digit ? "var(--kb-ink)" : "var(--kb-line-input)"}` }}
             />
           ))}
@@ -190,7 +190,7 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
         </button>
       </p>
 
-      <p className="mono m-0 text-center text-[14px] text-[color:var(--kb-ink-3)]" aria-live="off">
+      <p className="num m-0 text-center text-[14px] text-[color:var(--kb-ink-3)]" aria-live="off">
         {left > 0 ? `Code expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : "This code has expired. Send a new one."}
       </p>
     </form>

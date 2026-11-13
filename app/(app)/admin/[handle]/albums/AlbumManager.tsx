@@ -170,7 +170,7 @@ export function AlbumManager({
                 : "border-[color:var(--kb-line)] bg-white text-[color:var(--kb-ink-2)] hover:border-[color:var(--kb-line-strong)]"
             }`}
           >
-            {label} <span className="mono">{counts[value]}</span>
+            {label} <span className="num">{counts[value]}</span>
           </button>
         ))}
         {message ? <span className="kb-chip ml-auto bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">{message}</span> : null}
@@ -277,9 +277,9 @@ export function AlbumManager({
                       </span>
                     </Link>
                   </td>
-                  <td className="mono">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
-                  <td className="mono">{figures.views.toLocaleString("en-AU")}</td>
-                  <td className="mono">{figures.downloads.toLocaleString("en-AU")}</td>
+                  <td className="num">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
+                  <td className="num">{figures.views.toLocaleString("en-AU")}</td>
+                  <td className="num">{figures.downloads.toLocaleString("en-AU")}</td>
                   <td>{album.allowDownload ? "Yes" : "No"}</td>
                   <td>
                     <StatusChip album={album} />

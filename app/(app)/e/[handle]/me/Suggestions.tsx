@@ -147,7 +147,7 @@ export function Suggestions({
           </button>
         </div>
       </div>
-      <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">
+      <span className="num text-[14px] text-[color:var(--kb-ink-3)]">
         {(answered + 1).toLocaleString("en-AU")} of {Math.max(total, suggestions.length).toLocaleString("en-AU")}
       </span>
     </section>

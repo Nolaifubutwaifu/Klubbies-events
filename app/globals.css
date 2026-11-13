@@ -260,6 +260,12 @@
     font-family: var(--kb-font-mono);
     font-feature-settings: normal;
   }
+  /* Figures: counts, prices, dates. The text face with digits that line up;
+     the code face is for addresses and file names only. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
   .kb-lead {
     font-size: 19px;
     line-height: 1.6;
@@ -952,6 +958,54 @@
   .theme-soft .tile-grid > * {
     border-radius: var(--kb-r-photo);
     overflow: hidden;
+  }
+
+  /* Justified rows: every photo keeps its shape, each row fills the width.
+     A tile sets --r (width / height); the row height is --jh. Growth in
+     proportion to --r keeps a row's tiles the same height, and the spacer
+     at the end stops a short last row from stretching. */
+  .kb-jgrid {
+    --jh: 112px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .kb-jgrid::after {
+    content: "";
+    flex-grow: 1000000000;
+  }
+  .kb-jgrid > * {
+    position: relative;
+    flex: calc(var(--r, 1) * 100) 1 calc(var(--r, 1) * var(--jh));
+    aspect-ratio: var(--r, 1);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 3px;
+  }
+  .kb-jgrid > * > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  @media (min-width: 640px) {
+    .kb-jgrid {
+      --jh: 190px;
+      gap: 4px;
+    }
+    .kb-jgrid-compact {
+      --jh: 150px;
+    }
+  }
+  @media (min-width: 1280px) {
+    .kb-jgrid {
+      --jh: 200px;
+    }
+    .kb-jgrid-compact {
+      --jh: 170px;
+    }
   }
 
   .overlay-title {

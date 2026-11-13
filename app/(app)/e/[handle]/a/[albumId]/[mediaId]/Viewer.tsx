@@ -383,7 +383,7 @@ export function Viewer({
         </Link>
         <div className="flex min-w-0 flex-1 flex-col items-center leading-[1.3]">
           <span className="max-w-full truncate text-[15px] font-semibold">{albumTitle}</span>
-          <span className="mono text-[14px] text-[#a9acb5]">
+          <span className="num text-[14px] text-[#a9acb5]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
             {countNoun ? ` ${countNoun}` : ""}
           </span>
@@ -531,7 +531,7 @@ export function Viewer({
       {current.photographer || current.takenAt ? (
         <div className="flex flex-none justify-between gap-3 px-5 pb-1.5 pt-3.5 text-[14px] text-[#c4c7cf]">
           <span className="truncate">{current.photographer ? `Photo by ${current.photographer}` : ""}</span>
-          <span className="mono flex-none">{current.takenAt}</span>
+          <span className="num flex-none">{current.takenAt}</span>
         </div>
       ) : null}
 

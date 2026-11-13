@@ -41,7 +41,7 @@ export function ProcessingTiles({ count }: { count: number }) {
       {Array.from({ length: Math.min(count, 12) }, (_, i) => (
         <span
           key={`processing-${i}`}
-          className="relative flex aspect-square flex-col items-center justify-center gap-1.5 rounded-[10px]"
+          className="relative flex aspect-square flex-col items-center justify-center gap-1.5 rounded-[3px]"
           style={{ background: "color-mix(in srgb, var(--color-text) 7%, transparent)" }}
         >
           <svg

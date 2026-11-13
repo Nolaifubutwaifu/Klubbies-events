@@ -63,7 +63,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
         ) : (
           <>
             <div className="flex flex-col gap-2">
-              <span className="mono text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step 3 of 3</span>
+              <span className="num text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step 3 of 3</span>
               <h1 className="text-[28px] font-semibold tracking-[-0.02em] sm:text-[32px]">Choose your event&apos;s size</h1>
               <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
                 {inApp
@@ -106,7 +106,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
           <span className="font-semibold">
             {recommendedDone} of {state.recommended.length} done
           </span>
-          <span className="mono text-[color:var(--kb-ink-3)]">{Math.round((recommendedDone / state.recommended.length) * 100)}%</span>
+          <span className="num text-[color:var(--kb-ink-3)]">{Math.round((recommendedDone / state.recommended.length) * 100)}%</span>
         </div>
         <div className="flex gap-1" aria-hidden>
           {state.recommended.map((step) => (

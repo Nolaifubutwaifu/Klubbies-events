@@ -30,7 +30,7 @@ export function Segmented<T extends string>({
           >
             <span className="truncate">{option.label}</span>
             {option.count !== undefined ? (
-              <span className={`mono text-[14px] ${option.accent ? "text-[color:var(--kb-ember)]" : ""}`}>{option.count.toLocaleString("en-AU")}</span>
+              <span className={`num text-[14px] ${option.accent ? "text-[color:var(--kb-ember)]" : ""}`}>{option.count.toLocaleString("en-AU")}</span>
             ) : null}
           </button>
         );

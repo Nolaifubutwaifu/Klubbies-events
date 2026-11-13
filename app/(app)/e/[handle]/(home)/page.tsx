@@ -116,7 +116,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
             </p>
             {event.description ? <p className="m-0 mt-1 max-w-[62ch] text-[16px] leading-relaxed text-[#33363d] lg:text-white">{event.description}</p> : null}
           </div>
-          {totals ? <span className="mono hidden text-[14px] text-white lg:block">{summary}</span> : null}
+          {totals ? <span className="num hidden text-[14px] text-white lg:block">{summary}</span> : null}
         </div>
       </section>
 
@@ -166,7 +166,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
             </h2>
             <span className="flex items-center gap-3">
               {totals ? (
-                <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">
+                <span className="num text-[14px] text-[color:var(--kb-ink-3)]">
                   {/* The band already says the totals on a wide screen. */}
                   <span className="lg:hidden">{summary}</span>
                   <span className="hidden lg:inline">{published.length.toLocaleString("en-AU")} published</span>
@@ -233,7 +233,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                           .filter(Boolean)
                           .join(" · ")}
                       </span>
-                      <span className="mono hidden text-[14px] text-[color:var(--kb-ink-3)] lg:inline">
+                      <span className="num hidden text-[14px] text-[color:var(--kb-ink-3)] lg:inline">
                         {(album.photoCount + album.videoCount).toLocaleString("en-AU")}
                       </span>
                     </span>

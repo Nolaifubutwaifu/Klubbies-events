@@ -149,7 +149,7 @@ function NavList({ groups, isActive, onPick }: { groups: Group[]; isActive: (lin
                 </span>
                 <span className="whitespace-nowrap">{link.label}</span>
                 {link.badge > 0 ? (
-                  <span className="mono ml-auto rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] text-[color:var(--kb-warn)]">
+                  <span className="num ml-auto rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] text-[color:var(--kb-warn)]">
                     {link.badge.toLocaleString("en-AU")}
                   </span>
                 ) : link.aside ? (
@@ -236,7 +236,7 @@ export function AdminRail({
               <span className="font-semibold">
                 Setup {next.done} of {next.total}
               </span>
-              <span className="mono text-[color:var(--kb-ink-3)]">{Math.round((next.done / next.total) * 100)}%</span>
+              <span className="num text-[color:var(--kb-ink-3)]">{Math.round((next.done / next.total) * 100)}%</span>
             </span>
             <span className="relative h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-line)]" aria-hidden>
               <span className="absolute inset-y-0 left-0 rounded-[3px] bg-[color:var(--kb-brand)]" style={{ width: `${(next.done / next.total) * 100}%` }} />
@@ -349,7 +349,7 @@ export function AdminMenuButton({ handle, counts, plan }: Shared) {
         </span>
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {counts.removals > 0 ? (
-          <span className="mono rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] font-normal text-[color:var(--kb-warn)]">{counts.removals}</span>
+          <span className="num rounded-full bg-[color:var(--kb-warn-tint)] px-2 text-[14px] font-normal text-[color:var(--kb-warn)]">{counts.removals}</span>
         ) : null}
         <svg
           width="18"

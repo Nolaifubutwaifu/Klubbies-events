@@ -79,19 +79,19 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
     <main className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageTitle kicker={event.name} title="Attendees">
-          <span className="mono">{joined.toLocaleString("en-AU")}</span> joined
+          <span className="num">{joined.toLocaleString("en-AU")}</span> joined
           {usage?.guestLimit && planShort ? (
             <>
               {" "}
-              of <span className="mono">{usage.guestLimit.toLocaleString("en-AU")}</span> on {planShort}
+              of <span className="num">{usage.guestLimit.toLocaleString("en-AU")}</span> on {planShort}
             </>
           ) : !linkMode ? (
             <>
               {" "}
-              of <span className="mono">{live.length.toLocaleString("en-AU")}</span> on the list
+              of <span className="num">{live.length.toLocaleString("en-AU")}</span> on the list
             </>
           ) : null}{" "}
-          · <span className="mono">{findableUsers.size.toLocaleString("en-AU")}</span> found their photos
+          · <span className="num">{findableUsers.size.toLocaleString("en-AU")}</span> found their photos
         </PageTitle>
         {writable ? (
           <AttendeeButtons importPanel={<RosterImport eventId={event.id} />} addPanel={<AddMemberForm eventId={event.id} />} />

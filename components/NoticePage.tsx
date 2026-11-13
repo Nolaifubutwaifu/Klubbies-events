@@ -61,7 +61,7 @@ export function NoticePage({
               </svg>
             </span>
           ) : null}
-          {kicker ? <span className="mono text-[15px] text-[color:var(--kb-ink-3)]">{kicker}</span> : null}
+          {kicker ? <span className="num text-[15px] text-[color:var(--kb-ink-3)]">{kicker}</span> : null}
           {eyebrow ? <span className={`kb-eyebrow ${eyebrowTone === "warn" ? "!text-[color:var(--kb-warn)]" : ""}`}>{eyebrow}</span> : null}
           <h1 className="serif text-[40px] leading-[1.05] sm:text-[44px]">{title}</h1>
           {children ? <div className="flex flex-col gap-3 text-[16px] text-[color:var(--kb-ink-2)]">{children}</div> : null}

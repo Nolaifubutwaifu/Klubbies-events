@@ -88,7 +88,7 @@ export function GuestUploader({ token }: { token: string }) {
             <h2 className="text-[16px] font-semibold">
               {busy ? `Uploading ${done} of ${jobs.length}` : failed.length ? "Some files need another go" : "All done"}
             </h2>
-            <span className="mono text-[14px] text-[color:var(--kb-ink-2)]" role="status">
+            <span className="num text-[14px] text-[color:var(--kb-ink-2)]" role="status">
               {pct}%{failed.length ? ` · ${failed.length} failed` : ""}
             </span>
           </div>
@@ -114,7 +114,7 @@ export function GuestUploader({ token }: { token: string }) {
                 )}
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <span className="flex items-baseline justify-between gap-3 text-[14px]">
-                    <span className="mono truncate">{job.name}</span>
+                    <span className="num truncate">{job.name}</span>
                     <span
                       className={`flex-none ${job.status === "done" ? "font-semibold text-[color:var(--kb-ok)]" : job.status === "failed" ? "font-semibold text-[color:var(--kb-warn)]" : "text-[color:var(--kb-ink-2)]"}`}
                     >

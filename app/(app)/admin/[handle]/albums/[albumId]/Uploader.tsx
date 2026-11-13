@@ -130,7 +130,7 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
                   ? "Some files need another go"
                   : "Upload complete"}
             </h2>
-            <span className="mono text-[14px] text-[color:var(--kb-ink-2)]" role="status">
+            <span className="num text-[14px] text-[color:var(--kb-ink-2)]" role="status">
               {done} of {jobs.length}
               {busy && left > 0 ? ` · ${formatBytes(left)} left` : ""}
               {failed.length ? ` · ${failed.length} didn't upload` : ""}
@@ -170,7 +170,7 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
                   )}
                   <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <span className="flex items-center justify-between gap-3 text-[14px]">
-                      <span className="mono truncate">{job.name}</span>
+                      <span className="num truncate">{job.name}</span>
                       {job.status === "failed" ? null : (
                         <span className={`flex flex-none items-center gap-1 ${job.status === "done" ? "font-semibold text-[color:var(--kb-ok)]" : "text-[color:var(--kb-ink-2)]"}`}>
                           {job.status === "done" ? (

@@ -120,7 +120,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
                           </tr>
                         ) : null}
                         <tr>
-                          <td className="mono whitespace-nowrap text-[color:var(--kb-ink-2)]">{hhmm.format(new Date(e.occurred_at))}</td>
+                          <td className="num whitespace-nowrap text-[color:var(--kb-ink-2)]">{hhmm.format(new Date(e.occurred_at))}</td>
                           <td>
                             {e.memberships
                               ? personName({

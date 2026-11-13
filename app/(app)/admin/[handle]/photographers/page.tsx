@@ -100,7 +100,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
                         <td>
                           {link.file_count > 0 ? (
                             <>
-                              <span className="mono">{link.file_count.toLocaleString("en-AU")}</span>
+                              <span className="num">{link.file_count.toLocaleString("en-AU")}</span>
                               <span className="text-[color:var(--kb-ink-3)]"> · {formatBytes(link.byte_total)}</span>
                             </>
                           ) : (

@@ -250,22 +250,22 @@ export async function AlbumScreen({
             {[
               photoCount ? (
                 <span key="p">
-                  <span className="mono">{photoCount.toLocaleString("en-AU")}</span> {photoCount === 1 ? "photo" : "photos"}
+                  <span className="num">{photoCount.toLocaleString("en-AU")}</span> {photoCount === 1 ? "photo" : "photos"}
                 </span>
               ) : null,
               videoCount ? (
                 <span key="v">
-                  <span className="mono">{videoCount.toLocaleString("en-AU")}</span> {videoCount === 1 ? "video" : "videos"}
+                  <span className="num">{videoCount.toLocaleString("en-AU")}</span> {videoCount === 1 ? "video" : "videos"}
                 </span>
               ) : null,
               engagement ? (
                 <span key="views">
-                  <span className="mono">{(engagement.view_count ?? 0).toLocaleString("en-AU")}</span> views
+                  <span className="num">{(engagement.view_count ?? 0).toLocaleString("en-AU")}</span> views
                 </span>
               ) : null,
               engagement ? (
                 <span key="dl">
-                  <span className="mono">{(engagement.download_count ?? 0).toLocaleString("en-AU")}</span> downloads
+                  <span className="num">{(engagement.download_count ?? 0).toLocaleString("en-AU")}</span> downloads
                 </span>
               ) : null,
               !organiser && album.album_date ? <span key="d">{formatDate(album.album_date)}</span> : null,

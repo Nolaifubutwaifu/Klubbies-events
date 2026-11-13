@@ -378,7 +378,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           {numbers.map((n) => (
             <div key={n.label} className="flex flex-col gap-2.5 rounded-[10px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
               <span className="text-[14px] text-[color:var(--kb-ink-2)]">{n.label}</span>
-              <span className="mono text-[32px] font-medium leading-none tracking-[-0.02em]">{n.value.toLocaleString("en-AU")}</span>
+              <span className="num text-[32px] font-medium leading-none tracking-[-0.02em]">{n.value.toLocaleString("en-AU")}</span>
               <span className="relative h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]" aria-hidden>
                 {n.of && n.tone ? (
                   <span
@@ -470,9 +470,9 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                               {album.title}
                             </Link>
                           </td>
-                          <td className="mono">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
-                          <td className="mono">{(stats?.views ?? 0).toLocaleString("en-AU")}</td>
-                          <td className="mono">{(stats?.downloads ?? 0).toLocaleString("en-AU")}</td>
+                          <td className="num">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
+                          <td className="num">{(stats?.views ?? 0).toLocaleString("en-AU")}</td>
+                          <td className="num">{(stats?.downloads ?? 0).toLocaleString("en-AU")}</td>
                           <td>
                             <AlbumStatus status={album.status} publishAt={album.publishAt} />
                           </td>

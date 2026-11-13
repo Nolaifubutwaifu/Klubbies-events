@@ -129,7 +129,7 @@ export function BinView({ eventId, albums, items }: { eventId: string; albums: B
                 <rect x="3" y="5" width="18" height="14" rx="2" />
                 <path d="M3 15l4.5-4 4 3.5L15 10l6 5" />
               </svg>
-              <span className="mono text-[14px]">{album.count === 1 ? "1 item" : `${album.count} items`}</span>
+              <span className="num text-[14px]">{album.count === 1 ? "1 item" : `${album.count} items`}</span>
             </span>
             <div className="flex flex-col gap-3 p-3.5">
               <span className="flex min-w-0 flex-col">

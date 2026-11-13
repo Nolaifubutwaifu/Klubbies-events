@@ -1,3 +1,4 @@
+import { tileRatio } from "@/lib/media/ratio";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -41,7 +42,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
   const { data: downloadedMedia } = downloadedIds.length
     ? await supabase
         .from("media")
-        .select("id, album_id, thumb_path, poster_path, albums!media_album_id_fkey(title)")
+        .select("id, album_id, thumb_path, poster_path, width, height, albums!media_album_id_fkey(title)")
         .in("id", downloadedIds)
         .eq("status", "ready")
     : { data: [] };
@@ -57,6 +58,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
     albumId: m.album_id,
     albumTitle: m.albums?.title ?? "This event",
     thumbUrl: downloadUrls.get(m.thumb_path ?? m.poster_path ?? "") ?? null,
+    ratio: tileRatio(m.width, m.height),
     at: whenByMedia.get(m.id) ?? "",
   }));
 

@@ -61,7 +61,7 @@ export function LegalContents({ items }: { items: { id: string; title: string }[
               current ? "font-semibold text-[color:var(--kb-brand-deep)]" : "text-[color:var(--kb-ink-2)] hover:text-[color:var(--kb-ink)]"
             }`}
           >
-            <span className={`mono flex-none ${current ? "text-[color:var(--kb-brand)]" : "text-[color:var(--kb-ink-3)]"}`}>
+            <span className={`num flex-none ${current ? "text-[color:var(--kb-brand)]" : "text-[color:var(--kb-ink-3)]"}`}>
               {String(index + 1).padStart(2, "0")}
             </span>
             {item.title}
@@ -92,7 +92,7 @@ export function TopicNav({ items }: { items: { id: string; title: string; count:
             }`}
           >
             {item.title}
-            <span className="mono text-[14px]">{item.count}</span>
+            <span className="num text-[14px]">{item.count}</span>
           </a>
         );
       })}

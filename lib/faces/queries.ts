@@ -1,3 +1,4 @@
+import { tileRatio } from "@/lib/media/ratio";
 import "server-only";
 import type { Json, MemberFaceProfile } from "@/lib/db/types";
 import { facesConfigured } from "@/lib/faces/client";
@@ -70,6 +71,8 @@ export type PhotoOfYou = {
   albumId: string | null;
   albumTitle: string;
   thumbUrl: string | null;
+  /** width / height, for the justified grid. */
+  ratio: number;
   similarity: number;
 };
 
@@ -104,7 +107,7 @@ export async function listPhotosOfYou(
     // albums.cover_media_id points back at media, so a bare `albums` embed is
     // ambiguous and PostgREST refuses it.
     .select(
-      "id, media_id, similarity, media!inner(id, album_id, sort_at, thumb_path, poster_path, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title, album_date))",
+      "id, media_id, similarity, media!inner(id, album_id, sort_at, thumb_path, poster_path, width, height, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title, album_date))",
     )
     .eq("event_id", eventId)
     .eq("state", "confirmed")
@@ -149,6 +152,7 @@ export async function listPhotosOfYou(
       albumId,
       albumTitle: group.albumTitle,
       thumbUrl: path ? (urls.get(path) ?? null) : null,
+      ratio: tileRatio(row.media.width, row.media.height),
       similarity: Number(row.similarity),
     });
     groups.set(albumId, group);

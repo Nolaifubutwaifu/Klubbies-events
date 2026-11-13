@@ -96,7 +96,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             <p className="text-[15px] text-[color:var(--kb-ink-2)]">
               {!inApp && purchases?.find((p) => p.kind !== "keep_year") ? (
                 <>
-                  <span className="mono">A${((purchases?.find((p) => p.kind !== "keep_year")?.amount_cents ?? 0) / 100).toFixed(0)}</span> paid on{" "}
+                  <span className="num">A${((purchases?.find((p) => p.kind !== "keep_year")?.amount_cents ?? 0) / 100).toFixed(0)}</span> paid on{" "}
                 </>
               ) : (
                 "Paid "
@@ -187,7 +187,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
                   <span className="flex min-w-0 flex-[1_1_220px] flex-col">
                     <span className="flex flex-wrap items-center gap-2.5 font-semibold">
                       {tier.name}
-                      <span className="mono font-medium">{offer.kind === "upgrade" ? "+" : ""}A${offer.amount}</span>
+                      <span className="num font-medium">{offer.kind === "upgrade" ? "+" : ""}A${offer.amount}</span>
                       {fits ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Fits your guests</span> : null}
                     </span>
                     <span className="text-[14px] text-[color:var(--kb-ink-3)]">

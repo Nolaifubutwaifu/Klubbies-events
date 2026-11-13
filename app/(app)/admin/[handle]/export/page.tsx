@@ -57,7 +57,7 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
         <section aria-label="Albums to download" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--kb-sand)] bg-[#fafaf8] px-5 py-3 text-[14px]">
             <span className="font-semibold">{plural(listed.length, "album")}</span>
-            <span className="mono text-[color:var(--kb-ink-3)]">{plural(total, "file")}</span>
+            <span className="num text-[color:var(--kb-ink-3)]">{plural(total, "file")}</span>
           </div>
           {listed.map((album) => {
             const count = counts.get(album.id) ?? 0;
@@ -69,7 +69,7 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
                 </span>
                 <span className="flex min-w-0 flex-[1_1_200px] flex-col">
                   <span className="font-medium">{album.title}</span>
-                  <span className={count ? "mono text-[14px] text-[color:var(--kb-ink-3)]" : "text-[14px] text-[color:var(--kb-ink-3)]"}>
+                  <span className={count ? "num text-[14px] text-[color:var(--kb-ink-3)]" : "text-[14px] text-[color:var(--kb-ink-3)]"}>
                     {count ? plural(count, "file") : "Nothing to download yet"}
                   </span>
                 </span>

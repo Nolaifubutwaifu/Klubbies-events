@@ -141,7 +141,7 @@ export function MemberTable({
                   : "border-[color:var(--kb-line)] bg-white text-[color:var(--kb-ink-2)] hover:border-[color:var(--kb-line-strong)]"
               }`}
             >
-              {f.label} <span className="mono">{count.toLocaleString("en-AU")}</span>
+              {f.label} <span className="num">{count.toLocaleString("en-AU")}</span>
             </button>
           );
         })}

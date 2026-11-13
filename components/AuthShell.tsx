@@ -182,7 +182,7 @@ export function AuthHeading({ children, step }: { children: ReactNode; step?: { 
     <div className="flex flex-col gap-3.5">
       {step ? (
         <div className="flex items-center gap-3">
-          <span className="mono text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
+          <span className="num text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
             Step {step.at} of {step.of}
           </span>
           <span className="flex flex-1 gap-1" aria-hidden>
