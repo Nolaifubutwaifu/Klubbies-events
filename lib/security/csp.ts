@@ -42,7 +42,12 @@ function storageOrigin(supabase: string | null): string | null {
   return supabase.replace(".supabase.co", ".storage.supabase.co");
 }
 
-export function buildCsp(nonce: string): string {
+/**
+ * `reportOnly` matches the header the proxy sends. A report-only policy
+ * can't upgrade requests, and browsers log an error on every page for a
+ * policy that asks it to, so the directive waits for the enforcing header.
+ */
+export function buildCsp(nonce: string, reportOnly = true): string {
   const supabase = origin(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const supabaseStorage = storageOrigin(supabase);
   const isPreview = process.env.VERCEL_ENV === "preview";
@@ -87,7 +92,7 @@ export function buildCsp(nonce: string): string {
     "report-uri": [CSP_REPORT_PATH],
     "report-to": ["csp"],
   };
-  if (!isDev) directives["upgrade-insecure-requests"] = [];
+  if (!isDev && !reportOnly) directives["upgrade-insecure-requests"] = [];
 
   return Object.entries(directives)
     .map(([name, values]) => (values.length ? `${name} ${values.join(" ")}` : name))

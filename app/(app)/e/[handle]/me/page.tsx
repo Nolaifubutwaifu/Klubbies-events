@@ -38,7 +38,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
   if (!state.enabled) {
     return (
       <main className="flex flex-1 flex-col">
-        <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-5 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-5 pb-16 pt-8 sm:px-10 sm:pt-12">
           <div>
             <span className="kb-eyebrow">{ctx.event.name}</span>
             <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Your photos</h1>
@@ -182,7 +182,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                     {stillLooking ? `, still looking through ${progress.remaining.toLocaleString("en-AU")} more` : ""}
                   </span>
                 </span>
-                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} label="All" className="btn btn-light !min-h-[48px] no-underline" />
+                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
               </section>
             ) : null}
 

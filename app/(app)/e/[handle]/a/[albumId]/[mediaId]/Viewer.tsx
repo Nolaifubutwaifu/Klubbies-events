@@ -88,7 +88,7 @@ function Action({
     </>
   );
   const className =
-    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border-0 bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21]";
+    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border border-transparent bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21] md:min-h-[44px] md:flex-none md:flex-row md:gap-2 md:border-[#2a2d35] md:px-5";
   return href ? (
     <a href={href} className={className}>
       {inner}
@@ -382,7 +382,7 @@ export function Viewer({
           </svg>
         </Link>
         <div className="flex min-w-0 flex-1 flex-col items-center leading-[1.3]">
-          <span className="max-w-full truncate text-[15px] font-semibold">{albumTitle}</span>
+          <h1 className="m-0 max-w-full truncate text-[15px] font-semibold leading-[1.3] tracking-normal !text-white">{albumTitle}</h1>
           <span className="num text-[14px] text-[#a9acb5]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
             {countNoun ? ` ${countNoun}` : ""}
@@ -560,7 +560,7 @@ export function Viewer({
         })}
       </div>
 
-      <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5">
+      <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5 md:justify-center md:gap-2 md:border-t-0 md:pb-4 md:pt-1">
         {canDownload ? (
           <Action
             label={saving ? "Saving…" : env === "app" ? "Save to Photos" : "Download"}

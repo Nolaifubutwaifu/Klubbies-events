@@ -227,7 +227,7 @@ export async function AlbumScreen({
   );
 
   return (
-    <main className={`mx-auto flex w-full flex-1 flex-col gap-[18px] ${organiser ? "" : "max-w-[1320px] pb-6"}`}>
+    <main className={`mx-auto flex w-full flex-1 flex-col gap-[18px] ${organiser ? "" : "max-w-[1200px] pb-6"}`}>
       {/* The album's title block. The event bar above carries Back. */}
       <div className={`flex flex-col gap-[18px] ${organiser ? "" : "pt-6"}`}>
         <div className={`flex flex-col gap-1.5 ${pad}`}>
