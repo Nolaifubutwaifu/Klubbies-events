@@ -350,7 +350,7 @@ export function AlbumGrid({
               style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
               className={`relative block overflow-hidden border-0 bg-bg p-0 ${
                 selected.has(item.id)
-                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[3px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
+                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[4px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
                   : ""
               }`}
             >

@@ -150,9 +150,9 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                       {(progress.total - progress.remaining).toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")}
                     </span>
                   </span>
-                  <span className="relative h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-sand)]" aria-hidden>
+                  <span className="relative h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]" aria-hidden>
                     <span
-                      className="absolute inset-y-0 left-0 rounded-[3px] bg-[color:var(--kb-ember)]"
+                      className="absolute inset-y-0 left-0 rounded-[4px] bg-[color:var(--kb-ember)]"
                       style={{ width: `${Math.round(((progress.total - progress.remaining) / progress.total) * 100)}%` }}
                     />
                   </span>
@@ -162,7 +162,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
             </section>
             <div aria-hidden className="grid max-w-[640px] grid-cols-3 gap-[3px]">
               {Array.from({ length: 6 }, (_, i) => (
-                <span key={i} className="soft-skeleton block aspect-square !rounded-[3px]" />
+                <span key={i} className="soft-skeleton block aspect-square !rounded-[4px]" />
               ))}
             </div>
             <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
@@ -199,7 +199,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
               groups.map((group) => (
                 <section key={group.albumId} aria-labelledby={`g-${group.albumId}`} className="flex flex-col gap-2.5">
                   <div className="flex items-baseline justify-between gap-2 px-5 sm:px-10">
-                    <h2 id={`g-${group.albumId}`} className="text-[18px] font-semibold">
+                    <h2 id={`g-${group.albumId}`} className="text-[17px] font-semibold">
                       {group.albumTitle}
                     </h2>
                     <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length.toLocaleString("en-AU")}</span>

@@ -27,7 +27,7 @@ export function FaceNotice({ eventId, meHref }: { eventId: string; meHref: strin
       className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white shadow-[0_10px_28px_-12px_rgb(22_24_29/0.18)]"
     >
       <div className="flex items-center gap-3 bg-[color:var(--kb-ink)] px-[18px] py-4 text-white">
-        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] bg-[#2a2d35]" aria-hidden>
+        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[12px] bg-[#2a2d35]" aria-hidden>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
             <circle cx="12" cy="10" r="2.5" />

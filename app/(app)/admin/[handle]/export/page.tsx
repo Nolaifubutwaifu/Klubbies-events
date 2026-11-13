@@ -52,9 +52,9 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
       </PageTitle>
 
       {listed.length === 0 ? (
-        <p className="m-0 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 text-[15px]">There&apos;s nothing to download yet.</p>
+        <p className="m-0 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 text-[15px]">There&apos;s nothing to download yet.</p>
       ) : (
-        <section aria-label="Albums to download" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+        <section aria-label="Albums to download" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--kb-sand)] bg-[#fafaf8] px-5 py-3 text-[14px]">
             <span className="font-semibold">{plural(listed.length, "album")}</span>
             <span className="num text-[color:var(--kb-ink-3)]">{plural(total, "file")}</span>
@@ -64,7 +64,7 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
             const cover = covers.get(album.id);
             return (
               <div key={album.id} id={`album-${album.id}`} className="flex flex-wrap items-center gap-4 border-t border-[color:var(--kb-sand)] px-5 py-3.5 first-of-type:border-t-0">
-                <span className="block h-11 w-11 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                <span className="block h-11 w-11 flex-none overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                   {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : null}
                 </span>
                 <span className="flex min-w-0 flex-[1_1_200px] flex-col">
@@ -80,7 +80,7 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
         </section>
       )}
 
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5">
         <span className="flex flex-col">
           <span className="font-semibold">Not ready to let them go?</span>
           <span className="text-[14px] text-[color:var(--kb-ink-2)]">Keep every photo and the gallery for another 12 months.</span>

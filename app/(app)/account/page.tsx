@@ -47,11 +47,11 @@ export default async function AccountPage(props: PageProps<"/account">) {
 
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-[26px] px-5 pb-24 pt-7 sm:px-8 sm:pt-10">
         <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-full bg-[color:var(--kb-ink)] text-[22px] font-semibold text-white">
+          <span className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-full bg-[color:var(--kb-ink)] text-[20px] font-semibold text-white">
             {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials(name)}
           </span>
           <span className="flex min-w-0 flex-col">
-            <h1 className="serif truncate text-[34px] leading-[1.05]">{name}</h1>
+            <h1 className="serif truncate text-[30px] leading-[1.05]">{name}</h1>
             <span className="truncate text-[15px] text-[color:var(--kb-ink-2)]">{profile.email}</span>
           </span>
         </div>

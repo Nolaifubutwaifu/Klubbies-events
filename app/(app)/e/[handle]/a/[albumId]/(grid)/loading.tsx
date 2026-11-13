@@ -22,7 +22,7 @@ export default function AlbumLoading() {
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(clamp(104px, 14vw, 168px), 1fr))" }}
       >
         {Array.from({ length: 18 }, (_, i) => (
-          <span key={i} className="soft-skeleton block aspect-square !rounded-[10px]" />
+          <span key={i} className="soft-skeleton block aspect-square !rounded-[12px]" />
         ))}
       </div>
     </div>

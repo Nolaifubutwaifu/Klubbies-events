@@ -90,7 +90,7 @@ export function SavedTabs({
             <section key={group.albumId} className="flex flex-col gap-2.5">
               {groups.length > 1 ? (
                 <div className="flex flex-wrap items-baseline gap-3">
-                  <Link href={`/e/${handle}/a/${group.albumId}`} className="text-[18px] font-semibold text-ink no-underline">
+                  <Link href={`/e/${handle}/a/${group.albumId}`} className="text-[17px] font-semibold text-ink no-underline">
                     {group.albumTitle}
                   </Link>
                   <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length}</span>
@@ -131,11 +131,11 @@ export function SavedTabs({
             <section key={key} className="flex flex-col gap-2.5">
               <div className="flex flex-wrap items-baseline gap-3">
                 {items[0].albumId ? (
-                  <Link href={`/e/${handle}/a/${items[0].albumId}`} className="text-[18px] font-semibold text-ink no-underline">
+                  <Link href={`/e/${handle}/a/${items[0].albumId}`} className="text-[17px] font-semibold text-ink no-underline">
                     {items[0].albumTitle}
                   </Link>
                 ) : (
-                  <span className="text-[18px] font-semibold">{items[0].albumTitle}</span>
+                  <span className="text-[17px] font-semibold">{items[0].albumTitle}</span>
                 )}
                 <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{items.length}</span>
               </div>

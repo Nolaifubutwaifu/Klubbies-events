@@ -46,7 +46,7 @@ export function SizeStep({
           required
           value={guests}
           onChange={(ev) => setGuests(ev.target.value)}
-          className="input num mt-1 w-[180px] !text-[18px]"
+          className="input num mt-1 w-[180px] !text-[17px]"
           placeholder="e.g. 120"
         />
       </label>
@@ -127,7 +127,7 @@ function SizeCard({
         <span className="text-[17px] font-semibold">{name}</span>
         {highlighted ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Fits your guests</span> : null}
       </span>
-      <span className="num text-[28px] font-medium leading-none tracking-[-0.02em]">{price}</span>
+      <span className="num text-[30px] font-medium leading-none tracking-[-0.02em]">{price}</span>
       <span className="text-[14px] text-[color:var(--kb-ink-2)]">{detail}</span>
       {note ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">{note}</span> : null}
       <div className="mt-auto pt-1">{children}</div>

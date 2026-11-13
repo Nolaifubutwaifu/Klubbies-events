@@ -30,7 +30,7 @@ export function UploadWorkbench({
 
   return (
     <div className="flex flex-wrap items-start gap-6">
-      <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-5 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 sm:p-6 lg:max-w-[440px]">
+      <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 sm:p-6 lg:max-w-[440px]">
         {albums.length ? (
           <Segmented
             label="Where to"
@@ -45,7 +45,7 @@ export function UploadWorkbench({
 
         {mode === "existing" && albums.length ? (
           <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
-            <legend className="mb-2 text-[18px] font-semibold">Add to an album</legend>
+            <legend className="mb-2 text-[17px] font-semibold">Add to an album</legend>
             {albums.map((option) => (
               <label
                 key={option.id}
@@ -54,7 +54,7 @@ export function UploadWorkbench({
                 }`}
               >
                 <input type="radio" name="album" value={option.id} checked={option.id === albumId} onChange={() => setAlbumId(option.id)} className="sr-only" />
-                <span className="h-11 w-11 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                <span className="h-11 w-11 flex-none overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                   {option.coverUrl ? <img src={option.coverUrl} alt="" className="h-full w-full object-cover" /> : null}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">

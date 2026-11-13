@@ -24,6 +24,7 @@ import {
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import type { Database } from "../lib/db/types";
+import { faceStats } from "../lib/faces/stats";
 import { isDecodablePhoto, sharpDecodeOptions } from "../lib/media/logo-file";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -124,6 +125,19 @@ async function processOne(eventId: string, collectionId: string, mediaId: string
   if (droppedIds.length) {
     await rekognition.send(new DeleteFacesCommand({ CollectionId: collectionId, FaceIds: droppedIds }));
   }
+  // What this photo held, as counts (migration 38). Before that migration the
+  // column isn't there and the write is refused, which is fine.
+  const dropped = records.filter((r) => !clearsFloors(r));
+  await db
+    .from("media")
+    .update({
+      face_stats: faceStats(kept, dropped, indexed.UnindexedFaces, {
+        minBoundingBoxWidth: MIN_BOX_WIDTH,
+        minSharpness: MIN_SHARPNESS,
+        minBrightness: MIN_BRIGHTNESS,
+      }),
+    })
+    .eq("id", mediaId);
   if (kept.length === 0) return;
 
   const { data: inserted } = await db

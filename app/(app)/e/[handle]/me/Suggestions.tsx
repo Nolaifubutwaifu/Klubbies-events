@@ -13,7 +13,7 @@ import type { Suggestion } from "@/lib/faces/queries";
  */
 function FaceCrop({ suggestion }: { suggestion: Suggestion }) {
   return (
-    <span className="block aspect-square w-full overflow-hidden rounded-[6px] bg-[color:var(--tone-support)]">
+    <span className="block aspect-square w-full overflow-hidden rounded-[8px] bg-[color:var(--tone-support)]">
       {/* eslint-disable-next-line @next/next/no-img-element -- private, per-member crop */}
       <img
         src={`/api/faces/${suggestion.matchId}/crop`}

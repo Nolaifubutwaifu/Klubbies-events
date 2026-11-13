@@ -12,6 +12,7 @@ import { getEventContext } from "@/lib/auth/session";
 import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/queries";
 import { formatDate, formatEventDates, plural } from "@/lib/format";
 import { listStackedAlbums, type StackedAlbum } from "@/lib/media/album-list";
+import { eventPhotographers } from "@/lib/media/credits";
 import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -62,7 +63,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
   const needsNotice = faceState.enabled && !ctx.membership?.face_notice_ack_at;
   // The event's picture: the cover of the album it leads with, once published.
   const cover = published.find((album) => album.heroUrl)?.heroUrl ?? null;
-  const [credits, selfieUrl] = await Promise.all([photographerNames(supabase, event.id), enrolled ? ownSelfie(event.id, ctx.userId) : null]);
+  const [credits, selfieUrl] = await Promise.all([eventPhotographers(supabase, event.id), enrolled ? ownSelfie(event.id, ctx.userId) : null]);
 
   const summary = [plural(totals, "photo"), plural(published.length, "album")].join(" · ");
   const scheduledCount = albums.filter((album) => album.status !== "published" && album.publishAt).length;
@@ -169,7 +170,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
           inert={needsNotice}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-3 lg:border-b lg:border-[color:var(--kb-line)] lg:pb-3.5">
-            <h2 id="albums-heading" className="text-[22px] font-semibold tracking-[-0.01em] lg:serif lg:text-[40px] lg:font-normal lg:leading-none">
+            <h2 id="albums-heading" className="text-[20px] font-semibold tracking-[-0.01em] lg:serif lg:text-[44px] lg:font-normal lg:leading-none">
               {albums.length === 1 ? "Album" : "Albums"}
             </h2>
             <span className="flex items-center gap-3">
@@ -197,7 +198,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                 <span className="h-2 w-2 rounded-full bg-[color:var(--kb-line-strong)]" />
                 <span className="h-2 w-2 rounded-full bg-[color:var(--kb-line-strong)]" />
               </span>
-              <span className="text-[19px] font-semibold">No photos yet</span>
+              <span className="text-[17px] font-semibold">No photos yet</span>
               <span className="max-w-[44ch] text-[15px] text-[color:var(--kb-ink-2)]">
                 {ctx.perms.manage_albums
                   ? "Create an album and hand your photographers their upload links. Photos appear here as they land."
@@ -215,20 +216,20 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                 const scheduled = album.status !== "published" && album.publishAt;
                 return (
                   <Link key={album.id} href={`/e/${handle}/a/${album.id}`} className="group flex flex-col gap-2 text-ink no-underline">
-                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                       {album.coverUrl ? (
                         <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90" />
                       ) : (
-                        <span className="flex h-full w-full items-center justify-center rounded-[6px] border-[1.5px] border-dashed border-[color:var(--kb-line-strong)] p-3 text-center text-[14px] text-[color:var(--kb-ink-2)]">
+                        <span className="flex h-full w-full items-center justify-center rounded-[8px] border-[1.5px] border-dashed border-[color:var(--kb-line-strong)] p-3 text-center text-[14px] text-[color:var(--kb-ink-2)]">
                           {scheduled ? `Publishes on ${formatDate(album.publishAt)}` : "No photos yet"}
                         </span>
                       )}
                       {album.status !== "published" ? (
-                        <span className="absolute left-2 top-2 rounded-[6px] bg-[rgb(22_24_29/0.78)] px-2 py-0.5 text-[14px] font-medium text-white">
+                        <span className="absolute left-2 top-2 rounded-[8px] bg-[rgb(22_24_29/0.78)] px-2 py-0.5 text-[14px] font-medium text-white">
                           {album.status === "hidden" ? "Hidden" : scheduled ? `Goes live ${formatDate(album.publishAt)}` : "Draft"}
                         </span>
                       ) : album.isNew ? (
-                        <span className="absolute left-2 top-2 rounded-[6px] bg-[#fff] px-2 py-0.5 text-[14px] font-medium text-[#16181d]">New</span>
+                        <span className="absolute left-2 top-2 rounded-[8px] bg-[#fff] px-2 py-0.5 text-[14px] font-medium text-[#16181d]">New</span>
                       ) : null}
                     </div>
                     <span className="flex flex-col leading-[1.35] lg:flex-row lg:justify-between lg:gap-2">
@@ -284,16 +285,6 @@ function listNames(names: string[]): string {
 }
 
 /** Who took the photos attendees can see, for the credit under the albums. */
-async function photographerNames(supabase: Awaited<ReturnType<typeof createClient>>, eventId: string): Promise<string[]> {
-  const { data } = await supabase
-    .from("media")
-    .select("photographer_name")
-    .eq("event_id", eventId)
-    .not("photographer_name", "is", null)
-    .limit(2000);
-  return [...new Set((data ?? []).map((row) => row.photographer_name?.trim()).filter((name): name is string => Boolean(name)))];
-}
-
 /** The viewer's own selfie, signed for them: it is theirs, so the admin client may fetch it. */
 async function ownSelfie(eventId: string, userId: string): Promise<string | null> {
   const admin = createAdminClient();

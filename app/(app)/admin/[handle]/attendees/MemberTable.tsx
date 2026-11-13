@@ -150,7 +150,7 @@ export function MemberTable({
       <FormMessage state={result} />
 
       {chosen.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-[10px] bg-[color:var(--kb-ink)] px-4 py-2 text-[14px] text-white [&_.btn-secondary]:border-white/30 [&_.btn-secondary]:bg-transparent [&_.btn-secondary]:text-white">
+        <div className="flex flex-wrap items-center gap-3 rounded-[12px] bg-[color:var(--kb-ink)] px-4 py-2 text-[14px] text-white [&_.btn-secondary]:border-white/30 [&_.btn-secondary]:bg-transparent [&_.btn-secondary]:text-white">
           <strong>{chosen.length} selected</strong>
           {canManageRoles ? (
             <>
@@ -195,8 +195,8 @@ export function MemberTable({
       ) : null}
 
       {/* Wider than a phone: the scroller takes focus so the keyboard can reach it. */}
-      <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white" tabIndex={0} role="region" aria-label="Attendee list">
-        <table className="kb-table min-w-[760px]">
+      <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white" tabIndex={0} role="region" aria-label="Attendee list">
+        <table className="kb-table md:min-w-[760px]">
           <thead>
             <tr>
               <th className="w-8">
@@ -208,9 +208,11 @@ export function MemberTable({
                 />
               </th>
               <th scope="col">Name</th>
-              <th scope="col">Email</th>
-              <th scope="col">Joined</th>
-              <th scope="col">Photos found</th>
+              {/* On a phone the email and whether they've joined sit under the
+                  name, so the row fits without scrolling sideways. */}
+              <th scope="col" className="hidden md:table-cell">Email</th>
+              <th scope="col" className="hidden md:table-cell">Joined</th>
+              <th scope="col" className="hidden md:table-cell">Photos found</th>
               <th scope="col">Role</th>
               <th scope="col">
                 <span className="sr-only">Actions</span>
@@ -227,11 +229,16 @@ export function MemberTable({
                 </td>
                 <td>
                   <span className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[13px] font-semibold text-[color:var(--kb-ink-2)]" aria-hidden>
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[14px] font-semibold text-[color:var(--kb-ink-2)]" aria-hidden>
                       {initials(member.name)}
                     </span>
                     <span className="flex min-w-0 flex-col">
                       <span className="font-medium">{member.name}</span>
+                      <span className="max-w-[46vw] truncate text-[14px] text-[color:var(--kb-ink-3)] md:hidden">{member.email}</span>
+                      <span className="text-[14px] text-[color:var(--kb-ink-3)] md:hidden">
+                        {member.firstSeenAt ? "Joined" : "Not joined yet"}
+                        {member.findable ? " · selfie added" : ""}
+                      </span>
                       {member.nameMismatch && member.claimedName ? (
                         <span className="text-[14px] text-[color:var(--kb-ink-3)]" title="The name typed at sign-in differs from the list">
                           Signed in as “{member.claimedName}”
@@ -247,13 +254,13 @@ export function MemberTable({
                     ) : null}
                   </span>
                 </td>
-                <td className="text-[color:var(--kb-ink-2)]">{member.email}</td>
-                <td className="whitespace-nowrap text-[color:var(--kb-ink-2)]">{member.firstSeenAt ? formatDateTime(member.firstSeenAt) : "Not yet"}</td>
-                <td className="text-[color:var(--kb-ink-2)]">{member.findable ? "Selfie added" : "No selfie"}</td>
+                <td className="hidden text-[color:var(--kb-ink-2)] md:table-cell">{member.email}</td>
+                <td className="hidden whitespace-nowrap text-[color:var(--kb-ink-2)] md:table-cell">{member.firstSeenAt ? formatDateTime(member.firstSeenAt) : "Not yet"}</td>
+                <td className="hidden text-[color:var(--kb-ink-2)] md:table-cell">{member.findable ? "Selfie added" : "No selfie"}</td>
                 <td>
                   {canManageRoles && member.userId !== currentUserId && member.status !== "revoked" ? (
                     <select
-                      className="input !min-h-[38px] max-w-[170px] !py-1 text-[14px]"
+                      className="input !min-h-[38px] max-w-[132px] !py-1 text-[14px] md:max-w-[170px]"
                       value={member.roleId ?? ""}
                       disabled={pending}
                       aria-label={`Role for ${member.name}`}

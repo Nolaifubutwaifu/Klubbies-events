@@ -114,7 +114,7 @@ export function SettingsForm({
               type="color"
               value={accent || "#2b4acb"}
               onChange={(e) => setAccent(e.target.value)}
-              className="h-8 w-8 cursor-pointer rounded-[6px] border border-[color:var(--kb-line)] bg-transparent p-0 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
+              className="h-8 w-8 cursor-pointer rounded-[8px] border border-[color:var(--kb-line)] bg-transparent p-0 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
               aria-label="Pick a custom colour"
             />
             <input
@@ -140,7 +140,7 @@ export function SettingsForm({
         <span className="text-[14px] font-medium text-[color:var(--kb-ink-2)]">Preview</span>
         <div className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white" style={preview} aria-hidden>
           <div className="flex flex-col gap-1.5 bg-[color:var(--tone-support,var(--kb-sand))] p-4">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[color:var(--kb-ember)] text-[12px] font-bold text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[color:var(--kb-ember)] text-[14px] font-bold text-white">
               {name
                 .split(/\s+/)
                 .filter(Boolean)

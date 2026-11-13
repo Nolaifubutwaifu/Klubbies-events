@@ -176,7 +176,7 @@ export function AlbumManager({
         {message ? <span className="kb-chip ml-auto bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">{message}</span> : null}
       </div>
 
-      <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+      <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white">
         <table className="kb-table">
           <thead>
             <tr>
@@ -259,7 +259,7 @@ export function AlbumManager({
                   </td>
                   <td>
                     <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 text-ink no-underline sm:min-w-[200px]">
-                      <span className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]">
+                      <span className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]">
                         {album.coverUrl ? (
                           <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
@@ -344,7 +344,7 @@ export function AlbumManager({
       </div>
 
       {scheduling ? (
-        <div className="flex flex-wrap items-end gap-2 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-4">
+        <div className="flex flex-wrap items-end gap-2 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-4">
           <label className="flex flex-col gap-1 text-[14px] font-semibold">
             {byId.get(scheduling)?.title}: go live at
             <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="input !w-auto" />

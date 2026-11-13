@@ -54,7 +54,7 @@ export function GuestUploader({ token }: { token: string }) {
             <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
           </svg>
         </span>
-        <span className="text-[18px] font-semibold">
+        <span className="text-[17px] font-semibold">
           <span className="[@media(pointer:coarse)]:hidden">Drop your photos and videos here</span>
           <span className="hidden [@media(pointer:coarse)]:inline">Add your photos and videos</span>
         </span>
@@ -83,7 +83,7 @@ export function GuestUploader({ token }: { token: string }) {
       ))}
 
       {jobs.length ? (
-        <section aria-label="Uploads" className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-4 sm:p-5">
+        <section aria-label="Uploads" className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-4 sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-[16px] font-semibold">
               {busy ? `Uploading ${done} of ${jobs.length}` : failed.length ? "Some files need another go" : "All done"}
@@ -93,14 +93,14 @@ export function GuestUploader({ token }: { token: string }) {
             </span>
           </div>
           <div
-            className="h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-sand)]"
+            className="h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]"
             role="progressbar"
             aria-label="Upload progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={pct}
           >
-            <div className="h-full rounded-[3px] bg-[color:var(--kb-ember)] transition-[width]" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-[4px] bg-[color:var(--kb-ember)] transition-[width]" style={{ width: `${pct}%` }} />
           </div>
 
           <div className="flex flex-col">
@@ -108,9 +108,9 @@ export function GuestUploader({ token }: { token: string }) {
               <div key={job.key} className="flex items-center gap-3 border-t border-[color:var(--kb-sand)] py-2.5 first:border-t-0">
                 {job.previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- local object URL
-                  <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[6px] object-cover" />
+                  <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[8px] object-cover" />
                 ) : (
-                  <span className="h-10 w-10 flex-none rounded-[6px] bg-[color:var(--kb-sand)]" />
+                  <span className="h-10 w-10 flex-none rounded-[8px] bg-[color:var(--kb-sand)]" />
                 )}
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <span className="flex items-baseline justify-between gap-3 text-[14px]">
@@ -129,7 +129,7 @@ export function GuestUploader({ token }: { token: string }) {
                       </button>
                     </span>
                   ) : job.status !== "done" ? (
-                    <span className="block h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]">
+                    <span className="block h-1 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]">
                       <span className="block h-full bg-[color:var(--kb-ember)] transition-[width]" style={{ width: `${Math.floor(job.progress * 100)}%` }} />
                     </span>
                   ) : null}

@@ -71,7 +71,7 @@ export function PageTitle({
   return (
     <div className="flex flex-col items-start gap-1.5">
       {kicker ? <span className="kb-eyebrow lg:hidden">{kicker}</span> : null}
-      <h1 className="text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[30px]">{title}</h1>
+      <h1 className="text-[24px] font-semibold leading-[1.15] tracking-[-0.02em] sm:text-[30px]">{title}</h1>
       {children ? <p className="max-w-[64ch] text-[15px] text-[color:var(--kb-ink-2)]">{children}</p> : null}
     </div>
   );
@@ -124,7 +124,7 @@ export function Stat({
   return (
     <div className="soft-card flex flex-col gap-1.5 p-4">
       <span className="text-[14px] text-[color:var(--ink-70)]">{label}</span>
-      <span className="text-[28px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{value}</span>
+      <span className="text-[30px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{value}</span>
       {hint ? <span className={`text-[14px] font-medium ${hintColour}`}>{hint}</span> : null}
     </div>
   );

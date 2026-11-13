@@ -79,14 +79,14 @@ export default async function UsagePage(props: PageProps<"/ops/usage">) {
             ["Estimated cost", `A$${cost.toFixed(2)}`, "Storage, face search, egress"],
             ["Margin", revenue ? pct((revenue - paidCost) / revenue) : "", "Across paid events"],
           ].map(([label, value, hint]) => (
-            <div key={label} className="flex flex-col gap-1.5 rounded-[10px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
+            <div key={label} className="flex flex-col gap-1.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
               <span className="text-[14px] text-[color:var(--kb-ink-2)]">{label}</span>
-              <span className="num text-[28px] font-medium leading-none tracking-[-0.02em]">{value || "–"}</span>
+              <span className="num text-[30px] font-medium leading-none tracking-[-0.02em]">{value || "–"}</span>
               <span className="text-[14px] text-[color:var(--kb-ink-3)]">{hint}</span>
             </div>
           ))}
         </section>
-        <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+        <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white">
           <table className="kb-table min-w-[1100px] text-[14px]">
             <thead>
               <tr>

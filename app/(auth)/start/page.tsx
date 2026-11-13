@@ -41,7 +41,7 @@ function Preview() {
       <ul className="m-0 flex list-none flex-col border-t border-[color:var(--kb-night-line)] p-0">
         {PANEL.map((row) => (
           <li key={row.line} className="flex items-center gap-4 border-b border-[color:var(--kb-night-line)] py-[18px] text-[17px]">
-            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px] bg-[#1a2238] text-[#b3c1f6]" aria-hidden>
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[12px] bg-[#1a2238] text-[#b3c1f6]" aria-hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 {row.icon}
               </svg>

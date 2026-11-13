@@ -64,7 +64,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
           <>
             <div className="flex flex-col gap-2">
               <span className="num text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step 3 of 3</span>
-              <h1 className="text-[28px] font-semibold tracking-[-0.02em] sm:text-[32px]">Choose your event&apos;s size</h1>
+              <h1 className="text-[30px] font-semibold tracking-[-0.02em] sm:text-[30px]">Choose your event&apos;s size</h1>
               <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">
                 {inApp
                   ? "Your event starts on Free. Tell us roughly how many guests to expect, then continue."
@@ -101,7 +101,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
           : "Everything's in place. Photos will appear for attendees as soon as albums are published."}
       </PageTitle>
 
-      <div className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
+      <div className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5">
         <div className="flex items-center justify-between text-[14px]">
           <span className="font-semibold">
             {recommendedDone} of {state.recommended.length} done
@@ -110,7 +110,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
         </div>
         <div className="flex gap-1" aria-hidden>
           {state.recommended.map((step) => (
-            <span key={step.key} className={`h-1.5 flex-1 rounded-[3px] ${step.done ? "bg-[color:var(--kb-ok)]" : "bg-[color:var(--kb-line)]"}`} />
+            <span key={step.key} className={`h-1.5 flex-1 rounded-[4px] ${step.done ? "bg-[color:var(--kb-ok)]" : "bg-[color:var(--kb-line)]"}`} />
           ))}
         </div>
         <details className="group">
@@ -136,7 +136,7 @@ export default async function SetupPage(props: PageProps<"/admin/[handle]/setup"
         </details>
       </div>
 
-      <ol className="m-0 flex list-none flex-col overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white p-0">
+      <ol className="m-0 flex list-none flex-col overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white p-0">
         {state.recommended.map((step, index) => {
           const isNext = next?.key === step.key;
           return (

@@ -53,8 +53,8 @@
   /* Radius */
   --kb-r-pill: 999px;
   --kb-r-input: 8px;
-  --kb-r-photo: 6px;
-  --kb-r-card: 10px;
+  --kb-r-photo: 4px;
+  --kb-r-card: 12px;
   --kb-r-panel: 12px;
 
   /* Night: the dark marketing bands and the site footer. */
@@ -932,7 +932,7 @@
     justify-content: center;
     gap: 8px;
     border: 1.5px dashed var(--kb-line-input);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--kb-white);
     text-align: center;
     cursor: pointer;
@@ -997,7 +997,7 @@
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
-    border-radius: 3px;
+    border-radius: 4px;
   }
   .kb-jgrid > * > img {
     position: absolute;
@@ -1202,7 +1202,7 @@
     min-height: 40px;
     padding: 0 10px;
     border: 0;
-    border-radius: 6px;
+    border-radius: 8px;
     background: none;
     color: var(--kb-ink);
     font: inherit;
@@ -1492,7 +1492,7 @@ html:has(.theme-soft) body {
     justify-content: center;
     width: 44px;
     height: 44px;
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--kb-brand-tint);
     color: var(--kb-brand-deep);
   }
@@ -1525,7 +1525,7 @@ html:has(.theme-soft) body {
     align-items: center;
     min-height: 26px;
     padding: 0 9px;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
   }

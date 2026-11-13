@@ -88,7 +88,7 @@ function Action({
     </>
   );
   const className =
-    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border border-transparent bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21] md:min-h-[44px] md:flex-none md:flex-row md:gap-2 md:border-[#2a2d35] md:px-5";
+    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[12px] border border-transparent bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21] md:min-h-[44px] md:flex-none md:flex-row md:gap-2 md:border-[#2a2d35] md:px-5";
   return href ? (
     <a href={href} className={className}>
       {inner}
@@ -637,7 +637,7 @@ export function Viewer({
                 </button>
               ) : null}
           </div>
-          <h2 className="text-[18px] font-semibold">About this {current.kind === "video" ? "video" : "photo"}</h2>
+          <h2 className="text-[17px] font-semibold">About this {current.kind === "video" ? "video" : "photo"}</h2>
           <dl className="m-0 mt-3 grid gap-x-5 gap-y-2.5" style={{ gridTemplateColumns: "auto 1fr" }}>
             {details.map((d) => (
               <div key={d.label} className="contents">
@@ -659,7 +659,7 @@ export function Viewer({
       {sheet === "social" ? (
         <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Saving files" className={`${SHEET} px-5 pb-6 pt-4.5`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color:var(--kb-line-strong)]" />
-          <h2 className="soft-display text-[21px]">{env} can&apos;t save files</h2>
+          <h2 className="soft-display text-[20px]">{env} can&apos;t save files</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
             You&apos;re in {env}&apos;s own browser, which ignores downloads. Tap the ••• menu at the top of the screen and choose
             Open in browser (or Open in Safari), then download from there. Copy the link if you&apos;d rather paste it yourself.
@@ -690,7 +690,7 @@ export function Viewer({
       {sheet === "removal" ? (
         <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Request removal" className={`${SHEET} px-5 pb-6 pt-4.5`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color-mix(in_srgb,var(--color-text)_18%,transparent)]" />
-          <h2 className="soft-display text-[21px]">{asked ? "Already on its way down." : "Take this one down?"}</h2>
+          <h2 className="soft-display text-[20px]">{asked ? "Already on its way down." : "Take this one down?"}</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
             {asked
               ? "It's hidden from the album. The organiser confirms it within seven days, and if they don't, it's deleted."

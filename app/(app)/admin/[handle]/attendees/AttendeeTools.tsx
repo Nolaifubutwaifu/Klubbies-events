@@ -55,7 +55,7 @@ export function AccessModeCards({ eventId, mode, endsOn }: { eventId: string; mo
         {options.map((option) => (
           <label
             key={option.value}
-            className={`flex cursor-pointer items-start gap-3 rounded-[10px] border bg-white p-4 ${
+            className={`flex cursor-pointer items-start gap-3 rounded-[12px] border bg-white p-4 ${
               current === option.value ? "border-[1.5px] border-[color:var(--kb-brand)]" : "border-[color:var(--kb-line)] hover:border-[color:var(--kb-line-strong)]"
             }`}
           >

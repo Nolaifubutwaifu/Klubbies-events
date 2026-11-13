@@ -89,9 +89,9 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
               <section
                 key={request.id}
                 aria-label={`Request ${index + 1}`}
-                className="grid items-start gap-5 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 md:grid-cols-[220px_minmax(0,1fr)_auto]"
+                className="grid items-start gap-5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 md:grid-cols-[220px_minmax(0,1fr)_auto]"
               >
-                <div className="relative overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                <div className="relative overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                   {url ? (
                     <img src={url} alt={item?.original_filename ?? "The photo that was asked about"} className="block aspect-[4/3] w-full object-cover" />
                   ) : (
@@ -142,7 +142,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
           <h2 id="settled" className="text-[17px] font-semibold">
             Settled
           </h2>
-          <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <table className="kb-table">
               <thead>
                 <tr>
@@ -159,7 +159,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
                   return (
                     <tr key={request.id}>
                       <td>
-                        <span className="block h-10 w-10 overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                        <span className="block h-10 w-10 overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                           {url && request.status !== "confirmed" ? <img src={url} alt="" className="h-full w-full object-cover" /> : null}
                         </span>
                       </td>

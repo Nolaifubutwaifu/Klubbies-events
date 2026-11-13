@@ -1,5 +1,5 @@
-import { tileRatio } from "@/lib/media/ratio";
 import "server-only";
+import { tileRatio } from "@/lib/media/ratio";
 import type { Json, MemberFaceProfile } from "@/lib/db/types";
 import { facesConfigured } from "@/lib/faces/client";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";

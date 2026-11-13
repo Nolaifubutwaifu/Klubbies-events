@@ -59,7 +59,7 @@ export function CreateEventForm({ appUrl }: { appUrl: string }) {
       <div className="flex max-w-[560px] flex-col gap-6">
         <div className="flex flex-col gap-2">
           <span className="num text-[14px] font-medium text-[color:var(--kb-brand-deep)]">Step {step} of 3</span>
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em] sm:text-[32px]">{step === 1 ? "Tell us about the event" : "Who can get in?"}</h1>
+          <h1 className="text-[30px] font-semibold tracking-[-0.02em] sm:text-[30px]">{step === 1 ? "Tell us about the event" : "Who can get in?"}</h1>
           <p className="m-0 max-w-[56ch] text-[16px] text-[color:var(--kb-ink-2)]">
             {step === 1
               ? "You can change all of this later in Settings."
@@ -210,12 +210,12 @@ export function CreateEventForm({ appUrl }: { appUrl: string }) {
             </span>
           </div>
           <div className="flex flex-col gap-2 px-4 pb-5 pt-9">
-            <span className="serif text-[26px] leading-[1.05]">{name || "Your event"}</span>
-            <span className="text-[13px] text-[color:var(--kb-ink-2)]">{meta || "Date · Venue"}</span>
-            {organisation ? <span className="text-[13px] text-[color:var(--kb-ink-2)]">Hosted by {organisation}</span> : null}
-            <span className="mt-2 h-9 rounded-[6px] border border-[color:var(--kb-line-input)] bg-white" />
-            <span className="h-9 rounded-[6px] border border-[color:var(--kb-line-input)] bg-white" />
-            <span className="flex h-10 items-center justify-center rounded-[6px] bg-[color:var(--kb-ink)] text-[14px] font-semibold text-white">Get my photos</span>
+            <span className="serif text-[24px] leading-[1.05]">{name || "Your event"}</span>
+            <span className="text-[14px] text-[color:var(--kb-ink-2)]">{meta || "Date · Venue"}</span>
+            {organisation ? <span className="text-[14px] text-[color:var(--kb-ink-2)]">Hosted by {organisation}</span> : null}
+            <span className="mt-2 h-9 rounded-[8px] border border-[color:var(--kb-line-input)] bg-white" />
+            <span className="h-9 rounded-[8px] border border-[color:var(--kb-line-input)] bg-white" />
+            <span className="flex h-10 items-center justify-center rounded-[8px] bg-[color:var(--kb-ink)] text-[14px] font-semibold text-white">Get my photos</span>
           </div>
         </div>
         <p className="m-0 text-center text-[14px] text-[color:var(--kb-ink-3)]">Add your logo and colour after these three steps.</p>

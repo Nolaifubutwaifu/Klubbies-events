@@ -93,9 +93,9 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
       <div className="flex flex-wrap items-start gap-6">
         <div className="min-w-0 flex-[3_1_560px]">
           {rows.length === 0 ? (
-            <p className="rounded-[10px] border border-[color:var(--kb-line)] bg-white p-6 text-[14px] text-[color:var(--kb-ink-2)]">Nothing logged yet.</p>
+            <p className="rounded-[12px] border border-[color:var(--kb-line)] bg-white p-6 text-[14px] text-[color:var(--kb-ink-2)]">Nothing logged yet.</p>
           ) : (
-            <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white" tabIndex={0} role="region" aria-label="Activity log">
+            <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white" tabIndex={0} role="region" aria-label="Activity log">
               <table className="kb-table min-w-[600px]">
                 <thead>
                   <tr>
@@ -133,7 +133,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
                           <td>
                             <span className="flex items-center gap-2 whitespace-nowrap">
                               <span
-                                className={`flex h-7 w-7 items-center justify-center rounded-[6px] ${e.action === "view" ? "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]" : "bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]"}`}
+                                className={`flex h-7 w-7 items-center justify-center rounded-[8px] ${e.action === "view" ? "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]" : "bg-[color:var(--kb-brand-tint)] text-[color:var(--kb-brand-deep)]"}`}
                                 aria-hidden
                               >
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -179,7 +179,7 @@ export default async function ActivityPage(props: PageProps<"/admin/[handle]/act
           </nav>
         </div>
 
-        <aside aria-labelledby="why" className="flex min-w-0 flex-[1_1_260px] flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 lg:max-w-[320px]">
+        <aside aria-labelledby="why" className="flex min-w-0 flex-[1_1_260px] flex-col gap-3 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 lg:max-w-[320px]">
           <h2 id="why" className="text-[17px] font-semibold">
             What this is for
           </h2>

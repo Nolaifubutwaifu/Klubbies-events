@@ -123,7 +123,7 @@ export function BinView({ eventId, albums, items }: { eventId: string; albums: B
 
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
         {albums.map((album) => (
-          <div key={album.id} className="flex flex-col overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <div key={album.id} className="flex flex-col overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <span className="flex aspect-[4/3] flex-col items-center justify-center gap-1.5 bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -161,7 +161,7 @@ export function BinView({ eventId, albums, items }: { eventId: string; albums: B
           return (
             <div
               key={item.id}
-              className={`flex flex-col overflow-hidden rounded-[10px] border bg-white ${on ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"}`}
+              className={`flex flex-col overflow-hidden rounded-[12px] border bg-white ${on ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"}`}
             >
               <button
                 type="button"

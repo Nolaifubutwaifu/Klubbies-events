@@ -13,7 +13,7 @@ export function AddMemberForm({ eventId }: { eventId: string }) {
   }, [state]);
 
   return (
-    <form ref={form} action={action} className="grid gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 sm:grid-cols-[1fr_1fr_220px_auto] sm:items-end">
+    <form ref={form} action={action} className="grid gap-3 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 sm:grid-cols-[1fr_1fr_220px_auto] sm:items-end">
       <span className="text-[16px] font-semibold sm:col-span-4">Add one person</span>
       {/* Visible labels: a placeholder disappears the moment you type. */}
       <label className="field">

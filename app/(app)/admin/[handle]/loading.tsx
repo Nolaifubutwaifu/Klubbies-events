@@ -8,7 +8,7 @@ export default function AdminLoading() {
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading">
       <div className="flex flex-col gap-2">
         <span className="soft-skeleton h-[14px] w-[120px] !rounded-[4px]" />
-        <span className="soft-skeleton h-[32px] w-[min(320px,80%)] !rounded-[6px]" />
+        <span className="soft-skeleton h-[32px] w-[min(320px,80%)] !rounded-[8px]" />
         <span className="soft-skeleton h-[16px] w-[min(420px,95%)] !rounded-[4px]" />
       </div>
       <span className="soft-skeleton block h-[140px] w-full !rounded-[var(--kb-r-card)]" />

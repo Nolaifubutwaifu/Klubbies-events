@@ -63,7 +63,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
       <div className="flex flex-wrap items-start gap-6">
         <div className="min-w-0 flex-[2_1_560px]">
           {links?.length ? (
-            <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+            <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white">
               <table className="kb-table">
                 <thead>
                   <tr>
@@ -81,7 +81,7 @@ export default async function PhotographersPage(props: PageProps<"/admin/[handle
                       <tr key={link.id}>
                         <td>
                           <span className="flex min-w-[180px] items-center gap-3">
-                            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[13px] font-semibold text-[color:var(--kb-ink-2)]" aria-hidden>
+                            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[color:var(--kb-sand)] text-[14px] font-semibold text-[color:var(--kb-ink-2)]" aria-hidden>
                               {initials(link.label)}
                             </span>
                             <span className="flex min-w-0 flex-col leading-[1.35]">

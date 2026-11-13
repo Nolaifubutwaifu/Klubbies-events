@@ -75,10 +75,10 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
           <EventMark name={session.eventName} logoUrl={logoUrl} accentColour={session.eventAccent} size={52} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[color:var(--tone-support-ink,var(--kb-ink-2))]">Photographer upload</span>
-            <h1 className="serif text-[34px] leading-[1.02] sm:text-[44px]">{session.eventName}</h1>
+            <h1 className="serif text-[30px] leading-[1.02] sm:text-[44px]">{session.eventName}</h1>
           </div>
           <span className="flex items-center gap-2.5 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-[14px]">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--kb-ink)] text-[13px] font-semibold text-white" aria-hidden>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--kb-ink)] text-[14px] font-semibold text-white" aria-hidden>
               {initials}
             </span>
             <span>
@@ -100,7 +100,7 @@ export default async function GuestUploadPage(props: PageProps<"/g/[token]">) {
 
         <GuestUploader token={token} />
 
-        <div className="flex items-start gap-3 rounded-[10px] bg-[color:var(--kb-sand)] p-4">
+        <div className="flex items-start gap-3 rounded-[12px] bg-[color:var(--kb-sand)] p-4">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-0.5 flex-none text-[color:var(--kb-ink-2)]">
             <circle cx="12" cy="12" r="9" />
             <path d="M12 11v5M12 7.6v.1" />

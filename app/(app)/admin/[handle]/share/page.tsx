@@ -48,7 +48,7 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
         <Link href={`/admin/${handle}/attendees`}>Change who can get in</Link>
       </PageTitle>
 
-      <section aria-labelledby="link-title" className="flex flex-wrap items-center gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white px-5 py-4">
+      <section aria-labelledby="link-title" className="flex flex-wrap items-center gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white px-5 py-4">
         <h2 id="link-title" className="text-[17px] font-semibold">
           Event link
         </h2>
@@ -57,7 +57,7 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
       </section>
 
       <div className="flex flex-wrap items-start gap-6">
-        <section aria-labelledby="qr-title" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 lg:max-w-[380px]">
+        <section aria-labelledby="qr-title" className="flex min-w-0 flex-[1_1_300px] flex-col gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 lg:max-w-[380px]">
           <h2 id="qr-title" className="text-[17px] font-semibold">
             QR code and poster
           </h2>

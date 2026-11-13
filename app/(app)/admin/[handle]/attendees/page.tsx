@@ -121,7 +121,7 @@ export default async function AttendeesPage(props: PageProps<"/admin/[handle]/at
       ) : null}
 
       {imports.data?.length ? (
-        <details className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
+        <details className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5">
           <summary className="min-h-[44px] cursor-pointer content-center text-[16px] font-semibold">Import history</summary>
           <table className="table">
             <thead>

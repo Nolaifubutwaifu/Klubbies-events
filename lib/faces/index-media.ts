@@ -1,4 +1,5 @@
 import "server-only";
+import { faceStats } from "./stats";
 import { DeleteFacesCommand, IndexFacesCommand, type FaceRecord } from "@aws-sdk/client-rekognition";
 import sharp from "sharp";
 import { isDecodablePhoto, sharpDecodeOptions } from "@/lib/media/logo-file";
@@ -97,6 +98,15 @@ export async function indexMedia(eventId: string, mediaId: string): Promise<Inde
   // Faces that failed our floors were stored by IndexFaces regardless, so
   // they go straight back out: no point paying to keep a faceprint we have
   // already decided not to trust.
+  // What this photo held and why faces were let go: counts only, kept on the
+  // media row so the floors can be tuned on evidence (migration 38). Before
+  // that migration the column isn't there and the write is simply refused.
+  const stats = faceStats(kept, dropped, indexed.UnindexedFaces, FACE_FLOORS);
+  const { error: statsError } = await admin.from("media").update({ face_stats: stats }).eq("id", mediaId);
+  if (statsError && statsError.code !== "PGRST204" && statsError.code !== "42703") {
+    console.error("could not record face stats", mediaId, statsError.message);
+  }
+
   const droppedIds = dropped.map((r) => r.Face?.FaceId).filter((id): id is string => Boolean(id));
   if (droppedIds.length) {
     await client

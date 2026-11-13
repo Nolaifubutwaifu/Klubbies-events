@@ -8,7 +8,7 @@ export default function EventLoading() {
     <div className="mx-auto w-full max-w-[1200px] px-5 pb-16 pt-8 sm:px-10 sm:pt-12" aria-busy="true" aria-label="Loading the event">
       <div className="flex flex-col gap-3 border-b border-[color:var(--kb-line)] pb-8">
         <span className="soft-skeleton h-[16px] w-[160px] !rounded-[4px]" />
-        <span className="soft-skeleton h-[56px] w-[min(520px,90%)] !rounded-[6px]" />
+        <span className="soft-skeleton h-[56px] w-[min(520px,90%)] !rounded-[8px]" />
         <span className="soft-skeleton h-[16px] w-[260px] !rounded-[4px]" />
       </div>
       <span className="soft-skeleton mt-6 block h-[96px] w-full !rounded-[var(--kb-r-card)]" />

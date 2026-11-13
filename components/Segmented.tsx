@@ -15,7 +15,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="group" aria-label={label} className={`flex min-w-0 gap-1 rounded-[10px] bg-[color:var(--kb-sand)] p-1 ${className}`}>
+    <div role="group" aria-label={label} className={`flex min-w-0 gap-1 rounded-[12px] bg-[color:var(--kb-sand)] p-1 ${className}`}>
       {options.map((option) => {
         const on = option.value === value;
         return (
@@ -24,7 +24,7 @@ export function Segmented<T extends string>({
             type="button"
             aria-pressed={on}
             onClick={() => onChange(option.value)}
-            className={`flex min-h-[40px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] px-2 text-[15px] ${
+            className={`flex min-h-[40px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[8px] px-2 text-[15px] ${
               on ? "kb-seg-on font-semibold text-[color:var(--kb-ink)]" : "font-medium text-[color:var(--kb-ink-2)]"
             }`}
           >

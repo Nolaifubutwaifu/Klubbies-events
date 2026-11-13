@@ -26,7 +26,7 @@ export function DeletedEvents({ events }: { events: DeletedEventRow[] }) {
       <h2 id="deleted-events" className="text-[16px] font-semibold">
         Recently deleted
       </h2>
-      <ul className="m-0 flex list-none flex-col divide-y divide-[color:var(--kb-line)] rounded-[10px] border border-[color:var(--kb-line)] bg-white p-0">
+      <ul className="m-0 flex list-none flex-col divide-y divide-[color:var(--kb-line)] rounded-[12px] border border-[color:var(--kb-line)] bg-white p-0">
         {events.map((event) => (
           <li key={event.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <span className="flex min-w-0 flex-col">

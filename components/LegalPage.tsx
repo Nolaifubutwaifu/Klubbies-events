@@ -78,7 +78,7 @@ export async function LegalPage({
       <main className="flex-1">
         <section className="border-b border-[color:var(--kb-line)] bg-white py-14 sm:pb-14 sm:pt-[72px]">
           <div className="kb-wrap flex flex-col gap-7">
-            <nav aria-label="Legal documents" className="flex flex-wrap gap-1 self-start rounded-[10px] bg-[color:var(--kb-sand)] p-1">
+            <nav aria-label="Legal documents" className="flex flex-wrap gap-1 self-start rounded-[12px] bg-[color:var(--kb-sand)] p-1">
               {DOCS.map((d) => (
                 <Link
                   key={d.key}
@@ -92,7 +92,7 @@ export async function LegalPage({
                 </Link>
               ))}
             </nav>
-            <h1 className="kb-h1 max-w-[16ch] !text-[68px] max-sm:!text-[46px]">{title}</h1>
+            <h1 className="kb-h1 max-w-[16ch] !text-[68px] max-sm:!text-[44px]">{title}</h1>
             <div className="flex flex-wrap gap-x-7 gap-y-2 text-[15px] text-[color:var(--kb-ink-2)]">
               <Meta
                 icon={
@@ -135,7 +135,7 @@ export async function LegalPage({
               ) : null}
               {sections.map((section, index) => (
                 <section key={section.title} id={slug(section.title)} className="flex scroll-mt-24 flex-col gap-3 border-t border-[color:var(--kb-line)] py-8">
-                  <h2 className="flex items-baseline gap-3.5 text-[22px] font-semibold tracking-[-0.01em]">
+                  <h2 className="flex items-baseline gap-3.5 text-[20px] font-semibold tracking-[-0.01em]">
                     <span className="num text-[15px] font-normal text-[color:var(--kb-brand)]">{String(index + 1).padStart(2, "0")}</span>
                     {section.title}
                   </h2>

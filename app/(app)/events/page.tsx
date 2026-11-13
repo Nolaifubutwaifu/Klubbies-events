@@ -60,7 +60,7 @@ export default async function EventsPage(props: PageProps<"/events">) {
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5 px-5 pb-10 pt-7 sm:px-8 sm:pt-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h1 className="serif text-[40px] leading-[1.02] sm:text-[48px]">Your events</h1>
+            <h1 className="serif text-[44px] leading-[1.02] sm:text-[44px]">Your events</h1>
             <p className="text-[15px] text-[color:var(--kb-ink-2)]">Newest first. Only events you&apos;ve joined show here.</p>
           </div>
           <ScanEventButton className="btn btn-primary" />

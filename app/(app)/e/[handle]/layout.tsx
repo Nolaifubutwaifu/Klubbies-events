@@ -76,7 +76,7 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
             </svg>
             {closed ? `Closed on ${formatLongDate(ctx.event.access_ends_at)}` : review ? "Waiting for the organiser" : "Full for now"}
           </span>
-          <h1 className="serif text-[40px] leading-[1.02] sm:text-[48px]">
+          <h1 className="serif text-[44px] leading-[1.02] sm:text-[44px]">
             {closed ? "This gallery has closed" : review ? "The organiser will let you in" : "This gallery is full for now"}
           </h1>
           {review ? (

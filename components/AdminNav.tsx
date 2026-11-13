@@ -230,7 +230,7 @@ export function AdminRail({
         {next ? (
           <Link
             href={`${base}/setup`}
-            className="flex flex-col gap-2 rounded-[10px] border border-[color:var(--kb-sand)] bg-[color:var(--kb-cream)] p-3.5 text-ink no-underline"
+            className="flex flex-col gap-2 rounded-[12px] border border-[color:var(--kb-sand)] bg-[color:var(--kb-cream)] p-3.5 text-ink no-underline"
           >
             <span className="flex justify-between text-[14px]">
               <span className="font-semibold">
@@ -238,13 +238,13 @@ export function AdminRail({
               </span>
               <span className="num text-[color:var(--kb-ink-3)]">{Math.round((next.done / next.total) * 100)}%</span>
             </span>
-            <span className="relative h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-line)]" aria-hidden>
-              <span className="absolute inset-y-0 left-0 rounded-[3px] bg-[color:var(--kb-brand)]" style={{ width: `${(next.done / next.total) * 100}%` }} />
+            <span className="relative h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-line)]" aria-hidden>
+              <span className="absolute inset-y-0 left-0 rounded-[4px] bg-[color:var(--kb-brand)]" style={{ width: `${(next.done / next.total) * 100}%` }} />
             </span>
             <span className="text-[14px] text-[color:var(--kb-ink-2)]">Next: {next.title}</span>
           </Link>
         ) : (
-          <Link href={`${base}/billing`} className="flex flex-col rounded-[10px] border border-[color:var(--kb-sand)] bg-[color:var(--kb-cream)] p-3.5 text-ink no-underline">
+          <Link href={`${base}/billing`} className="flex flex-col rounded-[12px] border border-[color:var(--kb-sand)] bg-[color:var(--kb-cream)] p-3.5 text-ink no-underline">
             <span className="text-[14px] font-semibold">{plan.line}</span>
             <span className="text-[14px] text-[color:var(--kb-ink-3)]">{plan.hint}</span>
           </Link>

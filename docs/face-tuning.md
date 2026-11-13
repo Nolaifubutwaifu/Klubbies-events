@@ -45,3 +45,28 @@ unless you ask them.
 
 The tuning club gets its own Rekognition collection, and deleting it removes
 every faceprint in one call. That is the last step of the run.
+
+## What indexing saw (migration 38)
+
+Each photo's `media.face_stats` records what the indexer found, as counts
+only: `kept`, then how many faces were let go for being too `small`, too
+`soft` or too `dark` (our floors), and how many Rekognition refused itself
+(`unindexed`, with its `reasons`). A photo can count in more than one.
+
+Photos indexed before the migration have no stats; re-run them with
+`pnpm backfill-faces --event <handle>` to fill them in.
+
+Where the faces of one event went:
+
+    select count(*) filter (where face_stats is not null) as indexed,
+           count(*) filter (where (face_stats->>'kept')::int > 0) as with_a_face,
+           sum((face_stats->>'small')::int) as too_small,
+           sum((face_stats->>'soft')::int) as too_soft,
+           sum((face_stats->>'dark')::int) as too_dark,
+           sum((face_stats->>'unindexed')::int) as refused_by_rekognition
+    from media
+    where event_id = '<event id>' and kind = 'photo';
+
+If `too_small` dominates, the 6% width floor is the lever, and lowering it
+needs a fresh tuning run: at 4% the tuning set produced about 50 wrong
+matches. If `refused_by_rekognition` dominates, the lever is `QUALITY_FILTER`.

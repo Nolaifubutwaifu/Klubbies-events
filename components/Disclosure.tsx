@@ -33,7 +33,7 @@ export function Disclosure({
 }) {
   if (card) {
     return (
-      <details id={id} className={`kb-disclosure group overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white ${className === "soft-card" ? "" : className}`} open={defaultOpen || undefined}>
+      <details id={id} className={`kb-disclosure group overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white ${className === "soft-card" ? "" : className}`} open={defaultOpen || undefined}>
         <summary className="flex min-h-[68px] cursor-pointer list-none items-center gap-4 px-5 py-3 sm:px-6 [&::-webkit-details-marker]:hidden">
           <span className="flex min-w-0 flex-col">
             <span className="text-[17px] font-semibold">{title}</span>

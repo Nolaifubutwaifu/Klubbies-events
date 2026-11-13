@@ -151,7 +151,7 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
               autoFocus={index === 0}
               readOnly={pending}
               aria-busy={pending}
-              className="num h-14 w-full min-w-0 rounded-[8px] bg-white text-center text-[22px] font-medium text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:!border-2 focus-visible:!border-[color:var(--kb-ink)]"
+              className="num h-14 w-full min-w-0 rounded-[8px] bg-white text-center text-[20px] font-medium text-[color:var(--kb-ink)] caret-[color:var(--kb-ember)] outline-none focus-visible:!border-2 focus-visible:!border-[color:var(--kb-ink)]"
               style={{ border: `1px solid ${digit ? "var(--kb-ink)" : "var(--kb-line-input)"}` }}
             />
           ))}

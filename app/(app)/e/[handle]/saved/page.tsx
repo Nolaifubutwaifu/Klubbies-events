@@ -71,7 +71,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
         <div className="flex flex-col gap-5">
           <h1 className="serif text-[44px] leading-none">Saved</h1>
           <div className="soft-dashed flex max-w-[640px] flex-col items-start gap-3 p-7">
-            <h2 className="text-[18px] font-semibold">Nothing saved yet</h2>
+            <h2 className="text-[17px] font-semibold">Nothing saved yet</h2>
             <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
               Open any photo and tap the heart. It turns up here at full quality, ready to download.
             </p>

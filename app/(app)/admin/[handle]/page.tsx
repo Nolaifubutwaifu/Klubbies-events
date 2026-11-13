@@ -309,7 +309,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
     <main className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
+          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
           <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">{statusLine}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -331,18 +331,18 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
 
       {/* The numbers mean nothing before the first photo, so they wait for it. */}
       {hasPhotos ? (
-        <section aria-label="Numbers" className="grid grid-cols-3 overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+        <section aria-label="Numbers" className="grid grid-cols-3 overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
           {numbers.map((n, index) => (
             <div key={n.label} className={`flex min-w-0 flex-col gap-1.5 px-3.5 py-4 sm:px-5 ${index > 0 ? "border-l border-[color:var(--kb-sand)]" : ""}`}>
               <span className="truncate text-[14px] text-[color:var(--kb-ink-2)]">
                 <span className="sm:hidden">{n.label.split(" ")[0]}</span>
                 <span className="hidden sm:inline">{n.label}</span>
               </span>
-              <span className="num text-[26px] font-semibold leading-none tracking-[-0.02em] sm:text-[30px]">{n.value.toLocaleString("en-AU")}</span>
+              <span className="num text-[24px] font-semibold leading-none tracking-[-0.02em] sm:text-[30px]">{n.value.toLocaleString("en-AU")}</span>
               {n.of && n.tone ? (
-                <span className="relative mt-0.5 h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]" aria-hidden>
+                <span className="relative mt-0.5 h-1 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]" aria-hidden>
                   <span
-                    className="absolute inset-y-0 left-0 rounded-[2px]"
+                    className="absolute inset-y-0 left-0 rounded-[4px]"
                     style={{ width: `${Math.min(100, (n.value / n.of) * 100)}%`, background: n.value / n.of >= 0.8 ? "var(--kb-warn)" : "var(--kb-brand)" }}
                   />
                 </span>
@@ -388,7 +388,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
 
       <div className="flex flex-wrap items-start gap-5">
         <div className="flex min-w-0 flex-[2_1_520px] flex-col gap-5">
-          <section aria-labelledby="needs" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <section aria-labelledby="needs" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
               <h2 id="needs" className="text-[17px] font-semibold">
                 Needs you
@@ -430,7 +430,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             )}
           </section>
 
-          <section aria-labelledby="alb" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <section aria-labelledby="alb" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
               <h2 id="alb" className="text-[17px] font-semibold">
                 Albums
@@ -447,7 +447,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                   return (
                     <li key={album.id} className={index > 0 ? "border-t border-[color:var(--kb-sand)]" : ""}>
                       <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 px-5 py-3 text-ink no-underline hover:bg-[color:var(--kb-cream)]">
-                        <span className="block h-10 w-10 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                        <span className="block h-10 w-10 flex-none overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                           {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col leading-[1.35]">
@@ -470,7 +470,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </div>
 
         <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
-          <section aria-labelledby="sh" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <section aria-labelledby="sh" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
               <h2 id="sh" className="text-[17px] font-semibold">
                 Share with attendees
@@ -495,7 +495,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
           </section>
 
           {hasPhotos ? (
-            <section aria-labelledby="act" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+            <section aria-labelledby="act" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
               <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
                 <h2 id="act" className="text-[17px] font-semibold">
                   Recent activity
