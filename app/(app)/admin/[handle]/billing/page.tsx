@@ -78,7 +78,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
         </div>
       ) : null}
 
-      <section aria-labelledby="current" className="flex flex-wrap items-start gap-8 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-6">
+      <section aria-labelledby="current" className="flex flex-wrap items-start gap-8 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-6">
         <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1.5">
           <span className="text-[14px] text-[color:var(--kb-ink-3)]">Current size</span>
           <h2 id="current" className="flex flex-wrap items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em]">
@@ -96,7 +96,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
             <p className="text-[15px] text-[color:var(--kb-ink-2)]">
               {!inApp && purchases?.find((p) => p.kind !== "keep_year") ? (
                 <>
-                  <span className="mono">A${((purchases?.find((p) => p.kind !== "keep_year")?.amount_cents ?? 0) / 100).toFixed(0)}</span> paid on{" "}
+                  <span className="num">A${((purchases?.find((p) => p.kind !== "keep_year")?.amount_cents ?? 0) / 100).toFixed(0)}</span> paid on{" "}
                 </>
               ) : (
                 "Paid "
@@ -159,14 +159,14 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
       {offers.length && !inApp ? (
         <section className="flex flex-col gap-4" aria-labelledby="sizes">
           <div className="flex flex-col gap-1">
-            <h2 id="sizes" className="text-[18px] font-semibold">
+            <h2 id="sizes" className="text-[17px] font-semibold">
               {event.plan === "free" ? "Choose a size" : "Need a bigger size?"}
             </h2>
             {offers[0]?.kind === "upgrade" ? (
               <p className="text-[15px] text-[color:var(--kb-ink-2)]">You&apos;ve already paid for {planName(event.plan)}, so you only pay the extra.</p>
             ) : null}
           </div>
-          <div className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <div className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             {isTier(event.plan) ? (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-[color:var(--kb-cream)] px-5 py-4">
                 <span className="flex items-center gap-2.5 font-semibold">
@@ -187,7 +187,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
                   <span className="flex min-w-0 flex-[1_1_220px] flex-col">
                     <span className="flex flex-wrap items-center gap-2.5 font-semibold">
                       {tier.name}
-                      <span className="mono font-medium">{offer.kind === "upgrade" ? "+" : ""}A${offer.amount}</span>
+                      <span className="num font-medium">{offer.kind === "upgrade" ? "+" : ""}A${offer.amount}</span>
                       {fits ? <span className="kb-chip bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]">Fits your guests</span> : null}
                     </span>
                     <span className="text-[14px] text-[color:var(--kb-ink-3)]">
@@ -228,7 +228,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
       <section
         id="keep"
         aria-labelledby="keep-heading"
-        className="flex scroll-mt-24 flex-wrap items-center gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5 sm:p-6"
+        className="flex scroll-mt-24 flex-wrap items-center gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 sm:p-6"
       >
         <span className="kb-icon-well" aria-hidden>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -279,7 +279,7 @@ export default async function BillingPage(props: PageProps<"/admin/[handle]/bill
           <h2 id="payments" className="text-[16px] font-semibold">
             Payments
           </h2>
-          <ul className="m-0 flex list-none flex-col divide-y divide-[color:var(--kb-line)] rounded-[10px] border border-[color:var(--kb-line)] bg-white p-0">
+          <ul className="m-0 flex list-none flex-col divide-y divide-[color:var(--kb-line)] rounded-[12px] border border-[color:var(--kb-line)] bg-white p-0">
             {purchases.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-[15px]">
                 <span>

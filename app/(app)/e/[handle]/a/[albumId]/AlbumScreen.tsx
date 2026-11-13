@@ -1,3 +1,4 @@
+import { albumCredits } from "@/lib/media/credits";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Uploader } from "@/app/(app)/admin/[handle]/albums/[albumId]/Uploader";
@@ -81,22 +82,14 @@ export async function AlbumScreen({
       .limit(240),
   ]);
 
-  // "Added by Mahi and 1 guest" — who put the night together, which is the
-  // line the design leads the album with.
-  const uploadersQuery = supabase.from("media").select("uploaded_by").eq("album_id", album.id).not("uploaded_by", "is", null).limit(400);
+  // "Added by Mahi and 1 guest", and the credit line: who took these. One
+  // call for the distinct names and uploaders (lib/media/credits.ts).
+  const creditsQuery = albumCredits(supabase, album.id);
   const guestFilesQuery = supabase
     .from("media")
     .select("id", { count: "exact", head: true })
     .eq("album_id", album.id)
     .not("guest_link_id", "is", null);
-  // The credit line: who took these. Set from the photographer's upload link
-  // or the uploader's name when each file arrived.
-  const creditsQuery = supabase
-    .from("media")
-    .select("photographer_name")
-    .eq("album_id", album.id)
-    .not("photographer_name", "is", null)
-    .limit(1000);
 
   // Members can't read an unfinished row, so the count comes from the service
   // role — after the membership check above, never before it. It's a tally of
@@ -155,16 +148,12 @@ export async function AlbumScreen({
 
   const [
     [{ items, hasMore }, { data: counts }, { data: unfinished }, { data: readyIds }],
-    { data: uploaders },
     { count: guestFiles },
     { photos: processingPhotos, videos: processingVideos },
     cover,
     mineItems,
-    { data: creditRows },
-  ] = await Promise.all([firstPage, uploadersQuery, guestFilesQuery, processing, chosenCover, mine, creditsQuery]);
-  const credits = [...new Set((creditRows ?? []).map((row) => row.photographer_name?.trim()).filter((n): n is string => Boolean(n)))];
-
-  const uploaderIds = [...new Set((uploaders ?? []).map((m) => m.uploaded_by).filter((id): id is string => Boolean(id)))];
+    { credits, uploaderIds },
+  ] = await Promise.all([firstPage, guestFilesQuery, processing, chosenCover, mine, creditsQuery]);
   const [{ count: savedTotal }, savedIds, { data: uploaderNames }] = await Promise.all([
     supabase
       .from("favourites")
@@ -227,7 +216,7 @@ export async function AlbumScreen({
   );
 
   return (
-    <main className={`mx-auto flex w-full flex-1 flex-col gap-[18px] ${organiser ? "" : "max-w-[1320px] pb-6"}`}>
+    <main className={`mx-auto flex w-full flex-1 flex-col gap-[18px] ${organiser ? "" : "max-w-[1200px] pb-6"}`}>
       {/* The album's title block. The event bar above carries Back. */}
       <div className={`flex flex-col gap-[18px] ${organiser ? "" : "pt-6"}`}>
         <div className={`flex flex-col gap-1.5 ${pad}`}>
@@ -237,7 +226,7 @@ export async function AlbumScreen({
             </a>
           ) : null}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className={organiser ? "text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]" : "serif text-[44px] leading-none"}>{album.title}</h1>
+            <h1 className={organiser ? "text-[24px] font-semibold tracking-[-0.02em] sm:text-[30px]" : "serif text-[44px] leading-none"}>{album.title}</h1>
             {canManage ? (
               <span
                 className={`kb-chip ${album.status === "published" ? "bg-[color:var(--kb-ok-tint)] text-[color:var(--kb-ok)]" : "bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]"}`}
@@ -250,22 +239,22 @@ export async function AlbumScreen({
             {[
               photoCount ? (
                 <span key="p">
-                  <span className="mono">{photoCount.toLocaleString("en-AU")}</span> {photoCount === 1 ? "photo" : "photos"}
+                  <span className="num">{photoCount.toLocaleString("en-AU")}</span> {photoCount === 1 ? "photo" : "photos"}
                 </span>
               ) : null,
               videoCount ? (
                 <span key="v">
-                  <span className="mono">{videoCount.toLocaleString("en-AU")}</span> {videoCount === 1 ? "video" : "videos"}
+                  <span className="num">{videoCount.toLocaleString("en-AU")}</span> {videoCount === 1 ? "video" : "videos"}
                 </span>
               ) : null,
               engagement ? (
                 <span key="views">
-                  <span className="mono">{(engagement.view_count ?? 0).toLocaleString("en-AU")}</span> views
+                  <span className="num">{(engagement.view_count ?? 0).toLocaleString("en-AU")}</span> views
                 </span>
               ) : null,
               engagement ? (
                 <span key="dl">
-                  <span className="mono">{(engagement.download_count ?? 0).toLocaleString("en-AU")}</span> downloads
+                  <span className="num">{(engagement.download_count ?? 0).toLocaleString("en-AU")}</span> downloads
                 </span>
               ) : null,
               !organiser && album.album_date ? <span key="d">{formatDate(album.album_date)}</span> : null,
@@ -317,7 +306,7 @@ export async function AlbumScreen({
       ) : null}
 
       {organiser ? (
-        <details open={editing || undefined} className="group overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+        <details open={editing || undefined} className="group overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
           <summary className="flex min-h-[60px] cursor-pointer list-none items-center gap-4 px-5 [&::-webkit-details-marker]:hidden">
             <span className="text-[16px] font-semibold">Album settings</span>
             <span className="ml-auto hidden truncate text-[14px] text-[color:var(--kb-ink-3)] sm:block">

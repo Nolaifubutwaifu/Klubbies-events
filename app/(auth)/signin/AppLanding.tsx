@@ -13,7 +13,7 @@ import { appUrl } from "@/lib/env";
  * It's a full URL and a plain <a> on purpose: the app only sees real page
  * loads, never Next's client-side navigation.
  */
-const PHOTO = "absolute h-[190px] w-[150px] overflow-hidden rounded-[10px] border-4 border-white shadow-[0_18px_40px_-16px_rgb(22_24_29/0.45)]";
+const PHOTO = "absolute h-[190px] w-[150px] overflow-hidden rounded-[12px] border-4 border-white shadow-[0_18px_40px_-16px_rgb(22_24_29/0.45)]";
 
 export function AppLanding() {
   return (
@@ -41,7 +41,7 @@ export function AppLanding() {
         <span className="kb-rise kb-rise-2">
           <BrandTile size={40} />
         </span>
-        <h1 className="kb-rise kb-rise-2 serif text-[40px] leading-[1.02]">Sign in to see your event photos</h1>
+        <h1 className="kb-rise kb-rise-2 serif text-[44px] leading-[1.02]">Sign in to see your event photos</h1>
         <p className="kb-rise kb-rise-2 m-0 text-[14px] text-[color:var(--kb-ink-2)]">
           By continuing you agree to the <Link href="/terms">terms</Link> and <Link href="/privacy">privacy policy</Link>.
         </p>

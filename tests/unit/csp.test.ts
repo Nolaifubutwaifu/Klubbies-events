@@ -74,9 +74,11 @@ describe("content security policy", () => {
         "form-action 'self' https://checkout.stripe.com https://billing.stripe.com; " +
         "frame-ancestors 'none'; " +
         "report-uri /api/csp-report; " +
-        "report-to csp; " +
-        "upgrade-insecure-requests",
+        "report-to csp",
     );
+    // Only the enforcing header may ask for upgrades: a report-only policy
+    // that does logs a console error on every page.
+    expect(buildCsp("NONCE", false)).toMatch(/; upgrade-insecure-requests$/);
     expect(buildCsp("NONCE")).not.toMatch(/style-src[^;]*nonce-/);
     expect(buildCsp("NONCE")).not.toContain("'unsafe-eval'");
     expect(buildCsp("NONCE")).not.toContain("'wasm-unsafe-eval'");

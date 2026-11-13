@@ -38,7 +38,7 @@ export function YourPhotosCard({
     const more = count - Math.min(previews.length, 4);
     return (
       <section
-        className="flex flex-col gap-3.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-[18px] shadow-[0_10px_28px_-12px_rgb(22_24_29/0.2)] lg:flex-row lg:flex-wrap lg:items-center lg:gap-7 lg:rounded-[14px] lg:p-7 lg:shadow-none"
+        className="flex flex-col gap-3.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-[18px] shadow-[0_10px_28px_-12px_rgb(22_24_29/0.2)] lg:flex-row lg:flex-wrap lg:items-center lg:gap-7 lg:rounded-[12px] lg:p-7 lg:shadow-none"
         aria-labelledby="your-photos-title"
       >
         <div className="flex items-center gap-3 lg:flex-[1_1_300px] lg:gap-4">
@@ -74,7 +74,7 @@ export function YourPhotosCard({
               >
                 {item.url ? <img src={item.url} alt="" loading="lazy" /> : null}
                 {overflowAt ? (
-                  <span className="absolute inset-0 flex items-center justify-center rounded-[6px] bg-[rgb(22_24_29/0.62)] text-[15px] font-semibold text-white lg:hidden">
+                  <span className="absolute inset-0 flex items-center justify-center rounded-[8px] bg-[rgb(22_24_29/0.62)] text-[15px] font-semibold text-white lg:hidden">
                     +{more.toLocaleString("en-AU")}
                   </span>
                 ) : null}
@@ -118,11 +118,11 @@ export function YourPhotosCard({
 
   return (
     <section
-      className="flex flex-col gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 shadow-[0_10px_28px_-12px_rgb(22_24_29/0.2)] sm:flex-row sm:items-center sm:p-6 lg:rounded-[14px] lg:shadow-none"
+      className="flex flex-col gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5 shadow-[0_10px_28px_-12px_rgb(22_24_29/0.2)] sm:flex-row sm:items-center sm:p-6 lg:rounded-[12px] lg:shadow-none"
       aria-label="Your photos"
     >
       <span
-        className="flex h-12 w-12 flex-none items-center justify-center rounded-[10px] bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]"
+        className="flex h-12 w-12 flex-none items-center justify-center rounded-[12px] bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]"
         aria-hidden
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -132,7 +132,7 @@ export function YourPhotosCard({
         </svg>
       </span>
       <div className="min-w-0 flex-1">
-        <h2 className="text-[18px] font-semibold">
+        <h2 className="text-[17px] font-semibold">
           {state === "looking" ? <span className="kb-pulse mr-2 inline-block align-middle" aria-hidden /> : null}
           {c.title}
         </h2>

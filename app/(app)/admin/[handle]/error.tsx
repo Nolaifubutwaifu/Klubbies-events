@@ -9,7 +9,7 @@ export default function AdminError({ error, retry }: { error: Error & { digest?:
   return (
     <div className="flex max-w-[520px] flex-col gap-3 py-10">
       <span className="kb-eyebrow">Something went wrong</span>
-      <h1 className="text-[26px] font-semibold">This page didn&apos;t load.</h1>
+      <h1 className="text-[24px] font-semibold">This page didn&apos;t load.</h1>
       <p className="m-0 text-[15px] text-[color:var(--kb-ink-2)]">
         Nothing you saved is lost. Try again, and if it keeps happening, come back in a few minutes.
       </p>

@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+import { tileRatio } from "@/lib/media/ratio";
+import type { Metadata, Viewport } from "next";
+import { GALLERY_THEME_COLOR } from "@/lib/theme";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getEventContext } from "@/lib/auth/session";
@@ -6,6 +8,8 @@ import { listFavourites } from "@/lib/media/favourites";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { SavedTabs, type DownloadedItem } from "./SavedTabs";
+
+export const viewport: Viewport = { themeColor: GALLERY_THEME_COLOR };
 
 export async function generateMetadata(props: PageProps<"/e/[handle]/saved">): Promise<Metadata> {
   const { handle } = await props.params;
@@ -41,7 +45,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
   const { data: downloadedMedia } = downloadedIds.length
     ? await supabase
         .from("media")
-        .select("id, album_id, thumb_path, poster_path, albums!media_album_id_fkey(title)")
+        .select("id, album_id, thumb_path, poster_path, width, height, albums!media_album_id_fkey(title)")
         .in("id", downloadedIds)
         .eq("status", "ready")
     : { data: [] };
@@ -57,6 +61,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
     albumId: m.album_id,
     albumTitle: m.albums?.title ?? "This event",
     thumbUrl: downloadUrls.get(m.thumb_path ?? m.poster_path ?? "") ?? null,
+    ratio: tileRatio(m.width, m.height),
     at: whenByMedia.get(m.id) ?? "",
   }));
 
@@ -66,7 +71,7 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
         <div className="flex flex-col gap-5">
           <h1 className="serif text-[44px] leading-none">Saved</h1>
           <div className="soft-dashed flex max-w-[640px] flex-col items-start gap-3 p-7">
-            <h2 className="text-[18px] font-semibold">Nothing saved yet</h2>
+            <h2 className="text-[17px] font-semibold">Nothing saved yet</h2>
             <p className="m-0 max-w-[46ch] text-[15px] text-[color:var(--ink-70)]">
               Open any photo and tap the heart. It turns up here at full quality, ready to download.
             </p>

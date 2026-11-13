@@ -47,7 +47,7 @@ export function UndoBar({
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[calc(100%-32px)] max-w-[520px] items-center justify-between gap-3 rounded-[10px] bg-ink px-4 py-2.5 text-[15px] text-white shadow-lg"
+      className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-[calc(100%-32px)] max-w-[520px] items-center justify-between gap-3 rounded-[12px] bg-ink px-4 py-2.5 text-[15px] text-white shadow-lg"
       style={{ bottom: "calc(16px + env(safe-area-inset-bottom))" }}
     >
       <span className="min-w-0">{text}</span>

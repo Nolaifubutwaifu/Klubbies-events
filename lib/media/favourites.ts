@@ -1,4 +1,5 @@
 import "server-only";
+import { tileRatio } from "@/lib/media/ratio";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
@@ -6,6 +7,8 @@ export type SavedItem = {
   id: string;
   kind: string;
   thumbUrl: string | null;
+  /** width / height, for the justified grid. */
+  ratio: number;
   albumId: string | null;
   durationSeconds: number | null;
 };
@@ -21,7 +24,7 @@ export type SavedGroup = {
 export async function listFavourites(supabase: UserClient, eventId: string, userId: string): Promise<SavedGroup[]> {
   const { data: rows, error } = await supabase
     .from("favourites")
-    .select("media_id, created_at, media(id, kind, album_id, thumb_path, poster_path, duration_seconds, status)")
+    .select("media_id, created_at, media(id, kind, album_id, thumb_path, poster_path, width, height, duration_seconds, status)")
     .eq("event_id", eventId)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -60,6 +63,7 @@ export async function listFavourites(supabase: UserClient, eventId: string, user
       id: item.id,
       kind: item.kind,
       thumbUrl: path ? (urls.get(path) ?? null) : null,
+      ratio: tileRatio(item.width, item.height),
       albumId: item.album_id,
       durationSeconds: item.duration_seconds,
     });

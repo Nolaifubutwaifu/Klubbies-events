@@ -123,13 +123,13 @@ export function BinView({ eventId, albums, items }: { eventId: string; albums: B
 
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
         {albums.map((album) => (
-          <div key={album.id} className="flex flex-col overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+          <div key={album.id} className="flex flex-col overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <span className="flex aspect-[4/3] flex-col items-center justify-center gap-1.5 bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <rect x="3" y="5" width="18" height="14" rx="2" />
                 <path d="M3 15l4.5-4 4 3.5L15 10l6 5" />
               </svg>
-              <span className="mono text-[14px]">{album.count === 1 ? "1 item" : `${album.count} items`}</span>
+              <span className="num text-[14px]">{album.count === 1 ? "1 item" : `${album.count} items`}</span>
             </span>
             <div className="flex flex-col gap-3 p-3.5">
               <span className="flex min-w-0 flex-col">
@@ -161,7 +161,7 @@ export function BinView({ eventId, albums, items }: { eventId: string; albums: B
           return (
             <div
               key={item.id}
-              className={`flex flex-col overflow-hidden rounded-[10px] border bg-white ${on ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"}`}
+              className={`flex flex-col overflow-hidden rounded-[12px] border bg-white ${on ? "border-[color:var(--kb-brand)] shadow-[0_0_0_1px_var(--kb-brand)]" : "border-[color:var(--kb-line)]"}`}
             >
               <button
                 type="button"

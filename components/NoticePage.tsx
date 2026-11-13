@@ -55,15 +55,15 @@ export function NoticePage({
       <main className="flex flex-1 items-center justify-center px-5 py-12 sm:p-12">
         <div className="flex w-full max-w-[460px] flex-col items-start gap-[18px]">
           {badge ? (
-            <span className={`flex h-14 w-14 items-center justify-center rounded-[14px] ${BADGE[badge].className}`} aria-hidden>
+            <span className={`flex h-14 w-14 items-center justify-center rounded-[12px] ${BADGE[badge].className}`} aria-hidden>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={badge === "ok" ? 2.2 : 1.75} strokeLinecap="round" strokeLinejoin="round">
                 {BADGE[badge].icon}
               </svg>
             </span>
           ) : null}
-          {kicker ? <span className="mono text-[15px] text-[color:var(--kb-ink-3)]">{kicker}</span> : null}
+          {kicker ? <span className="num text-[15px] text-[color:var(--kb-ink-3)]">{kicker}</span> : null}
           {eyebrow ? <span className={`kb-eyebrow ${eyebrowTone === "warn" ? "!text-[color:var(--kb-warn)]" : ""}`}>{eyebrow}</span> : null}
-          <h1 className="serif text-[40px] leading-[1.05] sm:text-[44px]">{title}</h1>
+          <h1 className="serif text-[44px] leading-[1.05] sm:text-[44px]">{title}</h1>
           {children ? <div className="flex flex-col gap-3 text-[16px] text-[color:var(--kb-ink-2)]">{children}</div> : null}
           {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
         </div>

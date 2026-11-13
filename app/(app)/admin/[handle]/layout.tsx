@@ -3,6 +3,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { AdminMenuButton, AdminRail, AdminTopbar } from "@/components/AdminNav";
 import { EventSwitcher } from "@/components/EventSwitcher";
 import { AppHeader } from "@/components/AppHeader";
+import { FooterRow } from "@/components/AppFooter";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { displayNameFor } from "@/lib/auth/display-name";
 import { accessHasEnded, getProfile } from "@/lib/auth/session";
@@ -13,7 +14,6 @@ import { formatDate, formatLongDate } from "@/lib/format";
 import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { isNativeAppRequest } from "@/lib/native-app-server";
-import { eventToneStyle } from "@/lib/theme";
 
 export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">) {
   const { handle } = await props.params;
@@ -71,13 +71,21 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
 
   const setup = await setupState(event, inApp);
 
+  // Organiser screens are Klubbies' own product, so they keep one accent,
+  // Klubbies blue. The event's colour belongs to the attendee side, the event
+  // badge and the poster: mixed in here, a client's red or orange brand turned
+  // every link a different colour from the buttons beside it.
+
   // Until details, who can get in and size are done, the organiser sees only
   // the setup screens: no menu, nothing to wander off to (decision 102).
   if (!setup.requiredDone) {
     return (
-      <div className="kb-branded flex flex-1 flex-col" style={eventToneStyle(event.accent_colour)}>
+      <div className="kb-branded flex flex-1 flex-col">
         <AppHeader ctx={ctx} area="organiser" />
         <div className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col px-4 pt-6 sm:px-6">{props.children}</div>
+        <footer className="app-footer mt-auto border-t border-[color:var(--kb-line)]">
+          <FooterRow />
+        </footer>
       </div>
     );
   }
@@ -95,7 +103,7 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
     : null;
 
   return (
-    <div className="kb-branded flex flex-1" style={eventToneStyle(event.accent_colour)}>
+    <div className="kb-branded flex flex-1">
       <AdminRail
         handle={handle}
         eventName={event.name}
@@ -157,6 +165,9 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
           ) : null}
           <div className="min-w-0">{props.children}</div>
         </div>
+        <footer className="app-footer mt-auto border-t border-[color:var(--kb-line)]">
+          <FooterRow width="gallery" />
+        </footer>
       </div>
     </div>
   );

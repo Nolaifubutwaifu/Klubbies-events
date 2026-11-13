@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FaceNotice } from "@/components/FaceNotice";
@@ -12,9 +12,15 @@ import { getEventContext } from "@/lib/auth/session";
 import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/queries";
 import { formatDate, formatEventDates, plural } from "@/lib/format";
 import { listStackedAlbums, type StackedAlbum } from "@/lib/media/album-list";
+import { eventPhotographers } from "@/lib/media/credits";
 import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { GALLERY_THEME_COLOR } from "@/lib/theme";
+
+// The iPhone app paints its safe areas in this colour, so the dark gallery
+// runs under the status bar and home indicator.
+export const viewport: Viewport = { themeColor: GALLERY_THEME_COLOR };
 
 export async function generateMetadata(props: PageProps<"/e/[handle]">): Promise<Metadata> {
   const { handle } = await props.params;
@@ -57,47 +63,50 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
   const needsNotice = faceState.enabled && !ctx.membership?.face_notice_ack_at;
   // The event's picture: the cover of the album it leads with, once published.
   const cover = published.find((album) => album.heroUrl)?.heroUrl ?? null;
-  const [credits, selfieUrl] = await Promise.all([photographerNames(supabase, event.id), enrolled ? ownSelfie(event.id, ctx.userId) : null]);
+  const [credits, selfieUrl] = await Promise.all([eventPhotographers(supabase, event.id), enrolled ? ownSelfie(event.id, ctx.userId) : null]);
 
   const summary = [plural(totals, "photo"), plural(published.length, "album")].join(" · ");
   const scheduledCount = albums.filter((album) => album.status !== "published" && album.publishAt).length;
 
   return (
     <main className="flex flex-1 flex-col pb-20">
-      {/* The event's band. On a phone: its cover, then its name on a tint of
-          its colour. From 1024px: the name over the cover, which fades into
-          the event's own deep tone so a client's loud brand stays calm. */}
-      <section aria-labelledby="event-name" className="relative overflow-hidden bg-[color:var(--tone-support,var(--kb-mist))] lg:flex lg:min-h-[400px] lg:items-end lg:bg-[color:var(--kb-ember-deep)]">
+      {/* The event's band: its cover photo edge to edge with the name over it,
+          fading into the page so the albums below read as one surface. With
+          no cover yet, the event's own colour holds the space. */}
+      <section
+        aria-labelledby="event-name"
+        className={`relative flex items-end overflow-hidden ${cover ? "min-h-[340px] sm:min-h-[400px] lg:min-h-[460px]" : "bg-[color:var(--tone-support,var(--kb-sand))]"}`}
+      >
         {cover ? (
           <>
-            <img src={cover} alt="" className="block h-[200px] w-full object-cover lg:absolute lg:inset-0 lg:h-full" />
+            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
             <span
               aria-hidden
-              className="absolute inset-0 hidden lg:block"
+              className="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--kb-ember-deep) 15%, transparent) 0%, color-mix(in srgb, var(--kb-ember-deep) 88%, transparent) 100%)",
+                  "linear-gradient(180deg, rgb(15 17 21 / 0.3) 0%, rgb(15 17 21 / 0.12) 22%, rgb(15 17 21 / 0.82) 60%, var(--kb-cream) 100%)",
               }}
             />
           </>
         ) : null}
-        <div className="relative mx-auto flex w-full max-w-[1200px] flex-wrap items-end justify-between gap-6 px-5 pb-11 pt-5 sm:px-10 lg:pb-12 lg:pt-[120px] lg:text-white">
-          <div className="flex max-w-[760px] flex-col gap-2 lg:gap-3">
+        <div className={`relative mx-auto flex w-full max-w-[1200px] flex-wrap items-end justify-between gap-6 px-5 sm:px-10 ${cover ? "pb-12 pt-24 lg:pb-14" : "pb-12 pt-8 lg:pt-14"}`}>
+          <div className={`flex max-w-[760px] flex-col gap-2 lg:gap-3 ${cover ? "[text-shadow:0_1px_14px_rgb(0_0_0/0.6)]" : ""}`}>
             <div className="flex items-center gap-3">
               {logoUrl ? <EventMark name={event.name} logoUrl={logoUrl} accentColour={event.accent_colour} size={36} /> : null}
               {event.organisation ? (
-                <span className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[color:var(--tone-support-ink,var(--kb-ink-2))] lg:text-white">
+                <span className="text-[14px] font-semibold uppercase tracking-[0.08em] text-[color:var(--kb-ember-deep)]">
                   {event.organisation} presents
                 </span>
               ) : null}
             </div>
-            <h1 id="event-name" className="serif text-balance text-[40px] leading-none lg:text-[72px] lg:leading-[0.98] lg:!text-white">
+            <h1 id="event-name" className="serif text-balance text-[44px] leading-none sm:text-[56px] lg:text-[72px] lg:leading-[0.98]">
               {event.name}
             </h1>
-            <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-[15px] text-[#33363d] lg:gap-x-6 lg:text-[16px] lg:text-white">
+            <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-[15px] text-[color:var(--kb-ink-2)] lg:gap-x-6 lg:text-[16px]">
               {dates ? (
                 <span className="flex items-center gap-1.5">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="lg:hidden">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <rect x="3" y="5" width="18" height="16" rx="2" />
                     <path d="M3 10h18M8 3v4M16 3v4" />
                   </svg>
@@ -106,7 +115,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
               ) : null}
               {event.venue ? (
                 <span className="flex items-center gap-1.5">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="lg:hidden">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
                     <circle cx="12" cy="10" r="2.5" />
                   </svg>
@@ -114,9 +123,9 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                 </span>
               ) : null}
             </p>
-            {event.description ? <p className="m-0 mt-1 max-w-[62ch] text-[16px] leading-relaxed text-[#33363d] lg:text-white">{event.description}</p> : null}
+            {event.description ? <p className="m-0 mt-1 max-w-[62ch] text-[16px] leading-relaxed text-[color:var(--kb-ink-2)]">{event.description}</p> : null}
           </div>
-          {totals ? <span className="mono hidden text-[14px] text-white lg:block">{summary}</span> : null}
+          {totals ? <span className="num hidden text-[14px] text-[color:var(--kb-ink-2)] lg:block">{summary}</span> : null}
         </div>
       </section>
 
@@ -124,11 +133,11 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
         {/* Told first, invited second: the notice has to be acknowledged before
             the selfie invitation appears. It sits over the band's edge on a phone. */}
         {needsNotice ? (
-          <div className="relative -mt-6 lg:mt-10">
+          <div className="relative -mt-4 lg:mt-2">
             <FaceNotice eventId={event.id} meHref={`/e/${handle}/me`} />
           </div>
         ) : faceState.enabled ? (
-          <div className="relative -mt-6 lg:mt-10">
+          <div className="relative -mt-4 lg:mt-2">
             <YourPhotosCard
               handle={handle}
               state={
@@ -161,12 +170,12 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
           inert={needsNotice}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-3 lg:border-b lg:border-[color:var(--kb-line)] lg:pb-3.5">
-            <h2 id="albums-heading" className="text-[22px] font-semibold tracking-[-0.01em] lg:serif lg:text-[40px] lg:font-normal lg:leading-none">
+            <h2 id="albums-heading" className="text-[20px] font-semibold tracking-[-0.01em] lg:serif lg:text-[44px] lg:font-normal lg:leading-none">
               {albums.length === 1 ? "Album" : "Albums"}
             </h2>
             <span className="flex items-center gap-3">
               {totals ? (
-                <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">
+                <span className="num text-[14px] text-[color:var(--kb-ink-3)]">
                   {/* The band already says the totals on a wide screen. */}
                   <span className="lg:hidden">{summary}</span>
                   <span className="hidden lg:inline">{published.length.toLocaleString("en-AU")} published</span>
@@ -189,7 +198,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                 <span className="h-2 w-2 rounded-full bg-[color:var(--kb-line-strong)]" />
                 <span className="h-2 w-2 rounded-full bg-[color:var(--kb-line-strong)]" />
               </span>
-              <span className="text-[19px] font-semibold">No photos yet</span>
+              <span className="text-[17px] font-semibold">No photos yet</span>
               <span className="max-w-[44ch] text-[15px] text-[color:var(--kb-ink-2)]">
                 {ctx.perms.manage_albums
                   ? "Create an album and hand your photographers their upload links. Photos appear here as they land."
@@ -207,20 +216,20 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                 const scheduled = album.status !== "published" && album.publishAt;
                 return (
                   <Link key={album.id} href={`/e/${handle}/a/${album.id}`} className="group flex flex-col gap-2 text-ink no-underline">
-                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
                       {album.coverUrl ? (
                         <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-90" />
                       ) : (
-                        <span className="flex h-full w-full items-center justify-center rounded-[6px] border-[1.5px] border-dashed border-[color:var(--kb-line-strong)] p-3 text-center text-[14px] text-[color:var(--kb-ink-2)]">
+                        <span className="flex h-full w-full items-center justify-center rounded-[8px] border-[1.5px] border-dashed border-[color:var(--kb-line-strong)] p-3 text-center text-[14px] text-[color:var(--kb-ink-2)]">
                           {scheduled ? `Publishes on ${formatDate(album.publishAt)}` : "No photos yet"}
                         </span>
                       )}
                       {album.status !== "published" ? (
-                        <span className="absolute left-2 top-2 rounded-[6px] bg-[rgb(22_24_29/0.78)] px-2 py-0.5 text-[14px] font-medium text-white">
+                        <span className="absolute left-2 top-2 rounded-[8px] bg-[rgb(22_24_29/0.78)] px-2 py-0.5 text-[14px] font-medium text-white">
                           {album.status === "hidden" ? "Hidden" : scheduled ? `Goes live ${formatDate(album.publishAt)}` : "Draft"}
                         </span>
                       ) : album.isNew ? (
-                        <span className="absolute left-2 top-2 rounded-[6px] bg-white px-2 py-0.5 text-[14px] font-medium text-ink">New</span>
+                        <span className="absolute left-2 top-2 rounded-[8px] bg-[#fff] px-2 py-0.5 text-[14px] font-medium text-[#16181d]">New</span>
                       ) : null}
                     </div>
                     <span className="flex flex-col leading-[1.35] lg:flex-row lg:justify-between lg:gap-2">
@@ -233,7 +242,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                           .filter(Boolean)
                           .join(" · ")}
                       </span>
-                      <span className="mono hidden text-[14px] text-[color:var(--kb-ink-3)] lg:inline">
+                      <span className="num hidden text-[14px] text-[color:var(--kb-ink-3)] lg:inline">
                         {(album.photoCount + album.videoCount).toLocaleString("en-AU")}
                       </span>
                     </span>
@@ -276,16 +285,6 @@ function listNames(names: string[]): string {
 }
 
 /** Who took the photos attendees can see, for the credit under the albums. */
-async function photographerNames(supabase: Awaited<ReturnType<typeof createClient>>, eventId: string): Promise<string[]> {
-  const { data } = await supabase
-    .from("media")
-    .select("photographer_name")
-    .eq("event_id", eventId)
-    .not("photographer_name", "is", null)
-    .limit(2000);
-  return [...new Set((data ?? []).map((row) => row.photographer_name?.trim()).filter((name): name is string => Boolean(name)))];
-}
-
 /** The viewer's own selfie, signed for them: it is theirs, so the admin client may fetch it. */
 async function ownSelfie(eventId: string, userId: string): Promise<string | null> {
   const admin = createAdminClient();

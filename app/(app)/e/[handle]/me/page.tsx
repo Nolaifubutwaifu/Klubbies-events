@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URLs */
 import { ZipParts } from "@/components/ZipParts";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { GALLERY_THEME_COLOR } from "@/lib/theme";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Placeholder } from "@/components/ui";
@@ -20,6 +21,8 @@ import { Enrol, ReplaceSelfie, TurnOff } from "./Enrol";
 import { LookingNow } from "./LookingNow";
 import { Suggestions } from "./Suggestions";
 
+export const viewport: Viewport = { themeColor: GALLERY_THEME_COLOR };
+
 export async function generateMetadata(props: PageProps<"/e/[handle]/me">): Promise<Metadata> {
   const { handle } = await props.params;
   const ctx = await getEventContext(handle);
@@ -38,7 +41,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
   if (!state.enabled) {
     return (
       <main className="flex flex-1 flex-col">
-        <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-5 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-5 pb-16 pt-8 sm:px-10 sm:pt-12">
           <div>
             <span className="kb-eyebrow">{ctx.event.name}</span>
             <h1 className="serif mt-2 text-[clamp(36px,5vw,56px)]">Your photos</h1>
@@ -143,13 +146,13 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                 <div className="flex flex-col gap-1.5">
                   <span className="flex justify-between text-[14px]">
                     <span className="text-[color:var(--kb-ink-2)]">Checked</span>
-                    <span className="mono">
+                    <span className="num">
                       {(progress.total - progress.remaining).toLocaleString("en-AU")} of {progress.total.toLocaleString("en-AU")}
                     </span>
                   </span>
-                  <span className="relative h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-sand)]" aria-hidden>
+                  <span className="relative h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]" aria-hidden>
                     <span
-                      className="absolute inset-y-0 left-0 rounded-[3px] bg-[color:var(--kb-ember)]"
+                      className="absolute inset-y-0 left-0 rounded-[4px] bg-[color:var(--kb-ember)]"
                       style={{ width: `${Math.round(((progress.total - progress.remaining) / progress.total) * 100)}%` }}
                     />
                   </span>
@@ -159,7 +162,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
             </section>
             <div aria-hidden className="grid max-w-[640px] grid-cols-3 gap-[3px]">
               {Array.from({ length: 6 }, (_, i) => (
-                <span key={i} className="soft-skeleton block aspect-square !rounded-[3px]" />
+                <span key={i} className="soft-skeleton block aspect-square !rounded-[4px]" />
               ))}
             </div>
             <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">
@@ -175,14 +178,14 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                 {selfieUrl ? <img src={selfieUrl} alt="" className="h-12 w-12 flex-none rounded-full object-cover" /> : null}
                 <span className="flex min-w-0 flex-1 flex-col leading-[1.3]">
                   <span className="text-[20px] font-semibold">
-                    <span className="mono">{total.toLocaleString("en-AU")}</span> {total === 1 ? "photo" : "photos"}
+                    <span className="num">{total.toLocaleString("en-AU")}</span> {total === 1 ? "photo" : "photos"}
                   </span>
                   <span className="text-[14px] text-[#c4c7cf]">
                     in {groups.length.toLocaleString("en-AU")} {groups.length === 1 ? "album" : "albums"}
                     {stillLooking ? `, still looking through ${progress.remaining.toLocaleString("en-AU")} more` : ""}
                   </span>
                 </span>
-                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} label="All" className="btn btn-light !min-h-[48px] no-underline" />
+                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
               </section>
             ) : null}
 
@@ -196,17 +199,18 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
               groups.map((group) => (
                 <section key={group.albumId} aria-labelledby={`g-${group.albumId}`} className="flex flex-col gap-2.5">
                   <div className="flex items-baseline justify-between gap-2 px-5 sm:px-10">
-                    <h2 id={`g-${group.albumId}`} className="text-[18px] font-semibold">
+                    <h2 id={`g-${group.albumId}`} className="text-[17px] font-semibold">
                       {group.albumTitle}
                     </h2>
-                    <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length.toLocaleString("en-AU")}</span>
+                    <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length.toLocaleString("en-AU")}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-[3px] px-[3px] sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 sm:px-10">
+                  <div className="kb-jgrid px-[3px] sm:px-10">
                     {group.items.slice(0, PREVIEW).map((item) => (
                       <Link
                         key={item.matchId}
                         href={`/e/${handle}/a/${group.albumId}/${item.mediaId}?from=me`}
-                        className="soft-tile block aspect-square !rounded-[3px] no-underline"
+                        style={{ "--r": item.ratio } as React.CSSProperties}
+                        className="soft-tile block no-underline"
                         aria-label={`Photo of you from ${group.albumTitle}`}
                       >
                         {item.thumbUrl ? (

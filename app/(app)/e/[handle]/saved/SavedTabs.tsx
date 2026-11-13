@@ -12,6 +12,7 @@ export type DownloadedItem = {
   albumId: string | null;
   albumTitle: string;
   thumbUrl: string | null;
+  ratio: number;
   at: string;
 };
 
@@ -52,8 +53,8 @@ export function SavedTabs({
     return map;
   }, new Map());
 
-  const tile = "soft-tile relative block aspect-square !rounded-[3px]";
-  const grid = "grid grid-cols-3 gap-[3px] sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] sm:gap-1";
+  const tile = "soft-tile relative block";
+  const grid = "kb-jgrid";
   const only = groups.length === 1 ? groups[0] : null;
 
   return (
@@ -89,10 +90,10 @@ export function SavedTabs({
             <section key={group.albumId} className="flex flex-col gap-2.5">
               {groups.length > 1 ? (
                 <div className="flex flex-wrap items-baseline gap-3">
-                  <Link href={`/e/${handle}/a/${group.albumId}`} className="text-[18px] font-semibold text-ink no-underline">
+                  <Link href={`/e/${handle}/a/${group.albumId}`} className="text-[17px] font-semibold text-ink no-underline">
                     {group.albumTitle}
                   </Link>
-                  <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length}</span>
+                  <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length}</span>
                   <a href={`/api/albums/${group.albumId}/zip?only=${group.items.map((i) => i.id).join(",")}`} className="ml-auto text-[15px] font-medium">
                     Download these
                   </a>
@@ -105,6 +106,7 @@ export function SavedTabs({
                     href={`/e/${handle}/a/${group.albumId}/${item.id}`}
                     aria-label={`${item.kind === "video" ? "Video" : "Photo"} from ${group.albumTitle}`}
                     className={tile}
+                    style={{ "--r": item.ratio } as React.CSSProperties}
                     scroll={false}
                   >
                     {item.thumbUrl ? <img src={item.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
@@ -129,13 +131,13 @@ export function SavedTabs({
             <section key={key} className="flex flex-col gap-2.5">
               <div className="flex flex-wrap items-baseline gap-3">
                 {items[0].albumId ? (
-                  <Link href={`/e/${handle}/a/${items[0].albumId}`} className="text-[18px] font-semibold text-ink no-underline">
+                  <Link href={`/e/${handle}/a/${items[0].albumId}`} className="text-[17px] font-semibold text-ink no-underline">
                     {items[0].albumTitle}
                   </Link>
                 ) : (
-                  <span className="text-[18px] font-semibold">{items[0].albumTitle}</span>
+                  <span className="text-[17px] font-semibold">{items[0].albumTitle}</span>
                 )}
-                <span className="mono text-[14px] text-[color:var(--kb-ink-3)]">{items.length}</span>
+                <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{items.length}</span>
               </div>
               <div className={grid}>
                 {items.map((item) => (
@@ -144,6 +146,7 @@ export function SavedTabs({
                     href={item.albumId ? `/e/${handle}/a/${item.albumId}/${item.id}` : `/e/${handle}`}
                     aria-label={`Downloaded from ${item.albumTitle}, ${formatDate(item.at)}`}
                     className={tile}
+                    style={{ "--r": item.ratio } as React.CSSProperties}
                     scroll={false}
                   >
                     {item.thumbUrl ? <img src={item.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}

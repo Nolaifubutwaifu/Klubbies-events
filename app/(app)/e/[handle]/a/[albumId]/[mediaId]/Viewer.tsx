@@ -88,7 +88,7 @@ function Action({
     </>
   );
   const className =
-    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[10px] border-0 bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21]";
+    "flex min-h-[60px] flex-1 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[12px] border border-transparent bg-transparent text-[14px] font-medium text-[#e6e7ea] no-underline hover:bg-[#1a1c21] md:min-h-[44px] md:flex-none md:flex-row md:gap-2 md:border-[#2a2d35] md:px-5";
   return href ? (
     <a href={href} className={className}>
       {inner}
@@ -382,8 +382,8 @@ export function Viewer({
           </svg>
         </Link>
         <div className="flex min-w-0 flex-1 flex-col items-center leading-[1.3]">
-          <span className="max-w-full truncate text-[15px] font-semibold">{albumTitle}</span>
-          <span className="mono text-[14px] text-[#a9acb5]">
+          <h1 className="m-0 max-w-full truncate text-[15px] font-semibold leading-[1.3] tracking-normal !text-white">{albumTitle}</h1>
+          <span className="num text-[14px] text-[#a9acb5]">
             {position.toLocaleString("en-AU")} of {total.toLocaleString("en-AU")}
             {countNoun ? ` ${countNoun}` : ""}
           </span>
@@ -531,7 +531,7 @@ export function Viewer({
       {current.photographer || current.takenAt ? (
         <div className="flex flex-none justify-between gap-3 px-5 pb-1.5 pt-3.5 text-[14px] text-[#c4c7cf]">
           <span className="truncate">{current.photographer ? `Photo by ${current.photographer}` : ""}</span>
-          <span className="mono flex-none">{current.takenAt}</span>
+          <span className="num flex-none">{current.takenAt}</span>
         </div>
       ) : null}
 
@@ -560,7 +560,7 @@ export function Viewer({
         })}
       </div>
 
-      <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5">
+      <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5 md:justify-center md:gap-2 md:border-t-0 md:pb-4 md:pt-1">
         {canDownload ? (
           <Action
             label={saving ? "Saving…" : env === "app" ? "Save to Photos" : "Download"}
@@ -637,7 +637,7 @@ export function Viewer({
                 </button>
               ) : null}
           </div>
-          <h2 className="text-[18px] font-semibold">About this {current.kind === "video" ? "video" : "photo"}</h2>
+          <h2 className="text-[17px] font-semibold">About this {current.kind === "video" ? "video" : "photo"}</h2>
           <dl className="m-0 mt-3 grid gap-x-5 gap-y-2.5" style={{ gridTemplateColumns: "auto 1fr" }}>
             {details.map((d) => (
               <div key={d.label} className="contents">
@@ -659,7 +659,7 @@ export function Viewer({
       {sheet === "social" ? (
         <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Saving files" className={`${SHEET} px-5 pb-6 pt-4.5`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color:var(--kb-line-strong)]" />
-          <h2 className="soft-display text-[21px]">{env} can&apos;t save files</h2>
+          <h2 className="soft-display text-[20px]">{env} can&apos;t save files</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
             You&apos;re in {env}&apos;s own browser, which ignores downloads. Tap the ••• menu at the top of the screen and choose
             Open in browser (or Open in Safari), then download from there. Copy the link if you&apos;d rather paste it yourself.
@@ -690,7 +690,7 @@ export function Viewer({
       {sheet === "removal" ? (
         <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Request removal" className={`${SHEET} px-5 pb-6 pt-4.5`}>
           <span className="mx-auto mb-3.5 block h-1 w-[42px] rounded-full bg-[color-mix(in_srgb,var(--color-text)_18%,transparent)]" />
-          <h2 className="soft-display text-[21px]">{asked ? "Already on its way down." : "Take this one down?"}</h2>
+          <h2 className="soft-display text-[20px]">{asked ? "Already on its way down." : "Take this one down?"}</h2>
           <p className="mt-1.5 text-[15px] text-[color:var(--kb-ink-2)]">
             {asked
               ? "It's hidden from the album. The organiser confirms it within seven days, and if they don't, it's deleted."

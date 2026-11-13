@@ -90,7 +90,7 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
             <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
           </svg>
         </span>
-        <span className="text-[18px] font-semibold">
+        <span className="text-[17px] font-semibold">
           <span className="[@media(pointer:coarse)]:hidden">Drop photos and videos here</span>
           <span className="hidden [@media(pointer:coarse)]:inline">Add photos and videos</span>
         </span>
@@ -121,7 +121,7 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
       ))}
 
       {jobs.length ? (
-        <section className="flex flex-col gap-3 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-4 sm:p-5" aria-label="Uploads">
+        <section className="flex flex-col gap-3 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-4 sm:p-5" aria-label="Uploads">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-[16px] font-semibold">
               {busy
@@ -130,21 +130,21 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
                   ? "Some files need another go"
                   : "Upload complete"}
             </h2>
-            <span className="mono text-[14px] text-[color:var(--kb-ink-2)]" role="status">
+            <span className="num text-[14px] text-[color:var(--kb-ink-2)]" role="status">
               {done} of {jobs.length}
               {busy && left > 0 ? ` · ${formatBytes(left)} left` : ""}
               {failed.length ? ` · ${failed.length} didn't upload` : ""}
             </span>
           </div>
           <div
-            className="h-1.5 overflow-hidden rounded-[3px] bg-[color:var(--kb-sand)]"
+            className="h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]"
             role="progressbar"
             aria-label="Upload progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={pct}
           >
-            <div className="h-full rounded-[3px] bg-[color:var(--kb-brand)] transition-[width]" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-[4px] bg-[color:var(--kb-brand)] transition-[width]" style={{ width: `${pct}%` }} />
           </div>
           {busy ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">Keep this tab open. You can move around the app.</span> : null}
           {failed.length ? (
@@ -164,13 +164,13 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
                 <li key={job.key} className="flex items-center gap-3 border-t border-[color:var(--kb-sand)] py-2.5 first:border-t-0">
                   {job.previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- local object URL
-                    <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[6px] object-cover" />
+                    <img src={job.previewUrl} alt="" className="h-10 w-10 flex-none rounded-[8px] object-cover" />
                   ) : (
-                    <span className="h-10 w-10 flex-none rounded-[6px] bg-[color:var(--kb-sand)]" />
+                    <span className="h-10 w-10 flex-none rounded-[8px] bg-[color:var(--kb-sand)]" />
                   )}
                   <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <span className="flex items-center justify-between gap-3 text-[14px]">
-                      <span className="mono truncate">{job.name}</span>
+                      <span className="num truncate">{job.name}</span>
                       {job.status === "failed" ? null : (
                         <span className={`flex flex-none items-center gap-1 ${job.status === "done" ? "font-semibold text-[color:var(--kb-ok)]" : "text-[color:var(--kb-ink-2)]"}`}>
                           {job.status === "done" ? (
@@ -185,7 +185,7 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
                     {job.status === "failed" && job.error ? (
                       <span className="text-[14px] text-[color:var(--kb-warn)]">{job.error}</span>
                     ) : job.status !== "done" ? (
-                      <span className="relative h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]" aria-hidden>
+                      <span className="relative h-1 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]" aria-hidden>
                         <span className="absolute inset-y-0 left-0 bg-[color:var(--kb-brand)]" style={{ width: `${progress}%` }} />
                       </span>
                     ) : null}

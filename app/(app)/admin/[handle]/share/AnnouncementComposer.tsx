@@ -44,7 +44,7 @@ export function AnnouncementComposer({
   const people = `${recipientCount.toLocaleString("en-AU")} ${recipientCount === 1 ? "person" : "people"}`;
 
   return (
-    <section className="flex min-w-0 flex-[2_1_440px] flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5" aria-labelledby="announcement">
+    <section className="flex min-w-0 flex-[2_1_440px] flex-col gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5" aria-labelledby="announcement">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <span className="flex min-w-0 flex-col gap-1">
           <h2 id="announcement" className="text-[17px] font-semibold">

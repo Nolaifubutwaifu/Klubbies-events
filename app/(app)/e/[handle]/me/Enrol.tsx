@@ -66,7 +66,7 @@ export function Enrol({ eventId, backHref, page = false }: { eventId: string; ba
       {/* Plain and short up front; the full explanation is one tap away
           and must be read the same way before anyone ticks the box. */}
       <div className="flex flex-col gap-2">
-        <Title className={page ? "serif text-[40px] leading-[1.02]" : "text-[20px] font-semibold"}>{MEMBER_CONSENT.title}</Title>
+        <Title className={page ? "serif text-[44px] leading-[1.02]" : "text-[20px] font-semibold"}>{MEMBER_CONSENT.title}</Title>
         <p className="m-0 text-[16px] text-[color:var(--kb-ink-2)]">One selfie. Only you see the matches, and you can delete it any time.</p>
       </div>
 
@@ -163,7 +163,7 @@ export function TurnOff({ eventId }: { eventId: string }) {
 
   if (!confirming) {
     return (
-      <button type="button" className="kb-link self-start !text-[15px] !font-medium !text-[#b42318]" onClick={() => setConfirming(true)}>
+      <button type="button" className="kb-link self-start !text-[15px] !font-medium !text-[color:var(--kb-danger)]" onClick={() => setConfirming(true)}>
         Turn off face search and delete my face data
       </button>
     );

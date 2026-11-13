@@ -75,6 +75,16 @@ export function contrast(a: Rgb, b: Rgb): number {
 const WHITE: Rgb = [255, 255, 255];
 const INK: Rgb = [22, 24, 29];
 const PAPER: Rgb = [247, 247, 245];
+/** The attendee gallery's ground (--kb-cream inside [data-gallery="dark"]). */
+const NIGHT: Rgb = [15, 17, 21];
+export const GALLERY_THEME_COLOR = "#0f1115";
+
+/** Steps the colour toward white until it reaches the ratio on the dark ground. */
+function lightenUntil(rgb: Rgb, ratio: number): Rgb {
+  let out = rgb;
+  for (let i = 0; i < 40 && contrast(out, NIGHT) < ratio; i++) out = mix(out, WHITE, 0.08);
+  return out;
+}
 
 /** Steps the colour toward ink until it reaches the ratio on white. */
 function darkenUntil(rgb: Rgb, ratio: number): Rgb {
@@ -97,10 +107,35 @@ export function readableAccent(hex: string | null | undefined): string {
  * CSS variables for an event's pages. Undefined when the event has no colour,
  * so the stylesheet's default blue applies.
  */
-export function eventToneStyle(hex: string | null | undefined): Record<string, string> | undefined {
+export function eventToneStyle(hex: string | null | undefined, ground: "paper" | "night" = "paper"): Record<string, string> | undefined {
   if (!hex) return undefined;
   const rgb = parse(hex);
   if (!rgb) return undefined;
+  if (ground === "night") {
+    // The attendee gallery is dark, so the accent is lifted rather than
+    // darkened: 5:1 on the ground for text, a lighter step for hover, and a
+    // deep tint of itself for chips and selected states.
+    const accent = toHex(lightenUntil(rgb, 5));
+    const bright = toHex(lightenUntil(mix(rgb, WHITE, 0.3), 8));
+    const tint = toHex(mix(rgb, NIGHT, 0.78));
+    return {
+      "--kb-ember": accent,
+      "--kb-ember-deep": bright,
+      "--kb-ember-tint": tint,
+      "--color-accent": accent,
+      "--color-accent-100": tint,
+      "--color-accent-200": tint,
+      "--color-accent-500": accent,
+      "--color-accent-600": bright,
+      "--color-accent-700": bright,
+      "--color-accent-800": bright,
+      "--kb-ember-on-dark": accent,
+      "--kb-ember-solid": toHex(darkenUntil(rgb, 4.5)),
+      "--tone-support": toHex(mix(rgb, NIGHT, 0.86)),
+      "--tone-support-deep": toHex(mix(rgb, NIGHT, 0.72)),
+      "--tone-support-ink": bright,
+    } as Record<string, string>;
+  }
   const accent = darkenUntil(rgb, 4.5);
   const deep = toHex(darkenUntil(mix(accent, INK, 0.25), 7));
   const tint = toHex(mix(rgb, WHITE, 0.88));

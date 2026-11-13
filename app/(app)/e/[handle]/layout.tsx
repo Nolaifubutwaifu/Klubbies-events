@@ -76,7 +76,7 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
             </svg>
             {closed ? `Closed on ${formatLongDate(ctx.event.access_ends_at)}` : review ? "Waiting for the organiser" : "Full for now"}
           </span>
-          <h1 className="serif text-[40px] leading-[1.02] sm:text-[48px]">
+          <h1 className="serif text-[44px] leading-[1.02] sm:text-[44px]">
             {closed ? "This gallery has closed" : review ? "The organiser will let you in" : "This gallery is full for now"}
           </h1>
           {review ? (
@@ -111,7 +111,10 @@ export default async function EventLayout(props: LayoutProps<"/e/[handle]">) {
   }
 
   return (
-    <div className="flex flex-1 flex-col" style={eventToneStyle(ctx.event.accent_colour)}>
+    // The gallery itself is dark, like the photo viewer it opens into: photos
+    // carry the page and opening one no longer jumps from paper to black.
+    // The join, closed and waiting screens above stay on paper.
+    <div data-gallery="dark" className="flex flex-1 flex-col" style={eventToneStyle(ctx.event.accent_colour, "night")}>
       <AppHeader ctx={ctx} area="attendee" facesEnabled={faceState.enabled} />
       <div className="flex min-w-0 flex-1 flex-col">{props.children}</div>
       <CreditLine inApp={await isNativeAppRequest()} />

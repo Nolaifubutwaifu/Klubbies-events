@@ -30,7 +30,7 @@ export function NewAlbumPanel({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <h2 className="text-[18px] font-semibold">New album</h2>
+      <h2 className="text-[17px] font-semibold">New album</h2>
 
       <label className="flex flex-col gap-2 text-[15px] font-semibold">
         Name

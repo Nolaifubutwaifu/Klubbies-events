@@ -30,7 +30,7 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
         </Link>
       }
     >
-      <span className="mb-6 flex h-14 w-14 items-center justify-center rounded-[14px] bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]" aria-hidden>
+      <span className="mb-6 flex h-14 w-14 items-center justify-center rounded-[12px] bg-[color:var(--kb-ember-tint)] text-[color:var(--kb-ember)]" aria-hidden>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <path d="M3 7l9 6 9-6" />

@@ -11,6 +11,7 @@ import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
 import { SELECT_EVENT } from "@/components/AlbumActions";
 import { Segmented } from "@/components/Segmented";
+import { tileRatio } from "@/lib/media/ratio";
 
 function duration(seconds: number | null): string {
   if (!seconds) return "";
@@ -333,7 +334,7 @@ export function AlbumGrid({
 
       {/* Tight 3px gaps edge to edge on a phone, so the photos do the talking. */}
       <div
-        className={`grid w-full grid-cols-3 gap-[3px] pb-2 pt-2 sm:grid-cols-[repeat(auto-fill,minmax(168px,1fr))] sm:gap-1 ${inset ? "px-[3px] sm:px-10" : "lg:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]"}`}
+        className={`kb-jgrid w-full pb-2 pt-2 ${inset ? "px-[3px] sm:px-10" : "kb-jgrid-compact"}`}
       >
         {kind !== "saved" && kind !== "mine" ? <ProcessingTiles count={processingCount} /> : null}
         {shown.map((item) =>
@@ -346,9 +347,10 @@ export function AlbumGrid({
               aria-label={labelFor(item)}
               // The selection ring sits on a layer above the photo, so the
               // focus ring stays the global one instead of being overridden.
-              className={`relative block aspect-square overflow-hidden rounded-[3px] border-0 bg-bg p-0 ${
+              style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
+              className={`relative block overflow-hidden border-0 bg-bg p-0 ${
                 selected.has(item.id)
-                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[3px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
+                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[4px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
                   : ""
               }`}
             >
@@ -359,7 +361,8 @@ export function AlbumGrid({
               key={item.id}
               href={`${hrefBase}/${item.id}`}
               aria-label={labelFor(item)}
-              className="soft-tile relative block aspect-square !rounded-[3px]"
+              style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
+              className="soft-tile relative block"
               scroll={false}
             >
               <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />

@@ -71,7 +71,7 @@ export function GuestLinkForm({
       <form
         action={action}
         onSubmit={(e) => setMailTo(String(new FormData(e.currentTarget).get("sendTo") ?? ""))}
-        className="flex flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5"
+        className="flex flex-col gap-4 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-5"
       >
         <h2 className="text-[17px] font-semibold">Add a photographer</h2>
 
@@ -133,7 +133,7 @@ export function GuestLinkForm({
       </form>
 
       {state.url ? (
-        <div className="flex flex-col gap-3 rounded-[10px] border-[1.5px] border-[color:var(--kb-brand)] bg-white p-5">
+        <div className="flex flex-col gap-3 rounded-[12px] border-[1.5px] border-[color:var(--kb-brand)] bg-white p-5">
           <span className="text-[14px] font-medium">Copy this link now and send it to the photographer. It isn&apos;t shown again.</span>
           <div className="flex flex-wrap items-center gap-2">
             <code className="mono min-w-0 flex-1 break-all rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3 py-2.5 text-[14px]">

@@ -57,7 +57,7 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
         className="poster-sheet flex flex-col overflow-hidden bg-white text-[#16181d] shadow-[0_20px_60px_-20px_rgb(0_0_0/0.35)]"
         style={{ width: "210mm", height: "297mm", printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
       >
-        <div className="flex flex-col text-white" style={{ background: accent, padding: "15mm 17mm 13mm", gap: "5mm" }}>
+        <div className="flex flex-col text-white" style={{ background: accent, padding: "13mm 17mm 11mm", gap: "4mm" }}>
           <span
             className="flex items-center justify-center overflow-hidden bg-white font-bold"
             style={{ width: "22mm", height: "22mm", borderRadius: "5mm", color: accent, fontSize: "24px" }}
@@ -65,32 +65,34 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
             {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2.5mm" }} /> : initials}
           </span>
           <span className="text-[18px] font-semibold uppercase tracking-[0.1em] text-white/85">Your photos from</span>
-          <h1 className="serif m-0 text-[72px] leading-[0.98] !text-white">{event.name}</h1>
+          <h1 className="serif m-0 text-balance text-[64px] leading-[0.98] !text-white">{event.name}</h1>
         </div>
 
-        <div className="flex flex-1 items-center" style={{ padding: "13mm 17mm", gap: "13mm" }}>
-          <div className="flex flex-none flex-col items-center" style={{ gap: "4mm" }}>
+        {/* The code is the poster: about half the page wide, so it scans from
+            across a room. The three steps sit under it in one row. */}
+        <div className="flex flex-1 flex-col items-center justify-center" style={{ padding: "10mm 17mm", gap: "9mm" }}>
+          <div className="flex flex-col items-center" style={{ gap: "5mm" }}>
             <span
               className="block [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
-              style={{ width: "78mm", height: "78mm" }}
+              style={{ width: "108mm", height: "108mm" }}
               // Generated server-side from the event link by the qrcode package.
               dangerouslySetInnerHTML={{ __html: qr }}
             />
-            <span className="mono text-[16px] text-[#33363d]">{link}</span>
+            <span className="mono text-[22px] font-medium text-[#16181d]">{link}</span>
           </div>
-          <ol className="m-0 flex list-none flex-col p-0" style={{ gap: "7mm" }}>
+          <ol className="m-0 grid w-full list-none grid-cols-3 p-0" style={{ gap: "7mm" }}>
             {steps.map(([title, body], index) => (
-              <li key={title} className="flex items-start gap-4">
-                <span
-                  className="flex flex-none items-center justify-center rounded-full text-[18px] font-semibold text-white"
-                  style={{ background: accent, width: "11mm", height: "11mm" }}
-                >
-                  {index + 1}
+              <li key={title} className="flex flex-col" style={{ gap: "2.5mm" }}>
+                <span className="flex items-center gap-2.5">
+                  <span
+                    className="flex flex-none items-center justify-center rounded-full text-[16px] font-semibold text-white"
+                    style={{ background: accent, width: "9mm", height: "9mm" }}
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="text-[19px] font-semibold leading-tight">{title}</span>
                 </span>
-                <span className="flex flex-col gap-1">
-                  <span className="text-[22px] font-semibold">{title}</span>
-                  <span className="text-[17px] leading-[1.45] text-[#4a4d55]">{body}</span>
-                </span>
+                <span className="text-[15px] leading-[1.4] text-[#4a4d55]">{body}</span>
               </li>
             ))}
           </ol>

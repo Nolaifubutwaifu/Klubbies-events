@@ -294,17 +294,33 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
       </>
     );
 
+  const statusLine = closed
+    ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
+    : [
+        event.access_ends_at ? `Gallery open until ${formatDate(event.access_ends_at)}` : formatEventDates(event.starts_on, event.ends_on),
+        event.access_mode === "link" ? "Anyone with the link can join" : "Guest list only",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+  // Status, then what needs doing, then the detail. One primary action, in
+  // the same corner as on every other organiser screen.
   return (
-    <main className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
+    <main className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="text-[24px] font-semibold tracking-[-0.02em] sm:text-[30px]">Overview</h1>
+          <p className="m-0 text-[14px] text-[color:var(--kb-ink-3)]">{statusLine}</p>
+        </div>
         <div className="flex items-center gap-2">
-          <Link href={`/admin/${handle}/upload`} className="btn btn-secondary no-underline">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            New album
-          </Link>
+          {writable ? (
+            <Link href={`/admin/${handle}/upload`} className="btn btn-primary no-underline">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 16V5M7 10l5-5 5 5M5 20h14" />
+              </svg>
+              Upload photos
+            </Link>
+          ) : null}
           <MoreMenu iconOnly label="More actions">
             <MoreLink href={`/e/${handle}`}>See it as an attendee</MoreLink>
             <MoreLink href={`/admin/${handle}/setup`}>Setup checklist</MoreLink>
@@ -313,27 +329,29 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </div>
       </div>
 
-      <section aria-labelledby="sh" className="flex flex-col gap-4 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-5">
-        <h2 id="sh" className="text-[17px] font-semibold">
-          Share with attendees
-        </h2>
-        <div className="flex items-center gap-4">
-          <span
-            className="block w-[104px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
-            // Generated server-side from the event link by the qrcode package.
-            dangerouslySetInnerHTML={{ __html: qrSvg }}
-            aria-label="QR code for the event link"
-            role="img"
-          />
-          <span className="flex min-w-0 flex-col items-start gap-2">
-            <span className="mono break-all text-[14px]">{link.replace(/^https?:\/\//, "")}</span>
-            <CopyButton value={link} label="Copy link" className="btn btn-secondary !min-h-[40px]" />
-          </span>
-        </div>
-        <Link href={`/admin/${handle}/share`} className="text-[14px] font-medium">
-          Poster and announcement email
-        </Link>
-      </section>
+      {/* The numbers mean nothing before the first photo, so they wait for it. */}
+      {hasPhotos ? (
+        <section aria-label="Numbers" className="grid grid-cols-3 overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
+          {numbers.map((n, index) => (
+            <div key={n.label} className={`flex min-w-0 flex-col gap-1.5 px-3.5 py-4 sm:px-5 ${index > 0 ? "border-l border-[color:var(--kb-sand)]" : ""}`}>
+              <span className="truncate text-[14px] text-[color:var(--kb-ink-2)]">
+                <span className="sm:hidden">{n.label.split(" ")[0]}</span>
+                <span className="hidden sm:inline">{n.label}</span>
+              </span>
+              <span className="num text-[24px] font-semibold leading-none tracking-[-0.02em] sm:text-[30px]">{n.value.toLocaleString("en-AU")}</span>
+              {n.of && n.tone ? (
+                <span className="relative mt-0.5 h-1 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]" aria-hidden>
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-[4px]"
+                    style={{ width: `${Math.min(100, (n.value / n.of) * 100)}%`, background: n.value / n.of >= 0.8 ? "var(--kb-warn)" : "var(--kb-brand)" }}
+                  />
+                </span>
+              ) : null}
+              <span className="text-[14px] leading-snug text-[color:var(--kb-ink-3)]">{n.caption}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {nextStep ? (
         <Disclosure card title="Next steps" hint={`${doneSteps} of ${setup.recommended.length} done`} aside={`${doneSteps} of ${setup.recommended.length} done`}>
@@ -357,12 +375,8 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                   </span>
                   <span className="text-[14px] text-[color:var(--kb-ink-2)]">{step.hint}</span>
                 </span>
-                {step.key === nextStep.key ? (
-                  <Link href={step.href} className="btn btn-primary btn-sm no-underline">
-                    {step.cta}
-                  </Link>
-                ) : step.done ? null : (
-                  <Link href={step.href} className="text-[14px] font-medium">
+                {step.done ? null : (
+                  <Link href={step.href} className={step.key === nextStep.key ? "btn btn-secondary btn-sm no-underline" : "text-[14px] font-medium"}>
                     {step.cta}
                   </Link>
                 )}
@@ -372,30 +386,9 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
         </Disclosure>
       ) : null}
 
-      {/* The numbers mean nothing before the first photo, so they wait for it. */}
-      {hasPhotos ? (
-        <section aria-label="Numbers" className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-          {numbers.map((n) => (
-            <div key={n.label} className="flex flex-col gap-2.5 rounded-[10px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
-              <span className="text-[14px] text-[color:var(--kb-ink-2)]">{n.label}</span>
-              <span className="mono text-[32px] font-medium leading-none tracking-[-0.02em]">{n.value.toLocaleString("en-AU")}</span>
-              <span className="relative h-1 overflow-hidden rounded-[2px] bg-[color:var(--kb-sand)]" aria-hidden>
-                {n.of && n.tone ? (
-                  <span
-                    className="absolute inset-y-0 left-0 rounded-[2px]"
-                    style={{ width: `${Math.min(100, (n.value / n.of) * 100)}%`, background: n.tone === "ok" ? "var(--kb-ok)" : "var(--kb-brand)" }}
-                  />
-                ) : null}
-              </span>
-              <span className="text-[14px] text-[color:var(--kb-ink-3)]">{n.caption}</span>
-            </div>
-          ))}
-        </section>
-      ) : null}
-
-      <div className="flex flex-wrap items-start gap-6">
-        <div className="flex min-w-0 flex-[2_1_520px] flex-col gap-6">
-          <section aria-labelledby="needs" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+      <div className="flex flex-wrap items-start gap-5">
+        <div className="flex min-w-0 flex-[2_1_520px] flex-col gap-5">
+          <section aria-labelledby="needs" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
             <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
               <h2 id="needs" className="text-[17px] font-semibold">
                 Needs you
@@ -425,7 +418,8 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                     <span className="font-semibold">{task.title}</span>
                     <span className="text-[14px] text-[color:var(--kb-ink-2)]">{task.body}</span>
                   </span>
-                  <span className="sr-only">{task.cta}</span>
+                  <span className="hidden flex-none text-[14px] font-medium text-[color:var(--kb-brand-deep)] sm:inline">{task.cta}</span>
+                  <span className="sr-only sm:hidden">{task.cta}</span>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--kb-ink-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M9 6l6 6-6 6" />
                   </svg>
@@ -436,8 +430,8 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
             )}
           </section>
 
-          <section aria-labelledby="alb" className="overflow-hidden rounded-[10px] border border-[color:var(--kb-line)] bg-white">
-            <div className="flex items-center justify-between px-5 py-4">
+          <section aria-labelledby="alb" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
+            <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
               <h2 id="alb" className="text-[17px] font-semibold">
                 Albums
               </h2>
@@ -446,61 +440,80 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
               </Link>
             </div>
             {stacked.length ? (
-              <div className="overflow-x-auto">
-                <table className="kb-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Album</th>
-                      <th scope="col">Photos</th>
-                      <th scope="col">Views</th>
-                      <th scope="col">Downloads</th>
-                      <th scope="col">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stacked.map((album) => {
-                      const stats = albumStats.get(album.id);
-                      return (
-                        <tr key={album.id}>
-                          <td>
-                            <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 font-medium text-ink no-underline">
-                              <span className="block h-10 w-10 flex-none overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)]">
-                                {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
-                              </span>
-                              {album.title}
-                            </Link>
-                          </td>
-                          <td className="mono">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
-                          <td className="mono">{(stats?.views ?? 0).toLocaleString("en-AU")}</td>
-                          <td className="mono">{(stats?.downloads ?? 0).toLocaleString("en-AU")}</td>
-                          <td>
-                            <AlbumStatus status={album.status} publishAt={album.publishAt} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="m-0 list-none p-0">
+                {stacked.map((album, index) => {
+                  const stats = albumStats.get(album.id);
+                  const items = album.photoCount + album.videoCount;
+                  return (
+                    <li key={album.id} className={index > 0 ? "border-t border-[color:var(--kb-sand)]" : ""}>
+                      <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 px-5 py-3 text-ink no-underline hover:bg-[color:var(--kb-cream)]">
+                        <span className="block h-10 w-10 flex-none overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)]">
+                          {album.coverUrl ? <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : null}
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col leading-[1.35]">
+                          <span className="truncate font-medium">{album.title}</span>
+                          <span className="num text-[14px] text-[color:var(--kb-ink-3)]">
+                            {items ? plural(items, "item") : "No photos yet"}
+                            {items ? ` · ${plural(stats?.views ?? 0, "view")} · ${plural(stats?.downloads ?? 0, "download")}` : ""}
+                          </span>
+                        </span>
+                        <AlbumStatus status={album.status} publishAt={album.publishAt} />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             ) : (
-              <p className="m-0 px-5 pb-5 text-[14px] text-[color:var(--kb-ink-2)]">No albums yet. Create one, then add photographers.</p>
+              <p className="m-0 px-5 py-4 text-[14px] text-[color:var(--kb-ink-2)]">No albums yet. Create one, then add photographers.</p>
             )}
           </section>
         </div>
 
-        {hasPhotos ? (
-          <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-6">
-            <Disclosure card title="Recent activity">
+        <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
+          <section aria-labelledby="sh" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
+            <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
+              <h2 id="sh" className="text-[17px] font-semibold">
+                Share with attendees
+              </h2>
+              <Link href={`/admin/${handle}/share`} className="text-[14px] font-medium">
+                Poster and email
+              </Link>
+            </div>
+            <div className="flex items-center gap-4 p-5">
+              <span
+                className="block w-[88px] flex-none overflow-hidden rounded-[8px] border border-[color:var(--kb-line)] bg-white [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+                // Generated server-side from the event link by the qrcode package.
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+                aria-label="QR code for the event link"
+                role="img"
+              />
+              <span className="flex min-w-0 flex-col items-start gap-2">
+                <span className="mono break-all text-[14px]">{link.replace(/^https?:\/\//, "")}</span>
+                <CopyButton value={link} label="Copy link" className="btn btn-secondary !min-h-[40px]" />
+              </span>
+            </div>
+          </section>
+
+          {hasPhotos ? (
+            <section aria-labelledby="act" className="overflow-hidden rounded-[12px] border border-[color:var(--kb-line)] bg-white">
+              <div className="flex items-center justify-between border-b border-[color:var(--kb-sand)] px-5 py-4">
+                <h2 id="act" className="text-[17px] font-semibold">
+                  Recent activity
+                </h2>
+                <Link href={`/admin/${handle}/activity`} className="text-[14px] font-medium">
+                  Full log
+                </Link>
+              </div>
               {activity.data?.length ? (
-                <ul className="m-0 -my-2 list-none pl-0">
+                <ul className="m-0 list-none px-5 py-2">
                   {activity.data.map((e) => (
-                    <li key={e.id} className="flex gap-3 py-2.5">
+                    <li key={e.id} className="flex gap-3 py-2">
                       <span
                         className="mt-[7px] h-2 w-2 flex-none rounded-full"
                         style={{ background: e.action === "view" ? "var(--kb-line-strong)" : "var(--kb-brand)" }}
                         aria-hidden
                       />
-                      <span className="flex-1 text-[14px]">
+                      <span className="min-w-0 flex-1 text-[14px]">
                         <strong className="font-semibold">
                           {e.memberships
                             ? personName({
@@ -511,7 +524,7 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                             : "An organiser"}
                         </strong>{" "}
                         {e.action === "zip" ? "downloaded a zip" : e.action === "download" ? "downloaded" : "viewed"}
-                        {e.action === "zip" ? "" : ` ${e.media?.original_filename ?? "a photo"}`}
+                        {e.action === "zip" ? "" : <span className="break-all"> {e.media?.original_filename ?? "a photo"}</span>}
                         <br />
                         <span className="text-[color:var(--kb-ink-3)]">{formatDateTime(e.occurred_at)}</span>
                       </span>
@@ -519,24 +532,26 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
                   ))}
                 </ul>
               ) : (
-                <p className="m-0 text-[14px] text-[color:var(--kb-ink-2)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
+                <p className="m-0 px-5 py-4 text-[14px] text-[color:var(--kb-ink-2)]">No views yet. Once attendees open photos, you&apos;ll see it here.</p>
               )}
-              <Link href={`/admin/${handle}/activity`} className="self-start text-[14px] font-medium">
-                Full log
-              </Link>
-            </Disclosure>
-          </div>
-        ) : null}
+            </section>
+          ) : null}
+        </div>
       </div>
 
       {latest?.length ? (
-        <Disclosure
-          card
-          title="Latest uploads"
-          hint={newest ? [newest.albums?.title, formatDateTime(newest.created_at)].filter(Boolean).join(" · ") : undefined}
-          aside={newest ? [newest.albums?.title, newest.photographer_name, formatDateTime(newest.created_at)].filter(Boolean).join(" · ") : undefined}
-        >
-          <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}>
+        <section aria-labelledby="latest" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="latest" className="text-[17px] font-semibold">
+              Latest uploads
+            </h2>
+            {newest ? (
+              <span className="text-[14px] text-[color:var(--kb-ink-3)]">
+                {[newest.albums?.title, newest.photographer_name, formatDateTime(newest.created_at)].filter(Boolean).join(" · ")}
+              </span>
+            ) : null}
+          </div>
+          <div className="grid grid-cols-4 gap-1 sm:grid-cols-6 lg:grid-cols-12">
             {latest.map((m) => {
               const url = latestUrls.get(m.thumb_path ?? m.poster_path ?? "");
               return (
@@ -551,19 +566,8 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
               );
             })}
           </div>
-        </Disclosure>
+        </section>
       ) : null}
-
-      <p className="m-0 border-t border-[color:var(--kb-line)] pt-5 text-[14px] text-[color:var(--kb-ink-3)]">
-        {closed
-          ? `The gallery closed to attendees on ${formatLongDate(event.access_ends_at)}. You still have full access.`
-          : [
-              event.access_ends_at ? `Gallery open until ${formatDate(event.access_ends_at)}` : formatEventDates(event.starts_on, event.ends_on),
-              event.access_mode === "link" ? "Anyone with the link can join" : "Guest list only",
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-      </p>
     </main>
   );
 }

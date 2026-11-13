@@ -290,18 +290,18 @@ export function RosterImport({ eventId }: { eventId: string }) {
               <div className="flex flex-col gap-3 rounded-[var(--kb-r-card)] border border-[color:var(--kb-line-strong)] p-4">
                 <div className="grid gap-2 text-[14px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
                   <div>
-                    <div className="display text-[32px]">{summary.added}</div>new guests
+                    <div className="display text-[30px]">{summary.added}</div>new guests
                   </div>
                   <div>
-                    <div className="display text-[32px]">{summary.alreadyPresent}</div>already on the list
+                    <div className="display text-[30px]">{summary.alreadyPresent}</div>already on the list
                   </div>
                   {summary.restored ? (
                     <div>
-                      <div className="display text-[32px]">{summary.restored}</div>coming back
+                      <div className="display text-[30px]">{summary.restored}</div>coming back
                     </div>
                   ) : null}
                   <div>
-                    <div className="display text-[32px]" style={{ color: summary.problemCount ? "#b42318" : undefined }}>
+                    <div className="display text-[30px]" style={{ color: summary.problemCount ? "#b42318" : undefined }}>
                       {summary.problemCount}
                     </div>
                     rows with problems

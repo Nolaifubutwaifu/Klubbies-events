@@ -69,6 +69,8 @@ Vercel deploys `main` to production. Every variable from `.env.example` is set i
 
 `20261021000037_raster_media.sql` is the exception: ship that code first, then apply the file by hand. The app writes `logo_path` and `cover_path` with the service role. The cover trigger allow-lists `service_role`, `postgres` and `supabase_admin`; anon and everyone else are refused. Applying the migration first stops logo saves and cover changes until that code is live. An SVG logo or cover already stored is left in place; only a new non-raster path is refused.
 
+`20261114000038_album_credits_face_stats.sql` can be applied before or after its code: the pages fall back to the old queries until the credit functions exist, and the face worker skips recording its counts until the column does.
+
 `CRON_SECRET` enables the hourly job at `/api/cron/hourly`: it publishes scheduled albums, sweeps unanswered removal requests, sends the "gallery closes in a week" email, clears uploads that never finished, and works through the face search queue.
 
 ## Payments

@@ -79,14 +79,14 @@ export default async function UsagePage(props: PageProps<"/ops/usage">) {
             ["Estimated cost", `A$${cost.toFixed(2)}`, "Storage, face search, egress"],
             ["Margin", revenue ? pct((revenue - paidCost) / revenue) : "", "Across paid events"],
           ].map(([label, value, hint]) => (
-            <div key={label} className="flex flex-col gap-1.5 rounded-[10px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
+            <div key={label} className="flex flex-col gap-1.5 rounded-[12px] border border-[color:var(--kb-line)] bg-white px-5 py-[18px]">
               <span className="text-[14px] text-[color:var(--kb-ink-2)]">{label}</span>
-              <span className="mono text-[28px] font-medium leading-none tracking-[-0.02em]">{value || "–"}</span>
+              <span className="num text-[30px] font-medium leading-none tracking-[-0.02em]">{value || "–"}</span>
               <span className="text-[14px] text-[color:var(--kb-ink-3)]">{hint}</span>
             </div>
           ))}
         </section>
-        <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+        <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white">
           <table className="kb-table min-w-[1100px] text-[14px]">
             <thead>
               <tr>
@@ -111,26 +111,26 @@ export default async function UsagePage(props: PageProps<"/ops/usage">) {
                     {r.plan}
                     {r.rate === "club" ? " (club)" : ""}
                   </td>
-                  <td className="mono">{r.paidAud ? `A$${r.paidAud.toFixed(2)}` : ""}</td>
+                  <td className="num">{r.paidAud ? `A$${r.paidAud.toFixed(2)}` : ""}</td>
                   <td>{r.source}</td>
-                  <td className="mono">
+                  <td className="num">
                     {r.guestsJoined}
                     {r.expectedGuests ? ` / ${r.expectedGuests}` : ""}
                   </td>
-                  <td className="mono">{pct(r.joinRate)}</td>
-                  <td className="mono">{pct(r.selfieRate)}</td>
-                  <td className="mono">{pct(r.downloadRate)}</td>
-                  <td className="mono">{r.photos}</td>
-                  <td className="mono">{r.videoMinutes || ""}</td>
-                  <td className="mono">{r.storageGb}</td>
-                  <td className="mono">{r.faceCalls}</td>
-                  <td className="mono">
+                  <td className="num">{pct(r.joinRate)}</td>
+                  <td className="num">{pct(r.selfieRate)}</td>
+                  <td className="num">{pct(r.downloadRate)}</td>
+                  <td className="num">{r.photos}</td>
+                  <td className="num">{r.videoMinutes || ""}</td>
+                  <td className="num">{r.storageGb}</td>
+                  <td className="num">{r.faceCalls}</td>
+                  <td className="num">
                     {r.downloads}
                     {r.zips ? ` + ${r.zips} zips` : ""}
                   </td>
-                  <td className="mono">{r.daysToFirstPhotos === null ? "" : `${r.daysToFirstPhotos} days`}</td>
-                  <td className="mono">A${r.cost.totalAud.toFixed(2)}</td>
-                  <td className="mono">{pct(r.cost.margin)}</td>
+                  <td className="num">{r.daysToFirstPhotos === null ? "" : `${r.daysToFirstPhotos} days`}</td>
+                  <td className="num">A${r.cost.totalAud.toFixed(2)}</td>
+                  <td className="num">{pct(r.cost.margin)}</td>
                 </tr>
               ))}
             </tbody>
@@ -138,20 +138,20 @@ export default async function UsagePage(props: PageProps<"/ops/usage">) {
               <tr className="border-t border-[color:var(--kb-line)] font-semibold">
                 <td>Total</td>
                 <td />
-                <td className="mono">A${revenue.toFixed(2)}</td>
+                <td className="num">A${revenue.toFixed(2)}</td>
                 <td />
-                <td className="mono">{rows.reduce((sum, r) => sum + r.guestsJoined, 0)}</td>
+                <td className="num">{rows.reduce((sum, r) => sum + r.guestsJoined, 0)}</td>
                 <td />
                 <td />
                 <td />
-                <td className="mono">{rows.reduce((sum, r) => sum + r.photos, 0)}</td>
-                <td className="mono">{Math.round(rows.reduce((sum, r) => sum + r.videoMinutes, 0) * 10) / 10}</td>
+                <td className="num">{rows.reduce((sum, r) => sum + r.photos, 0)}</td>
+                <td className="num">{Math.round(rows.reduce((sum, r) => sum + r.videoMinutes, 0) * 10) / 10}</td>
                 <td />
-                <td className="mono">{rows.reduce((sum, r) => sum + r.faceCalls, 0)}</td>
-                <td className="mono">{rows.reduce((sum, r) => sum + r.downloads, 0)}</td>
+                <td className="num">{rows.reduce((sum, r) => sum + r.faceCalls, 0)}</td>
+                <td className="num">{rows.reduce((sum, r) => sum + r.downloads, 0)}</td>
                 <td />
-                <td className="mono">A${cost.toFixed(2)}</td>
-                <td className="mono">{revenue ? pct((revenue - paidCost) / revenue) : ""}</td>
+                <td className="num">A${cost.toFixed(2)}</td>
+                <td className="num">{revenue ? pct((revenue - paidCost) / revenue) : ""}</td>
               </tr>
             </tfoot>
           </table>

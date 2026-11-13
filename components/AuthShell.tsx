@@ -26,7 +26,7 @@ function PhotoPanel() {
     <div aria-hidden className="relative flex h-full flex-col justify-end overflow-hidden bg-[color:var(--kb-night)] p-14">
       <div className="absolute inset-x-10 top-10 grid grid-cols-3 gap-1.5">
         {ART_PHOTOS.map((name) => (
-          <span key={name} className="relative block aspect-square overflow-hidden rounded-[6px]">
+          <span key={name} className="relative block aspect-square overflow-hidden rounded-[8px]">
             <Image src={`/marketing/${name}.webp`} alt="" fill sizes="16vw" className="object-cover" />
           </span>
         ))}
@@ -130,7 +130,7 @@ export function AuthShell({
             </div>
             <div className="mx-auto flex max-w-[440px] flex-col gap-2 px-5 pt-12 sm:px-0">
               {event.accessMode === "guest_list" ? <GuestListLabel /> : null}
-              <span className="serif text-[38px] leading-[1.02]">{event.name}</span>
+              <span className="serif text-[44px] leading-[1.02]">{event.name}</span>
               {meta ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">{meta}</span> : null}
               {event.organisation ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">Hosted by {event.organisation}</span> : null}
             </div>
@@ -182,12 +182,12 @@ export function AuthHeading({ children, step }: { children: ReactNode; step?: { 
     <div className="flex flex-col gap-3.5">
       {step ? (
         <div className="flex items-center gap-3">
-          <span className="mono text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
+          <span className="num text-[14px] font-medium text-[color:var(--kb-brand-deep)]">
             Step {step.at} of {step.of}
           </span>
           <span className="flex flex-1 gap-1" aria-hidden>
             {Array.from({ length: step.of }, (_, i) => (
-              <span key={i} className={`h-1 flex-1 rounded-[2px] ${i < step.at ? "bg-[color:var(--kb-brand)]" : "bg-[color:var(--kb-line)]"}`} />
+              <span key={i} className={`h-1 flex-1 rounded-[4px] ${i < step.at ? "bg-[color:var(--kb-brand)]" : "bg-[color:var(--kb-line)]"}`} />
             ))}
           </span>
         </div>

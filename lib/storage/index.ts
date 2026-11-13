@@ -148,14 +148,26 @@ export async function signDownload(client: Client, path: string, filename: strin
   return data.signedUrl;
 }
 
-export async function listFolder(client: Client, folder: string): Promise<Map<string, number>> {
-  const { data, error } = await client.storage.from(BUCKET).list(folder, { limit: 20 });
-  if (error) throw error;
+/**
+ * Which of the named files exist in a folder, and their sizes. Each is looked
+ * up by its exact path. Listing the folder instead asked storage to search the
+ * whole bucket by prefix, and in production that averaged over two seconds
+ * for every upload being finished.
+ */
+export async function folderObjects(client: Client, folder: string, names: string[]): Promise<Map<string, number>> {
   const sizes = new Map<string, number>();
-  for (const obj of data ?? []) {
-    const size = typeof obj.metadata?.size === "number" ? obj.metadata.size : 0;
-    sizes.set(obj.name, size);
-  }
+  await Promise.all(
+    names.map(async (name) => {
+      const { data, error } = await client.storage.from(BUCKET).info(`${folder}/${name}`);
+      if (error) {
+        // A file that was never uploaded (no poster for a photo) is expected.
+        const status = (error as { status?: number; statusCode?: string | number }).status ?? Number((error as { statusCode?: string | number }).statusCode);
+        if (status === 400 || status === 404 || /not.?found/i.test(error.message)) return;
+        throw error;
+      }
+      sizes.set(name, typeof data?.size === "number" ? data.size : 0);
+    }),
+  );
   return sizes;
 }
 

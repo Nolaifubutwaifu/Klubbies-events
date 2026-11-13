@@ -42,6 +42,7 @@
   --kb-ok-tint: #e2f3e9;
   --kb-warn: #8a5300; /* 5.9:1 on white */
   --kb-warn-tint: #fcefd6;
+  --kb-danger: #b42318;
 
   /* Type: Geist for everything functional, Instrument Serif for display. */
   --kb-font-display: var(--font-geist), system-ui, sans-serif;
@@ -52,8 +53,8 @@
   /* Radius */
   --kb-r-pill: 999px;
   --kb-r-input: 8px;
-  --kb-r-photo: 6px;
-  --kb-r-card: 10px;
+  --kb-r-photo: 4px;
+  --kb-r-card: 12px;
   --kb-r-panel: 12px;
 
   /* Night: the dark marketing bands and the site footer. */
@@ -178,6 +179,13 @@
     text-underline-offset: 4px;
   }
 
+  /* A link inside a sentence is underlined, so it isn't told apart from the
+     words around it by colour alone (WCAG 1.4.1). Links that carry a class
+     are buttons, rows and navigation, which style themselves. */
+  .theme-soft :is(p, li) > a:not([class]) {
+    text-decoration: underline;
+  }
+
   /* One focus ring everywhere: 3px ink, 3px off the edge. */
   :focus {
     outline: none;
@@ -259,6 +267,12 @@
   .mono {
     font-family: var(--kb-font-mono);
     font-feature-settings: normal;
+  }
+  /* Figures: counts, prices, dates. The text face with digits that line up;
+     the code face is for addresses and file names only. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
   .kb-lead {
     font-size: 19px;
@@ -858,6 +872,14 @@
     border-bottom: 1px solid var(--kb-sand);
     vertical-align: middle;
   }
+  @media (max-width: 639px) {
+    .table th,
+    .kb-table th,
+    .table td,
+    .kb-table td {
+      padding-inline: 12px;
+    }
+  }
   .table tbody tr:last-child td,
   .kb-table tbody tr:last-child td {
     border-bottom: 0;
@@ -910,7 +932,7 @@
     justify-content: center;
     gap: 8px;
     border: 1.5px dashed var(--kb-line-input);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--kb-white);
     text-align: center;
     cursor: pointer;
@@ -952,6 +974,54 @@
   .theme-soft .tile-grid > * {
     border-radius: var(--kb-r-photo);
     overflow: hidden;
+  }
+
+  /* Justified rows: every photo keeps its shape, each row fills the width.
+     A tile sets --r (width / height); the row height is --jh. Growth in
+     proportion to --r keeps a row's tiles the same height, and the spacer
+     at the end stops a short last row from stretching. */
+  .kb-jgrid {
+    --jh: 112px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .kb-jgrid::after {
+    content: "";
+    flex-grow: 1000000000;
+  }
+  .kb-jgrid > * {
+    position: relative;
+    flex: calc(var(--r, 1) * 100) 1 calc(var(--r, 1) * var(--jh));
+    aspect-ratio: var(--r, 1);
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+  .kb-jgrid > * > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  @media (min-width: 640px) {
+    .kb-jgrid {
+      --jh: 190px;
+      gap: 4px;
+    }
+    .kb-jgrid-compact {
+      --jh: 150px;
+    }
+  }
+  @media (min-width: 1280px) {
+    .kb-jgrid {
+      --jh: 200px;
+    }
+    .kb-jgrid-compact {
+      --jh: 170px;
+    }
   }
 
   .overlay-title {
@@ -1132,7 +1202,7 @@
     min-height: 40px;
     padding: 0 10px;
     border: 0;
-    border-radius: 6px;
+    border-radius: 8px;
     background: none;
     color: var(--kb-ink);
     font: inherit;
@@ -1202,7 +1272,7 @@ html:has(.theme-soft) body {
    footer's links need room to clear it. */
 @media (max-width: 767.98px) {
   .theme-soft:has([data-tabbar]) .app-footer {
-    padding-bottom: calc(68px + max(12px, env(safe-area-inset-bottom)));
+    padding-bottom: calc(84px + max(12px, env(safe-area-inset-bottom)));
   }
 }
 
@@ -1422,7 +1492,7 @@ html:has(.theme-soft) body {
     justify-content: center;
     width: 44px;
     height: 44px;
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--kb-brand-tint);
     color: var(--kb-brand-deep);
   }
@@ -1455,7 +1525,7 @@ html:has(.theme-soft) body {
     align-items: center;
     min-height: 26px;
     padding: 0 9px;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
   }
@@ -1491,6 +1561,147 @@ html:has(.theme-soft) body {
     border-color: var(--kb-brand);
     color: var(--kb-brand-deep);
   }
+}
+
+/* ---------------------------------------------------------------------------
+   The attendee gallery at night (design direction B). The event's pages set
+   data-gallery="dark" on their wrapper; every token is restated here, so the
+   same components draw themselves dark with no second set of class names.
+   :has() carries it up to .theme-soft, which is where the footer lives.
+   The aliases are resolved where they are declared, so they are restated too.
+   --------------------------------------------------------------------------- */
+.theme-soft:has([data-gallery="dark"]),
+[data-gallery="dark"] {
+  color-scheme: dark;
+  --kb-cream: #0f1115; /* ground */
+  --kb-sand: #1a1d23; /* wells, placeholders */
+  --kb-mist: var(--kb-sand);
+  --kb-white: #1e2229; /* cards, bars, inputs */
+  --kb-line: #2b3039;
+  --kb-line-strong: #414753;
+  --kb-line-input: #7b8190; /* 4.6:1 on the card */
+  --kb-ink: #f4f5f7;
+  --kb-ink-2: #c9ccd4; /* 11:1 on the ground */
+  --kb-ink-3: #a1a5b0; /* 7:1 on the ground */
+  --kb-ok: #6fd0a0;
+  --kb-ok-tint: #15301f;
+  --kb-warn: #e8b45c;
+  --kb-warn-tint: #3a2a0c;
+  --kb-danger: #ff9c8f;
+
+  --color-bg: var(--kb-cream);
+  --color-surface: var(--kb-white);
+  --color-text: var(--kb-ink);
+  --color-divider: var(--kb-line);
+  --color-neutral-100: var(--kb-sand);
+  --color-neutral-200: var(--kb-sand);
+  --color-neutral-300: var(--kb-line);
+  --color-neutral-400: var(--kb-line-strong);
+  --color-neutral-500: var(--kb-ink-3);
+  --color-neutral-600: var(--kb-ink-3);
+  --color-neutral-700: var(--kb-ink-2);
+  --color-neutral-800: var(--kb-ink-2);
+  --color-neutral-900: var(--kb-ink);
+  --ink-70: var(--kb-ink-2);
+  --ink-55: var(--kb-ink-3);
+  --ink-35: var(--kb-line-input);
+  --tone-base: var(--kb-cream);
+  --tone-support: var(--kb-sand);
+  --tone-support-deep: var(--kb-line);
+  --tone-support-ink: var(--kb-ink);
+  --shadow-lg: 0 18px 44px -14px rgb(0 0 0 / 0.7);
+
+  background: var(--kb-cream);
+  color: var(--kb-ink);
+}
+/* The default accent, for an event with no colour of its own. An event that
+   has one sets these inline (lib/theme.ts, the "night" ground). */
+[data-gallery="dark"] {
+  --kb-ember: #9db0f7;
+  --kb-ember-deep: #c3cffb;
+  --kb-ember-tint: #1c2544;
+  --kb-ember-solid: #2b4acb;
+  --color-accent: var(--kb-ember);
+  --color-accent-100: var(--kb-ember-tint);
+  --color-accent-200: var(--kb-ember-tint);
+  --color-accent-500: var(--kb-ember);
+  --color-accent-600: var(--kb-ember-deep);
+  --color-accent-700: var(--kb-ember-deep);
+  --color-accent-800: var(--kb-ember-deep);
+}
+html:has([data-gallery="dark"]),
+html:has([data-gallery="dark"]) body {
+  background: #0f1115;
+}
+
+/* Unlayered on purpose: these have to win over Tailwind's utilities
+   (bg-white, text-white on an ink slab), which a layered rule cannot. */
+/* Literal white surfaces become the card colour, and ink slabs (the
+   selection bar, the summary, Undo) a raised surface that keeps its white
+   text. */
+[data-gallery="dark"] :is(.bg-white, .soft-dashed) {
+  background-color: var(--kb-white);
+}
+[data-gallery="dark"] :is(.bg-ink, [class*="bg-[color:var(--kb-ink)]"]) {
+  background-color: #2a2f39;
+}
+[data-gallery="dark"] [class*="text-[#33363d]"] {
+  color: var(--kb-ink-2);
+}
+/* Primary: white on the dark ground, the one thing the screen is for. */
+[data-gallery="dark"] :is(.btn-primary, .soft-btn-primary, .btn-light) {
+  background: #fff;
+  border-color: #fff;
+  color: #16181d;
+}
+[data-gallery="dark"] :is(.btn-primary, .soft-btn-primary, .btn-light):hover:not(:disabled) {
+  background: #dfe2e8;
+  border-color: #dfe2e8;
+}
+[data-gallery="dark"] :is(.btn-secondary, .btn-ghost)[aria-pressed="true"] {
+  background: #fff;
+  border-color: #fff;
+  color: #16181d;
+}
+[data-gallery="dark"] :is(.btn-danger, .soft-btn-danger) {
+  border-color: #6b2a24;
+  color: #ff9c8f;
+}
+[data-gallery="dark"] :is(.btn-danger, .soft-btn-danger):hover:not(:disabled) {
+  background: #3a1814;
+  border-color: #ff9c8f;
+}
+[data-gallery="dark"] :is(.kb-error, .kb-menu-item[data-danger="true"]) {
+  color: #ff9c8f;
+}
+[data-gallery="dark"] :is(.table th, .kb-table th) {
+  background: var(--kb-sand);
+}
+[data-gallery="dark"] .theme-soft select,
+[data-gallery="dark"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23f4f5f7' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+[data-gallery="dark"] :is(input[type="checkbox"], input[type="radio"]):checked {
+  background: var(--kb-ember-solid);
+  border-color: var(--kb-ember-solid);
+}
+[data-gallery="dark"] .soft-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.07), transparent);
+}
+[data-gallery="dark"] :focus-visible {
+  box-shadow: 0 0 0 6px #0f1115;
+}
+[data-gallery="dark"] ::selection {
+  background: #3b4a86;
+}
+/* The segmented control's chosen side. */
+.kb-seg-on {
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(22 24 29 / 0.1);
+}
+[data-gallery="dark"] .kb-seg-on {
+  background: #3a404c;
+  box-shadow: none;
 }
 
 /* The app's sign-in screen rises in after the native loading screen fades. */

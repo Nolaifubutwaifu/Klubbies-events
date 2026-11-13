@@ -170,24 +170,26 @@ export function AlbumManager({
                 : "border-[color:var(--kb-line)] bg-white text-[color:var(--kb-ink-2)] hover:border-[color:var(--kb-line-strong)]"
             }`}
           >
-            {label} <span className="mono">{counts[value]}</span>
+            {label} <span className="num">{counts[value]}</span>
           </button>
         ))}
         {message ? <span className="kb-chip ml-auto bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-2)]">{message}</span> : null}
       </div>
 
-      <div className="overflow-x-auto rounded-[10px] border border-[color:var(--kb-line)] bg-white">
+      <div className="overflow-x-auto rounded-[12px] border border-[color:var(--kb-line)] bg-white">
         <table className="kb-table">
           <thead>
             <tr>
-              <th scope="col" className="w-10">
+              {/* A phone keeps what an organiser at the venue needs: which album,
+                  whether it is live, and the menu. The figures are a tap away. */}
+              <th scope="col" className="hidden w-10 sm:table-cell">
                 <span className="sr-only">Order</span>
               </th>
               <th scope="col">Album</th>
-              <th scope="col">Photos</th>
-              <th scope="col">Views</th>
-              <th scope="col">Downloads</th>
-              <th scope="col">Downloads allowed</th>
+              <th scope="col" className="hidden sm:table-cell">Photos</th>
+              <th scope="col" className="hidden md:table-cell">Views</th>
+              <th scope="col" className="hidden md:table-cell">Downloads</th>
+              <th scope="col" className="hidden lg:table-cell">Downloads allowed</th>
               <th scope="col">Status</th>
               <th scope="col">
                 <span className="sr-only">Actions</span>
@@ -221,7 +223,7 @@ export function AlbumManager({
                   }}
                   className={`${isTarget ? "shadow-[inset_0_2px_0_var(--kb-brand)]" : ""} ${dragging ? "opacity-45" : ""}`}
                 >
-                  <td className="!pr-0">
+                  <td className="hidden !pr-0 sm:table-cell">
                     {canReorder ? (
                       <button
                         type="button"
@@ -256,8 +258,8 @@ export function AlbumManager({
                     ) : null}
                   </td>
                   <td>
-                    <Link href={`/admin/${handle}/albums/${album.id}`} className="flex min-w-[200px] items-center gap-3 text-ink no-underline">
-                      <span className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[6px] bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]">
+                    <Link href={`/admin/${handle}/albums/${album.id}`} className="flex items-center gap-3 text-ink no-underline sm:min-w-[200px]">
+                      <span className="flex h-11 w-11 flex-none items-center justify-center overflow-hidden rounded-[8px] bg-[color:var(--kb-sand)] text-[color:var(--kb-ink-3)]">
                         {album.coverUrl ? (
                           <img src={album.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                         ) : (
@@ -270,28 +272,38 @@ export function AlbumManager({
                       <span className="flex min-w-0 flex-col leading-[1.35]">
                         <span className="font-medium">{album.title}</span>
                         <span className="text-[14px] text-[color:var(--kb-ink-3)]">
-                          {album.photoCount + album.videoCount === 0
-                            ? "No photos yet"
-                            : [album.date ? formatDate(album.date) : null, album.openToMembers ? "attendees can add" : null].filter(Boolean).join(" · ")}
+                          {album.photoCount + album.videoCount === 0 ? (
+                            "No photos yet"
+                          ) : (
+                            <>
+                              <span className="sm:hidden">{(album.photoCount + album.videoCount).toLocaleString("en-AU")} · </span>
+                              {[album.date ? formatDate(album.date) : null, album.openToMembers ? "attendees can add" : null].filter(Boolean).join(" · ")}
+                            </>
+                          )}
                         </span>
                       </span>
                     </Link>
                   </td>
-                  <td className="mono">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
-                  <td className="mono">{figures.views.toLocaleString("en-AU")}</td>
-                  <td className="mono">{figures.downloads.toLocaleString("en-AU")}</td>
-                  <td>{album.allowDownload ? "Yes" : "No"}</td>
+                  <td className="num hidden sm:table-cell">{(album.photoCount + album.videoCount).toLocaleString("en-AU")}</td>
+                  <td className="num hidden md:table-cell">{figures.views.toLocaleString("en-AU")}</td>
+                  <td className="num hidden md:table-cell">{figures.downloads.toLocaleString("en-AU")}</td>
+                  <td className="hidden lg:table-cell">{album.allowDownload ? "Yes" : "No"}</td>
                   <td>
                     <StatusChip album={album} />
                   </td>
                   <td>
                     <span className="flex items-center justify-end gap-2">
                       {album.status === "draft" ? (
-                        <button type="button" disabled={pending} onClick={() => run(() => setAlbumPublishedAction(album.id, true))} className="btn btn-ghost">
+                        <button type="button" disabled={pending} onClick={() => run(() => setAlbumPublishedAction(album.id, true))} className="btn btn-ghost max-sm:hidden">
                           Publish
                         </button>
                       ) : null}
                       <MoreMenu iconOnly label={`More for ${album.title}`}>
+                        {album.status === "draft" ? (
+                          <MoreButton disabled={pending} onClick={() => run(() => setAlbumPublishedAction(album.id, true))}>
+                            Publish now
+                          </MoreButton>
+                        ) : null}
                         <MoreLink href={`/admin/${handle}/albums/${album.id}`}>Open album</MoreLink>
                         <MoreLink href={`/e/${handle}/a/${album.id}`}>See it as an attendee</MoreLink>
                         {/* Dragging doesn't work with a finger in Safari, so moving
@@ -332,7 +344,7 @@ export function AlbumManager({
       </div>
 
       {scheduling ? (
-        <div className="flex flex-wrap items-end gap-2 rounded-[10px] border border-[color:var(--kb-line)] bg-white p-4">
+        <div className="flex flex-wrap items-end gap-2 rounded-[12px] border border-[color:var(--kb-line)] bg-white p-4">
           <label className="flex flex-col gap-1 text-[14px] font-semibold">
             {byId.get(scheduling)?.title}: go live at
             <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="input !w-auto" />
