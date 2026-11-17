@@ -4,7 +4,6 @@ import { eventFacesEnabled } from "@/lib/faces/collections";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { recordGuestUpload, resolveGuestLink } from "@/lib/guest/links";
 import { derivativePaths, folderObjects } from "@/lib/storage";
-import { kickBackup } from "@/lib/backup/r2";
 import { kickPlanNotices } from "@/lib/billing/notices";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -81,8 +80,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   }
 
   await recordGuestUpload(session.linkId, byteSize);
-  // The second copy in R2, once the response has gone.
-  kickBackup(mediaId);
+  // The R2 copy waits for the hourly backup drain. See the member finalize route.
   kickPlanNotices(media.event_id);
   await indexFaces(media.event_id, mediaId);
 

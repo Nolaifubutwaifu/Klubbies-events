@@ -28,8 +28,9 @@ function authorised(request: Request): boolean {
 // attendees a week before a gallery closes, clears uploads that never
 // finished within 14 days, empties anything in Recently deleted for more
 // than 30 days, and closes guest overflow windows that have run 48 hours
-// (pausing the guests who joined last). It copies new uploads to R2 that the
-// upload request didn't, deletes R2 copies whose 30 days are up, and on the
+// (pausing the guests who joined last). It copies new uploads to R2 (that
+// queue is every ready file not copied yet; finalize does not copy inline),
+// deletes R2 copies whose 30 days are up, and on the
 // 1st of each month checks R2 for events that no longer exist. It warns
 // organisers 30 and 7 days before an event's photos are deleted, deletes the
 // face data of galleries that have closed, and deletes photos at 12 months. Closing itself needs no job: RLS compares

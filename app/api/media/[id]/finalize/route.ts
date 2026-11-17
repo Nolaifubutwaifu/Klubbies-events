@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { eventFacesEnabled } from "@/lib/faces/collections";
-import { kickBackup } from "@/lib/backup/r2";
 import { kickPlanNotices } from "@/lib/billing/notices";
 import { mediaUnits } from "@/lib/billing/plans";
 import { PHOTOS_FULL } from "@/lib/billing/usage";
@@ -92,8 +91,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
     return NextResponse.json({ ok: true });
   }
 
-  // The second copy in R2, once the response has gone.
-  kickBackup(id);
+  // The R2 copy waits for the hourly backup drain (a ready row with no
+  // backed_up_at). Doing it here streamed the original inside this request.
   kickPlanNotices(media.event_id);
   await indexFaces(media.event_id, id);
 
