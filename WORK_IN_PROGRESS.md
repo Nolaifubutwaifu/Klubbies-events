@@ -28,7 +28,7 @@ Migrations 001 through 038 are applied on production.
 
 Do not re-run 037 or 038.
 
-[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38) adds four migrations. Run them in this order:
+[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38) adds four migrations. 039, 040, and 042 go in before the merge. 041 goes in after the production deploy is Ready, and only if the pre-check is clean. File order:
 
 1. `supabase/migrations/20261117000039_worker_leases.sql`
 2. `supabase/migrations/20261117000040_face_stats_insert_guard.sql`
@@ -41,7 +41,7 @@ Run 041 only after the read-only pre-check in the PR 38 body returns no rows. On
 
 ## In progress
 
-[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38), "Harden uploads and background work for a 150-guest burst", is a draft. Head at this note: `cbe662e`. It is waiting on the final Security and UX re-check. After that, Max merges and runs the migrations in the order above. Nothing in PR 38 has been applied to production. The pull request body has the pre-check SQL and the verification queries. Follow that body, not a summary.
+[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38), "Harden uploads and background work for a 150-guest burst", is ready for review and not merged. Head: `162825b`. Follow the merge steps in that pull request body, not this summary. In short: run 039, 040, and 042 in the SQL editor before merging. They are safe with the code on main. Then merge and wait for the Vercel production deploy to be Ready. Then run the 041 pre-check, and run 041 only if it returns zeros. Then run the verification queries. Nothing in PR 38 has been applied to production yet.
 
 Max's settings, as of 17 Nov:
 
