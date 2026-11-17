@@ -14,6 +14,8 @@ import {
   type PhotosOfYouGroup,
   type Suggestion,
 } from "@/lib/faces/queries";
+import { zipPartFileCounts } from "@/lib/media/zip-parts";
+import { yourPhotosZipItems } from "@/lib/media/zip-index";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -70,7 +72,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
   }
 
   const enrolled = state.profile?.status === "ready";
-  const [{ groups, total, hasMore }, suggestions, progress] = await Promise.all([
+  const [{ groups, total, hasMore }, suggestions, progress, zipItems] = await Promise.all([
     enrolled
       ? listPhotosOfYou(supabase, ctx.event.id)
       : Promise.resolve({ groups: [] as PhotosOfYouGroup[], total: 0, hasMore: false }),
@@ -78,7 +80,11 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
       ? listFaceSuggestions(supabase, ctx.event.id)
       : Promise.resolve({ items: [] as Suggestion[], total: 0 }),
     backfillProgress(ctx.event.id),
+    enrolled
+      ? yourPhotosZipItems(supabase, ctx.event.id, ctx.perms.manage_albums).catch(() => [])
+      : Promise.resolve([]),
   ]);
+  const zipParts = zipPartFileCounts(zipItems);
 
   const stillLooking = state.backfillRunning || progress.remaining > 0;
 
@@ -185,7 +191,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                     {stillLooking ? `, still looking through ${progress.remaining.toLocaleString("en-AU")} more` : ""}
                   </span>
                 </span>
-                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
+                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} partCounts={zipParts} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
               </section>
             ) : null}
 

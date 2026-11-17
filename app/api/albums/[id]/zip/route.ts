@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { PART_SIZE, safeFilename, UNAVAILABLE, zipError, zipResponse } from "@/lib/media/zip";
+import { albumZipItems, zipPartAt, type ZipSource } from "@/lib/media/zip-index";
+import { safeFilename, UNAVAILABLE, zipError, zipResponse } from "@/lib/media/zip";
 import { createClient } from "@/lib/supabase/server";
 
 // Pro's ceiling. A part of full quality photos and video is slow to stream on
@@ -21,7 +22,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
     .split(",")
     .map((value) => value.trim())
     .filter((value) => z.uuid().safeParse(value).success)
-    .slice(0, PART_SIZE);
+    .slice(0, 1000);
 
   const supabase = await createClient();
   const { data: album } = await supabase.from("albums").select("id, event_id, title, allow_download").eq("id", id).maybeSingle();
@@ -33,16 +34,26 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
     return zipError(request, "Downloads are turned off for this album", 403);
   }
 
-  let query = supabase
-    .from("media")
-    .select("id, storage_path, original_filename, sort_at, backed_up_at")
-    .eq("album_id", album.id)
-    .eq("status", "ready")
-    .order("sort_at", { ascending: true })
-    .order("id", { ascending: true });
-  query = only.length ? query.in("id", only) : query.range(part * PART_SIZE, (part + 1) * PART_SIZE - 1);
-  const { data: media } = await query;
-  if (!media?.length) return zipError(request, "Nothing to download", 404);
+  let items: (ZipSource & { byteSize: number | null })[];
+  if (only.length) {
+    const { data, error } = await supabase
+      .from("media")
+      .select("id, storage_path, original_filename, backed_up_at, byte_size")
+      .eq("album_id", album.id)
+      .eq("status", "ready")
+      .in("id", only);
+    if (error) return zipError(request, "Could not load this album", 500);
+    const byId = new Map((data ?? []).map((row) => [row.id, { ...row, byteSize: row.byte_size }]));
+    items = only.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [row] : [];
+    });
+  } else {
+    items = await albumZipItems(supabase, album.id);
+  }
+  // 150 files or ~500 MB, whichever comes first, so a part finishes inside the function limit.
+  const media = zipPartAt(items, part);
+  if (!media.length) return zipError(request, "Nothing to download", 404);
 
   await logAccess(event, null, "zip");
 
