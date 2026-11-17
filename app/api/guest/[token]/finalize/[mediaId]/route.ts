@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eventFacesEnabled } from "@/lib/faces/collections";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { recordGuestUpload, resolveGuestLink } from "@/lib/guest/links";
+import { kickVideoPreviews } from "@/lib/media/video-previews";
 import { derivativePaths, folderObjects } from "@/lib/storage";
 import { kickPlanNotices } from "@/lib/billing/notices";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -29,7 +30,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   // The link may only finish files it started: the guest_link_id is the check.
   const { data: media } = await admin
     .from("media")
-    .select("id, event_id, storage_path, byte_size, guest_link_id, status")
+    .select("id, event_id, storage_path, byte_size, guest_link_id, status, kind, poster_path, duration_seconds")
     .eq("id", mediaId)
     .eq("guest_link_id", session.linkId)
     .maybeSingle();
@@ -42,6 +43,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   }
 
   if (media.status === "ready") {
+    if (media.kind === "video" && (!media.poster_path || media.duration_seconds == null)) kickVideoPreviews();
     await indexFaces(media.event_id, mediaId);
     return NextResponse.json({ ok: true });
   }
@@ -82,6 +84,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   await recordGuestUpload(session.linkId, byteSize);
   // The R2 copy waits for the hourly backup drain. See the member finalize route.
   kickPlanNotices(media.event_id);
+  if (media.kind === "video" && (!objects.has("poster.jpg") || parsed.data.durationSeconds == null)) kickVideoPreviews();
   await indexFaces(media.event_id, mediaId);
 
   return NextResponse.json({ ok: true });

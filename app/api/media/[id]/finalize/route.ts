@@ -7,6 +7,7 @@ import { mediaUnits } from "@/lib/billing/plans";
 import { PHOTOS_FULL } from "@/lib/billing/usage";
 import { formatDuration } from "@/lib/format";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
+import { kickVideoPreviews } from "@/lib/media/video-previews";
 import { derivativePaths, folderObjects } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -44,6 +45,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   // Already finished (the response was lost, so the browser tried again).
   // Face enqueue is idempotent; the other side effects already ran.
   if (media.status === "ready") {
+    if (media.kind === "video" && (!media.poster_path || media.duration_seconds == null)) kickVideoPreviews();
     await indexFaces(media.event_id, id);
     return NextResponse.json({ ok: true });
   }
@@ -94,6 +96,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   // The R2 copy waits for the hourly backup drain (a ready row with no
   // backed_up_at). Doing it here streamed the original inside this request.
   kickPlanNotices(media.event_id);
+  if (media.kind === "video" && (!objects.has("poster.jpg") || durationSeconds == null)) kickVideoPreviews();
   await indexFaces(media.event_id, id);
 
   return NextResponse.json({ ok: true });
