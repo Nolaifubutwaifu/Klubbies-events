@@ -31,6 +31,11 @@ import {
 
 let cached: { config: R2Config; client: S3Client } | null | undefined;
 
+/** Signed URLs must not land in backup_error or the logs. */
+export function redactSecrets(text: string): string {
+  return text.replace(/https?:\/\/\S+/gi, "[url]").replace(/[?&]token=[^&\s]+/gi, "[token]");
+}
+
 function r2(): { config: R2Config; client: S3Client } | null {
   if (cached === undefined) {
     const config = r2ConfigFrom(process.env);
@@ -70,7 +75,7 @@ async function copyPath(path: string): Promise<void> {
   const target = r2();
   if (!target) return;
   const { data, error } = await createAdminClient().storage.from(BUCKET).createSignedUrl(path, 15 * 60);
-  if (error || !data) throw new Error(`could not sign ${path}: ${error?.message ?? "no url"}`);
+  if (error || !data) throw new Error(`could not sign ${path}: sign_failed`);
   await streamUrlToR2(target.client, target.config, data.signedUrl, path);
 }
 
@@ -89,13 +94,13 @@ export async function backupMedia(item: MediaFiles): Promise<boolean> {
       .from("media")
       .update({
         backup_attempts: attempts,
-        backup_error: String(error instanceof Error ? error.message : error).slice(0, 500),
+        backup_error: redactSecrets(error instanceof Error ? error.message : String(error)).slice(0, 500),
         // A big file that keeps failing inside a web request is handed to
         // `pnpm backup-drain`, which has no time limit.
         backup_deferred_at: big && attempts >= 2 ? new Date().toISOString() : null,
       })
       .eq("id", item.id);
-    console.error("backup failed", item.id, error);
+    console.error("backup failed", item.id, redactSecrets(error instanceof Error ? error.message : String(error)));
     return false;
   }
 }
@@ -155,7 +160,7 @@ export async function runBackupDrain(budgetMs: number): Promise<BackupDrainResul
         if (markError) throw markError;
         result.logos += 1;
       } catch (error) {
-        console.error("logo backup failed", event.id, error);
+        console.error("logo backup failed", event.id, redactSecrets(error instanceof Error ? error.message : String(error)));
         result.failed += 1;
       }
     }
