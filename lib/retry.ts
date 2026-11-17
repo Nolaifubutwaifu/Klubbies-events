@@ -61,24 +61,38 @@ export function emailDelayMs(retryIndex: number, random: () => number = Math.ran
 }
 
 /** POST JSON, retrying network errors, 5xx and 544. A 4xx response is returned as-is. */
-export function postJson(url: string, body: unknown): Promise<Response> {
-  return withBackoff(async () => {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok && (res.status === 544 || res.status >= 500)) {
-      throw Object.assign(new Error(`${res.status}`), { status: res.status });
-    }
-    return res;
-  }, isUploadRetryable);
+export function postJson(
+  url: string,
+  body: unknown,
+  onRetry?: (nextAttempt: number, attempts: number) => void,
+): Promise<Response> {
+  return withBackoff(
+    async () => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok && (res.status === 544 || res.status >= 500)) {
+        throw Object.assign(new Error(`${res.status}`), { status: res.status });
+      }
+      return res;
+    },
+    isUploadRetryable,
+    { onRetry },
+  );
 }
 
 export async function withBackoff<T>(
   run: () => Promise<T>,
   shouldRetry: (error: unknown) => boolean,
-  opts?: { attempts?: number; delayMs?: (retryIndex: number) => number; sleep?: (ms: number) => Promise<void> },
+  opts?: {
+    attempts?: number;
+    delayMs?: (retryIndex: number) => number;
+    sleep?: (ms: number) => Promise<void>;
+    /** nextAttempt is 2 on the first retry: "Trying again (2 of 4)". */
+    onRetry?: (nextAttempt: number, attempts: number) => void;
+  },
 ): Promise<T> {
   const attempts = opts?.attempts ?? RETRY_ATTEMPTS;
   const delayMs = opts?.delayMs ?? exponentialDelayMs;
@@ -90,6 +104,7 @@ export async function withBackoff<T>(
     } catch (error) {
       last = error;
       if (attempt === attempts - 1 || !shouldRetry(error)) throw error;
+      opts?.onRetry?.(attempt + 2, attempts);
       await wait(delayMs(attempt));
     }
   }

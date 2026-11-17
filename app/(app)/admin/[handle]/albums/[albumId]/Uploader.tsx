@@ -56,7 +56,9 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
             ? "Waiting"
             : job.status === "preparing"
               ? "Preparing"
-              : "Finishing";
+              : job.status === "retrying"
+                ? `Trying again (${job.retryAttempt ?? 2} of ${job.retryOf ?? 4})`
+                : "Finishing";
 
   // One centred column: the choose button first, then progress and the files.
   // It used to be two stretched columns with a square grey bar and shouted

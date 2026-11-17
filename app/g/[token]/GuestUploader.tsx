@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
 import { ACCEPT_ATTRIBUTE } from "@/lib/media/constants";
 import { EMPTY_GUEST_SNAPSHOT, GuestUploadQueue } from "@/lib/media/guest-queue";
 
@@ -25,6 +25,13 @@ export function GuestUploader({ token }: { token: string }) {
   const failed = jobs.filter((j) => j.status === "failed");
   const busy = jobs.some((j) => j.status !== "done" && j.status !== "failed");
   const pct = jobs.length ? Math.floor((jobs.reduce((sum, j) => sum + j.progress, 0) / jobs.length) * 100) : 0;
+
+  useEffect(() => {
+    if (!busy) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy]);
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -91,6 +98,7 @@ export function GuestUploader({ token }: { token: string }) {
             <span className="num text-[14px] text-[color:var(--kb-ink-2)]" role="status">
               {pct}%{failed.length ? ` · ${failed.length} failed` : ""}
             </span>
+            {busy ? <span className="basis-full text-[14px] text-[color:var(--kb-ink-3)]">Keep this tab open. You can move around the app.</span> : null}
           </div>
           <div
             className="h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]"
@@ -118,7 +126,13 @@ export function GuestUploader({ token }: { token: string }) {
                     <span
                       className={`flex-none ${job.status === "done" ? "font-semibold text-[color:var(--kb-ok)]" : job.status === "failed" ? "font-semibold text-[color:var(--kb-warn)]" : "text-[color:var(--kb-ink-2)]"}`}
                     >
-                      {job.status === "done" ? "Done" : job.status === "failed" ? "Failed" : `${Math.floor(job.progress * 100)}%`}
+                      {job.status === "done"
+                        ? "Done"
+                        : job.status === "failed"
+                          ? "Failed"
+                          : job.status === "retrying"
+                            ? `Trying again (${job.retryAttempt ?? 2} of ${job.retryOf ?? 4})`
+                            : `${Math.floor(job.progress * 100)}%`}
                     </span>
                   </span>
                   {job.status === "failed" ? (

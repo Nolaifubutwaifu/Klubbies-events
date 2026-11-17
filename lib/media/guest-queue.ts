@@ -11,7 +11,7 @@ import { supabaseUrl } from "@/lib/supabase/config";
 // the browser PUTs straight to storage. Like the member queue it runs two
 // lanes: a few files prepared ahead while up to six upload.
 
-export type GuestJobStatus = "queued" | "preparing" | "uploading" | "finishing" | "done" | "failed";
+export type GuestJobStatus = "queued" | "preparing" | "uploading" | "retrying" | "finishing" | "done" | "failed";
 
 export type GuestJobView = Readonly<{
   key: string;
@@ -21,6 +21,8 @@ export type GuestJobView = Readonly<{
   progress: number;
   error?: string;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
 }>;
 
 type Signed = { path: string; token: string };
@@ -45,6 +47,8 @@ type Job = {
   progress: number;
   error?: string;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
   prepared?: Prepared;
   hash?: string | null;
   ticket?: Ticket;
@@ -136,6 +140,8 @@ export class GuestUploadQueue {
       progress: j.progress,
       error: j.error,
       previewUrl: j.previewUrl,
+      retryAttempt: j.retryAttempt,
+      retryOf: j.retryOf,
     }));
     for (const listener of this.listeners) listener();
   }
@@ -150,6 +156,12 @@ export class GuestUploadQueue {
   private patch(job: Job, changes: Partial<Job>) {
     Object.assign(job, changes);
     this.emit();
+  }
+
+  private onRetry(job: Job) {
+    return (nextAttempt: number, attempts: number) => {
+      this.patch(job, { status: "retrying", retryAttempt: nextAttempt, retryOf: attempts });
+    };
   }
 
   private isVideo(job: Job) {
@@ -251,12 +263,16 @@ export class GuestUploadQueue {
 
   /** A fresh ticket, including signed URLs. "duplicate" means the album already has the file. */
   private async requestTicket(job: Job): Promise<Ticket | "duplicate"> {
-    const res = await postJson(`/api/guest/${encodeURIComponent(this.token)}/ticket`, {
-      filename: job.file.name,
-      mimeType: job.mimeType,
-      byteSize: job.file.size,
-      contentHash: job.hash,
-    });
+    const res = await postJson(
+      `/api/guest/${encodeURIComponent(this.token)}/ticket`,
+      {
+        filename: job.file.name,
+        mimeType: job.mimeType,
+        byteSize: job.file.size,
+        contentHash: job.hash,
+      },
+      this.onRetry(job),
+    );
     const body: Ticket & { error?: string; full?: boolean } = await res.json();
     if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
     if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
@@ -284,6 +300,7 @@ export class GuestUploadQueue {
         await withBackoff(
           () => this.putSigned(job, original, job.file, ticket.mimeType, 0.85, 0),
           isUploadRetryable,
+          { onRetry: this.onRetry(job) },
         );
         this.patch(job, { originalDone: true, progress: 0.85 });
       }
@@ -308,15 +325,20 @@ export class GuestUploadQueue {
         await withBackoff(
           () => this.putSigned(job, signed, blob, blob.type || "image/webp", 0.05, job.progress),
           isUploadRetryable,
+          { onRetry: this.onRetry(job) },
         );
       }
 
-      const res = await postJson(`/api/guest/${encodeURIComponent(this.token)}/finalize/${ticket.mediaId}`, {
-        width: prepared.width,
-        height: prepared.height,
-        durationSeconds: prepared.durationSeconds,
-        capturedAt: prepared.capturedAt,
-      });
+      const res = await postJson(
+        `/api/guest/${encodeURIComponent(this.token)}/finalize/${ticket.mediaId}`,
+        {
+          width: prepared.width,
+          height: prepared.height,
+          durationSeconds: prepared.durationSeconds,
+          capturedAt: prepared.capturedAt,
+        },
+        this.onRetry(job),
+      );
       if (!res.ok) {
         const body: { error?: string } = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Could not finish the upload");

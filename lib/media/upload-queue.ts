@@ -29,7 +29,7 @@ type Ticket = {
   signed?: Record<string, { signedUrl: string }>;
 };
 
-export type JobStatus = "queued" | "preparing" | "uploading" | "finishing" | "done" | "failed";
+export type JobStatus = "queued" | "preparing" | "uploading" | "retrying" | "finishing" | "done" | "failed";
 
 type Job = {
   key: string;
@@ -40,6 +40,8 @@ type Job = {
   error?: string;
   note?: string;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
   prepared?: Prepared;
   hash?: string | null;
   ticket?: Ticket;
@@ -57,6 +59,8 @@ export type JobView = Readonly<{
   /** Set when a file was skipped rather than uploaded, and why. */
   note?: string;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
 }>;
 
 /** Files uploading at once. */
@@ -162,6 +166,8 @@ export class UploadQueue {
       error: j.error,
       note: j.note,
       previewUrl: j.previewUrl,
+      retryAttempt: j.retryAttempt,
+      retryOf: j.retryOf,
     }));
     for (const listener of this.listeners) listener();
   }
@@ -176,6 +182,12 @@ export class UploadQueue {
   private patch(job: Job, changes: Partial<Job>) {
     Object.assign(job, changes);
     this.emit();
+  }
+
+  private onRetry(job: Job) {
+    return (nextAttempt: number, attempts: number) => {
+      this.patch(job, { status: "retrying", retryAttempt: nextAttempt, retryOf: attempts });
+    };
   }
 
   private isVideo(job: Job) {
@@ -278,13 +290,17 @@ export class UploadQueue {
 
   /** A fresh ticket, including signed derivative URLs. "duplicate" means the album already has the file. */
   private async requestTicket(job: Job): Promise<Ticket | "duplicate"> {
-    const res = await postJson("/api/media/upload_ticket", {
-      albumId: this.albumId,
-      filename: job.file.name,
-      mimeType: job.mimeType,
-      byteSize: job.file.size,
-      contentHash: job.hash,
-    });
+    const res = await postJson(
+      "/api/media/upload_ticket",
+      {
+        albumId: this.albumId,
+        filename: job.file.name,
+        mimeType: job.mimeType,
+        byteSize: job.file.size,
+        contentHash: job.hash,
+      },
+      this.onRetry(job),
+    );
     const body: Ticket & { error?: string; full?: boolean } = await res.json();
     if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
     if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
@@ -342,15 +358,19 @@ export class UploadQueue {
             contentType: blob.type || "image/webp",
           });
           if (error) throw error;
-        }, isUploadRetryable);
+        }, isUploadRetryable, { onRetry: this.onRetry(job) });
       }
 
-      const res = await postJson(`/api/media/${ticket.mediaId}/finalize`, {
-        width: prepared.width,
-        height: prepared.height,
-        durationSeconds: prepared.durationSeconds,
-        capturedAt: prepared.capturedAt,
-      });
+      const res = await postJson(
+        `/api/media/${ticket.mediaId}/finalize`,
+        {
+          width: prepared.width,
+          height: prepared.height,
+          durationSeconds: prepared.durationSeconds,
+          capturedAt: prepared.capturedAt,
+        },
+        this.onRetry(job),
+      );
       if (!res.ok) {
         const body: { error?: string } = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Could not finish the upload");
