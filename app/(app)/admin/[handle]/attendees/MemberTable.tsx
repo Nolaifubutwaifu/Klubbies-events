@@ -155,7 +155,7 @@ export function MemberTable({
           {canManageRoles ? (
             <>
               <select
-                className="input max-w-[200px] text-[14px]"
+                className="input max-w-[200px] text-[16px]"
                 value={roleTarget}
                 onChange={(e) => setRoleTarget(e.target.value)}
                 aria-label="Change role"
@@ -260,7 +260,7 @@ export function MemberTable({
                 <td>
                   {canManageRoles && member.userId !== currentUserId && member.status !== "revoked" ? (
                     <select
-                      className="input !min-h-[38px] max-w-[132px] !py-1 text-[14px] md:max-w-[170px]"
+                      className="input !min-h-[38px] max-w-[132px] !py-1 text-[16px] md:max-w-[170px]"
                       value={member.roleId ?? ""}
                       disabled={pending}
                       aria-label={`Role for ${member.name}`}

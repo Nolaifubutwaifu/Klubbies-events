@@ -118,7 +118,7 @@ export function SettingsForm({
               aria-label="Pick a custom colour"
             />
             <input
-              className="input mono w-[112px] text-[14px]"
+              className="input mono w-[112px] text-[16px]"
               value={accent}
               onChange={(e) => setAccent(e.target.value.startsWith("#") ? e.target.value : `#${e.target.value}`)}
               pattern="#[0-9a-fA-F]{6}"

@@ -179,7 +179,7 @@ export function RosterImport({ eventId }: { eventId: string }) {
       <Dialog open={pasteOpen} onClose={() => setPasteOpen(false)} title="Paste a guest list">
         <p className="text-[14px] text-[color:var(--ink-70)]">One person per line: name and email, in any format.</p>
         <textarea
-          className="input font-mono text-[14px]"
+          className="input font-mono text-[16px]"
           rows={10}
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
