@@ -2,6 +2,7 @@ import { Upload } from "tus-js-client";
 import { contentHash } from "@/lib/media/content-hash";
 import { UPLOAD_MAX_BYTES, VIDEO_TOO_BIG, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
+import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseUrl } from "@/lib/supabase/config";
 
@@ -276,16 +277,12 @@ export class UploadQueue {
       this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        const res = await fetch("/api/media/upload_ticket", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            albumId: this.albumId,
-            filename: job.file.name,
-            mimeType: job.mimeType,
-            byteSize: job.file.size,
-            contentHash: job.hash,
-          }),
+        const res = await postJson("/api/media/upload_ticket", {
+          albumId: this.albumId,
+          filename: job.file.name,
+          mimeType: job.mimeType,
+          byteSize: job.file.size,
+          contentHash: job.hash,
         });
         const body: Ticket & { error?: string; full?: boolean } = await res.json();
         if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
@@ -312,19 +309,17 @@ export class UploadQueue {
       ];
       for (const [path, blob] of derivatives) {
         if (!blob) continue;
-        const { error } = await storage.upload(path, blob, { upsert: true, contentType: blob.type || "image/webp" });
-        if (error) throw error;
+        await withBackoff(async () => {
+          const { error } = await storage.upload(path, blob, { upsert: true, contentType: blob.type || "image/webp" });
+          if (error) throw error;
+        }, isUploadRetryable);
       }
 
-      const res = await fetch(`/api/media/${ticket.mediaId}/finalize`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          width: prepared.width,
-          height: prepared.height,
-          durationSeconds: prepared.durationSeconds,
-          capturedAt: prepared.capturedAt,
-        }),
+      const res = await postJson(`/api/media/${ticket.mediaId}/finalize`, {
+        width: prepared.width,
+        height: prepared.height,
+        durationSeconds: prepared.durationSeconds,
+        capturedAt: prepared.capturedAt,
       });
       if (!res.ok) {
         const body: { error?: string } = await res.json().catch(() => ({}));

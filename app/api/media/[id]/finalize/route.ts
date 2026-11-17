@@ -36,7 +36,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   }
 
   if (parsed.data.failed) {
-    await supabase.from("media").update({ status: "failed" }).eq("id", id);
+    // A lost response can make the browser report failure after this file
+    // already landed. Don't take a finished photo back out of the album.
+    await supabase.from("media").update({ status: "failed" }).eq("id", id).neq("status", "ready");
+    return NextResponse.json({ ok: true });
+  }
+
+  // Already finished (the response was lost, so the browser tried again).
+  // Face enqueue is idempotent; the other side effects already ran.
+  if (media.status === "ready") {
+    await indexFaces(media.event_id, id);
     return NextResponse.json({ ok: true });
   }
 
@@ -49,7 +58,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
 
   const paths = derivativePaths(folder);
   const { width, height, durationSeconds, capturedAt } = parsed.data;
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("media")
     .update({
       status: "ready",
@@ -62,10 +71,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
       display_path: objects.has("display.webp") ? paths.display : null,
       poster_path: objects.has("poster.jpg") ? paths.poster : null,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .neq("status", "ready")
+    .select("id");
   if (error?.code === PHOTOS_FULL) {
     // The real length came in over what's left of the allowance (migration 34).
-    await supabase.from("media").update({ status: "failed" }).eq("id", id);
+    await supabase.from("media").update({ status: "failed" }).eq("id", id).neq("status", "ready");
     const length = durationSeconds ? formatDuration(durationSeconds) : "this video";
     return NextResponse.json(
       {
@@ -75,23 +86,34 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
     );
   }
   if (error) return NextResponse.json({ error: "Could not finish the upload" }, { status: 500 });
+  // A parallel retry already finished this row. Don't kick the side effects twice.
+  if (!updated?.length) {
+    await indexFaces(media.event_id, id);
+    return NextResponse.json({ ok: true });
+  }
 
   // The second copy in R2, once the response has gone.
   kickBackup(id);
   kickPlanNotices(media.event_id);
+  await indexFaces(media.event_id, id);
 
-  // Face recognition, when the event has turned it on. Wrapped so it can never
-  // fail the upload: a missing face job is a nuisance, a failed upload is not.
-  // The drain is kicked here rather than left to the hourly cron, or "Photos of
-  // you" would lag by up to an hour and read as broken.
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * Face recognition, when the event has turned it on. A missing face job is a
+ * nuisance, a failed upload is not. The insert is unique per photo, so a
+ * retry that lost the first response does not queue a second job. The drain
+ * is kicked here rather than left to the hourly cron, or "Photos of you"
+ * would lag by up to an hour and read as broken.
+ */
+async function indexFaces(eventId: string, mediaId: string): Promise<void> {
   try {
-    if (await eventFacesEnabled(media.event_id)) {
-      await enqueueMediaJob(media.event_id, id);
+    if (await eventFacesEnabled(eventId)) {
+      await enqueueMediaJob(eventId, mediaId);
       kickFaceJobs();
     }
   } catch (faceError) {
-    console.error("could not queue face indexing", id, faceError);
+    console.error("could not queue face indexing", mediaId, faceError);
   }
-
-  return NextResponse.json({ ok: true });
 }

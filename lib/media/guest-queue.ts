@@ -1,6 +1,7 @@
 import { contentHash } from "@/lib/media/content-hash";
 import { UPLOAD_MAX_BYTES, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
+import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { supabaseUrl } from "@/lib/supabase/config";
 
 // The guest version of the upload queue. Same shape as the member one, minus
@@ -196,8 +197,8 @@ export class GuestUploadQueue {
       request.onload = () =>
         request.status >= 200 && request.status < 300
           ? resolve()
-          : reject(new Error(`${request.status} ${request.responseText.slice(0, 120)}`));
-      request.onerror = () => reject(new Error("network"));
+          : reject(Object.assign(new Error(`${request.status} ${request.responseText.slice(0, 120)}`), { status: request.status }));
+      request.onerror = () => reject(Object.assign(new Error("network"), { status: 0 }));
       request.send(blob);
     });
   }
@@ -227,15 +228,11 @@ export class GuestUploadQueue {
       this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        const res = await fetch(`/api/guest/${encodeURIComponent(this.token)}/ticket`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            filename: job.file.name,
-            mimeType: job.mimeType,
-            byteSize: job.file.size,
-            contentHash: job.hash,
-          }),
+        const res = await postJson(`/api/guest/${encodeURIComponent(this.token)}/ticket`, {
+          filename: job.file.name,
+          mimeType: job.mimeType,
+          byteSize: job.file.size,
+          contentHash: job.hash,
         });
         const body: Ticket & { error?: string; full?: boolean } = await res.json();
         if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
@@ -259,18 +256,18 @@ export class GuestUploadQueue {
       ];
       for (const [path, blob] of derivatives) {
         if (!blob) continue;
-        await this.putSigned(job, ticket.signed[path], blob, blob.type || "image/webp", 0.05, job.progress);
+        const signed = ticket.signed[path];
+        await withBackoff(
+          () => this.putSigned(job, signed, blob, blob.type || "image/webp", 0.05, job.progress),
+          isUploadRetryable,
+        );
       }
 
-      const res = await fetch(`/api/guest/${encodeURIComponent(this.token)}/finalize/${ticket.mediaId}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          width: prepared.width,
-          height: prepared.height,
-          durationSeconds: prepared.durationSeconds,
-          capturedAt: prepared.capturedAt,
-        }),
+      const res = await postJson(`/api/guest/${encodeURIComponent(this.token)}/finalize/${ticket.mediaId}`, {
+        width: prepared.width,
+        height: prepared.height,
+        durationSeconds: prepared.durationSeconds,
+        capturedAt: prepared.capturedAt,
       });
       if (!res.ok) {
         const body: { error?: string } = await res.json().catch(() => ({}));

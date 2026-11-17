@@ -30,14 +30,20 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   // The link may only finish files it started: the guest_link_id is the check.
   const { data: media } = await admin
     .from("media")
-    .select("id, event_id, storage_path, byte_size, guest_link_id")
+    .select("id, event_id, storage_path, byte_size, guest_link_id, status")
     .eq("id", mediaId)
     .eq("guest_link_id", session.linkId)
     .maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (parsed.data.failed) {
-    await admin.from("media").update({ status: "failed" }).eq("id", mediaId);
+    // A lost response can report failure after the file already landed.
+    await admin.from("media").update({ status: "failed" }).eq("id", mediaId).neq("status", "ready");
+    return NextResponse.json({ ok: true });
+  }
+
+  if (media.status === "ready") {
+    await indexFaces(media.event_id, mediaId);
     return NextResponse.json({ ok: true });
   }
 
@@ -50,7 +56,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
 
   const paths = derivativePaths(folder);
   const byteSize = objects.get(originalName) || media.byte_size || 0;
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("media")
     .update({
       status: "ready",
@@ -63,26 +69,33 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
       display_path: objects.has("display.webp") ? paths.display : null,
       poster_path: objects.has("poster.jpg") ? paths.poster : null,
     })
-    .eq("id", mediaId);
+    .eq("id", mediaId)
+    .neq("status", "ready")
+    .select("id");
   if (error) return NextResponse.json({ error: "Could not finish the upload" }, { status: 500 });
+  // A parallel retry already finished the row. Counting it again would inflate
+  // the guest link's tally. Face enqueue below is safe to repeat.
+  if (!updated?.length) {
+    await indexFaces(media.event_id, mediaId);
+    return NextResponse.json({ ok: true });
+  }
 
   await recordGuestUpload(session.linkId, byteSize);
   // The second copy in R2, once the response has gone.
   kickBackup(mediaId);
   kickPlanNotices(media.event_id);
+  await indexFaces(media.event_id, mediaId);
 
-  // Face recognition, when the event has turned it on. Wrapped so it can never
-  // fail the upload: a missing face job is a nuisance, a failed upload is not.
-  // The drain is kicked here rather than left to the hourly cron, or "Photos of
-  // you" would lag by up to an hour and read as broken.
+  return NextResponse.json({ ok: true });
+}
+
+async function indexFaces(eventId: string, mediaId: string): Promise<void> {
   try {
-    if (await eventFacesEnabled(media.event_id)) {
-      await enqueueMediaJob(media.event_id, mediaId);
+    if (await eventFacesEnabled(eventId)) {
+      await enqueueMediaJob(eventId, mediaId);
       kickFaceJobs();
     }
   } catch (faceError) {
     console.error("could not queue face indexing", mediaId, faceError);
   }
-
-  return NextResponse.json({ ok: true });
 }
