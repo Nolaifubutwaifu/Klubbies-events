@@ -24,7 +24,8 @@ export async function POST(request: Request) {
   }
 
   const result = await verifyCode(email, parsed.data.code, parsed.data.event);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  // 503 tells the code screen to keep the digits: the same code still works.
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.busy ? 503 : 400 });
 
   cookieStore.delete(SIGNIN_COOKIE);
   // A page that sent them here to sign in wins, except for a new organiser,

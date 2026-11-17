@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withAuthRetry } from "@/lib/auth/auth-busy";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
@@ -15,6 +16,7 @@ const schema = z.object({
 });
 
 const GENERIC = "That email and password don't match. Try a code instead.";
+const AUTH_BUSY_PASSWORD = "Lots of people are signing in right now. Wait a few seconds and try again.";
 
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
@@ -26,7 +28,11 @@ export async function POST(request: Request) {
   const email = normaliseEmail(parsed.data.email);
   if (await hitRateLimit(LIMITS.passwordPerEmail, email)) return NextResponse.json({ error: RATE_LIMITED }, { status: 429 });
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
+  const { data, error, busy } = await withAuthRetry(() => supabase.auth.signInWithPassword({ email, password: parsed.data.password }));
+  if (busy) {
+    console.warn("password_signin: Supabase Auth still rate limited after retries");
+    return NextResponse.json({ error: AUTH_BUSY_PASSWORD }, { status: 503 });
+  }
   if (error || !data.user) return NextResponse.json({ error: GENERIC }, { status: 400 });
 
   // Where to land: a single event goes straight in, otherwise the event list.
