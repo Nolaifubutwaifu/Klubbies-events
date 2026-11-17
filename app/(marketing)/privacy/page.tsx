@@ -71,7 +71,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "The iPhone app",
-    "The app shows the same Klubbies Events as the website and stores the same things. It uses the camera only when you take a selfie or scan an event's QR code, and it asks for permission to add to your photo library only when you tap Save to Photos, so it can never read your library. If you turn on notifications, we store a device token from Apple against your account so we can tell your phone about new albums; it is deleted when you delete your account, and when you remove the app we delete it the next time Apple tells us it no longer works. The app has no advertising, no tracking and no analytics tools.",
+    "The app shows the same Klubbies Events as the website and stores the same things. It uses the camera only when you take a selfie or scan an event's QR code, and it asks for permission to add to your photo library only when you tap Save to Photos, so it can never read your library. If you turn on notifications, we store a device token from Apple against your account so we can tell your phone about new albums; it is deleted when you delete your account, and when you remove the app we delete it the next time Apple tells us it no longer works. The app does not ship its own advertising or analytics SDK. If Google ads measurement is switched on, it can run when a marketing page or an organiser page is opened inside the app, and it does not run on guest photo pages.",
   ],
   [
     "Deleting your account",
@@ -83,16 +83,49 @@ const SECTIONS: [string, string][] = [
   ],
 ];
 
+const GOOGLE_ADS_TEXT =
+  "If Google ads measurement is switched on, we load Google's tag when you look at our public pages or an organiser page (creating an event, setting it up, or managing it). Google may set a cookie and receive the page address, roughly when it was opened, and the ad click identifiers and campaign fields that were in the link you opened (such as gclid, gbraid, wbraid, and utm_source). If you then create a Klubbies account or create an event, we send Google one conversion for that action so we can tell which ad led there. We do not load this tag on pages a guest uses: an event gallery, a photo, an album, the join door, or a link opened from a QR code or a share link. We do not send Google photos, guest lists, or face data. You can review or turn off personalised ads in Google's ad settings. Google explains how it uses data from sites that use its services, and how its advertising cookies work.";
+
 export default function PrivacyPage() {
-  const words = SECTIONS.reduce((sum, [title, body]) => sum + `${title} ${body}`.split(/\s+/).length, 0);
+  const words =
+    SECTIONS.reduce((sum, [title, body]) => sum + `${title} ${body}`.split(/\s+/).length, 0) +
+    `Google ads ${GOOGLE_ADS_TEXT}`.split(/\s+/).length;
+  const sections = SECTIONS.map(([title, body]) => ({ title, body: <p>{body}</p> }));
+  const foundUs = sections.findIndex((section) => section.title === "How organisers found us");
+  sections.splice(foundUs + 1, 0, {
+    title: "Google ads",
+    body: (
+      <p>
+        If Google ads measurement is switched on, we load Google&apos;s tag when you look at our public pages or an
+        organiser page (creating an event, setting it up, or managing it). Google may set a cookie and receive the page
+        address, roughly when it was opened, and the ad click identifiers and campaign fields that were in the link you
+        opened (such as gclid, gbraid, wbraid, and utm_source). If you then create a Klubbies account or create an event,
+        we send Google one conversion for that action so we can tell which ad led there. We do not load this tag on pages
+        a guest uses: an event gallery, a photo, an album, the join door, or a link opened from a QR code or a share
+        link. We do not send Google photos, guest lists, or face data. You can review or turn off personalised ads in{" "}
+        <a href="https://adssettings.google.com" rel="noopener noreferrer">
+          Google&apos;s ad settings
+        </a>
+        . Google explains{" "}
+        <a href="https://policies.google.com/privacy" rel="noopener noreferrer">
+          how it uses data from sites that use its services
+        </a>
+        , and{" "}
+        <a href="https://policies.google.com/technologies/ads" rel="noopener noreferrer">
+          how its advertising cookies work
+        </a>
+        .
+      </p>
+    ),
+  });
   return (
     <LegalPage
       doc="privacy"
       title="Privacy at Klubbies Events"
       summary="In short: only people the organiser lets in see an event's photos, face search is your choice, and photos, attendee details and faceprints are stored in Sydney."
-      updated="27 September 2026"
+      updated="1 November 2026"
       minutes={Math.max(1, Math.round(words / 220))}
-      sections={SECTIONS.map(([title, body]) => ({ title, body: <p>{body}</p> }))}
+      sections={sections}
     />
   );
 }

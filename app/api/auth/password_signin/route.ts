@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { ADS_COOKIE, decorateAdsRedirect } from "@/lib/ads";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
 import { clientFingerprint } from "@/lib/auth/request";
@@ -44,12 +45,14 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
   cookieStore.delete(NEXT_COOKIE);
-  const redirectTo = next
+  const landing = next
     ? next
     : wanted
-    ? `/e/${wanted}`
-    : accepted.length === 1
+      ? `/e/${wanted}`
+      : accepted.length === 1
         ? `/e/${accepted[0].events.handle}`
         : "/events";
+  // Click ids ride along only to organiser pages. A guest landing on /e stays bare.
+  const redirectTo = decorateAdsRedirect(landing, cookieStore.get(ADS_COOKIE)?.value);
   return NextResponse.json({ ok: true, redirectTo });
 }

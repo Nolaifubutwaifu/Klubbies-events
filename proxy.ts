@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ADS_ATTR_MAX_AGE, ADS_COOKIE, ADS_HEADER, adsCookieOptions, adsForRequest } from "@/lib/ads";
 import { SOURCE_COOKIE, SOURCE_TAG } from "@/lib/attribution";
 import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, safeNextPath } from "@/lib/auth/next-path";
 import { buildCsp, permissionsPolicy, reportingEndpoints } from "@/lib/security/csp";
@@ -45,6 +46,14 @@ export async function proxy(request: NextRequest) {
   const csp = buildCsp(nonce);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  // Validated click ids for this render. A caller-supplied header is replaced.
+  const ads = adsForRequest({
+    pathname: request.nextUrl.pathname,
+    searchParams: request.nextUrl.searchParams,
+    cookie: request.cookies.get(ADS_COOKIE)?.value,
+  });
+  if (ads.header) requestHeaders.set(ADS_HEADER, ads.header);
+  else requestHeaders.delete(ADS_HEADER);
   // Next reads the nonce from Content-Security-Policy, then from this
   // Report-Only header (app-render parseRequestHeaders).
   requestHeaders.set(CSP_HEADER, csp);
@@ -77,13 +86,33 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     url.search = "";
-    return secure(rememberSource(request, remember(NextResponse.redirect(url), here)), csp, pathname);
+    return finish(remember(NextResponse.redirect(url), here), request, csp, pathname);
   }
   if (!data?.claims && navigating && EVENT_DEEP.test(pathname)) remember(response, here);
   // requireUser() sends people to /signin?next=…
   if (pathname === "/signin") remember(response, request.nextUrl.searchParams.get("next"));
 
-  return secure(rememberSource(request, response), csp, pathname);
+  return finish(response, request, csp, pathname);
+}
+
+function finish(response: NextResponse, request: NextRequest, csp: string, pathname: string): NextResponse {
+  return secure(rememberAds(request, rememberSource(request, response)), csp, pathname);
+}
+
+/**
+ * Remembers gclid, gbraid, wbraid and utm_* from the landing URL for 90 days.
+ * Only on marketing and organiser routes, and only when the Google tag id
+ * is set. The first landing wins. Guest URLs are ignored.
+ */
+function rememberAds(request: NextRequest, response: NextResponse): NextResponse {
+  const { setCookie } = adsForRequest({
+    pathname: request.nextUrl.pathname,
+    searchParams: request.nextUrl.searchParams,
+    cookie: request.cookies.get(ADS_COOKIE)?.value,
+  });
+  if (!setCookie) return response;
+  response.cookies.set(ADS_COOKIE, setCookie, adsCookieOptions(ADS_ATTR_MAX_AGE));
+  return response;
 }
 
 /**

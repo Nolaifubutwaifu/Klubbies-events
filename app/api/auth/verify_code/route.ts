@@ -1,5 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  ADS_CONVERSION_MAX_AGE,
+  ADS_COOKIE,
+  ADS_SIGNUP_COOKIE,
+  adsCookieOptions,
+  decorateAdsRedirect,
+  googleAdsSignupLabel,
+  isAdsUuid,
+} from "@/lib/ads";
 import { CODE_REJECTED, SIGNIN_COOKIE, verifyCode, verifyCodeSchema } from "@/lib/auth/flow";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "@/lib/auth/rate-limit";
 import { NEXT_COOKIE, safeNextPath } from "@/lib/auth/next-path";
@@ -31,6 +40,13 @@ export async function POST(request: Request) {
   // who has an event to set up first.
   const next = safeNextPath(cookieStore.get(NEXT_COOKIE)?.value);
   cookieStore.delete(NEXT_COOKIE);
-  const redirectTo = next && result.redirectTo !== "/admin/new" ? next : result.redirectTo;
+  const redirectTo = decorateAdsRedirect(
+    next && result.redirectTo !== "/admin/new" ? next : result.redirectTo,
+    cookieStore.get(ADS_COOKIE)?.value,
+  );
+  // One shot, after the code is accepted. A missing label sets nothing.
+  if (result.newAccountId && isAdsUuid(result.newAccountId) && googleAdsSignupLabel()) {
+    cookieStore.set(ADS_SIGNUP_COOKIE, result.newAccountId, adsCookieOptions(ADS_CONVERSION_MAX_AGE));
+  }
   return NextResponse.json({ ok: true, redirectTo });
 }
