@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { emailDelayMs, exponentialDelayMs, isEmailRetryable, isUploadRetryable, withBackoff } from "@/lib/retry";
+import { emailDelayMs, emailLogLabel, exponentialDelayMs, isEmailRetryable, isUploadRetryable, withBackoff } from "@/lib/retry";
 
 describe("upload retry schedule", () => {
   it("spaces four attempts over about 30 seconds", () => {
@@ -29,6 +29,11 @@ describe("email retry", () => {
     expect(isEmailRetryable(new TypeError("fetch failed"))).toBe(true);
     expect(isEmailRetryable(Object.assign(new Error("bad address"), { statusCode: 422 }))).toBe(false);
     expect(isEmailRetryable(Object.assign(new Error("no"), { statusCode: 400 }))).toBe(false);
+  });
+
+  it("does not put a sign-in code in the log label", () => {
+    expect(emailLogLabel("482193 is your code for Club Night")).toBe("[code] is your code for Club Night");
+    expect(emailLogLabel("Your photos from Club Night are ready")).toBe("Your photos from Club Night are ready");
   });
 
   it("backs off without the upload's 30 second budget", () => {

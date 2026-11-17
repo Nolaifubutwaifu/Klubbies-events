@@ -49,6 +49,11 @@ export function isEmailRetryable(error: unknown): boolean {
   return /network|failed to fetch|fetch failed|timeout|timed out|econnreset|etimedout|socket|rate limit/i.test(text);
 }
 
+/** The sign-in subject starts with the code. Logs must not keep it. */
+export function emailLogLabel(subject: string): string {
+  return subject.replace(/^\d{6,10}\b/, "[code]");
+}
+
 /** Shorter than the upload schedule: a sign-in code should not sit for half a minute. */
 export function emailDelayMs(retryIndex: number, random: () => number = Math.random): number {
   const base = 1_000 * 2 ** retryIndex;
