@@ -137,7 +137,10 @@ export class UploadQueue {
     // Drop derivative URLs: they are short-lived, and a retry after a long
     // video may find them expired. The ticket row itself is reused.
     const ticket = job.originalDone && job.ticket ? { ...job.ticket, signed: undefined } : undefined;
-    this.patch(job, { status: "queued", error: undefined, ticket });
+    // Drop the in-memory TUS handle when the original is unfinished. A new
+    // Upload with the same fingerprint resumes the same object, not a
+    // different album's file.
+    this.patch(job, { status: "queued", error: undefined, ticket, tus: job.originalDone ? job.tus : undefined });
     this.pump();
   }
 
@@ -250,7 +253,12 @@ export class UploadQueue {
           retryDelays: [0, 2000, 5000, 10000, 20000],
           uploadDataDuringCreation: true,
           removeFingerprintOnSuccess: true,
-          storeFingerprintForResuming: false,
+          // The default fingerprint is only the file name and size, so the
+          // same photo in two albums would resume into the wrong object.
+          // This one includes the media id and storage path from the ticket.
+          storeFingerprintForResuming: true,
+          fingerprint: async (file) =>
+            ["kb", ticket.mediaId, ticket.storagePath, file.name, file.size, file.lastModified].join("|"),
           metadata: {
             bucketName: ticket.bucket,
             objectName: ticket.storagePath,
