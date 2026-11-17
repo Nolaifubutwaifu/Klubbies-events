@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { render } from "@react-email/render";
 import { Resend } from "resend";
 import AlbumPublished, { type AlbumPublishedProps } from "@/emails/AlbumPublished";
@@ -27,6 +28,11 @@ function resend(): Resend {
 }
 
 type ResendFailure = { name?: string; message?: string; statusCode?: number | null };
+
+/** Same key for every try of one message, so a retried 5xx is not a second email. */
+function idempotencyKey(parts: string[]): string {
+  return createHash("sha256").update(parts.join("\n")).digest("hex");
+}
 
 function failure(error: ResendFailure): Error {
   const wrapped = new Error(`Resend: ${error.name ?? "Error"}: ${error.message ?? "request failed"}`);
@@ -71,7 +77,17 @@ async function send(to: string, subject: string, element: React.ReactElement): P
   }
   const env = serverEnv();
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
-  await deliver(to, subject, () => resend().emails.send({ from: env.EMAIL_FROM, ...replyTo(), to, subject, html, text }));
+  await deliver(to, subject, () =>
+    resend().emails.send({
+      from: env.EMAIL_FROM,
+      ...replyTo(),
+      to,
+      subject,
+      html,
+      text,
+      idempotencyKey: idempotencyKey(["send", to, subject]),
+    }),
+  );
 }
 
 export type ContactMessage = { from: string; name?: string; event?: string; topic: string; body: string; userAgent: string };
@@ -92,7 +108,16 @@ export async function sendContactMessage(to: string, message: ContactMessage): P
     console.info(`[email dry run] "${subject}" → ${to}\n${text}`);
     return;
   }
-  await deliver(to, subject, () => resend().emails.send({ from: serverEnv().EMAIL_FROM, replyTo: message.from, to, subject, text }));
+  await deliver(to, subject, () =>
+    resend().emails.send({
+      from: serverEnv().EMAIL_FROM,
+      replyTo: message.from,
+      to,
+      subject,
+      text,
+      idempotencyKey: idempotencyKey(["contact", to, subject, message.from]),
+    }),
+  );
 }
 
 export function sendSignInCode(to: string, props: SignInCodeProps) {
@@ -160,7 +185,11 @@ export async function sendBatch(messages: BatchMessage[]): Promise<void> {
 
   for (let i = 0; i < prepared.length; i += 100) {
     const slice = prepared.slice(i, i + 100);
-    await deliver(`${slice.length} recipients`, slice[0].subject, () => resend().batch.send(slice));
+    await deliver(`${slice.length} recipients`, slice[0].subject, () =>
+      resend().batch.send(slice, {
+        idempotencyKey: idempotencyKey(["batch", ...slice.map((item) => `${item.to}\n${item.subject}`)]),
+      }),
+    );
   }
 }
 
@@ -201,6 +230,10 @@ export async function sendAnnouncements(
   );
   for (let i = 0; i < prepared.length; i += 100) {
     const slice = prepared.slice(i, i + 100);
-    await deliver(`${slice.length} recipients`, slice[0].subject, () => resend().batch.send(slice));
+    await deliver(`${slice.length} recipients`, slice[0].subject, () =>
+      resend().batch.send(slice, {
+        idempotencyKey: idempotencyKey(["batch", ...slice.map((item) => `${item.to}\n${item.subject}`)]),
+      }),
+    );
   }
 }

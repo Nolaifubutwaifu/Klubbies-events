@@ -40,13 +40,13 @@ export function isUploadRetryable(error: unknown): boolean {
   return /network|failed to fetch|fetch failed|offline|timeout|econnreset|etimedout|socket|aborted/i.test(text);
 }
 
-/** Resend: rate limits and outages. A rejected address is not going to start working. */
+/**
+ * Resend: only a definite 429 or 5xx. A network error has no status, and
+ * retrying it can deliver the same sign-in code twice.
+ */
 export function isEmailRetryable(error: unknown): boolean {
   const status = httpStatus(error);
-  if (status === 429 || status === 544 || (status !== null && status >= 500)) return true;
-  if (status !== null && status >= 400 && status < 500) return false;
-  const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
-  return /network|failed to fetch|fetch failed|timeout|timed out|econnreset|etimedout|socket|rate limit/i.test(text);
+  return status === 429 || status === 544 || (status !== null && status >= 500);
 }
 
 /** The sign-in subject starts with the code. Logs must not keep it. */

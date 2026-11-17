@@ -26,7 +26,7 @@ describe("email retry", () => {
   it("retries 429 and 5xx only", () => {
     expect(isEmailRetryable(Object.assign(new Error("rate"), { statusCode: 429 }))).toBe(true);
     expect(isEmailRetryable(Object.assign(new Error("down"), { statusCode: 500 }))).toBe(true);
-    expect(isEmailRetryable(new TypeError("fetch failed"))).toBe(true);
+    expect(isEmailRetryable(new TypeError("fetch failed"))).toBe(false);
     expect(isEmailRetryable(Object.assign(new Error("bad address"), { statusCode: 422 }))).toBe(false);
     expect(isEmailRetryable(Object.assign(new Error("no"), { statusCode: 400 }))).toBe(false);
   });
