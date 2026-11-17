@@ -29,19 +29,17 @@ export function ZipParts({
     );
   }
   const join = href.includes("?") ? "&" : "?";
-  let cursor = 1;
+  const ranges = counts.map((n, i) => {
+    const from = 1 + counts.slice(0, i).reduce((sum, count) => sum + count, 0);
+    return { from, to: from + n - 1 };
+  });
   return (
     <span className="flex flex-wrap items-center gap-2">
-      {counts.map((n, i) => {
-        const from = cursor;
-        const to = cursor + n - 1;
-        cursor += n;
-        return (
-          <a key={i} href={i === 0 ? href : `${href}${join}part=${i}`} className={className} download aria-label={`Part ${i + 1} of ${parts}, files ${from} to ${to}`}>
-            Part {i + 1} of {parts}
-          </a>
-        );
-      })}
+      {ranges.map(({ from, to }, i) => (
+        <a key={i} href={i === 0 ? href : `${href}${join}part=${i}`} className={className} download aria-label={`Part ${i + 1} of ${parts}, files ${from} to ${to}`}>
+          Part {i + 1} of {parts}
+        </a>
+      ))}
     </span>
   );
 }
