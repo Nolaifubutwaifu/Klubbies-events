@@ -821,6 +821,18 @@ isOneToOne: false
 "overflow_closed_at": string | null
             }[]
                            },
+            "try_worker_lease":
+{ Args: { "p_name": string, "p_holder": string, "p_seconds": number }; Returns: boolean
+                           },
+            "release_worker_lease":
+{ Args: { "p_name": string, "p_holder": string }; Returns: undefined
+                           },
+            "try_rekognition_slot":
+{ Args: { "p_holder": string, "p_max": number, "p_ttl_seconds": number }; Returns: boolean
+                           },
+            "release_rekognition_slot":
+{ Args: { "p_holder": string }; Returns: undefined
+                           },
             "claim_face_jobs":
 { Args: { "batch_size": number }; Returns: {
               "attempts": number,
