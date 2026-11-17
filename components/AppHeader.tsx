@@ -51,7 +51,11 @@ export async function AppHeader({
 
   return (
     <>
-      <header className="relative z-30 border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
+      <header
+        className={`relative z-30 border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)] ${
+          area === "attendee" ? "pt-[env(safe-area-inset-top)]" : ""
+        }`}
+      >
         <div
           className={`relative mx-auto flex w-full items-center gap-2.5 ${
             area === "attendee" ? "min-h-[60px] max-w-[1200px] pl-4 pr-3 sm:px-10 md:min-h-16" : "min-h-[60px] max-w-[1320px] gap-3 px-4 sm:px-6"
