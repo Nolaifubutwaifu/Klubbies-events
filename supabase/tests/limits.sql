@@ -53,26 +53,48 @@ begin
   -- Photos: 200 on Free; the bin and failed uploads don't count
   -- ---------------------------------------------------------------------
   for i in 1..200 loop
-    insert into public.media (event_id, album_id, kind, storage_path, status)
-    values (v_event, v_album, 'photo', 'p' || i || '.jpg', 'ready')
-    returning id into v_m;
+    v_m := gen_random_uuid();
+    insert into public.media (id, event_id, album_id, kind, storage_path, status)
+    values (
+      v_m, v_event, v_album, 'photo',
+      'events/' || v_event || '/albums/' || v_album || '/' || v_m || '/original.jpg',
+      'ready'
+    );
     if i = 1 then v_first_media := v_m; end if;
   end loop;
 
   begin
-    insert into public.media (event_id, album_id, kind, storage_path, status) values (v_event, v_album, 'photo', 'over.jpg', 'ready');
+    v_m := gen_random_uuid();
+    insert into public.media (id, event_id, album_id, kind, storage_path, status)
+    values (
+      v_m, v_event, v_album, 'photo',
+      'events/' || v_event || '/albums/' || v_album || '/' || v_m || '/original.jpg',
+      'ready'
+    );
     raise exception 'the 201st photo on Free was accepted';
   exception when sqlstate 'KB001' then null;
   end;
 
   update public.media set deleted_at = now() where id = v_first_media;
-  insert into public.media (event_id, album_id, kind, storage_path, status) values (v_event, v_album, 'photo', 'room.jpg', 'ready');
+  v_m := gen_random_uuid();
+  insert into public.media (id, event_id, album_id, kind, storage_path, status)
+  values (
+    v_m, v_event, v_album, 'photo',
+    'events/' || v_event || '/albums/' || v_album || '/' || v_m || '/original.jpg',
+    'ready'
+  );
 
   -- Five photos out: five units free, but a video needs ten.
   update public.media set status = 'failed'
   where id in (select id from public.media where event_id = v_event and deleted_at is null and status = 'ready' limit 5);
   begin
-    insert into public.media (event_id, album_id, kind, storage_path, status) values (v_event, v_album, 'video', 'v.mp4', 'processing');
+    v_m := gen_random_uuid();
+    insert into public.media (id, event_id, album_id, kind, storage_path, status)
+    values (
+      v_m, v_event, v_album, 'video',
+      'events/' || v_event || '/albums/' || v_album || '/' || v_m || '/original.mp4',
+      'processing'
+    );
     raise exception 'a video fitted into five photos of room';
   exception when sqlstate 'KB001' then null;
   end;

@@ -2,7 +2,7 @@ import "server-only";
 import { tileRatio } from "@/lib/media/ratio";
 import type { Json, MemberFaceProfile } from "@/lib/db/types";
 import { facesConfigured } from "@/lib/faces/client";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 export const PHOTOS_OF_YOU_PAGE_SIZE = 60;
@@ -107,7 +107,7 @@ export async function listPhotosOfYou(
     // albums.cover_media_id points back at media, so a bare `albums` embed is
     // ambiguous and PostgREST refuses it.
     .select(
-      "id, media_id, similarity, media!inner(id, album_id, sort_at, thumb_path, poster_path, width, height, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title, album_date))",
+      "id, media_id, similarity, media!inner(id, event_id, album_id, sort_at, thumb_path, poster_path, width, height, content_hash, original_filename, byte_size, albums!media_album_id_fkey(title, album_date))",
     )
     .eq("event_id", eventId)
     .eq("state", "confirmed")
@@ -129,7 +129,7 @@ export async function listPhotosOfYou(
   // request per tile is the thing this codebase has consistently avoided.
   const urls = await signPaths(
     supabase,
-    pageRows.map((row) => row.media.thumb_path ?? row.media.poster_path ?? "").filter(Boolean),
+    mediaClaims(pageRows.map((row) => ({ ...row.media, paths: [row.media.thumb_path ?? row.media.poster_path] }))),
     SIGNED_URL_TTL.thumb,
   );
 

@@ -121,8 +121,11 @@ begin
   select count(*) into n from public.media where album_id = v_album2;
   if n <> 0 then raise exception 'guest can still see photos in a binned album'; end if;
   begin
-    insert into public.media (event_id, album_id, kind, storage_path, status, uploaded_by)
-    values (v_event, v_album2, 'photo', 'x.jpg', 'processing', v_guest);
+    insert into public.media (id, event_id, album_id, kind, storage_path, status, uploaded_by)
+    select v_id, v_event, v_album2, 'photo',
+      'events/' || v_event || '/albums/' || v_album2 || '/' || v_id || '/original.jpg',
+      'processing', v_guest
+    from (select gen_random_uuid() as v_id) ids;
     raise exception 'guest uploaded into a binned album';
   exception when insufficient_privilege then null;
   end;

@@ -53,7 +53,11 @@ export default async function ViewerPage(props: PageProps<"/e/[handle]/a/[albumI
       const nearby = sequence.slice(Math.max(0, at - 12), at + 13);
       const thumbs = await signPaths(
         supabase,
-        nearby.map((item) => item.thumbPath ?? "").filter(Boolean),
+        nearby.flatMap((item) =>
+          item.thumbPath && item.albumId
+            ? [{ kind: "media" as const, path: item.thumbPath, eventId: ctx.event.id, albumId: item.albumId, mediaId: item.mediaId }]
+            : [],
+        ),
         SIGNED_URL_TTL.thumb,
       );
       mine = {

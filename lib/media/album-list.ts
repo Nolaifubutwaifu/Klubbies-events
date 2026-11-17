@@ -1,5 +1,5 @@
 import "server-only";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths, type PathClaim } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 export const TILES_PER_ALBUM = 6;
@@ -65,7 +65,7 @@ export async function listStackedAlbums(
     supabase.from("album_media_counts").select("*").in("album_id", ids),
     supabase
       .from("media")
-      .select("id, album_id, kind, status, thumb_path, display_path, poster_path, sort_at")
+      .select("id, event_id, album_id, kind, status, thumb_path, display_path, poster_path, sort_at")
       .in("album_id", ids)
       .order("album_id")
       .order("sort_at", { ascending: true })
@@ -83,7 +83,7 @@ export async function listStackedAlbums(
 
   const coverMediaIds = albums.map((a) => a.cover_media_id).filter((id): id is string => Boolean(id));
   const { data: coverMedia } = coverMediaIds.length
-    ? await supabase.from("media").select("id, thumb_path, display_path, poster_path").in("id", coverMediaIds)
+    ? await supabase.from("media").select("id, event_id, album_id, thumb_path, display_path, poster_path").in("id", coverMediaIds)
     : { data: [] };
   const coverById = new Map((coverMedia ?? []).map((m) => [m.id, m.thumb_path ?? m.poster_path]));
   const coverDisplayById = new Map((coverMedia ?? []).map((m) => [m.id, m.display_path ?? m.poster_path]));
@@ -103,14 +103,24 @@ export async function listStackedAlbums(
       heroFirst?.poster_path ??
       null)
     : null;
-  const heroUrls = heroPath ? await signPaths(supabase, [heroPath], SIGNED_URL_TTL.display) : new Map<string, string>();
+  const heroClaims: PathClaim[] = hero
+    ? [
+        ...(hero.cover_path ? [{ kind: "event" as const, path: hero.cover_path, eventId }] : []),
+        ...mediaClaims((byAlbum.get(hero.id) ?? []).slice(0, 1).map((m) => ({ ...m, paths: [m.display_path, m.poster_path, m.thumb_path] }))),
+        ...mediaClaims((coverMedia ?? []).filter((m) => m.id === hero.cover_media_id).map((m) => ({ ...m, paths: [m.display_path, m.poster_path, m.thumb_path] }))),
+      ]
+    : [];
+  const heroUrls = heroPath ? await signPaths(supabase, heroClaims, SIGNED_URL_TTL.display) : new Map<string, string>();
 
-  const paths = [
-    ...(media ?? []).map((m) => m.thumb_path ?? m.poster_path ?? ""),
-    ...albums.map((a) => a.cover_path ?? ""),
-    ...[...coverById.values()].map((p) => p ?? ""),
-  ].filter(Boolean);
-  const urls = await signPaths(supabase, paths, SIGNED_URL_TTL.thumb);
+  const urls = await signPaths(
+    supabase,
+    [
+      ...mediaClaims((media ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
+      ...albums.flatMap((album) => (album.cover_path ? [{ kind: "event" as const, path: album.cover_path, eventId }] : [])),
+      ...mediaClaims((coverMedia ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
+    ],
+    SIGNED_URL_TTL.thumb,
+  );
 
   return albums.map((album) => {
     const count = countByAlbum.get(album.id);

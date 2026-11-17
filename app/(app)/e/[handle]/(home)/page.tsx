@@ -12,6 +12,8 @@ import { getEventContext } from "@/lib/auth/session";
 import { countPhotosOfYou, faceStateFor, listPhotosOfYou } from "@/lib/faces/queries";
 import { formatDate, formatEventDates, plural } from "@/lib/format";
 import { listStackedAlbums, type StackedAlbum } from "@/lib/media/album-list";
+import { zipPartSummaries } from "@/lib/media/zip-parts";
+import { yourPhotosZipItems } from "@/lib/media/zip-index";
 import { eventPhotographers } from "@/lib/media/credits";
 import { SIGNED_URL_TTL, signLogoMarks, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -51,9 +53,14 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
   const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
 
   const enrolled = faceState.enabled && faceState.profile?.status === "ready";
-  const [preview, matchCount] = enrolled
-    ? await Promise.all([listPhotosOfYou(supabase, event.id, 0), countPhotosOfYou(supabase, event.id)])
-    : [null, 0];
+  const [preview, matchCount, photoZip] = enrolled
+    ? await Promise.all([
+        listPhotosOfYou(supabase, event.id, 0),
+        countPhotosOfYou(supabase, event.id),
+        yourPhotosZipItems(supabase, event.id, ctx.perms.manage_albums).catch(() => []),
+      ])
+    : [null, 0, [] as Awaited<ReturnType<typeof yourPhotosZipItems>>];
+  const photoZipParts = zipPartSummaries(photoZip);
   const previewItems = (preview?.groups ?? []).flatMap((group) => group.items).slice(0, 8);
 
   const published = albums.filter((a) => a.status === "published");
@@ -152,6 +159,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
                       : "looking"
               }
               count={matchCount}
+              partSummaries={photoZipParts}
               selfieUrl={selfieUrl}
               albums={[...new Set((preview?.groups ?? []).map((group) => group.albumTitle).filter(Boolean))]}
               previews={previewItems.map((item) => ({ id: item.mediaId, albumId: item.albumId, url: item.thumbUrl }))}
@@ -290,5 +298,5 @@ async function ownSelfie(eventId: string, userId: string): Promise<string | null
   const admin = createAdminClient();
   const { data } = await admin.from("member_face_profiles").select("selfie_path").eq("event_id", eventId).eq("user_id", userId).maybeSingle();
   if (!data?.selfie_path) return null;
-  return (await signPaths(admin, [data.selfie_path], SIGNED_URL_TTL.display)).get(data.selfie_path) ?? null;
+  return (await signPaths(admin, [{ kind: "selfie", path: data.selfie_path }], SIGNED_URL_TTL.display)).get(data.selfie_path) ?? null;
 }

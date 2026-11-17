@@ -29,7 +29,7 @@ export default async function SettingsPage(props: PageProps<"/admin/[handle]/set
   const { event } = ctx;
   const supabase = await createClient();
   const logoUrl = event.logo_path
-    ? ((await signPaths(supabase, [event.logo_path], SIGNED_URL_TTL.display)).get(event.logo_path) ?? null)
+    ? ((await signPaths(supabase, [{ kind: "event", path: event.logo_path, eventId: event.id }], SIGNED_URL_TTL.display)).get(event.logo_path) ?? null)
     : null;
 
   // Binned rows are hidden from every user client, so the bin's size is read

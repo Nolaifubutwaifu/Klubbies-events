@@ -4,7 +4,7 @@ import Link from "next/link";
 import { EmptyState, PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { RemovalDecision } from "./RemovalDecision";
 import { personName } from "@/lib/auth/display-name";
@@ -44,7 +44,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
 
   const [{ data: media }, { data: askers }] = await Promise.all([
     mediaIds.length
-      ? supabase.from("media").select("id, album_id, display_path, thumb_path, original_filename, photographer_name, albums!media_album_id_fkey(title)").in("id", mediaIds)
+      ? supabase.from("media").select("id, event_id, album_id, display_path, thumb_path, original_filename, photographer_name, albums!media_album_id_fkey(title)").in("id", mediaIds)
       : Promise.resolve({ data: [] }),
     askerIds.length
       ? supabase.from("memberships").select("user_id, roster_name, claimed_name, users!memberships_user_id_fkey(display_name)").eq("event_id", ctx.event.id).in("user_id", askerIds)
@@ -60,7 +60,7 @@ export default async function RemovalsPage(props: PageProps<"/admin/[handle]/rem
   );
   const urls = await signPaths(
     supabase,
-    (media ?? []).map((m) => m.display_path ?? m.thumb_path ?? "").filter(Boolean),
+    mediaClaims((media ?? []).map((m) => ({ ...m, paths: [m.display_path ?? m.thumb_path] }))),
     SIGNED_URL_TTL.display,
   );
 

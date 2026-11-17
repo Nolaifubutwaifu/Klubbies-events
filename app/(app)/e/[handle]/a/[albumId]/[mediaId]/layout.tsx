@@ -5,5 +5,5 @@ import type { ReactNode } from "react";
  * its own height underneath, so the sheets really do sit on the bottom edge.
  */
 export default function ViewerLayout({ children }: { children: ReactNode }) {
-  return <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-[#14100f]">{children}</div>;
+  return <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#14100f]">{children}</div>;
 }

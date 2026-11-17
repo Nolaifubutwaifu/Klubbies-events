@@ -53,7 +53,7 @@ begin
   insert into public.albums (id, event_id, title, status, visibility)
   values (v_album, v_event, 'Test album', 'published', 'members');
   insert into public.media (id, event_id, album_id, kind, storage_path, status)
-  values (v_media, v_event, v_album, 'photo', 'events/x/albums/y/z/original.jpg', 'ready');
+  values (v_media, v_event, v_album, 'photo', 'events/' || v_event || '/albums/' || v_album || '/' || v_media || '/original.jpg', 'ready');
 
   -- New events already get a settings row from the faces-on-by-default trigger.
   insert into public.event_face_settings (event_id, enabled, collection_id)

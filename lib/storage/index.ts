@@ -9,7 +9,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Narrow storage interface (masterfile §8.1). Swapping Supabase Storage for S3
 // or R2 should only touch this module.
 
+import { MEDIA_OBJECT_NAMES, claimAllowed, ownedMediaObjectPath, type PathClaim } from "./object-paths";
 import { BUCKET, logoMarkPath } from "./paths";
+
+export type { PathClaim } from "./object-paths";
+export { claimAllowed, mediaClaim, mediaClaims, ownedAvatarPath, ownedMediaObjectPath } from "./object-paths";
 
 export { BUCKET, logoMarkPath } from "./paths";
 
@@ -57,9 +61,10 @@ export const LOGO_MARK_SIZE = 96;
 // (masterfile §8: ten minutes for thumbnails).
 //
 // Entries are keyed by a hash of the caller's access token, never by user id
-// alone: the signing call is the authorisation check (the storage policy
-// mirrors media visibility), and only the same session that passed it gets
-// the URL back. The service role has no session, so it is never cached.
+// alone. The service role mints the URL (see signPaths); the cache still
+// only hands it back to the session that asked, so one viewer's URL is not
+// reused for someone else's request. The service role has no session, so a
+// cron or script that signs is never cached.
 const signedCache = new Map<string, { url: string; expiresAt: number }>();
 const MAX_CACHED = 20_000;
 /** Reuse only while at least this much of the lifetime remains, so a page
@@ -88,12 +93,33 @@ function pruneCache(now: number) {
 }
 
 /**
- * Signs many paths in one call. Always pass the user's client: the storage
- * select policy mirrors media visibility, so a path the user may not see
- * simply comes back unsigned.
+ * Signs many paths in one call.
+ *
+ * The signatures are minted with the service role, not the caller's client.
+ * Storage's SELECT policy re-reads `media` (via storage.search / the object
+ * name) for every file, and that check timed out with 544 when one person
+ * uploaded a handful of photos — and it would do the same when a full album
+ * grid asks for sixty thumbnails at once. Callers only pass paths taken from
+ * rows their own client already selected under RLS (a media row, a logo, an
+ * avatar). This function does not decide who may see a file, and it never
+ * signs a path supplied by the browser. A path the caller could not read
+ * never reaches here, so album visibility is unchanged.
+ *
+ * `client` scopes the in-memory cache to that session. It is not the signer.
  */
-export async function signPaths(client: Client, paths: string[], seconds: number): Promise<Map<string, string>> {
-  const unique = [...new Set(paths.filter(Boolean))];
+export async function signPaths(client: Client, claims: PathClaim[], seconds: number): Promise<Map<string, string>> {
+  const unique = [
+    ...new Set(
+      claims
+        .filter((claim) => {
+          if (!claim.path) return false;
+          if (claimAllowed(claim)) return true;
+          console.error("refusing to sign a path outside its owner", claim.kind, claim.path);
+          return false;
+        })
+        .map((claim) => claim.path),
+    ),
+  ];
   const result = new Map<string, string>();
   if (unique.length === 0) return result;
 
@@ -109,9 +135,10 @@ export async function signPaths(client: Client, paths: string[], seconds: number
     else missing.push(path);
   }
 
+  const admin = createAdminClient();
   for (let i = 0; i < missing.length; i += 500) {
     const chunk = missing.slice(i, i + 500);
-    const { data, error } = await client.storage.from(BUCKET).createSignedUrls(chunk, lifetime);
+    const { data, error } = await admin.storage.from(BUCKET).createSignedUrls(chunk, lifetime);
     if (error) throw error;
     for (const item of data ?? []) {
       if (!item.path || !item.signedUrl || item.error) continue;
@@ -131,7 +158,16 @@ export async function signPaths(client: Client, paths: string[], seconds: number
  */
 export async function signLogoMarks(client: Client, logoPaths: (string | null | undefined)[]): Promise<Map<string, string>> {
   const logos = [...new Set(logoPaths.filter((p): p is string => Boolean(p)))];
-  const signed = await signPaths(client, [...logos, ...logos.map(logoMarkPath)], SIGNED_URL_TTL.display);
+  const claims: PathClaim[] = [];
+  for (const logo of logos) {
+    const eventId = logo.match(/^events\/([0-9a-f-]{36})\/logo\//i)?.[1];
+    if (!eventId) {
+      console.error("refusing to sign a logo outside events/{id}/logo", logo);
+      continue;
+    }
+    claims.push({ kind: "event", path: logo, eventId }, { kind: "event", path: logoMarkPath(logo), eventId });
+  }
+  const signed = await signPaths(client, claims, SIGNED_URL_TTL.display);
   const result = new Map<string, string>();
   for (const logo of logos) {
     const url = signed.get(logoMarkPath(logo)) ?? signed.get(logo);
@@ -140,12 +176,46 @@ export async function signLogoMarks(client: Client, logoPaths: (string | null | 
   return result;
 }
 
-export async function signDownload(client: Client, path: string, filename: string): Promise<string | null> {
-  const { data, error } = await client.storage
-    .from(BUCKET)
-    .createSignedUrl(path, ttl(SIGNED_URL_TTL.download), { download: filename });
+export async function signDownload(
+  client: Client,
+  claim: Extract<PathClaim, { kind: "media" }>,
+  filename: string,
+): Promise<string | null> {
+  void client;
+  if (!ownedMediaObjectPath(claim.eventId, claim.albumId, claim.mediaId, claim.path)) {
+    console.error("refusing to sign a download outside its photo", claim.path);
+    return null;
+  }
+  const { data, error } = await createAdminClient()
+    .storage.from(BUCKET)
+    .createSignedUrl(claim.path, ttl(SIGNED_URL_TTL.download), { download: filename });
   if (error || !data) return null;
   return data.signedUrl;
+}
+
+/**
+ * One signed upload URL per exact object path, minted with the service role.
+ * The caller has already checked the person may write this album and created
+ * the media row. The browser then PUTs the thumbnail straight to that path,
+ * so storage INSERT/UPDATE policies (and their per-file database lookups)
+ * are not evaluated for every derivative.
+ */
+export async function signedUploadTokens(
+  owner: { eventId: string; albumId: string; mediaId: string },
+  paths: string[],
+): Promise<Record<string, { signedUrl: string; path: string; token: string }>> {
+  const admin = createAdminClient();
+  const signed: Record<string, { signedUrl: string; path: string; token: string }> = {};
+  for (const path of paths) {
+    if (!ownedMediaObjectPath(owner.eventId, owner.albumId, owner.mediaId, path)) {
+      console.error("refusing to sign an upload outside its photo", path);
+      throw new Error("refusing to sign an upload outside its photo");
+    }
+    const { data, error } = await admin.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
+    if (error || !data) throw error ?? new Error(`could not sign ${path}`);
+    signed[path] = { signedUrl: data.signedUrl, path: data.path, token: data.token };
+  }
+  return signed;
 }
 
 /**
@@ -153,12 +223,26 @@ export async function signDownload(client: Client, path: string, filename: strin
  * up by its exact path. Listing the folder instead asked storage to search the
  * whole bucket by prefix, and in production that averaged over two seconds
  * for every upload being finished.
+ *
+ * The service role does the lookup. Both callers have already authorised the
+ * media row (the uploader, an organiser, or the guest link that created it)
+ * and pass only that row's folder. info() under the user JWT re-ran storage
+ * RLS per file and was part of the 544 timeouts.
  */
-export async function folderObjects(client: Client, folder: string, names: string[]): Promise<Map<string, number>> {
+export async function folderObjects(
+  owner: { eventId: string; albumId: string; mediaId: string },
+  names: string[],
+): Promise<Map<string, number>> {
   const sizes = new Map<string, number>();
+  const folder = mediaFolder(owner.eventId, owner.albumId, owner.mediaId);
+  const known = names.filter((name) => (MEDIA_OBJECT_NAMES as readonly string[]).includes(name) && !name.includes("/"));
+  if (known.length !== names.length) console.error("refusing to list a name outside this photo", owner.mediaId);
+  const admin = createAdminClient();
   await Promise.all(
-    names.map(async (name) => {
-      const { data, error } = await client.storage.from(BUCKET).info(`${folder}/${name}`);
+    known.map(async (name) => {
+      const path = `${folder}/${name}`;
+      if (!ownedMediaObjectPath(owner.eventId, owner.albumId, owner.mediaId, path)) return;
+      const { data, error } = await admin.storage.from(BUCKET).info(path);
       if (error) {
         // A file that was never uploaded (no poster for a photo) is expected.
         const status = (error as { status?: number; statusCode?: string | number }).status ?? Number((error as { statusCode?: string | number }).statusCode);

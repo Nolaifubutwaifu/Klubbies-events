@@ -1,6 +1,8 @@
 import { contentHash } from "@/lib/media/content-hash";
-import { UPLOAD_MAX_BYTES, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
+import { ACCEPTED_TYPES, isOversizeError, maxBytesForKind, oversizeMessage, resolveMimeType, tooBigWarning, type UploadKind } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
+import { watchUploadStall } from "@/lib/media/signed-put";
+import { httpStatus, isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { supabaseUrl } from "@/lib/supabase/config";
 
 // The guest version of the upload queue. Same shape as the member one, minus
@@ -9,7 +11,7 @@ import { supabaseUrl } from "@/lib/supabase/config";
 // the browser PUTs straight to storage. Like the member queue it runs two
 // lanes: a few files prepared ahead while up to six upload.
 
-export type GuestJobStatus = "queued" | "preparing" | "uploading" | "finishing" | "done" | "failed";
+export type GuestJobStatus = "queued" | "preparing" | "uploading" | "retrying" | "finishing" | "done" | "failed";
 
 export type GuestJobView = Readonly<{
   key: string;
@@ -18,7 +20,11 @@ export type GuestJobView = Readonly<{
   status: GuestJobStatus;
   progress: number;
   error?: string;
+  /** False when Retry would fail the same way. Absent means it can be retried. */
+  retryable?: boolean;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
 }>;
 
 type Signed = { path: string; token: string };
@@ -31,7 +37,8 @@ type Ticket = {
   mimeType: string;
   storagePath: string;
   derivatives: { thumb: string; display: string; poster: string };
-  signed: Record<string, Signed>;
+  /** Absent on a retry after the original landed: the URLs are fetched again. */
+  signed?: Record<string, Signed>;
 };
 
 type Job = {
@@ -41,7 +48,10 @@ type Job = {
   status: GuestJobStatus;
   progress: number;
   error?: string;
+  retryable?: boolean;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
   prepared?: Prepared;
   hash?: string | null;
   ticket?: Ticket;
@@ -59,10 +69,16 @@ const PREPARED_AHEAD = 6;
 
 export const EMPTY_GUEST_SNAPSHOT: readonly GuestJobView[] = [];
 
-function friendlyError(error: unknown): string {
+function friendlyError(error: unknown, kind: UploadKind, name: string): string {
   const text = error instanceof Error ? error.message : String(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return "This file is larger than the event's plan allows.";
-  if (/403|expired|not valid/i.test(text)) return "The link stopped working. Ask the organiser for a new one.";
+  const status = httpStatus(error);
+  if (isOversizeError(error)) return oversizeMessage(name, kind);
+  // The organiser's link itself is gone. A 403 from a signed upload URL is
+  // just that try's token, and a new ticket replaces it.
+  if (/this link (has expired|isn't valid)|isn't valid any more|link stopped working/i.test(text)) {
+    return "The link stopped working. Ask the organiser for a new one.";
+  }
+  if (status === 403 || /\b403\b/.test(text)) return "This try expired. Tap Retry now.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
 }
@@ -95,8 +111,9 @@ export class GuestUploadQueue {
         rejected.push(file.name);
         continue;
       }
-      if (file.size > UPLOAD_MAX_BYTES) {
-        warnings.push(tooBigWarning(file.name));
+      const kind = ACCEPTED_TYPES[mimeType].kind;
+      if (file.size > maxBytesForKind(kind)) {
+        warnings.push(tooBigWarning(file.name, kind));
         continue;
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
@@ -108,9 +125,28 @@ export class GuestUploadQueue {
 
   retry(key: string) {
     const job = this.jobs.get(key);
-    if (!job || job.status !== "failed") return;
-    this.patch(job, { status: "queued", error: undefined });
+    if (!job || job.status !== "failed" || job.retryable === false) return;
+    // A ticket from a stalled upload may have expired. A fresh one carries on
+    // in the same row (matched by content), so nothing is uploaded twice.
+    // Drop derivative URLs when the original is already in: they are
+    // short-lived, and a retry after a long video may find them expired.
+    const ticket = job.originalDone && job.ticket ? { ...job.ticket, signed: undefined } : undefined;
+    this.patch(job, { status: "queued", error: undefined, ticket });
     this.pump();
+  }
+
+  retryFailed() {
+    for (const job of this.jobs.values()) if (job.status === "failed" && job.retryable !== false) this.retry(job.key);
+  }
+
+  /** Gives up on every failed file: they leave the list. */
+  clearFailed() {
+    for (const [key, job] of this.jobs) {
+      if (job.status !== "failed") continue;
+      if (job.previewUrl) URL.revokeObjectURL(job.previewUrl);
+      this.jobs.delete(key);
+    }
+    this.emit();
   }
 
   private emit() {
@@ -121,7 +157,10 @@ export class GuestUploadQueue {
       status: j.status,
       progress: j.progress,
       error: j.error,
+      retryable: j.retryable,
       previewUrl: j.previewUrl,
+      retryAttempt: j.retryAttempt,
+      retryOf: j.retryOf,
     }));
     for (const listener of this.listeners) listener();
   }
@@ -133,9 +172,24 @@ export class GuestUploadQueue {
     }
   }
 
+  private recordFailure(job: Job, error: unknown) {
+    const kind = this.isVideo(job) ? "video" : "photo";
+    this.patch(job, {
+      status: "failed",
+      error: friendlyError(error, kind, job.file.name),
+      retryable: isOversizeError(error) ? false : true,
+    });
+  }
+
   private patch(job: Job, changes: Partial<Job>) {
     Object.assign(job, changes);
     this.emit();
+  }
+
+  private onRetry(job: Job) {
+    return (nextAttempt: number, attempts: number) => {
+      this.patch(job, { status: "retrying", retryAttempt: nextAttempt, retryOf: attempts });
+    };
   }
 
   private isVideo(job: Job) {
@@ -186,18 +240,33 @@ export class GuestUploadQueue {
     return new Promise<void>((resolve, reject) => {
       const url = `${supabaseUrl}/storage/v1/object/upload/sign/${job.ticket!.bucket}/${signed.path}?token=${encodeURIComponent(signed.token)}`;
       const request = new XMLHttpRequest();
+      let stalled = false;
+      let settled = false;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        stall.stop();
+        if (error) reject(error);
+        else resolve();
+      };
+      const stall = watchUploadStall(() => {
+        stalled = true;
+        request.abort();
+      });
       request.open("PUT", url);
       request.setRequestHeader("content-type", contentType);
       request.setRequestHeader("x-upsert", "true");
       request.upload.onprogress = (ev) => {
+        stall.bump();
         if (!ev.lengthComputable) return;
         this.patch(job, { progress: base + (ev.loaded / ev.total) * weight });
       };
       request.onload = () =>
         request.status >= 200 && request.status < 300
-          ? resolve()
-          : reject(new Error(`${request.status} ${request.responseText.slice(0, 120)}`));
-      request.onerror = () => reject(new Error("network"));
+          ? finish()
+          : finish(Object.assign(new Error(`${request.status} ${request.responseText.slice(0, 120)}`), { status: request.status }));
+      request.onerror = () => finish(Object.assign(new Error("network"), { status: 0 }));
+      request.onabort = () => finish(Object.assign(new Error(stalled ? "network" : "aborted"), { status: 0 }));
       request.send(blob);
     });
   }
@@ -216,8 +285,27 @@ export class GuestUploadQueue {
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.recordFailure(job, error);
     }
+  }
+
+  /** A fresh ticket, including signed URLs. "duplicate" means the album already has the file. */
+  private async requestTicket(job: Job): Promise<Ticket | "duplicate"> {
+    const res = await postJson(
+      `/api/guest/${encodeURIComponent(this.token)}/ticket`,
+      {
+        filename: job.file.name,
+        mimeType: job.mimeType,
+        byteSize: job.file.size,
+        contentHash: job.hash,
+      },
+      this.onRetry(job),
+    );
+    const body: Ticket & { error?: string; full?: boolean } = await res.json();
+    if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
+    if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
+    if (body.duplicate) return "duplicate";
+    return body;
   }
 
   /** Ticket, original, derivatives, finalise: the network half. */
@@ -227,28 +315,30 @@ export class GuestUploadQueue {
       this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        const res = await fetch(`/api/guest/${encodeURIComponent(this.token)}/ticket`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            filename: job.file.name,
-            mimeType: job.mimeType,
-            byteSize: job.file.size,
-            contentHash: job.hash,
-          }),
-        });
-        const body: Ticket & { error?: string; full?: boolean } = await res.json();
-        if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
-        if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
+        const issued = await this.requestTicket(job);
         // Already in the album: from the guest's side that is simply done.
-        if (body.duplicate) return this.patch(job, { status: "done", progress: 1 });
-        ticket = body;
+        if (issued === "duplicate") return this.patch(job, { status: "done", progress: 1 });
+        ticket = issued;
         this.patch(job, { ticket });
       }
 
       if (!job.originalDone) {
-        await this.putSigned(job, ticket.signed[ticket.storagePath], job.file, ticket.mimeType, 0.85, 0);
+        const original = ticket.signed?.[ticket.storagePath];
+        if (!original) throw new Error("Could not start the upload");
+        const mimeType = ticket.mimeType;
+        await withBackoff(
+          () => this.putSigned(job, original, job.file, mimeType, 0.85, 0),
+          isUploadRetryable,
+          { onRetry: this.onRetry(job) },
+        );
         this.patch(job, { originalDone: true, progress: 0.85 });
+      }
+
+      if (!ticket.signed) {
+        const refreshed = await this.requestTicket(job);
+        if (refreshed === "duplicate") return this.patch(job, { status: "done", progress: 1 });
+        ticket = refreshed;
+        this.patch(job, { ticket });
       }
 
       this.patch(job, { status: "finishing" });
@@ -259,26 +349,32 @@ export class GuestUploadQueue {
       ];
       for (const [path, blob] of derivatives) {
         if (!blob) continue;
-        await this.putSigned(job, ticket.signed[path], blob, blob.type || "image/webp", 0.05, job.progress);
+        const signed = ticket.signed?.[path];
+        if (!signed) throw new Error("Could not start the upload");
+        await withBackoff(
+          () => this.putSigned(job, signed, blob, blob.type || "image/webp", 0.05, job.progress),
+          isUploadRetryable,
+          { onRetry: this.onRetry(job) },
+        );
       }
 
-      const res = await fetch(`/api/guest/${encodeURIComponent(this.token)}/finalize/${ticket.mediaId}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const res = await postJson(
+        `/api/guest/${encodeURIComponent(this.token)}/finalize/${ticket.mediaId}`,
+        {
           width: prepared.width,
           height: prepared.height,
           durationSeconds: prepared.durationSeconds,
           capturedAt: prepared.capturedAt,
-        }),
-      });
+        },
+        this.onRetry(job),
+      );
       if (!res.ok) {
         const body: { error?: string } = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Could not finish the upload");
       }
       this.patch(job, { status: "done", progress: 1 });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.recordFailure(job, error);
     }
   }
 }

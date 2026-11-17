@@ -1,5 +1,4 @@
 import "server-only";
-import { after } from "next/server";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { BUCKET, logoMarkPath } from "@/lib/storage/paths";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,11 +20,21 @@ import {
  * copying each upload across, serving full quality files from it, deleting
  * copies 30 days after the original goes, and the monthly safety net.
  *
+ * The copy does not run inside the upload request. A ready row with
+ * backed_up_at still null is the queue, and the hourly cron drains it.
+ * Streaming the original to R2 from finalize held that function open for
+ * every file in a burst.
+ *
  * With R2 unconfigured every function here quietly does nothing, and every
  * caller falls back to Supabase.
  */
 
 let cached: { config: R2Config; client: S3Client } | null | undefined;
+
+/** Signed URLs must not land in backup_error or the logs. */
+export function redactSecrets(text: string): string {
+  return text.replace(/https?:\/\/\S+/gi, "[url]").replace(/[?&]token=[^&\s]+/gi, "[token]");
+}
 
 function r2(): { config: R2Config; client: S3Client } | null {
   if (cached === undefined) {
@@ -41,7 +50,7 @@ export function r2Configured(): boolean {
 
 /** Copies stop being attempted by the web app after this many failures. */
 const MAX_ATTEMPTS = 5;
-/** Bigger files are left to the hourly pass rather than the upload request. */
+/** A file this large is deferred to `pnpm backup-drain` after two failed hourly attempts. */
 const KICK_MAX_BYTES = 200 * 1024 * 1024;
 /** A cautious guess at Supabase to R2 speed, for deciding what fits a budget. */
 const BYTES_PER_SECOND = 10 * 1024 * 1024;
@@ -66,7 +75,7 @@ async function copyPath(path: string): Promise<void> {
   const target = r2();
   if (!target) return;
   const { data, error } = await createAdminClient().storage.from(BUCKET).createSignedUrl(path, 15 * 60);
-  if (error || !data) throw new Error(`could not sign ${path}: ${error?.message ?? "no url"}`);
+  if (error || !data) throw new Error(`could not sign ${path}: sign_failed`);
   await streamUrlToR2(target.client, target.config, data.signedUrl, path);
 }
 
@@ -85,33 +94,14 @@ export async function backupMedia(item: MediaFiles): Promise<boolean> {
       .from("media")
       .update({
         backup_attempts: attempts,
-        backup_error: String(error instanceof Error ? error.message : error).slice(0, 500),
+        backup_error: redactSecrets(error instanceof Error ? error.message : String(error)).slice(0, 500),
         // A big file that keeps failing inside a web request is handed to
         // `pnpm backup-drain`, which has no time limit.
         backup_deferred_at: big && attempts >= 2 ? new Date().toISOString() : null,
       })
       .eq("id", item.id);
-    console.error("backup failed", item.id, error);
+    console.error("backup failed", item.id, redactSecrets(error instanceof Error ? error.message : String(error)));
     return false;
-  }
-}
-
-/**
- * After an upload finishes: copy it once the response has gone, the way face
- * search is kicked. Big files wait for the hourly pass. Never throws.
- */
-export function kickBackup(mediaId: string): void {
-  if (!r2Configured()) return;
-  const run = async () => {
-    const { data } = await createAdminClient().from("media").select(MEDIA_FILE_COLUMNS).eq("id", mediaId).maybeSingle();
-    if (!data || (data.byte_size ?? 0) > KICK_MAX_BYTES) return;
-    await backupMedia(data);
-  };
-  const safe = () => run().catch((error) => console.error("backup kick failed", mediaId, error));
-  try {
-    after(safe);
-  } catch {
-    void safe();
   }
 }
 
@@ -170,7 +160,7 @@ export async function runBackupDrain(budgetMs: number): Promise<BackupDrainResul
         if (markError) throw markError;
         result.logos += 1;
       } catch (error) {
-        console.error("logo backup failed", event.id, error);
+        console.error("logo backup failed", event.id, redactSecrets(error instanceof Error ? error.message : String(error)));
         result.failed += 1;
       }
     }

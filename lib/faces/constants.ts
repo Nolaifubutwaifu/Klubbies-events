@@ -83,9 +83,16 @@ export const TRANSCODE_QUALITY = 85;
 export const SELFIE_MAX_EDGE = 1000;
 export const SELFIE_QUALITY = 0.9;
 
-/** Jobs claimed per batch, and how many run at once within one. */
+/** Jobs claimed per batch, and how many run at once within one drain. */
 export const JOB_BATCH_SIZE = 25;
 export const JOB_CONCURRENCY = 8;
+
+/**
+ * Rekognition calls in flight across every server, not per drain. One drain
+ * already runs JOB_CONCURRENCY workers; the slot table (migration 039) stops
+ * a second drain from doubling that if the lease and a call overlap.
+ */
+export const GLOBAL_REKOGNITION_CONCURRENCY = JOB_CONCURRENCY;
 
 /**
  * How long a drain keeps claiming batches before it stops and leaves the rest

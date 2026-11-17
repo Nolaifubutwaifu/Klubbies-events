@@ -6,6 +6,8 @@ import { PageTitle } from "@/components/ui";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { formatLongDate, plural } from "@/lib/format";
 import { listStackedAlbums } from "@/lib/media/album-list";
+import { albumZipPartCounts } from "@/lib/media/zip-index";
+import type { ZipPartSummary } from "@/lib/media/zip-parts";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Download everything" };
@@ -27,19 +29,13 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
     .is("deleted_at", null)
     .order("sort_order")
     .order("created_at");
-  // Counted per album: a plain select stops at 1,000 rows.
-  const counts = new Map<string, number>(
+  // Parts follow file count and total size, paged so an album past 1,000 rows is whole.
+  const partCounts = new Map<string, ZipPartSummary[]>(
     await Promise.all(
-      (albums ?? []).map(async (album) => {
-        const { count } = await supabase
-          .from("media")
-          .select("id", { count: "exact", head: true })
-          .eq("album_id", album.id)
-          .eq("status", "ready");
-        return [album.id, count ?? 0] as const;
-      }),
+      (albums ?? []).map(async (album) => [album.id, await albumZipPartCounts(supabase, album.id).catch(() => [] as ZipPartSummary[])] as const),
     ),
   );
+  const counts = new Map<string, number>([...partCounts].map(([id, parts]) => [id, parts.reduce((sum, part) => sum + part.files, 0)]));
   const listed = albums ?? [];
   const covers = new Map((await listStackedAlbums(supabase, event.id, { includeDrafts: true })).map((album) => [album.id, album.coverUrl]));
   const total = listed.reduce((sum, album) => sum + (counts.get(album.id) ?? 0), 0);
@@ -73,7 +69,15 @@ export default async function ExportPage(props: PageProps<"/admin/[handle]/expor
                     {count ? plural(count, "file") : "Nothing to download yet"}
                   </span>
                 </span>
-                {count ? <ZipParts href={`/api/albums/${album.id}/zip`} count={count} label="Download zip" className="btn btn-secondary btn-sm no-underline" /> : null}
+                {count ? (
+                  <ZipParts
+                    href={`/api/albums/${album.id}/zip`}
+                    count={count}
+                    partSummaries={partCounts.get(album.id)}
+                    label="Download zip"
+                    className="btn btn-secondary btn-sm no-underline"
+                  />
+                ) : null}
               </div>
             );
           })}

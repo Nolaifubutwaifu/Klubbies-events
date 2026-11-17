@@ -6,6 +6,8 @@ import { useState } from "react";
 import { Segmented } from "@/components/Segmented";
 import type { SavedGroup } from "@/lib/media/favourites";
 import { formatDate } from "@/lib/format";
+import { formatBytes } from "@/lib/format";
+import { planZipParts } from "@/lib/media/zip-parts";
 
 export type DownloadedItem = {
   id: string;
@@ -15,6 +17,38 @@ export type DownloadedItem = {
   ratio: number;
   at: string;
 };
+
+function ZipDownloadLinks({
+  albumId,
+  items,
+  className,
+  label,
+  icon = false,
+}: {
+  albumId: string;
+  items: { id: string; byteSize: number | null }[];
+  className: string;
+  label: string;
+  icon?: boolean;
+}) {
+  const parts = planZipParts(items.map((item) => ({ id: item.id, byteSize: item.byteSize })));
+  return (
+    <>
+      {parts.map((part, index) => (
+        <a key={part[0]?.id ?? index} href={`/api/albums/${albumId}/zip?only=${part.map((item) => item.id).join(",")}`} className={className}>
+          {icon && index === 0 ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
+            </svg>
+          ) : null}
+          {parts.length > 1
+            ? `Part ${index + 1} of ${parts.length}, ${formatBytes(part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0))}`
+            : label}
+        </a>
+      ))}
+    </>
+  );
+}
 
 function duration(seconds: number | null): string {
   if (!seconds) return "";
@@ -62,12 +96,7 @@ export function SavedTabs({
       <div className="flex items-end justify-between gap-3">
         <h1 className="serif text-[44px] leading-none">Saved</h1>
         {tab === "favourites" && only ? (
-          <a href={`/api/albums/${only.albumId}/zip?only=${only.items.map((i) => i.id).join(",")}`} className="btn btn-secondary no-underline">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
-            </svg>
-            Download {favouriteCount.toLocaleString("en-AU")}
-          </a>
+          <ZipDownloadLinks albumId={only.albumId} items={only.items} className="btn btn-secondary no-underline" label={`Download ${favouriteCount.toLocaleString("en-AU")}`} icon />
         ) : null}
       </div>
 
@@ -94,9 +123,7 @@ export function SavedTabs({
                     {group.albumTitle}
                   </Link>
                   <span className="num text-[14px] text-[color:var(--kb-ink-3)]">{group.items.length}</span>
-                  <a href={`/api/albums/${group.albumId}/zip?only=${group.items.map((i) => i.id).join(",")}`} className="ml-auto text-[15px] font-medium">
-                    Download these
-                  </a>
+                  <ZipDownloadLinks albumId={group.albumId} items={group.items} className="ml-auto text-[15px] font-medium" label="Download these" />
                 </div>
               ) : null}
               <div className={grid}>

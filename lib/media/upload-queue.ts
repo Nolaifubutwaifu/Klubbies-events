@@ -1,7 +1,18 @@
 import { Upload } from "tus-js-client";
 import { contentHash } from "@/lib/media/content-hash";
-import { UPLOAD_MAX_BYTES, VIDEO_TOO_BIG, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
+import {
+  ACCEPTED_TYPES,
+  TUS_CHUNK_BYTES,
+  isOversizeError,
+  maxBytesForKind,
+  oversizeMessage,
+  resolveMimeType,
+  tooBigWarning,
+  type UploadKind,
+} from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
+import { putSignedObject } from "@/lib/media/signed-put";
+import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseUrl } from "@/lib/supabase/config";
 
@@ -23,9 +34,11 @@ type Ticket = {
   mimeType: string;
   storagePath: string;
   derivatives: { thumb: string; display: string; poster: string };
+  /** Signed PUTs for the derivatives, issued after the ticket was authorised. */
+  signed?: Record<string, { signedUrl: string }>;
 };
 
-export type JobStatus = "queued" | "preparing" | "uploading" | "finishing" | "done" | "failed";
+export type JobStatus = "queued" | "preparing" | "uploading" | "retrying" | "finishing" | "done" | "failed";
 
 type Job = {
   key: string;
@@ -34,8 +47,12 @@ type Job = {
   status: JobStatus;
   uploaded: number;
   error?: string;
+  /** False when another try cannot succeed, such as a file that is too big. */
+  retryable?: boolean;
   note?: string;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
   prepared?: Prepared;
   hash?: string | null;
   ticket?: Ticket;
@@ -50,9 +67,13 @@ export type JobView = Readonly<{
   status: JobStatus;
   uploaded: number;
   error?: string;
+  /** False when Retry would fail the same way. Absent means it can be retried. */
+  retryable?: boolean;
   /** Set when a file was skipped rather than uploaded, and why. */
   note?: string;
   previewUrl?: string;
+  retryAttempt?: number;
+  retryOf?: number;
 }>;
 
 /** Files uploading at once. */
@@ -63,12 +84,12 @@ const VIDEOS_AT_ONCE = 2;
 const PREPARING_AT_ONCE = 2;
 /** Prepared files waiting for an upload slot, at most, so memory stays flat on a big batch. */
 const PREPARED_AHEAD = 6;
-const CHUNK_SIZE = 6 * 1024 * 1024; // Supabase requires exactly 6 MB chunks
+const CHUNK_SIZE = TUS_CHUNK_BYTES;
 const RESUMABLE_ENDPOINT = `${supabaseUrl.replace(".supabase.co", ".storage.supabase.co")}/storage/v1/upload/resumable`;
 
-function friendlyError(error: unknown): string {
+function friendlyError(error: unknown, kind: UploadKind, name: string): string {
   const text = error instanceof Error ? error.message : String(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return VIDEO_TOO_BIG;
+  if (isOversizeError(error)) return oversizeMessage(name, kind);
   if (/401|403|jwt|unauthor/i.test(text)) return "Your session expired. Refresh the page and retry.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
@@ -110,8 +131,9 @@ export class UploadQueue {
         rejected.push(file.name);
         continue;
       }
-      if (file.size > UPLOAD_MAX_BYTES) {
-        warnings.push(tooBigWarning(file.name));
+      const kind = ACCEPTED_TYPES[mimeType].kind;
+      if (file.size > maxBytesForKind(kind)) {
+        warnings.push(tooBigWarning(file.name, kind));
         continue;
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
@@ -123,15 +145,21 @@ export class UploadQueue {
 
   retry(key: string) {
     const job = this.jobs.get(key);
-    if (!job || job.status !== "failed") return;
+    if (!job || job.status !== "failed" || job.retryable === false) return;
     // A ticket from a stalled upload may have expired. A fresh one carries on
     // in the same row (matched by content), so nothing is uploaded twice.
-    this.patch(job, { status: "queued", error: undefined, ticket: job.originalDone ? job.ticket : undefined });
+    // Drop derivative URLs: they are short-lived, and a retry after a long
+    // video may find them expired. The ticket row itself is reused.
+    const ticket = job.originalDone && job.ticket ? { ...job.ticket, signed: undefined } : undefined;
+    // Drop the in-memory TUS handle when the original is unfinished. A new
+    // Upload with the same fingerprint resumes the same object, not a
+    // different album's file.
+    this.patch(job, { status: "queued", error: undefined, ticket, tus: job.originalDone ? job.tus : undefined });
     this.pump();
   }
 
   retryFailed() {
-    for (const job of this.jobs.values()) if (job.status === "failed") this.retry(job.key);
+    for (const job of this.jobs.values()) if (job.status === "failed" && job.retryable !== false) this.retry(job.key);
   }
 
   /** Gives up on every failed file: they leave the list (the server already knows they failed). */
@@ -153,8 +181,11 @@ export class UploadQueue {
       status: j.status,
       uploaded: j.uploaded,
       error: j.error,
+      retryable: j.retryable,
       note: j.note,
       previewUrl: j.previewUrl,
+      retryAttempt: j.retryAttempt,
+      retryOf: j.retryOf,
     }));
     for (const listener of this.listeners) listener();
   }
@@ -166,9 +197,25 @@ export class UploadQueue {
     }
   }
 
+  private recordFailure(job: Job, error: unknown) {
+    const kind = this.isVideo(job) ? "video" : "photo";
+    const oversize = isOversizeError(error);
+    this.patch(job, {
+      status: "failed",
+      error: friendlyError(error, kind, job.file.name),
+      retryable: oversize ? false : true,
+    });
+  }
+
   private patch(job: Job, changes: Partial<Job>) {
     Object.assign(job, changes);
     this.emit();
+  }
+
+  private onRetry(job: Job) {
+    return (nextAttempt: number, attempts: number) => {
+      this.patch(job, { status: "retrying", retryAttempt: nextAttempt, retryOf: attempts });
+    };
   }
 
   private isVideo(job: Job) {
@@ -231,7 +278,12 @@ export class UploadQueue {
           retryDelays: [0, 2000, 5000, 10000, 20000],
           uploadDataDuringCreation: true,
           removeFingerprintOnSuccess: true,
-          storeFingerprintForResuming: false,
+          // The default fingerprint is only the file name and size, so the
+          // same photo in two albums would resume into the wrong object.
+          // This one includes the media id and storage path from the ticket.
+          storeFingerprintForResuming: true,
+          fingerprint: async (file) =>
+            ["kb", ticket.mediaId, ticket.storagePath, file.name, file.size, file.lastModified].join("|"),
           metadata: {
             bucketName: ticket.bucket,
             objectName: ticket.storagePath,
@@ -265,8 +317,28 @@ export class UploadQueue {
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.recordFailure(job, error);
     }
+  }
+
+  /** A fresh ticket, including signed derivative URLs. "duplicate" means the album already has the file. */
+  private async requestTicket(job: Job): Promise<Ticket | "duplicate"> {
+    const res = await postJson(
+      "/api/media/upload_ticket",
+      {
+        albumId: this.albumId,
+        filename: job.file.name,
+        mimeType: job.mimeType,
+        byteSize: job.file.size,
+        contentHash: job.hash,
+      },
+      this.onRetry(job),
+    );
+    const body: Ticket & { error?: string; full?: boolean } = await res.json();
+    if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
+    if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
+    if (body.duplicate) return "duplicate";
+    return body;
   }
 
   /** Ticket, original, derivatives, finalise: the network half. */
@@ -276,25 +348,12 @@ export class UploadQueue {
       this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        const res = await fetch("/api/media/upload_ticket", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            albumId: this.albumId,
-            filename: job.file.name,
-            mimeType: job.mimeType,
-            byteSize: job.file.size,
-            contentHash: job.hash,
-          }),
-        });
-        const body: Ticket & { error?: string; full?: boolean } = await res.json();
-        if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
-        if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
-        if (body.duplicate) {
+        const issued = await this.requestTicket(job);
+        if (issued === "duplicate") {
           this.patch(job, { status: "done", uploaded: job.file.size, note: "Already in this album" });
           return;
         }
-        ticket = body;
+        ticket = issued;
         this.patch(job, { ticket });
       }
 
@@ -304,28 +363,47 @@ export class UploadQueue {
       }
 
       this.patch(job, { status: "finishing" });
-      const storage = this.supabase.storage.from(ticket.bucket);
       const derivatives: [string, Blob | null][] = [
         [ticket.derivatives.thumb, prepared.thumb],
         [ticket.derivatives.display, prepared.display],
         [ticket.derivatives.poster, prepared.poster],
       ];
+      if (derivatives.some(([, blob]) => blob) && !ticket.signed) {
+        const refreshed = await this.requestTicket(job);
+        if (refreshed === "duplicate") {
+          this.patch(job, { status: "done", uploaded: job.file.size, note: "Already in this album" });
+          return;
+        }
+        ticket = refreshed;
+        this.patch(job, { ticket });
+      }
       for (const [path, blob] of derivatives) {
         if (!blob) continue;
-        const { error } = await storage.upload(path, blob, { upsert: true, contentType: blob.type || "image/webp" });
-        if (error) throw error;
+        const signedUrl = ticket.signed?.[path]?.signedUrl;
+        await withBackoff(async () => {
+          if (signedUrl) {
+            await putSignedObject(signedUrl, blob, blob.type || "image/webp");
+            return;
+          }
+          // A ticket from before signed URLs existed still uploads with the session.
+          const { error } = await this.supabase.storage.from(ticket.bucket).upload(path, blob, {
+            upsert: true,
+            contentType: blob.type || "image/webp",
+          });
+          if (error) throw error;
+        }, isUploadRetryable, { onRetry: this.onRetry(job) });
       }
 
-      const res = await fetch(`/api/media/${ticket.mediaId}/finalize`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const res = await postJson(
+        `/api/media/${ticket.mediaId}/finalize`,
+        {
           width: prepared.width,
           height: prepared.height,
           durationSeconds: prepared.durationSeconds,
           capturedAt: prepared.capturedAt,
-        }),
-      });
+        },
+        this.onRetry(job),
+      );
       if (!res.ok) {
         const body: { error?: string } = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Could not finish the upload");
@@ -333,7 +411,7 @@ export class UploadQueue {
       this.patch(job, { status: "done" });
       this.onItemDone();
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.recordFailure(job, error);
       // Tell the server, so the row stops showing as "processing" to guests
       // and stops counting against the allowance. Upload again revives it.
       if (job.ticket && !job.ticket.duplicate) {

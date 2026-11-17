@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { attachmentHeader, isBackedUpPath, r2ConfigFrom } from "@/lib/backup/r2-core";
-import { isMonthlyCheckHour } from "@/lib/backup/r2";
+import { isMonthlyCheckHour, redactSecrets } from "@/lib/backup/r2";
 
 const EVENT = "11111111-2222-3333-4444-555555555555";
 
@@ -24,6 +24,12 @@ describe("R2 backup", () => {
   it("keeps a non-English filename on download", () => {
     expect(attachmentHeader("Ball – photo.jpg")).toBe(
       `attachment; filename="Ball _ photo.jpg"; filename*=UTF-8''Ball%20%E2%80%93%20photo.jpg`,
+    );
+  });
+
+  it("strips signed urls from backup errors", () => {
+    expect(redactSecrets("could not fetch https://x.supabase.co/storage/v1/object/sign/a?token=secret")).toBe(
+      "could not fetch [url]",
     );
   });
 

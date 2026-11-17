@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from "react";
 import { ACCEPT_ATTRIBUTE } from "@/lib/media/constants";
 import { EMPTY_GUEST_SNAPSHOT, GuestUploadQueue } from "@/lib/media/guest-queue";
 
@@ -24,7 +24,15 @@ export function GuestUploader({ token }: { token: string }) {
   const done = jobs.filter((j) => j.status === "done").length;
   const failed = jobs.filter((j) => j.status === "failed");
   const busy = jobs.some((j) => j.status !== "done" && j.status !== "failed");
+  const shown = [...failed, ...jobs.filter((j) => j.status !== "failed").slice(-30)];
   const pct = jobs.length ? Math.floor((jobs.reduce((sum, j) => sum + j.progress, 0) / jobs.length) * 100) : 0;
+
+  useEffect(() => {
+    if (!busy) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy]);
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -91,6 +99,21 @@ export function GuestUploader({ token }: { token: string }) {
             <span className="num text-[14px] text-[color:var(--kb-ink-2)]" role="status">
               {pct}%{failed.length ? ` · ${failed.length} failed` : ""}
             </span>
+            {busy ? <span className="basis-full text-[14px] text-[color:var(--kb-ink-3)]">Keep this tab open. You can move around the app.</span> : null}
+            {failed.length ? (
+              <div className="flex basis-full flex-wrap gap-2">
+                {failed.some((job) => job.retryable !== false) ? (
+                  <button type="button" className="btn btn-secondary" onClick={() => queue.retryFailed()}>
+                    {failed.filter((job) => job.retryable !== false).length === 1
+                      ? "Retry it"
+                      : `Retry all ${failed.filter((job) => job.retryable !== false).length}`}
+                  </button>
+                ) : null}
+                <button type="button" className="btn btn-ghost" onClick={() => queue.clearFailed()}>
+                  Clear failed
+                </button>
+              </div>
+            ) : null}
           </div>
           <div
             className="h-1.5 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]"
@@ -104,7 +127,7 @@ export function GuestUploader({ token }: { token: string }) {
           </div>
 
           <div className="flex flex-col">
-            {jobs.slice(-30).map((job) => (
+            {shown.map((job) => (
               <div key={job.key} className="flex items-center gap-3 border-t border-[color:var(--kb-sand)] py-2.5 first:border-t-0">
                 {job.previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- local object URL
@@ -118,15 +141,23 @@ export function GuestUploader({ token }: { token: string }) {
                     <span
                       className={`flex-none ${job.status === "done" ? "font-semibold text-[color:var(--kb-ok)]" : job.status === "failed" ? "font-semibold text-[color:var(--kb-warn)]" : "text-[color:var(--kb-ink-2)]"}`}
                     >
-                      {job.status === "done" ? "Done" : job.status === "failed" ? "Failed" : `${Math.floor(job.progress * 100)}%`}
+                      {job.status === "done"
+                        ? "Done"
+                        : job.status === "failed"
+                          ? "Failed"
+                          : job.status === "retrying"
+                            ? `Trying again (${job.retryAttempt ?? 2} of ${job.retryOf ?? 4})`
+                            : `${Math.floor(job.progress * 100)}%`}
                     </span>
                   </span>
                   {job.status === "failed" ? (
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-[14px] text-[color:var(--kb-warn)]">{job.error}</span>
-                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => queue.retry(job.key)}>
-                        Retry now
-                      </button>
+                      {job.retryable === false ? null : (
+                        <button type="button" className="btn btn-secondary min-h-[44px] min-w-[44px]" onClick={() => queue.retry(job.key)}>
+                          Retry now
+                        </button>
+                      )}
                     </span>
                   ) : job.status !== "done" ? (
                     <span className="block h-1 overflow-hidden rounded-[4px] bg-[color:var(--kb-sand)]">

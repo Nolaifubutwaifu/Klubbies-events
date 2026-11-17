@@ -23,7 +23,9 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
   const [qr, logos] = await Promise.all([
     eventQrSvg(handle),
     // The full logo, not the 96px badge: it prints about 190px tall at 300dpi.
-    event.logo_path ? signPaths(await createClient(), [event.logo_path], SIGNED_URL_TTL.display) : Promise.resolve(new Map<string, string>()),
+    event.logo_path
+      ? signPaths(await createClient(), [{ kind: "event", path: event.logo_path, eventId: event.id }], SIGNED_URL_TTL.display)
+      : Promise.resolve(new Map<string, string>()),
   ]);
   const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
   const meta = [formatEventDates(event.starts_on, event.ends_on), event.venue].filter(Boolean).join(" · ");

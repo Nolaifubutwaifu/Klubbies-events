@@ -1617,6 +1617,7 @@ html:has(.theme-soft) body {
 /* The default accent, for an event with no colour of its own. An event that
    has one sets these inline (lib/theme.ts, the "night" ground). */
 [data-gallery="dark"] {
+  -webkit-tap-highlight-color: transparent;
   --kb-ember: #9db0f7;
   --kb-ember-deep: #c3cffb;
   --kb-ember-tint: #1c2544;

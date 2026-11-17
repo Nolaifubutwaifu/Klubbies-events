@@ -1,76 +1,93 @@
 import "server-only";
-import { Readable } from "node:stream";
+import { PassThrough, Readable } from "node:stream";
 import { ZipArchive } from "archiver";
 import { NextResponse } from "next/server";
 import { r2Stream } from "@/lib/backup/r2";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 import { ZIP_PART_SIZE } from "./zip-parts";
 
 export const PART_SIZE = ZIP_PART_SIZE;
 
-type ZipItem = { id: string; storage_path: string; original_filename: string | null; backed_up_at: string | null };
+type ZipItem = {
+  id: string;
+  event_id: string;
+  album_id: string | null;
+  storage_path: string;
+  original_filename: string | null;
+  backed_up_at: string | null;
+};
 
 /**
  * Streams originals into a zip as they download. Callers pick the items with
  * the user's own client, so RLS has already decided what is visible; items
  * with a copy in R2 are read from there (no download charge), the rest are
- * signed through the caller's client, so storage RLS is the last word on them.
+ * signed for paths on those rows.
+ *
+ * The archive is piped through a stream the response reads. A slow phone
+ * pauses that stream, which pauses the archive, and the next file is not
+ * fetched until the current one has been written. Nothing is buffered ahead
+ * of what has been sent.
  */
 export async function zipResponse(supabase: UserClient, media: ZipItem[], filename: string): Promise<NextResponse> {
   const urls = await signPaths(
     supabase,
-    media.filter((m) => !m.backed_up_at).map((m) => m.storage_path),
+    mediaClaims(media.filter((m) => !m.backed_up_at).map((m) => ({ ...m, paths: [m.storage_path] }))),
     SIGNED_URL_TTL.download,
   );
 
   // Stored (not deflated): photos and video are already compressed.
-  const archive = new ZipArchive({ store: true });
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      archive.on("data", (chunk: Buffer) => controller.enqueue(new Uint8Array(chunk)));
-      archive.on("end", () => controller.close());
-      archive.on("warning", (error: unknown) => console.error("zip warning", error));
-      archive.on("error", (error: unknown) => controller.error(error));
+  // A small high water mark so a paused phone is not sitting on megabytes.
+  const archive = new ZipArchive({ store: true, highWaterMark: 64 * 1024 });
+  const pass = new PassThrough({ highWaterMark: 64 * 1024 });
+  archive.pipe(pass);
 
-      void (async () => {
-        const used = new Set<string>();
-        const missing: string[] = [];
-        for (const item of media) {
-          const fallback = item.storage_path.split("/").pop() ?? `${item.id}.jpg`;
-          let body = await r2Stream(item);
-          if (!body) {
-            const url = urls.get(item.storage_path) ?? (await signPaths(supabase, [item.storage_path], SIGNED_URL_TTL.download)).get(item.storage_path);
-            const response = url ? await fetch(url).catch(() => null) : null;
-            if (!response?.ok || !response.body) {
-              missing.push(item.original_filename || fallback);
-              continue;
-            }
-            body = response.body;
-          }
-
-          let name = item.original_filename?.replace(/[/\\]/g, "-") || fallback;
-          if (used.has(name)) name = `${item.id.slice(0, 8)}-${name}`;
-          used.add(name);
-
-          archive.append(Readable.fromWeb(body as Parameters<typeof Readable.fromWeb>[0]), { name });
-        }
-        // A zip that quietly comes up short looks complete; say what's missing.
-        if (missing.length) {
-          const note = `These ${missing.length} file(s) couldn't be added to this zip. Try downloading them one at a time from the album, or download this zip again later.\n\n${missing.join("\n")}\n`;
-          archive.append(Buffer.from(note, "utf8"), { name: "missing.txt" });
-        }
-        await archive.finalize();
-      })().catch((error) => {
-        console.error("zip failed", error);
-        archive.abort();
-      });
-    },
-    cancel() {
-      archive.abort();
-    },
+  let finished = false;
+  archive.on("end", () => {
+    finished = true;
   });
+  archive.on("warning", (error: unknown) => console.error("zip warning", error));
+  pass.on("close", () => {
+    if (!finished) archive.abort();
+  });
+
+  void (async () => {
+    const used = new Set<string>();
+    const missing: string[] = [];
+    for (const item of media) {
+      const fallback = item.storage_path.split("/").pop() ?? `${item.id}.jpg`;
+      let body = await r2Stream(item);
+      if (!body) {
+            const again = mediaClaims([{ ...item, paths: [item.storage_path] }]);
+            const url = urls.get(item.storage_path) ?? (again.length ? (await signPaths(supabase, again, SIGNED_URL_TTL.download)).get(item.storage_path) : undefined);
+        const response = url ? await fetch(url).catch(() => null) : null;
+        if (!response?.ok || !response.body) {
+          missing.push(item.original_filename || fallback);
+          continue;
+        }
+        body = response.body;
+      }
+
+      let name = item.original_filename?.replace(/[/\\]/g, "-") || fallback;
+      if (used.has(name)) name = `${item.id.slice(0, 8)}-${name}`;
+      used.add(name);
+
+      await appendEntry(archive, Readable.fromWeb(body as Parameters<typeof Readable.fromWeb>[0]), name);
+    }
+    // A zip that quietly comes up short looks complete; say what's missing.
+    if (missing.length) {
+      const note = `These ${missing.length} file(s) couldn't be added to this zip. Try downloading them one at a time from the album, or download this zip again later.\n\n${missing.join("\n")}\n`;
+      await appendEntry(archive, Buffer.from(note, "utf8"), "missing.txt");
+    }
+    await archive.finalize();
+  })().catch((error) => {
+    console.error("zip failed", error);
+    archive.abort();
+    pass.destroy();
+  });
+
+  const stream = Readable.toWeb(pass) as ReadableStream<Uint8Array>;
 
   return new NextResponse(stream, {
     headers: {
@@ -79,6 +96,32 @@ export async function zipResponse(supabase: UserClient, media: ZipItem[], filena
       "cache-control": "no-store",
     },
   });
+}
+
+/** Resolves once this entry has been written into the archive, so the next file is not fetched early. */
+function appendEntry(archive: ZipArchive, source: Readable | Buffer, name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error?: unknown) => {
+      if (settled) return;
+      settled = true;
+      archive.off("entry", onEntry);
+      archive.off("error", onError);
+      if (error) reject(error instanceof Error ? error : new Error(String(error)));
+      else resolve();
+    };
+    const onEntry = () => finish();
+    const onError = (error: unknown) => finish(error);
+    archive.once("entry", onEntry);
+    archive.once("error", onError);
+    archive.append(source, { name });
+  });
+}
+
+/** Part 1 is named as a part whenever the download is split, so the phone doesn't save two files as the same "Album.zip". */
+export function zipPartFilename(title: string, part: number, partCount: number): string {
+  if (partCount > 1) return `${title} (part ${part + 1}).zip`;
+  return `${title}.zip`;
 }
 
 export function safeFilename(title: string, fallback: string): string {

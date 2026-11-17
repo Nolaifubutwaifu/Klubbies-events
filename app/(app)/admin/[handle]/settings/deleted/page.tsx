@@ -5,7 +5,7 @@ import { requireAdminContext } from "@/lib/auth/admin-context";
 import { personName } from "@/lib/auth/display-name";
 import { formatDate } from "@/lib/format";
 import { restorableUntil } from "@/lib/media/bin";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { BinView, type BinAlbum, type BinItem } from "./BinView";
@@ -32,7 +32,7 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
       .order("deleted_at", { ascending: false }),
     admin
       .from("media")
-      .select("id, kind, original_filename, thumb_path, poster_path, deleted_at, deleted_by, albums!media_album_id_fkey!inner(title, deleted_at)")
+      .select("id, event_id, album_id, kind, original_filename, thumb_path, poster_path, deleted_at, deleted_by, albums!media_album_id_fkey!inner(title, deleted_at)")
       .eq("event_id", eventId)
       .not("deleted_at", "is", null)
       .is("albums.deleted_at", null)
@@ -73,7 +73,7 @@ export default async function RecentlyDeletedPage(props: PageProps<"/admin/[hand
   const supabase = await createClient();
   const urls = await signPaths(
     supabase,
-    (media ?? []).map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
+    mediaClaims((media ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
     SIGNED_URL_TTL.thumb,
   );
 

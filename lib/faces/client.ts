@@ -1,6 +1,8 @@
 import "server-only";
 import { RekognitionClient } from "@aws-sdk/client-rekognition";
 import { serverEnv } from "@/lib/env";
+import { withRekognitionSlot } from "@/lib/worker-lease";
+import { GLOBAL_REKOGNITION_CONCURRENCY } from "./constants";
 
 // Absence of AWS credentials is a configuration state, not an error: a dev
 // machine without them boots, the worker no-ops, and no event can turn the
@@ -22,6 +24,11 @@ export function faceClient(): RekognitionClient | null {
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
     },
   });
+  // Every IndexFaces / SearchFaces / DeleteFaces goes through one counter,
+  // whichever drain or purge started it. JOB_CONCURRENCY is the cap.
+  const send = cached.send.bind(cached);
+  cached.send = ((command: unknown, options?: unknown) =>
+    withRekognitionSlot(GLOBAL_REKOGNITION_CONCURRENCY, () => send(command as never, options as never))) as typeof cached.send;
   return cached;
 }
 

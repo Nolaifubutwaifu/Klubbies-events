@@ -50,6 +50,8 @@ export const viewport: Viewport = {
   themeColor: "#f7f7f5",
   width: "device-width",
   initialScale: 1,
+  // Lets env(safe-area-inset-*) see the iPhone home indicator and notch.
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

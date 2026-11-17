@@ -11,8 +11,10 @@ import { faceStateFor, photosOfYouInAlbum } from "@/lib/faces/queries";
 import { formatDate } from "@/lib/format";
 import { favouritedIds } from "@/lib/media/favourites";
 import { listAlbumMedia } from "@/lib/media/queries";
+import { albumZipPartCounts } from "@/lib/media/zip-index";
+import type { ZipPartSummary } from "@/lib/media/zip-parts";
 import { ProcessingBanner } from "@/components/ProcessingBanner";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaim, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { personName } from "@/lib/auth/display-name";
@@ -121,17 +123,19 @@ export async function AlbumScreen({
   // needs the first page, so that fallback is applied further down.
   const chosenCover = (async (): Promise<{ url: string | null; source: string } | null> => {
     if (album.cover_path) {
-      const url = (await signPaths(supabase, [album.cover_path], SIGNED_URL_TTL.display)).get(album.cover_path) ?? null;
+      const url = (await signPaths(supabase, [{ kind: "event", path: album.cover_path, eventId: album.event_id }], SIGNED_URL_TTL.display)).get(album.cover_path) ?? null;
       return { url, source: "Your own cover image." };
     }
     if (album.cover_media_id) {
       const { data: cover } = await supabase
         .from("media")
-        .select("display_path, thumb_path")
+        .select("id, event_id, album_id, display_path, thumb_path")
         .eq("id", album.cover_media_id)
         .maybeSingle();
-      const path = cover?.display_path ?? cover?.thumb_path;
-      const url = path ? ((await signPaths(supabase, [path], SIGNED_URL_TTL.display)).get(path) ?? null) : null;
+      const path = cover?.display_path ?? cover?.thumb_path ?? null;
+      if (!cover || !path) return { url: null, source: "Chosen from this album." };
+      const claim = mediaClaim(cover, path);
+      const url = claim ? ((await signPaths(supabase, [claim], SIGNED_URL_TTL.display)).get(path) ?? null) : null;
       return { url, source: "Chosen from this album." };
     }
     return null;
@@ -153,7 +157,16 @@ export async function AlbumScreen({
     cover,
     mineItems,
     { credits, uploaderIds },
-  ] = await Promise.all([firstPage, guestFilesQuery, processing, chosenCover, mine, creditsQuery]);
+    zipPartCounts,
+  ] = await Promise.all([
+    firstPage,
+    guestFilesQuery,
+    processing,
+    chosenCover,
+    mine,
+    creditsQuery,
+    albumZipPartCounts(supabase, album.id).catch(() => [] as ZipPartSummary[]),
+  ]);
   const [{ count: savedTotal }, savedIds, { data: uploaderNames }] = await Promise.all([
     supabase
       .from("favourites")
@@ -273,7 +286,8 @@ export async function AlbumScreen({
           <AlbumActions
             albumId={album.id}
             mediaIds={(readyIds ?? []).map((m) => m.id)}
-            parts={Math.max(1, Math.ceil((photoCount + videoCount) / 150))}
+            parts={zipPartCounts.length > 0 ? zipPartCounts.length : Math.max(1, Math.ceil((photoCount + videoCount) / 150))}
+            partBytes={zipPartCounts.map((part) => part.bytes)}
             canDownload={album.allow_download || canManage}
             canManage={canManage}
             canAdd={canAdd}

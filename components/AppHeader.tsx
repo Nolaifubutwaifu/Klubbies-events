@@ -34,7 +34,9 @@ export async function AppHeader({
 
   const [logos, avatars] = await Promise.all([
     signLogoMarks(supabase, [event.logo_path]),
-    profile?.avatar_url ? signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display) : Promise.resolve(new Map<string, string>()),
+    profile?.avatar_url
+      ? signPaths(supabase, [{ kind: "avatar", path: profile.avatar_url, userId: profile.id }], SIGNED_URL_TTL.display)
+      : Promise.resolve(new Map<string, string>()),
   ]);
   const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
   const avatarUrl = profile?.avatar_url ? (avatars.get(profile.avatar_url) ?? null) : null;
@@ -51,7 +53,11 @@ export async function AppHeader({
 
   return (
     <>
-      <header className="relative z-30 border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)]">
+      <header
+        className={`relative z-30 border-b border-[color:var(--kb-line)] bg-[color:var(--kb-white)] ${
+          area === "attendee" ? "pt-[env(safe-area-inset-top)]" : ""
+        }`}
+      >
         <div
           className={`relative mx-auto flex w-full items-center gap-2.5 ${
             area === "attendee" ? "min-h-[60px] max-w-[1200px] pl-4 pr-3 sm:px-10 md:min-h-16" : "min-h-[60px] max-w-[1320px] gap-3 px-4 sm:px-6"

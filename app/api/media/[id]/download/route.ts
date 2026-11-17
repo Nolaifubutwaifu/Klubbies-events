@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
 import { r2Url } from "@/lib/backup/r2";
-import { SIGNED_URL_TTL, signDownload, signedUrlLifetime, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaim, signDownload, signedUrlLifetime, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/download">) {
@@ -13,7 +13,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const supabase = await createClient();
   const { data: media } = await supabase
     .from("media")
-    .select("id, event_id, kind, storage_path, display_path, original_filename, mime_type, byte_size, backed_up_at, albums!media_album_id_fkey(allow_download)")
+    .select("id, event_id, album_id, kind, storage_path, display_path, original_filename, mime_type, byte_size, backed_up_at, albums!media_album_id_fkey(allow_download)")
     .eq("id", id)
     .maybeSingle();
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -30,7 +30,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   // anything not copied yet still comes from Supabase.
   const url =
     (await r2Url(media, signedUrlLifetime(SIGNED_URL_TTL.download), filename)) ??
-    (await signDownload(supabase, media.storage_path, filename));
+    (media.album_id
+      ? await signDownload(supabase, { kind: "media", path: media.storage_path, eventId: media.event_id, albumId: media.album_id, mediaId: media.id }, filename)
+      : null);
   if (!url) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await logAccess(event, media.id, "download");
@@ -43,7 +45,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
     const saveUrl =
       photosReadable || !media.display_path
         ? url
-        : (await signPaths(supabase, [media.display_path], SIGNED_URL_TTL.display)).get(media.display_path) ?? url;
+        : (media.album_id
+            ? (await signPaths(supabase, [mediaClaim(media, media.display_path)].filter((c) => c !== null), SIGNED_URL_TTL.display)).get(media.display_path) ?? url
+            : url);
     return NextResponse.json({ url: saveUrl, filename, kind: media.kind, bytes: media.byte_size });
   }
   return NextResponse.redirect(url, { status: 303 });

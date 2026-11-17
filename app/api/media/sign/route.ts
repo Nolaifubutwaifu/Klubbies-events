@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById, getSessionUser } from "@/lib/auth/session";
 import { r2Url } from "@/lib/backup/r2";
-import { SIGNED_URL_TTL, signedUrlLifetime, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signedUrlLifetime, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   // RLS decides which of the requested items this user may see.
   const { data, error } = await supabase
     .from("media")
-    .select("id, kind, storage_path, thumb_path, display_path, poster_path, backed_up_at, mime_type, event_id, albums!media_album_id_fkey(allow_download)")
+    .select("id, kind, storage_path, thumb_path, display_path, poster_path, backed_up_at, mime_type, event_id, album_id, albums!media_album_id_fkey(allow_download)")
     .in("id", parsed.data.mediaIds);
   if (error) return NextResponse.json({ error: "Could not load media" }, { status: 500 });
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   }
   const urls = await signPaths(
     supabase,
-    rows.map(pathFor).filter((p): p is string => Boolean(p)),
+    mediaClaims(rows.map((m) => ({ ...m, paths: [pathFor(m)] }))),
     ttl,
   );
 

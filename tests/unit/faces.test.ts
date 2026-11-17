@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { bandFor, SIMILARITY } from "@/lib/faces/constants";
+import { bandFor, GLOBAL_REKOGNITION_CONCURRENCY, JOB_CONCURRENCY, SIMILARITY } from "@/lib/faces/constants";
+import { isMissingLeaseRpc } from "@/lib/worker-lease";
 
 describe("similarity bands", () => {
   it("confirms at the threshold and above", () => {
@@ -97,5 +98,18 @@ describe("external image ids", () => {
     const { parseExternalId } = await import("@/lib/faces/client");
     const uuid = "8f3c1111-2222-3333-4444-555566667777";
     expect(parseExternalId(`ref:${uuid}`)).toEqual({ kind: "ref", id: uuid });
+  });
+});
+
+describe("face drain lease", () => {
+  it("treats a missing migration as 'not installed', not as a busy drain", () => {
+    expect(isMissingLeaseRpc({ code: "PGRST202", message: "Could not find the function public.try_worker_lease in the schema cache" })).toBe(true);
+    expect(isMissingLeaseRpc({ code: "42501", message: "permission denied" })).toBe(false);
+    expect(isMissingLeaseRpc(null)).toBe(false);
+  });
+
+  it("caps Rekognition at the per-drain worker count", () => {
+    expect(GLOBAL_REKOGNITION_CONCURRENCY).toBe(JOB_CONCURRENCY);
+    expect(GLOBAL_REKOGNITION_CONCURRENCY).toBeLessThanOrEqual(8);
   });
 });

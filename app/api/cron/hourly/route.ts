@@ -12,7 +12,7 @@ import { runBinPurge } from "@/lib/media/bin";
 import { runRemovalSweep } from "@/lib/media/removals";
 import { runScheduledPublishJob } from "@/lib/media/schedule";
 import { runUnfinishedSweep } from "@/lib/media/unfinished";
-import { runVideoPreviewBackfill } from "@/lib/media/video-previews";
+import { runVideoPreviewBackfill, VIDEO_PREVIEW_CRON_BUDGET_MS } from "@/lib/media/video-previews";
 import { prunePendingSignIns, runAccessEndingJob } from "@/lib/notify";
 
 export const maxDuration = 300;
@@ -28,8 +28,9 @@ function authorised(request: Request): boolean {
 // attendees a week before a gallery closes, clears uploads that never
 // finished within 14 days, empties anything in Recently deleted for more
 // than 30 days, and closes guest overflow windows that have run 48 hours
-// (pausing the guests who joined last). It copies new uploads to R2 that the
-// upload request didn't, deletes R2 copies whose 30 days are up, and on the
+// (pausing the guests who joined last). It copies new uploads to R2 (that
+// queue is every ready file not copied yet; finalize does not copy inline),
+// deletes R2 copies whose 30 days are up, and on the
 // 1st of each month checks R2 for events that no longer exist. It warns
 // organisers 30 and 7 days before an event's photos are deleted, deletes the
 // face data of galleries that have closed, and deletes photos at 12 months. Closing itself needs no job: RLS compares
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
   // After the usage refresh, so an event's saved totals are its last before its photos go.
   const retention = await runRetentionJob(left(40_000)).catch((error) => (console.error("retention", error), null));
   // Posters, sizes and lengths for videos the uploader's browser couldn't read.
-  const videoPreviews = await runVideoPreviewBackfill(left(60_000)).catch((error) => (console.error("video previews", error), 0));
+  const videoPreviews = await runVideoPreviewBackfill(left(VIDEO_PREVIEW_CRON_BUDGET_MS)).catch((error) => (console.error("video previews", error), 0));
   const faces = await runFaceJobs({ budgetMs: left(240_000) });
   await pruneRateEvents();
   return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, retention, videoPreviews, faces });

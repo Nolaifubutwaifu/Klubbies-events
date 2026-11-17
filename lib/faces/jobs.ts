@@ -3,6 +3,7 @@ import { after } from "next/server";
 import type { FaceJob, FaceJobKind } from "@/lib/db/types";
 import { removeObjects } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { withWorkerLease } from "@/lib/worker-lease";
 import { facesConfigured, isThrottling } from "./client";
 import { ensureEventCollection } from "./collections";
 import { DRAIN_BUDGET_MS, JOB_BATCH_SIZE, JOB_CONCURRENCY, MAX_JOB_ATTEMPTS, UPLOAD_KICK_BUDGET_MS } from "./constants";
@@ -24,10 +25,28 @@ export type DrainResult = { claimed: number; done: number; failed: number; purge
  *   3. an admin "Run now" button, for backfill and for when something sticks.
  *
  * claim_face_jobs uses `for update skip locked`, so two of these running at
- * once take different work rather than the same work twice.
+ * once take different work rather than the same work twice. They must not
+ * run at once anyway: each one opens JOB_CONCURRENCY Rekognition calls, and
+ * a few hundred finishes would open a few hundred drains. A database lease
+ * (migration 039) lets one drain through. The others return immediately and
+ * leave the jobs queued for that drain or for the hourly cron.
  */
+const IDLE_DRAIN: DrainResult = { claimed: 0, done: 0, failed: 0, purged: 0, searches: 0 };
+
 export async function runFaceJobs(options: { budgetMs?: number; batchSize?: number } = {}): Promise<DrainResult> {
-  if (!facesConfigured()) return { claimed: 0, done: 0, failed: 0, purged: 0, searches: 0 };
+  if (!facesConfigured()) return { ...IDLE_DRAIN };
+  const outcome = await withWorkerLease("face_drain", (renew) => drainFaceJobs(options, renew));
+  if (outcome === "busy") {
+    console.log("face drain already running; jobs stay queued");
+    return { ...IDLE_DRAIN };
+  }
+  return outcome;
+}
+
+async function drainFaceJobs(
+  options: { budgetMs?: number; batchSize?: number },
+  renew: () => Promise<boolean>,
+): Promise<DrainResult> {
   const budgetMs = options.budgetMs ?? DRAIN_BUDGET_MS;
   const batchSize = options.batchSize ?? JOB_BATCH_SIZE;
   const deadline = Date.now() + budgetMs;
@@ -44,6 +63,9 @@ export async function runFaceJobs(options: { budgetMs?: number; batchSize?: numb
   // five separate triggers and, back when the cron ran once a day on Hobby,
   // five days. Nothing ever asked for the next batch.
   while (Date.now() < deadline) {
+    // Lost the lease (the previous holder crashed and this one was taken
+    // over, or our renewal failed): stop so two drains don't both call AWS.
+    if (!(await renew())) break;
     const { data: claimed, error } = await admin.rpc("claim_face_jobs", { batch_size: batchSize });
     if (error) throw error;
     const jobs = (claimed ?? []) as FaceJob[];

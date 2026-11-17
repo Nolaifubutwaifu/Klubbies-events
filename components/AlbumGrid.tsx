@@ -9,6 +9,8 @@ import { deleteMediaAction, restoreMediaAction, setAlbumCoverAction } from "@/ap
 import { Dialog } from "@/components/Dialog";
 import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
+import { formatBytes } from "@/lib/format";
+import { planZipParts } from "@/lib/media/zip-parts";
 import { SELECT_EVENT } from "@/components/AlbumActions";
 import { Segmented } from "@/components/Segmented";
 import { tileRatio } from "@/lib/media/ratio";
@@ -28,7 +30,7 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
         <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (
-        <span className="flex h-full w-full items-center justify-center bg-neutral-400 p-2 text-center text-[14px] text-ink">
+        <span className="flex h-full w-full items-center justify-center bg-[color:var(--kb-sand)] p-2 text-center text-[14px] text-[color:var(--kb-ink-2)]">
           {item.status !== "ready"
             ? item.original_filename || "Not finished"
             : item.kind === "video"
@@ -153,6 +155,8 @@ export function AlbumGrid({
     });
 
   const selectedIds = [...selected];
+  const known = new Map([...items, ...mineItems].map((item) => [item.id, item.byteSize]));
+  const downloadParts = planZipParts(selectedIds.map((id) => ({ id, byteSize: known.get(id) ?? null })));
   const shown =
     kind === "all"
       ? items
@@ -227,7 +231,7 @@ export function AlbumGrid({
   return (
     <div className="flex flex-col gap-3">
       {selecting ? (
-        <div className="sticky bottom-[84px] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
+        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
           <strong className="text-[14px] font-bold">
             {selected.size} selected
           </strong>
@@ -252,17 +256,26 @@ export function AlbumGrid({
           </button>
 
           {canDownload ? (
-            <a
-              // No href with nothing selected, so Enter can't start a
-              // download of the whole album's first part.
-              href={selected.size ? `/api/albums/${albumId}/zip?only=${selectedIds.join(",")}` : undefined}
-              aria-disabled={!selected.size}
-              className={`flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline ${
-                selected.size ? "" : "pointer-events-none opacity-50"
-              }`}
-            >
-              Download
-            </a>
+            downloadParts.length === 0 ? (
+              <a
+                aria-disabled
+                className="pointer-events-none flex min-h-[44px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline opacity-50"
+              >
+                Download
+              </a>
+            ) : (
+              downloadParts.map((part, index) => (
+                <a
+                  key={part.map((item) => item.id).join(",")}
+                  href={`/api/albums/${albumId}/zip?only=${part.map((item) => item.id).join(",")}`}
+                  className="flex min-h-[44px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline"
+                >
+                  {downloadParts.length > 1
+                    ? `Part ${index + 1} of ${downloadParts.length}, ${formatBytes(part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0))}`
+                    : "Download"}
+                </a>
+              ))
+            )
           ) : null}
 
           {canManage && selected.size === 1 ? (
@@ -337,38 +350,52 @@ export function AlbumGrid({
         className={`kb-jgrid w-full pb-2 pt-2 ${inset ? "px-[3px] sm:px-10" : "kb-jgrid-compact"}`}
       >
         {kind !== "saved" && kind !== "mine" ? <ProcessingTiles count={processingCount} /> : null}
-        {shown.map((item) =>
-          selecting ? (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => toggle(item.id)}
-              aria-pressed={selected.has(item.id)}
-              aria-label={labelFor(item)}
-              // The selection ring sits on a layer above the photo, so the
-              // focus ring stays the global one instead of being overridden.
-              style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
-              className={`relative block overflow-hidden border-0 bg-bg p-0 ${
-                selected.has(item.id)
-                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[4px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
-                  : ""
-              }`}
-            >
-              <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />
-            </button>
-          ) : (
+        {shown.map((item) => {
+          const tile = <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />;
+          const style = { "--r": tileRatio(item.width, item.height) } as React.CSSProperties;
+          if (selecting) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => toggle(item.id)}
+                aria-pressed={selected.has(item.id)}
+                aria-label={labelFor(item)}
+                // The selection ring sits on a layer above the photo, so the
+                // focus ring stays the global one instead of being overridden.
+                style={style}
+                className={`relative block overflow-hidden border-0 bg-bg p-0 ${
+                  selected.has(item.id)
+                    ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[4px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
+                    : ""
+                }`}
+              >
+                {tile}
+              </button>
+            );
+          }
+          // Processing and failed rows are not in the viewer (it only loads
+          // status ready), so a link here 404s. The badge stays on the tile.
+          if (item.status !== "ready") {
+            return (
+              <div key={item.id} role="img" aria-label={labelFor(item)} style={style} className="soft-tile relative block">
+                {tile}
+              </div>
+            );
+          }
+          return (
             <Link
               key={item.id}
               href={`${hrefBase}/${item.id}`}
               aria-label={labelFor(item)}
-              style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
+              style={style}
               className="soft-tile relative block"
               scroll={false}
             >
-              <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />
+              {tile}
             </Link>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {shown.length === 0 ? (
