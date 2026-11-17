@@ -51,7 +51,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
 
   const folder = media.storage_path.slice(0, media.storage_path.lastIndexOf("/"));
   const originalName = media.storage_path.slice(folder.length + 1);
-  const objects = await folderObjects(supabase, folder, [originalName, "thumb.webp", "display.webp", "poster.jpg"]);
+  const objects = await folderObjects(folder, [originalName, "thumb.webp", "display.webp", "poster.jpg"]);
   if (!objects.has(originalName)) {
     return NextResponse.json({ error: "The original file has not finished uploading" }, { status: 409 });
   }

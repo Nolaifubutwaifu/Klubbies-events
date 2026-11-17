@@ -6,7 +6,7 @@ import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
 import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
 import { BINNED_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
-import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
+import { BUCKET, derivativePaths, mediaFolder, signedUploadTokens } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,26 +41,30 @@ export async function POST(request: Request) {
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
   if (byteSize > UPLOAD_MAX_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
-  const answer = (existing: ExistingUpload) => {
+  const answer = async (existing: ExistingUpload) => {
     // Already here and finished: the second copy is the bug this prevents.
     if (existing.status === "ready") return NextResponse.json({ duplicate: true, mediaId: existing.id });
     // Started before and never finished: carry on into the same row, so the
     // retry fixes the stuck file instead of sitting beside it.
     const folder = existing.storagePath.slice(0, existing.storagePath.lastIndexOf("/"));
+    const derivatives = derivativePaths(folder);
+    const signed = await derivativeUploads(derivatives);
+    if (!signed) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
     return NextResponse.json({
       mediaId: existing.id,
       kind,
       bucket: BUCKET,
       mimeType,
       storagePath: existing.storagePath,
-      derivatives: derivativePaths(folder),
+      derivatives,
+      signed,
     });
   };
 
   const existing = await findExistingUpload(supabase, album.id, contentHash);
   if (existing) {
     if (existing.status === "failed") await supabase.from("media").update({ status: "processing" }).eq("id", existing.id);
-    return answer(existing);
+    return await answer(existing);
   }
 
   const id = crypto.randomUUID();
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
   if (isUniqueViolation(error)) {
     // Two tabs dropped the same file at once and the other one won.
     const winner = await findExistingUpload(supabase, album.id, contentHash);
-    if (winner) return answer(winner);
+    if (winner) return await answer(winner);
     // Or it's in Recently deleted, which this user's client can't see.
     const binned = await findExistingUpload(createAdminClient(), album.id, contentHash);
     if (binned?.binned) return NextResponse.json({ error: BINNED_MESSAGE }, { status: 409 });
@@ -97,12 +101,26 @@ export async function POST(request: Request) {
   }
   if (error) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
 
+  const derivatives = derivativePaths(folder);
+  const signed = await derivativeUploads(derivatives);
+  if (!signed) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
   return NextResponse.json({
     mediaId: id,
     kind,
     bucket: BUCKET,
     mimeType,
     storagePath,
-    derivatives: derivativePaths(folder),
+    derivatives,
+    signed,
   });
+}
+
+/** Signed PUTs for the three derivatives. The original still goes up with TUS. */
+async function derivativeUploads(derivatives: { thumb: string; display: string; poster: string }) {
+  try {
+    return await signedUploadTokens([derivatives.thumb, derivatives.display, derivatives.poster]);
+  } catch (error) {
+    console.error("could not sign derivative uploads", error);
+    return null;
+  }
 }

@@ -2,6 +2,7 @@ import { Upload } from "tus-js-client";
 import { contentHash } from "@/lib/media/content-hash";
 import { UPLOAD_MAX_BYTES, VIDEO_TOO_BIG, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
+import { putSignedObject } from "@/lib/media/signed-put";
 import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseUrl } from "@/lib/supabase/config";
@@ -24,6 +25,8 @@ type Ticket = {
   mimeType: string;
   storagePath: string;
   derivatives: { thumb: string; display: string; poster: string };
+  /** Signed PUTs for the derivatives, issued after the ticket was authorised. */
+  signed?: Record<string, { signedUrl: string }>;
 };
 
 export type JobStatus = "queued" | "preparing" | "uploading" | "finishing" | "done" | "failed";
@@ -127,7 +130,10 @@ export class UploadQueue {
     if (!job || job.status !== "failed") return;
     // A ticket from a stalled upload may have expired. A fresh one carries on
     // in the same row (matched by content), so nothing is uploaded twice.
-    this.patch(job, { status: "queued", error: undefined, ticket: job.originalDone ? job.ticket : undefined });
+    // Drop derivative URLs: they are short-lived, and a retry after a long
+    // video may find them expired. The ticket row itself is reused.
+    const ticket = job.originalDone && job.ticket ? { ...job.ticket, signed: undefined } : undefined;
+    this.patch(job, { status: "queued", error: undefined, ticket });
     this.pump();
   }
 
@@ -270,6 +276,22 @@ export class UploadQueue {
     }
   }
 
+  /** A fresh ticket, including signed derivative URLs. "duplicate" means the album already has the file. */
+  private async requestTicket(job: Job): Promise<Ticket | "duplicate"> {
+    const res = await postJson("/api/media/upload_ticket", {
+      albumId: this.albumId,
+      filename: job.file.name,
+      mimeType: job.mimeType,
+      byteSize: job.file.size,
+      contentHash: job.hash,
+    });
+    const body: Ticket & { error?: string; full?: boolean } = await res.json();
+    if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
+    if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
+    if (body.duplicate) return "duplicate";
+    return body;
+  }
+
   /** Ticket, original, derivatives, finalise: the network half. */
   private async send(job: Job) {
     const prepared = job.prepared!;
@@ -277,21 +299,12 @@ export class UploadQueue {
       this.patch(job, { status: "uploading", error: undefined });
       let ticket = job.ticket;
       if (!ticket) {
-        const res = await postJson("/api/media/upload_ticket", {
-          albumId: this.albumId,
-          filename: job.file.name,
-          mimeType: job.mimeType,
-          byteSize: job.file.size,
-          contentHash: job.hash,
-        });
-        const body: Ticket & { error?: string; full?: boolean } = await res.json();
-        if (res.status === 409 && body.full) this.stopQueued(body.error ?? "This event is full.");
-        if (!res.ok || body.error) throw new Error(body.error ?? "Could not start the upload");
-        if (body.duplicate) {
+        const issued = await this.requestTicket(job);
+        if (issued === "duplicate") {
           this.patch(job, { status: "done", uploaded: job.file.size, note: "Already in this album" });
           return;
         }
-        ticket = body;
+        ticket = issued;
         this.patch(job, { ticket });
       }
 
@@ -301,16 +314,33 @@ export class UploadQueue {
       }
 
       this.patch(job, { status: "finishing" });
-      const storage = this.supabase.storage.from(ticket.bucket);
       const derivatives: [string, Blob | null][] = [
         [ticket.derivatives.thumb, prepared.thumb],
         [ticket.derivatives.display, prepared.display],
         [ticket.derivatives.poster, prepared.poster],
       ];
+      if (derivatives.some(([, blob]) => blob) && !ticket.signed) {
+        const refreshed = await this.requestTicket(job);
+        if (refreshed === "duplicate") {
+          this.patch(job, { status: "done", uploaded: job.file.size, note: "Already in this album" });
+          return;
+        }
+        ticket = refreshed;
+        this.patch(job, { ticket });
+      }
       for (const [path, blob] of derivatives) {
         if (!blob) continue;
+        const signedUrl = ticket.signed?.[path]?.signedUrl;
         await withBackoff(async () => {
-          const { error } = await storage.upload(path, blob, { upsert: true, contentType: blob.type || "image/webp" });
+          if (signedUrl) {
+            await putSignedObject(signedUrl, blob, blob.type || "image/webp");
+            return;
+          }
+          // A ticket from before signed URLs existed still uploads with the session.
+          const { error } = await this.supabase.storage.from(ticket.bucket).upload(path, blob, {
+            upsert: true,
+            contentType: blob.type || "image/webp",
+          });
           if (error) throw error;
         }, isUploadRetryable);
       }
