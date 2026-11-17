@@ -370,7 +370,7 @@ export function Viewer({
   return (
     // The one screen that leaves the cream behind: a photo is easier to read
     // against near-black, and nothing else on this page competes with it.
-    <main ref={root} className="relative flex h-full min-h-0 flex-1 flex-col bg-[#0b0c0f] text-white">
+    <main ref={root} className="fixed inset-0 z-50 flex flex-col bg-[#0b0c0f] pt-[env(safe-area-inset-top)] text-white">
       <div className="flex h-16 flex-none items-center justify-between gap-2 px-2 sm:px-4">
         <Link
           href={albumHref}
