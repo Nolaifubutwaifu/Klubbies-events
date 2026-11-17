@@ -1,6 +1,14 @@
 import { Upload } from "tus-js-client";
 import { contentHash } from "@/lib/media/content-hash";
-import { UPLOAD_MAX_BYTES, VIDEO_TOO_BIG, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
+import {
+  ACCEPTED_TYPES,
+  TUS_CHUNK_BYTES,
+  maxBytesForKind,
+  oversizeMessage,
+  resolveMimeType,
+  tooBigWarning,
+  type UploadKind,
+} from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
 import { putSignedObject } from "@/lib/media/signed-put";
 import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
@@ -71,12 +79,12 @@ const VIDEOS_AT_ONCE = 2;
 const PREPARING_AT_ONCE = 2;
 /** Prepared files waiting for an upload slot, at most, so memory stays flat on a big batch. */
 const PREPARED_AHEAD = 6;
-const CHUNK_SIZE = 6 * 1024 * 1024; // Supabase requires exactly 6 MB chunks
+const CHUNK_SIZE = TUS_CHUNK_BYTES;
 const RESUMABLE_ENDPOINT = `${supabaseUrl.replace(".supabase.co", ".storage.supabase.co")}/storage/v1/upload/resumable`;
 
-function friendlyError(error: unknown): string {
+function friendlyError(error: unknown, kind: UploadKind): string {
   const text = error instanceof Error ? error.message : String(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return VIDEO_TOO_BIG;
+  if (/413|too large|maximum allowed size/i.test(text)) return oversizeMessage(kind);
   if (/401|403|jwt|unauthor/i.test(text)) return "Your session expired. Refresh the page and retry.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
@@ -118,8 +126,9 @@ export class UploadQueue {
         rejected.push(file.name);
         continue;
       }
-      if (file.size > UPLOAD_MAX_BYTES) {
-        warnings.push(tooBigWarning(file.name));
+      const kind = ACCEPTED_TYPES[mimeType].kind;
+      if (file.size > maxBytesForKind(kind)) {
+        warnings.push(tooBigWarning(file.name, kind));
         continue;
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
@@ -292,7 +301,7 @@ export class UploadQueue {
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
     }
   }
 
@@ -386,7 +395,7 @@ export class UploadQueue {
       this.patch(job, { status: "done" });
       this.onItemDone();
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
       // Tell the server, so the row stops showing as "processing" to guests
       // and stops counting against the allowance. Upload again revives it.
       if (job.ticket && !job.ticket.duplicate) {

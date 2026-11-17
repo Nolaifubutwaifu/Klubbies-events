@@ -38,22 +38,58 @@ export const EVENT_MEDIA_MIME_TYPES = [
 ] as const;
 
 /**
- * The largest file anyone can upload. The product allows 500 MB (pricing
- * handoff §4), but Storage enforces its own per-file ceiling: 50 MB on the
- * Supabase Free plan. Anything above it was accepted here and then rejected
- * mid-upload with no reason given. Set NEXT_PUBLIC_UPLOAD_MAX_MB to 500 once
- * Storage allows it (Supabase Pro, global limit and bucket limit raised).
+ * Photos stay at 50 MB. A phone photo is well under that. Videos are separate:
+ * a 20–30s iPhone clip is often larger than 50 MB, and the load test rejected
+ * every one of them. 200 MB covers a normal phone video. The product ceiling
+ * is still 500 MB (pricing handoff §4).
+ *
+ * NEXT_PUBLIC_UPLOAD_MAX_MB overrides the video ceiling only, and is capped at
+ * 500. Leave it unset to use 200. It is inlined at build time, so a change in
+ * Vercel needs a new deployment. Photos do not follow this variable.
  */
 const PRODUCT_MAX_MB = 500;
+const VIDEO_DEFAULT_MB = 200;
 const configuredMb = Number(process.env.NEXT_PUBLIC_UPLOAD_MAX_MB);
-export const UPLOAD_MAX_MB = Number.isFinite(configuredMb) && configuredMb > 0 ? Math.min(configuredMb, PRODUCT_MAX_MB) : 50;
-export const LARGE_VIDEO_BYTES = UPLOAD_MAX_MB * 1024 * 1024;
-export const UPLOAD_MAX_BYTES = LARGE_VIDEO_BYTES;
-export const VIDEO_TOO_BIG = `Files can be up to ${UPLOAD_MAX_MB} MB. Trim the video or export it smaller (on iPhone: Edit, then trim), then try again.`;
+export const PHOTO_MAX_MB = 50;
+export const PHOTO_MAX_BYTES = PHOTO_MAX_MB * 1024 * 1024;
+export const UPLOAD_MAX_MB =
+  Number.isFinite(configuredMb) && configuredMb > 0 ? Math.min(configuredMb, PRODUCT_MAX_MB) : VIDEO_DEFAULT_MB;
+export const VIDEO_MAX_BYTES = UPLOAD_MAX_MB * 1024 * 1024;
+
+/**
+ * Supabase resumable uploads require every chunk but the last to be exactly
+ * 6 MiB. A 200 MB video is many of these chunks, not one request.
+ */
+export const TUS_CHUNK_BYTES = 6 * 1024 * 1024;
+
+export type UploadKind = "photo" | "video";
+
+export function maxBytesForKind(kind: UploadKind): number {
+  return kind === "photo" ? PHOTO_MAX_BYTES : VIDEO_MAX_BYTES;
+}
+
+export function oversizeMessage(kind: UploadKind): string {
+  if (kind === "photo") return `Photos can be up to ${PHOTO_MAX_MB} MB.`;
+  return `Videos can be up to ${UPLOAD_MAX_MB} MB. Trim the video or export it smaller (on iPhone: Edit, then trim), then try again.`;
+}
 
 /** Said before a file is even queued, so nobody waits for an upload that can't finish. */
-export function tooBigWarning(name: string): string {
-  return `${name} is over ${UPLOAD_MAX_MB} MB, so it wasn't added. Files can be up to ${UPLOAD_MAX_MB} MB: trim the video and add it again.`;
+export function tooBigWarning(name: string, kind: UploadKind): string {
+  if (kind === "photo") {
+    return `${name} is over ${PHOTO_MAX_MB} MB, so it wasn't added. Photos can be up to ${PHOTO_MAX_MB} MB.`;
+  }
+  return `${name} is over ${UPLOAD_MAX_MB} MB, so it wasn't added. Videos can be up to ${UPLOAD_MAX_MB} MB: trim the video and add it again.`;
+}
+
+/**
+ * How a resumable upload splits a file. Every chunk but the last is exactly
+ * TUS_CHUNK_BYTES. The last one is shorter when the file is not a multiple.
+ */
+export function tusChunkPlan(byteSize: number): { chunks: number; fullChunks: number; lastChunkBytes: number } {
+  if (byteSize <= 0) return { chunks: 0, fullChunks: 0, lastChunkBytes: 0 };
+  const chunks = Math.ceil(byteSize / TUS_CHUNK_BYTES);
+  const lastChunkBytes = byteSize - (chunks - 1) * TUS_CHUNK_BYTES;
+  return { chunks, fullChunks: chunks - 1, lastChunkBytes };
 }
 
 /** Browsers often report HEIC and MOV with an empty type; fall back to the extension. */

@@ -19,7 +19,9 @@ export const VIDEO_PREVIEW_PER_RUN = 20;
 /** Hourly slice. The cron's whole budget is 300s; this stays inside what is left. */
 export const VIDEO_PREVIEW_CRON_BUDGET_MS = 120_000;
 /** After an upload: long enough for the video just finished, not a backlog. */
-const KICK_BUDGET_MS = 70_000;
+export const VIDEO_PREVIEW_KICK_BUDGET_MS = 70_000;
+/** One range-seek. A 200 MB original is not downloaded, so this stays under the kick. */
+export const GRAB_FRAME_TIMEOUT_MS = 60_000;
 // Same sizes the uploader makes in the browser (lib/media/prepare.ts).
 const DISPLAY_EDGE = 2000;
 const THUMB_SHORT_EDGE = 400;
@@ -29,8 +31,10 @@ type Frame = { jpeg: Buffer; durationSeconds: number | null };
 
 /**
  * One frame and the length, read straight from the stored file over HTTPS.
- * ffmpeg seeks with range requests, so a 70 MB clip isn't downloaded whole,
- * and it applies the phone's rotation, so the frame comes out upright.
+ * ffmpeg seeks with range requests, so a 200 MB clip is not downloaded whole
+ * and is not held in memory: only the JPEG frame is. The 60s kill is for the
+ * seek, and it still fits inside the kick budget. ffmpeg also applies the
+ * phone's rotation, so the frame comes out upright.
  */
 export function grabFrame(url: string, atSeconds: number): Promise<Frame> {
   return new Promise((resolve, reject) => {
@@ -42,7 +46,7 @@ export function grabFrame(url: string, atSeconds: number): Promise<Frame> {
     );
     const out: Buffer[] = [];
     let err = "";
-    const timer = setTimeout(() => ff.kill("SIGKILL"), 60_000);
+    const timer = setTimeout(() => ff.kill("SIGKILL"), GRAB_FRAME_TIMEOUT_MS);
     ff.stdout.on("data", (chunk: Buffer) => out.push(chunk));
     ff.stderr.on("data", (chunk: Buffer) => (err += chunk.toString()));
     ff.on("error", reject);
@@ -76,7 +80,7 @@ export async function runVideoPreviewBackfill(budgetMs: number): Promise<number>
 /** After a video lands without a poster or a length. Never throws. */
 export function kickVideoPreviews(): void {
   const drain = () =>
-    runVideoPreviewBackfill(KICK_BUDGET_MS)
+    runVideoPreviewBackfill(VIDEO_PREVIEW_KICK_BUDGET_MS)
       .then((made) => {
         if (made) console.log(`video preview kick made ${made}`);
       })

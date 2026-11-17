@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveGuestLink } from "@/lib/guest/links";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
-import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
+import { ACCEPTED_TYPES, maxBytesForKind, oversizeMessage, resolveMimeType } from "@/lib/media/constants";
 import { BINNED_GUEST_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -39,8 +39,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
 
   const admin = createAdminClient();
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
-  if (parsed.data.byteSize > UPLOAD_MAX_BYTES) {
-    return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
+  if (parsed.data.byteSize > maxBytesForKind(kind)) {
+    return NextResponse.json({ error: oversizeMessage(kind) }, { status: 413 });
   }
 
   // The same file twice is one photo. A guest learns nothing from this beyond

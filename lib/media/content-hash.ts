@@ -2,8 +2,14 @@
 // the ticket route can tell "this album already has it" and skip a second
 // copy. The first real event had 29 of its first 60 photos twice.
 
-/** Hash every byte up to this size; past it, a sample. */
-const FULL_HASH_LIMIT = 96 * 1024 * 1024;
+/** Hash every byte up to this size; past it, a sample. A 200 MB video is past it. */
+export const CONTENT_HASH_FULL_BYTES = 96 * 1024 * 1024;
+
+/** True when the hash reads the whole file into memory. Larger files are sampled. */
+export function contentHashReadsWholeFile(byteSize: number): boolean {
+  return byteSize <= CONTENT_HASH_FULL_BYTES;
+}
+
 const SAMPLE_BYTES = 8 * 1024 * 1024;
 
 function hex(buffer: ArrayBuffer): string {
@@ -20,7 +26,7 @@ function hex(buffer: ArrayBuffer): string {
 export async function contentHash(file: Blob): Promise<string | null> {
   try {
     if (!globalThis.crypto?.subtle) return null;
-    if (file.size <= FULL_HASH_LIMIT) {
+    if (contentHashReadsWholeFile(file.size)) {
       return hex(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()));
     }
     const parts = [

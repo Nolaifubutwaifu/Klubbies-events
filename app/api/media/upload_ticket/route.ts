@@ -4,7 +4,7 @@ import { displayNameFor } from "@/lib/auth/display-name";
 import { getEventContextById } from "@/lib/auth/session";
 import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
-import { ACCEPTED_TYPES, resolveMimeType, UPLOAD_MAX_BYTES, VIDEO_TOO_BIG } from "@/lib/media/constants";
+import { ACCEPTED_TYPES, maxBytesForKind, oversizeMessage, resolveMimeType } from "@/lib/media/constants";
 import { BINNED_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
 import { BUCKET, derivativePaths, mediaFolder, signedUploadTokens } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
-  if (byteSize > UPLOAD_MAX_BYTES) return NextResponse.json({ error: VIDEO_TOO_BIG }, { status: 413 });
+  if (byteSize > maxBytesForKind(kind)) return NextResponse.json({ error: oversizeMessage(kind) }, { status: 413 });
   const answer = async (existing: ExistingUpload) => {
     // Already here and finished: the second copy is the bug this prevents.
     if (existing.status === "ready") return NextResponse.json({ duplicate: true, mediaId: existing.id });

@@ -1,5 +1,5 @@
 import { contentHash } from "@/lib/media/content-hash";
-import { UPLOAD_MAX_BYTES, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
+import { ACCEPTED_TYPES, maxBytesForKind, oversizeMessage, resolveMimeType, tooBigWarning, type UploadKind } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
 import { watchUploadStall } from "@/lib/media/signed-put";
 import { httpStatus, isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
@@ -66,10 +66,10 @@ const PREPARED_AHEAD = 6;
 
 export const EMPTY_GUEST_SNAPSHOT: readonly GuestJobView[] = [];
 
-function friendlyError(error: unknown): string {
+function friendlyError(error: unknown, kind: UploadKind): string {
   const text = error instanceof Error ? error.message : String(error);
   const status = httpStatus(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return "This file is larger than the event's plan allows.";
+  if (/413|too large|maximum allowed size/i.test(text)) return oversizeMessage(kind);
   // The organiser's link itself is gone. A 403 from a signed upload URL is
   // just that try's token, and a new ticket replaces it.
   if (/this link (has expired|isn't valid)|isn't valid any more|link stopped working/i.test(text)) {
@@ -108,8 +108,9 @@ export class GuestUploadQueue {
         rejected.push(file.name);
         continue;
       }
-      if (file.size > UPLOAD_MAX_BYTES) {
-        warnings.push(tooBigWarning(file.name));
+      const kind = ACCEPTED_TYPES[mimeType].kind;
+      if (file.size > maxBytesForKind(kind)) {
+        warnings.push(tooBigWarning(file.name, kind));
         continue;
       }
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`;
@@ -271,7 +272,7 @@ export class GuestUploadQueue {
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
     }
   }
 
@@ -360,7 +361,7 @@ export class GuestUploadQueue {
       }
       this.patch(job, { status: "done", progress: 1 });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error) });
+      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
     }
   }
 }
