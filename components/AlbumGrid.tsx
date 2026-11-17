@@ -30,7 +30,7 @@ function Tile({ item, cover, saved }: { item: GridItem; cover: boolean; saved: b
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
         <img src={item.thumbUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (
-        <span className="flex h-full w-full items-center justify-center bg-neutral-400 p-2 text-center text-[14px] text-ink">
+        <span className="flex h-full w-full items-center justify-center bg-[color:var(--kb-sand)] p-2 text-center text-[14px] text-[color:var(--kb-ink-2)]">
           {item.status !== "ready"
             ? item.original_filename || "Not finished"
             : item.kind === "video"
@@ -231,7 +231,7 @@ export function AlbumGrid({
   return (
     <div className="flex flex-col gap-3">
       {selecting ? (
-        <div className="sticky bottom-[84px] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
+        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
           <strong className="text-[14px] font-bold">
             {selected.size} selected
           </strong>
@@ -259,7 +259,7 @@ export function AlbumGrid({
             downloadParts.length === 0 ? (
               <a
                 aria-disabled
-                className="pointer-events-none flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline opacity-50"
+                className="pointer-events-none flex min-h-[44px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline opacity-50"
               >
                 Download
               </a>
@@ -268,7 +268,7 @@ export function AlbumGrid({
                 <a
                   key={part.map((item) => item.id).join(",")}
                   href={`/api/albums/${albumId}/zip?only=${part.map((item) => item.id).join(",")}`}
-                  className="flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline"
+                  className="flex min-h-[44px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline"
                 >
                   {downloadParts.length > 1
                     ? `Part ${index + 1} of ${downloadParts.length}, ${formatBytes(part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0))}`
