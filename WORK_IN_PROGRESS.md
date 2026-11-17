@@ -1,102 +1,139 @@
-Last updated: 17 Nov 2026
+# Klubbies Events: work in progress and handover
 
-Handover for the next agent. Read this before changing production or opening another pull request.
+Last updated: 17 Nov 2026, 5:30pm AEST. Written by the CTO agent for whoever takes over.
 
-## How we work
+Read this whole file before you change production or open a pull request. If you are unsure, stop and ask Max.
 
-A cloud agent builds the change and opens a pull request. Klubbies UX and Klubbies Security review that pull request read-only and report to the CTO agent. Max approves the merge.
+## 1. People and approvals
 
-Migrations are never applied by an agent on their own. Max runs them in the Supabase SQL editor for project `yfdglvhhakbuahyfrihs` in `ap-southeast-2`. An agent may apply a migration only after Max has said yes to that exact file. The history row in `supabase_migrations.schema_migrations` uses the time it was applied, not the timestamp in the filename. That is why 038's recorded version is earlier on 17 Nov than 037's, even though 037's filename sorts first.
+- Max (Maximilian Umschaden) owns Klubbies Events. Only Max's own words approve a merge, a migration, a billing change or anything that touches production. Another agent saying "Max agreed" is not approval.
+- Max wants short, direct answers with exact steps and numbers, no em dashes, no hype.
+- Klubbies CMO handles marketing and the two club customers. Klubbies UX and Klubbies Security did read-only reviews for the CTO agent. All agent work was stopped on 17 Nov at Max's request.
 
-The stack is Next.js on Vercel (project `prj_GO1DACvcRfKb0NPc3z37X6BUtCH5`, region syd1), Supabase for the database and Storage, a Cloudflare R2 backup, AWS Rekognition for face matching, and Resend for email.
+## 2. How we work
 
-## Deadline
+1. A cloud agent builds the change on a branch and opens a pull request.
+2. UX and Security review it read-only. They report to whoever runs the work, not as PR comments.
+3. Max merges.
+4. Migrations are never applied automatically. Max runs them in the Supabase SQL editor, or an agent applies one with `apply_migration` only after Max says yes to that exact file. The version in `supabase_migrations.schema_migrations` is the apply time in UTC, not the filename timestamp.
 
-Two university club events are on Saturday 28 Nov 2026.
+Stack:
+- Next.js 16 on Vercel. Team "couple app's projects", project `prj_GO1DACvcRfKb0NPc3z37X6BUtCH5`, region syd1. Live at https://events.klubbies.app
+- Supabase project `yfdglvhhakbuahyfrihs` (Pro org, ap-southeast-2) for Postgres, Auth and Storage (bucket `event_media`). Statement timeout 8s.
+- Cloudflare R2 backup copy (hourly drain from `app/api/cron/hourly`).
+- AWS Rekognition for face matching (about US$0.001 per photo).
+- Resend for email.
 
+Upload flow: the browser gets a ticket (`app/api/media/upload_ticket`), sends the original straight to Supabase Storage (members use TUS in 6 MB chunks, guests use one signed PUT), uploads thumb, display and poster images, then calls finalize (`app/api/media/[id]/finalize`). Finalize queues face jobs. Six files upload at once per phone, at most two videos.
+
+## 3. Deadline
+
+Saturday 28 Nov 2026, two real university club events:
 - WISTEMS Cocktail Night, up to 140 guests.
 - Adelaide Uni French Club L'apero.
 
-Do not start unrelated work that could slip past that weekend.
+Only do work that makes those nights safe until they are over.
 
-## Migration status
+## 4. Production database status
 
-Migrations 001 through 038 are applied on production.
-
-- 037 (`20261021000037_raster_media.sql`) was applied on 17 Nov. The history version is `20261117061620`.
-- 038 (`20261114000038_album_credits_face_stats.sql`) was applied on 17 Nov. The history version is `20261117060641`.
+Applied: 001 to 038.
+- 037 `20261021000037_raster_media.sql`, applied 17 Nov 4:16pm AEST (version `20261117061620`). Smoke tested live the same day: logo change, album cover, HEIC photo and MOV video upload all passed.
+- 038 `20261114000038_album_credits_face_stats.sql`, applied 17 Nov 4:06pm AEST (version `20261117060641`).
 
 Do not re-run 037 or 038.
 
-[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38) adds four migrations. 039, 040, and 042 go in before the merge. 041 goes in after the production deploy is Ready, and only if the pre-check is clean. File order:
+## 5. Next step: PR 38 (ready to merge)
 
-1. `supabase/migrations/20261117000039_worker_leases.sql`
-2. `supabase/migrations/20261117000040_face_stats_insert_guard.sql`
-3. `supabase/migrations/20261117000042_event_media_video_size.sql`
-4. `supabase/migrations/20261117000041_media_path_ownership.sql` last
+[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38) "Harden uploads and background work for a 150-guest burst". Branch `cursor/event-burst-hardening-0ab8`, head `162825b`, CI green. UX approved and Security approved at `162825b`. Not merged. Nothing from it is on production yet.
 
-Run 041 only after the read-only pre-check in the PR 38 body returns no rows. On 17 Nov that pre-check was 0 media rows and 0 avatars. 041 is one transaction. If its own pre-check finds a bad path, it raises and commits nothing, including the trigger drop.
+What it does: upload retries and a 30s stall timeout, a fresh ticket on retry, visible "Trying again (2 of 4)", failed files listed first with Retry all, resend-code waits for the real send, zip parts split by size (about 500 MB) and labelled in MB, worker leases and a Rekognition cap of 8, Resend retries only on 429 or 5xx with an idempotency key, the R2 copy moved out of finalize, media paths locked to their own folder (closes a cross-event photo access hole that only existed in earlier versions of this PR), finalize rejects oversize files, 200 MB video limit (photos stay 50 MB), Next 16.4.5 security patch, iPhone safe-area fixes, and the viewer keeps your scroll position.
 
-039 adds worker leases and a Rekognition cap of 8. 040 lets only `service_role`, `postgres`, and `supabase_admin` set or change `face_stats`. 042 raises the `event_media` bucket file size limit to 200 MiB when it is missing or lower, and never lowers a higher limit. Production is already 500 MiB (`524288000`), so 042 changes nothing there. 041 requires each media path to stay in that row's own folder, and each avatar under `avatars/{that user}/`.
+Merge steps, in this order. Supabase SQL editor: https://supabase.com/dashboard/project/yfdglvhhakbuahyfrihs/sql/new
 
-## In progress
+1. Before merging, run each file from the PR branch, one at a time:
+   - `supabase/migrations/20261117000039_worker_leases.sql`
+   - `supabase/migrations/20261117000040_face_stats_insert_guard.sql`
+   - `supabase/migrations/20261117000042_event_media_video_size.sql`
+   These are additive and safe with the code on main today.
+2. Merge PR 38. Wait until the Vercel production deployment for that commit is Ready.
+3. Run the 041 read-only pre-check from the PR 38 body. Run `supabase/migrations/20261117000041_media_path_ownership.sql` only if it returns zero rows. On 17 Nov it returned 0 media rows and 0 avatars out of 1,061 media rows. 041 runs in one transaction and aborts by itself if it finds a bad path.
+4. Run the verification queries in the PR 38 body.
+5. Do a quick live smoke test on a private test event: one photo, one HEIC, one MOV, open each in the viewer, download a zip.
+6. After the deploy, delete the Vercel env var `NEXT_PUBLIC_UPLOAD_MAX_MB` (set to 500 in Production and Preview). The code no longer reads it, so it only misleads.
 
-[PR 38](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/38), "Harden uploads and background work for a 150-guest burst", is ready for review and not merged. Head: `162825b`. Follow the merge steps in that pull request body, not this summary. In short: run 039, 040, and 042 in the SQL editor before merging. They are safe with the code on main. Then merge and wait for the Vercel production deploy to be Ready. Then run the 041 pre-check, and run 041 only if it returns zeros. Then run the verification queries. Nothing in PR 38 has been applied to production yet.
+If anything breaks after the merge, roll back in Vercel by promoting the previous production deployment (`dpl_GSYeAHE8ZMskKyHeEdb2UxZSBiEH`, commit `ff38bbc`). 039, 040 and 042 are safe with the old code. If 041 causes trouble, drop its two triggers.
 
-Max's settings, as of 17 Nov:
+## 6. Settings Max is changing (confirm each one, do not assume)
 
-- Supabase Storage global file size limit raised to 500 MB.
-- Database compute goes up to Small on Wednesday 18 Nov, in the off-peak window, and stays there through 28 Nov. Step it back down after the events. That step is also listed under Clean-up.
-- Resend is on Pro.
+| Setting | Where | Target | Status on 17 Nov |
+|---|---|---|---|
+| Storage global file size limit | Supabase, Storage, Settings | 500 MB (at least 200 MB) | Max said he was doing it. Not confirmed. Without it, videos over 50 MB fail mid-upload. |
+| Compute size | Supabase, Settings, Compute and Disk | Small, from Wed 18 Nov off-peak (about 2 min downtime) through 28 Nov | Approved, not done. |
+| Resend plan | resend.com, Settings, Billing | Pro (US$20 a month) | Approved, not confirmed. Free stops at 100 emails a day, and one code email per WISTEMS guest is already over that. |
+| Auth rate limits | Supabase, Authentication, Rate Limits | Raise email and OTP limits for an arrival rush of 140 phones | Not done. Separate from the app's own limits in `lib/auth/rate-limit.ts`. |
 
-Load test. The harness is on the CTO agent's machine. It is not in this repo. It stages 10, then 50, then 150 accounts. Planned for Thursday 19 Nov 2026, 10am to 1pm AEST, after PR 38 is live on production. No emails are sent. The harness has stop rules and a full cleanup. Those rules live with the harness, not in the repo.
+## 7. Load test (planned, not run)
 
-After PR 38 is live, Max runs a 5-step iPhone check. The steps are Max's. They are not written in this repo.
+Goal: prove the site holds a 150-guest burst before the 28th. Planned for Thu 19 Nov 2026, 10am to 1pm AEST, after PR 38 is live and compute is on Small. Max approved this test.
 
-When the club links arrive, lift `guest_limit` and `photo_limit` on both events. Check the triggers before writing NULL. On current main this is already safe:
+The harness was built on the CTO agent's machine at `/workspace/klubbies-loadtest`. It is not in this repo yet. Ask the CTO agent to commit it (without the generated media) if someone else will run it.
 
-- `private.guest_join_state` returns `open` when `guest_limit` is null (`supabase/migrations/20260928000027_plans_and_limits.sql`).
-- `private.rebalance_event_guests` clears pauses when `guest_limit` is null.
-- `private.guard_photo_allowance` returns the new row when `photo_limit` is null, so there is no photo cap.
-- `private.guard_video_length` does the same (`supabase/migrations/20261009000034_video_units_per_six_seconds.sql`).
+- Stages: 10 users and 100 photos, then 50 users with viewers and 3 zips, then 150 signed in, 70 uploading, 350 photos, 20 videos, 15 zips at 10 Mbps.
+- Sign-in sends no emails: it gets codes from the Supabase admin API and submits them to `/api/auth/verify_code`.
+- Stop rules: Storage 5xx or 544 above 1% over a rolling minute, or any database timeout.
+- Production commands refuse to run without `KBLT_ALLOW_PRODUCTION=yes-max-approved`. It only touches an event whose name starts with "Load test" and users named `loadtest-NNN@klubbies.app`.
+- Needs `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the environment. The test event is created by `sql/01_create_test_event.sql`, which Max runs. Cleanup ends with `sql/03_verify_cleanup.sql` returning all zeros.
+- Sign-ins are paced at 5 a minute, so 150 users take about 30 minutes. Budget under US$10.
 
-Do not set either column to 0. Both columns have a check that the value is greater than 0. NULL means unlimited. A positive number is a cap.
+## 8. Max's iPhone check (after PR 38 is live)
 
-Raise the Supabase Auth rate limits in the dashboard before 28 Nov. Those are separate from the app's own limits in `lib/auth/rate-limit.ts` (5 code requests per email per hour, 400 per IP per hour, 1200 code checks per IP per hour). A room of 140 phones on one network can still hit Auth's own caps even when the app limits allow it.
+1. Sign in as a guest. The code screen should say an 8 digit code is on its way. Enter it. Tap "Send a new code" once: "Sent again. Use the newest email." should appear only after the email has really gone.
+2. On a guest link, start a photo upload and turn on Airplane mode partway. Within about 30 seconds it should say Failed, "Connection lost. Retry when you're back online." Turn Airplane mode off, tap Retry now, see "Trying again (2 of 4)", and it should finish.
+3. Open the album as a guest, scroll down a long way, tap a photo. It opens full screen, clear of the notch and home bar. Close it and you land in the same place on the grid.
+4. As organiser, open the album straight after an upload. A finished photo opens. A Processing tile does nothing (no not-found page).
+5. Download a large album. Buttons read like "Part 1 of 3, 480 MB" and the first file name includes "(part 1)".
 
-[PR 36](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/36), "Add optional Google Ads conversion tracking", is a draft and ON HOLD. Leave it unmerged.
+## 9. Club events
 
-## Clean-up
+When the CMO sends the two event links, lift the caps on both first events: set `guest_limit` and `photo_limit` to NULL. NULL means unlimited and is safe on current main (`private.guest_join_state`, `private.rebalance_event_guests`, `private.guard_photo_allowance` and `private.guard_video_length` all treat NULL as no cap). Never set 0; both columns must be greater than 0. Max approves the SQL first.
 
-- Delete the test event named `Upload test - delete me` (handle `upload_test_delete_me`).
-- On `klubbies_demo_event`, 7 photos failed on 13 Nov. Clear or retry them so the demo is not full of stuck rows.
-- After 28 Nov, step the Supabase compute size back down from Small.
+## 10. Other open pull requests
 
-## Known risks
+- [PR 36](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/36) Google Ads conversion tracking. Draft, ON HOLD until outreach lands a paying event. Leave unmerged.
+- [PR 33](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/33) Guests can lift their own name-review hold (fix). Open, not merged. Contains migration `20261025000038`. Check it against main and review it again after PR 38 merges.
+- [PR 28](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/28) Sign-in, start form and accessibility UX fixes. Draft. Contains migration `20261025000039`. If both go in, apply PR 33's migration before PR 28's.
+- [PR 39](https://github.com/Nolaifubutwaifu/Klubbies-events/pull/39) This handover file. Docs only.
 
-- Album zip downloads on slow venue wifi. The zip route allows 800 seconds, and PR 38 also splits a zip at about 500 MB as well as 150 files. A stack of long videos can still run out the clock or produce several parts.
-- Sign-in during an arrival rush. The app limits are per email first and a high per-IP flood guard, but Supabase Auth has its own dashboard limits. Raise those before the 28th.
-- Resend on the Free plan stops at 100 emails a day. Max has moved the account to Resend Pro. Confirm that upgrade is actually live before the events. One code email per guest at WISTEMS is already over 100.
-- The minimatch advisory is still open. The patched release is 11.0.1, a new major for the copies eslint and archiver use. It was left on the current major on purpose.
+## 11. Clean-up
 
-## Future improvements
+- Delete the test event "Upload test - delete me" (handle `upload_test_delete_me`, id `005483f5-c692-4b89-aa5d-7a806d59cc74`). It now has 5 items, a test logo and cover, and two test guests.
+- 7 photos on `klubbies_demo_event` failed on 13 Nov (Storage 544 timeouts, root cause patched in `41c7e7fc`). Clear or retry them.
+- After 28 Nov, step Supabase compute back down from Small.
+- After the load test, run its cleanup and confirm `sql/03_verify_cleanup.sql` is all zeros.
 
-Do these after the events, not before.
+## 12. Known risks for 28 Nov
 
-- Backfill `face_stats` for photos that already exist. `scripts/backfill-faces.ts` does that pass. Budget about US$1 in Rekognition for the current library. It uses the service role key and will not spend anything without `--confirm`.
-- Build zips off the request, or as a background job. The 800 second function limit is the wrong place for a whole album.
-- Keep Next.js and the other dependencies current. PR 38 moved Next to 16.4.5 and Vitest to 5.0.3 or newer. minimatch still needs a major bump.
-- Run the load test from CI, or from a runner in Sydney, so it is not tied to one machine.
-- Give organisers a real upload progress dashboard. Today they have the small tray in `app/(app)/UploadTray.tsx` and the panel on the album.
+- Videos over 50 MB fail until the Storage global limit is raised (section 6).
+- Sign-in rush: Supabase Auth limits can show valid codes as "That code didn't match". Raise them (section 6).
+- Resend Free stops at 100 emails a day (section 6).
+- Album zips on slow venue wifi. The zip function allows 800 seconds. PR 38 splits parts at about 500 MB, but very slow phones may still time out. Guests can download single photos instead.
+- Guest originals are one signed PUT, so a dropped connection restarts a big video from zero.
+- Vercel bot protection may challenge many requests from one IP during the load test.
+- minimatch advisory GHSA-g3hv-75wg-m249 left open on purpose (fix is a major bump in eslint and archiver).
 
-Suggestions from the PR 38 work, also for after the events:
+## 13. Future improvements (after the events)
 
-- Guest originals are one signed PUT, not TUS. A 200 MB iPhone video on venue wifi starts again from the beginning if the connection drops. Member uploads already use 6 MB TUS chunks.
-- Member TUS still sends the user JWT on every chunk. That path can still return 544 in a burst. Signing those chunks on the server would take the JWT out of the hot path.
-- The browser hashes the whole file up to 96 MB (`lib/media/content-hash.ts`). A video between 50 MB and 96 MB is read entirely into memory on the phone. Past 96 MB it samples the ends.
-- Video preview seeks with ffmpeg range requests and gives up after 60 seconds (`lib/media/video-previews.ts`). A large phone video whose index sits at the end of the file can use most of that. Watch the first real 200 MB clips before changing it.
-- The avatar path trigger is still `SECURITY INVOKER`. It does not call another private function, so it should be fine, but it did not get the same definer treatment as the media path guard in 041. Worth a second look if avatar updates start failing for `service_role`.
-- The SQL tests under `supabase/tests/` are not in CI. The 041 path rule would have broken `backup.sql`, `face_rls.sql`, `limits.sql`, and one insert in `bin_rls.sql`, and only the review caught it.
-- Face matching indexes photos only (`lib/faces/index-media.ts`). A person who appears only in a video never shows up in Photos of you. Indexing the poster frame would cover that without sending the video to Rekognition.
-- `NEXT_PUBLIC_UPLOAD_MAX_MB` is set to 500 in Vercel Production and Preview. PR 38 stops reading it, so photos stay at 50 MB and videos at 200 MB. After that deploy, delete the variable so the next person does not think it still sets the limit.
-- The hourly R2 drain assumes about 10 MB/s and a short budget. A run of 200 MB videos can be deferred to `pnpm backup-drain`. That is safe, but the backup will lag the gallery on a heavy night.
+- Guest uploads over TUS so big videos resume instead of restarting.
+- Sign member TUS chunks on the server to take the user JWT out of the hot path (avoids 544 bursts).
+- Build zips as a background job, not inside an 800s request.
+- Backfill `face_stats` for existing photos with `scripts/backfill-faces.ts` (about US$1, needs `--confirm`).
+- Index a video's poster frame for face matching, so people who only appear in videos show up in "Photos of you".
+- Put the SQL tests in `supabase/tests/` into CI. Only review caught that 041 broke four fixtures.
+- Move the load test into the repo and run it from CI or a Sydney runner.
+- Content hashing reads whole files up to 96 MB on the phone (`lib/media/content-hash.ts`); sample instead.
+- Watch video preview timing (`lib/media/video-previews.ts`, 60s ffmpeg limit) on the first real 200 MB clips.
+- Give the avatar path trigger the same SECURITY DEFINER treatment as 041 if avatar updates fail.
+- The hourly R2 drain can lag on a heavy video night; `pnpm backup-drain` catches up.
+- An organiser upload progress dashboard.
+- Keep Next.js and dependencies current; bump minimatch with the next eslint major.
+- Google Ads tracking (PR 36) when the ads test resumes.
