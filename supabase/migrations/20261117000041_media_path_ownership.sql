@@ -6,15 +6,68 @@
 -- "..". service_role writes go through the same check: the app already
 -- writes that shape.
 --
--- users.avatar_url must be avatars/{id}/<file>. Same allowlist of roles is
--- not used here: every role, including service_role, must keep that shape.
+-- The guard is SECURITY DEFINER. As INVOKER it called media_path_owned,
+-- whose EXECUTE is revoked, so authenticated writes failed with 42501 and
+-- service_role failed with permission denied for schema private. DEFINER
+-- runs as the function owner, who can see private. search_path stays empty.
+-- EXECUTE stays revoked, and private is not granted to service_role.
 --
--- Run the pre-check in the pull request before applying. A row that does
--- not match will fail its next update.
+-- users.avatar_url must be avatars/{id}/<file>. Every role, including
+-- service_role, must keep that shape. That check does not call another
+-- private function.
+--
+-- The whole file is one transaction. The pre-check raises, and aborts,
+-- before any trigger is dropped, so a bad existing row cannot leave media
+-- without its guard. DROP TRIGGER cannot commit unless CREATE TRIGGER does.
 --
 -- Idempotent. lock_timeout so DROP/CREATE TRIGGER does not wait on media.
 
-set lock_timeout = '5s';
+begin;
+
+set local lock_timeout = '5s';
+
+do $$
+declare
+  n int;
+begin
+  select count(*) into n
+  from public.media
+  where position('..' in storage_path) > 0
+     or album_id is null
+     or storage_path is distinct from
+        'events/' || event_id::text || '/albums/' || album_id::text || '/' || id::text || '/'
+        || regexp_replace(storage_path, '^.*/', '')
+     or regexp_replace(storage_path, '^.*/', '') not in (
+          'original.jpg', 'original.jpeg', 'original.png', 'original.heic', 'original.heif', 'original.webp',
+          'original.mp4', 'original.mov', 'thumb.webp', 'display.webp', 'poster.jpg'
+        )
+     or (thumb_path is not null and (
+          position('..' in thumb_path) > 0
+          or thumb_path is distinct from
+             'events/' || event_id::text || '/albums/' || album_id::text || '/' || id::text || '/thumb.webp'
+        ))
+     or (display_path is not null and (
+          position('..' in display_path) > 0
+          or display_path is distinct from
+             'events/' || event_id::text || '/albums/' || album_id::text || '/' || id::text || '/display.webp'
+        ))
+     or (poster_path is not null and (
+          position('..' in poster_path) > 0
+          or poster_path is distinct from
+             'events/' || event_id::text || '/albums/' || album_id::text || '/' || id::text || '/poster.jpg'
+        ));
+  if n > 0 then
+    raise exception '041 pre-check: % media rows have a path outside their folder', n;
+  end if;
+
+  select count(*) into n
+  from public.users
+  where avatar_url is not null
+    and (position('..' in avatar_url) > 0 or avatar_url !~ ('^avatars/' || id::text || '/[^/]+$'));
+  if n > 0 then
+    raise exception '041 pre-check: % profiles have an avatar_url outside their folder', n;
+  end if;
+end $$;
 
 create or replace function private.media_object_name_ok(p_name text)
 returns boolean
@@ -52,7 +105,7 @@ $$;
 create or replace function private.guard_media_object_paths()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 begin
@@ -104,3 +157,5 @@ drop trigger if exists user_avatar_path_guard on public.users;
 create trigger user_avatar_path_guard
   before insert or update on public.users
   for each row execute function private.guard_user_avatar_path();
+
+commit;

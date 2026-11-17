@@ -23,7 +23,7 @@ begin
   values (v_event, v_org, 'bk-org@test.invalid', 'Organiser', 'event_admin', v_admin_role, 'active', now());
   insert into public.albums (id, event_id, title) values (v_album, v_event, 'A');
   insert into public.media (id, event_id, album_id, kind, storage_path, status)
-  values (v_media, v_event, v_album, 'photo', 'x.jpg', 'ready');
+  values (v_media, v_event, v_album, 'photo', 'events/' || v_event || '/albums/' || v_album || '/' || v_media || '/original.jpg', 'ready');
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_org, 'role', 'authenticated')::text, true);
