@@ -9,6 +9,7 @@ import { deleteMediaAction, restoreMediaAction, setAlbumCoverAction } from "@/ap
 import { Dialog } from "@/components/Dialog";
 import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
+import { formatBytes } from "@/lib/format";
 import { planZipParts } from "@/lib/media/zip-parts";
 import { SELECT_EVENT } from "@/components/AlbumActions";
 import { Segmented } from "@/components/Segmented";
@@ -269,7 +270,9 @@ export function AlbumGrid({
                   href={`/api/albums/${albumId}/zip?only=${part.map((item) => item.id).join(",")}`}
                   className="flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline"
                 >
-                  {downloadParts.length > 1 ? `Download part ${index + 1}` : "Download"}
+                  {downloadParts.length > 1
+                    ? `Part ${index + 1} of ${downloadParts.length}, ${formatBytes(part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0))}`
+                    : "Download"}
                 </a>
               ))
             )

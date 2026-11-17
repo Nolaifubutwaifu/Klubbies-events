@@ -110,6 +110,12 @@ function appendEntry(archive: ZipArchive, source: Readable | Buffer, name: strin
   });
 }
 
+/** Part 1 is named as a part whenever the download is split, so the phone doesn't save two files as the same "Album.zip". */
+export function zipPartFilename(title: string, part: number, partCount: number): string {
+  if (partCount > 1) return `${title} (part ${part + 1}).zip`;
+  return `${title}.zip`;
+}
+
 export function safeFilename(title: string, fallback: string): string {
   return title.replace(/[^a-zA-Z0-9 _-]/g, "").trim() || fallback;
 }

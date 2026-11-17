@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { albumZipItems, zipPartAt, type ZipSource } from "@/lib/media/zip-index";
-import { safeFilename, UNAVAILABLE, zipError, zipResponse } from "@/lib/media/zip";
+import { albumZipItems, type ZipSource } from "@/lib/media/zip-index";
+import { planZipParts } from "@/lib/media/zip-parts";
+import { safeFilename, UNAVAILABLE, zipError, zipPartFilename, zipResponse } from "@/lib/media/zip";
 import { createClient } from "@/lib/supabase/server";
 
 // Pro's ceiling. A part of full quality photos and video is slow to stream on
@@ -52,12 +53,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
     items = await albumZipItems(supabase, album.id);
   }
   // 150 files or ~500 MB, whichever comes first, so a part finishes inside the function limit.
-  const media = zipPartAt(items, part);
+  const groups = planZipParts(items);
+  const media = groups[part] ?? [];
   if (!media.length) return zipError(request, "Nothing to download", 404);
 
   await logAccess(event, null, "zip");
 
   const title = safeFilename(album.title, "album");
-  const filename = only.length ? `${title} (selected).zip` : part > 0 ? `${title} (part ${part + 1}).zip` : `${title}.zip`;
+  const base = only.length ? `${title} (selected)` : title;
+  const filename = groups.length > 1 ? zipPartFilename(base, part, groups.length) : `${base}.zip`;
   return zipResponse(supabase, media, filename);
 }

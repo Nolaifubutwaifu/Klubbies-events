@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Segmented } from "@/components/Segmented";
 import type { SavedGroup } from "@/lib/media/favourites";
 import { formatDate } from "@/lib/format";
+import { formatBytes } from "@/lib/format";
 import { planZipParts } from "@/lib/media/zip-parts";
 
 export type DownloadedItem = {
@@ -40,7 +41,9 @@ function ZipDownloadLinks({
               <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />
             </svg>
           ) : null}
-          {parts.length > 1 ? `${label} part ${index + 1}` : label}
+          {parts.length > 1
+            ? `Part ${index + 1} of ${parts.length}, ${formatBytes(part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0))}`
+            : label}
         </a>
       ))}
     </>

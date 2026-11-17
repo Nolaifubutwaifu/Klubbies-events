@@ -36,7 +36,17 @@ export function planZipParts<T extends ZipSized>(items: readonly T[]): T[][] {
   return parts;
 }
 
+export type ZipPartSummary = { files: number; bytes: number };
+
+/** Files and total bytes in each part, in order. */
+export function zipPartSummaries(items: readonly ZipSized[]): ZipPartSummary[] {
+  return planZipParts(items).map((part) => ({
+    files: part.length,
+    bytes: part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0),
+  }));
+}
+
 /** How many files each part holds, in order. Empty when there is nothing to zip. */
 export function zipPartFileCounts(items: readonly ZipSized[]): number[] {
-  return planZipParts(items).map((part) => part.length);
+  return zipPartSummaries(items).map((part) => part.files);
 }

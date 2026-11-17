@@ -14,7 +14,7 @@ export function YourPhotosCard({
   eventId,
   state,
   count,
-  partCounts,
+  partSummaries,
   albums = [],
   selfieUrl = null,
   previews,
@@ -23,8 +23,8 @@ export function YourPhotosCard({
   eventId: string;
   state: State;
   count: number;
-  /** Files in each zip part. Omitted, the links split every 150 files. */
-  partCounts?: number[];
+  /** Files and bytes in each zip part. Omitted, the links split every 150 files. */
+  partSummaries?: { files: number; bytes: number }[];
   /** Album names the matches came from, for "Across Keynote and Awards". */
   albums?: string[];
   /** Their own selfie, signed for them alone. */
@@ -89,7 +89,7 @@ export function YourPhotosCard({
           <Link href={meHref} className="btn btn-secondary !min-h-[48px] no-underline">
             See all
           </Link>
-          <ZipParts href={`/api/events/${eventId}/me/zip`} count={count} partCounts={partCounts} className="btn btn-primary !min-h-[48px] no-underline" />
+          <ZipParts href={`/api/events/${eventId}/me/zip`} count={count} partSummaries={partSummaries} className="btn btn-primary !min-h-[48px] no-underline" />
         </div>
       </section>
     );

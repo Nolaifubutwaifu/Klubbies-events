@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ZIP_PART_BYTES, ZIP_PART_SIZE, planZipParts, zipPartFileCounts } from "@/lib/media/zip-parts";
+import { ZIP_PART_BYTES, ZIP_PART_SIZE, planZipParts, zipPartFileCounts, zipPartSummaries } from "@/lib/media/zip-parts";
 
 const mb = (n: number) => n * 1024 * 1024;
 
@@ -23,6 +23,7 @@ describe("zip parts", () => {
     ];
     const parts = planZipParts(items);
     expect(parts.map((part) => part.map((item) => item.id))).toEqual([["a", "b"], ["c", "d"]]);
+    expect(zipPartSummaries(items).map((part) => part.bytes)).toEqual([mb(400), mb(250)]);
     for (const part of parts) {
       const bytes = part.reduce((sum, item) => sum + (item.byteSize ?? 0), 0);
       expect(bytes).toBeLessThanOrEqual(ZIP_PART_BYTES);

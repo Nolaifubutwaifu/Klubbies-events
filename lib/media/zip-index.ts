@@ -1,6 +1,6 @@
 import "server-only";
 import type { UserClient } from "@/lib/supabase/server";
-import { planZipParts, zipPartFileCounts, type ZipSized } from "./zip-parts";
+import { planZipParts, zipPartSummaries, type ZipPartSummary, type ZipSized } from "./zip-parts";
 
 const PAGE = 1000;
 
@@ -46,7 +46,7 @@ export async function albumZipItems(supabase: UserClient, albumId: string): Prom
 }
 
 /** File counts per zip part, for the download links. */
-export async function albumZipPartCounts(supabase: UserClient, albumId: string): Promise<number[]> {
+export async function albumZipPartCounts(supabase: UserClient, albumId: string): Promise<ZipPartSummary[]> {
   const rows = await eachPage<{ byte_size: number | null }>((from, to) =>
     supabase
       .from("media")
@@ -57,7 +57,7 @@ export async function albumZipPartCounts(supabase: UserClient, albumId: string):
       .order("id", { ascending: true })
       .range(from, to),
   );
-  return zipPartFileCounts(rows.map((row) => ({ byteSize: row.byte_size })));
+  return zipPartSummaries(rows.map((row) => ({ byteSize: row.byte_size })));
 }
 
 type YourPhotoRow = {

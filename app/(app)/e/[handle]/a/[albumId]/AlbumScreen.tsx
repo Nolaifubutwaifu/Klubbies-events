@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { favouritedIds } from "@/lib/media/favourites";
 import { listAlbumMedia } from "@/lib/media/queries";
 import { albumZipPartCounts } from "@/lib/media/zip-index";
+import type { ZipPartSummary } from "@/lib/media/zip-parts";
 import { ProcessingBanner } from "@/components/ProcessingBanner";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -162,7 +163,7 @@ export async function AlbumScreen({
     chosenCover,
     mine,
     creditsQuery,
-    albumZipPartCounts(supabase, album.id).catch(() => [] as number[]),
+    albumZipPartCounts(supabase, album.id).catch(() => [] as ZipPartSummary[]),
   ]);
   const [{ count: savedTotal }, savedIds, { data: uploaderNames }] = await Promise.all([
     supabase
@@ -284,6 +285,7 @@ export async function AlbumScreen({
             albumId={album.id}
             mediaIds={(readyIds ?? []).map((m) => m.id)}
             parts={zipPartCounts.length > 0 ? zipPartCounts.length : Math.max(1, Math.ceil((photoCount + videoCount) / 150))}
+            partBytes={zipPartCounts.map((part) => part.bytes)}
             canDownload={album.allow_download || canManage}
             canManage={canManage}
             canAdd={canAdd}

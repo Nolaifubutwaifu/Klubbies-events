@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { setAlbumPublishedAction } from "@/app/(app)/admin/actions";
 import { MoreButton, MoreLink, MoreMenu, MoreSeparator } from "@/components/MoreMenu";
+import { formatBytes } from "@/lib/format";
 import { nativeSaveToPhotos } from "@/lib/native-app";
 
 const SHARE_BATCH = 8;
@@ -43,6 +44,7 @@ export function AlbumActions({
   albumId,
   mediaIds,
   parts,
+  partBytes = [],
   canDownload,
   canManage,
   canAdd,
@@ -54,6 +56,7 @@ export function AlbumActions({
   albumId: string;
   mediaIds: string[];
   parts: number;
+  partBytes?: number[];
   canDownload: boolean;
   canManage: boolean;
   canAdd: boolean;
@@ -162,7 +165,7 @@ export function AlbumActions({
     primary = (
       <a href={zipHref(0)} className="btn btn-secondary !min-h-[48px] flex-1 no-underline sm:flex-none">
         <DownloadIcon />
-        {parts > 1 ? "Download part 1" : "Download album"}
+        {parts > 1 ? `Part 1 of ${parts}${partBytes[0] ? `, ${formatBytes(partBytes[0])}` : ""}` : "Download album"}
       </a>
     );
   }
@@ -177,7 +180,7 @@ export function AlbumActions({
     for (let i = from; i < parts; i++) {
       menuItems.push(
         <a key={`zip${i}`} href={zipHref(i)} className="kb-menu-item">
-          {parts > 1 ? `Download part ${i + 1} of ${parts}` : "Download all"}
+          {parts > 1 ? `Part ${i + 1} of ${parts}${partBytes[i] ? `, ${formatBytes(partBytes[i])}` : ""}` : "Download all"}
         </a>,
       );
     }

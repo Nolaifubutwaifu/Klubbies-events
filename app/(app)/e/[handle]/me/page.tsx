@@ -14,7 +14,7 @@ import {
   type PhotosOfYouGroup,
   type Suggestion,
 } from "@/lib/faces/queries";
-import { zipPartFileCounts } from "@/lib/media/zip-parts";
+import { zipPartSummaries } from "@/lib/media/zip-parts";
 import { yourPhotosZipItems } from "@/lib/media/zip-index";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -84,7 +84,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
       ? yourPhotosZipItems(supabase, ctx.event.id, ctx.perms.manage_albums).catch(() => [])
       : Promise.resolve([]),
   ]);
-  const zipParts = zipPartFileCounts(zipItems);
+  const zipParts = zipPartSummaries(zipItems);
 
   const stillLooking = state.backfillRunning || progress.remaining > 0;
 
@@ -191,7 +191,7 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                     {stillLooking ? `, still looking through ${progress.remaining.toLocaleString("en-AU")} more` : ""}
                   </span>
                 </span>
-                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} partCounts={zipParts} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
+                <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} partSummaries={zipParts} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
               </section>
             ) : null}
 

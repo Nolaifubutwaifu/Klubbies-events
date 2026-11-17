@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { getEventContextById } from "@/lib/auth/session";
 import { logAccess } from "@/lib/media/access";
-import { safeFilename, UNAVAILABLE, zipError, zipResponse } from "@/lib/media/zip";
-import { yourPhotosZipItems, zipPartAt } from "@/lib/media/zip-index";
+import { safeFilename, UNAVAILABLE, zipError, zipPartFilename, zipResponse } from "@/lib/media/zip";
+import { yourPhotosZipItems } from "@/lib/media/zip-index";
+import { planZipParts } from "@/lib/media/zip-parts";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 800;
@@ -27,10 +28,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/events/[id]/
     return null;
   });
   if (!items) return zipError(request, "Could not load your photos", 500);
-  const media = zipPartAt(items, part);
+  const groups = planZipParts(items);
+  const media = groups[part] ?? [];
   if (!media.length) return zipError(request, "Nothing to download", 404);
 
   await logAccess(event, null, "zip");
   const title = safeFilename(event.event.name, "event");
-  return zipResponse(supabase, media, part > 0 ? `${title} - your photos (part ${part + 1}).zip` : `${title} - your photos.zip`);
+  return zipResponse(supabase, media, zipPartFilename(`${title} - your photos`, part, groups.length));
 }
