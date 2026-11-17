@@ -311,8 +311,9 @@ export class GuestUploadQueue {
       if (!job.originalDone) {
         const original = ticket.signed?.[ticket.storagePath];
         if (!original) throw new Error("Could not start the upload");
+        const mimeType = ticket.mimeType;
         await withBackoff(
-          () => this.putSigned(job, original, job.file, ticket.mimeType, 0.85, 0),
+          () => this.putSigned(job, original, job.file, mimeType, 0.85, 0),
           isUploadRetryable,
           { onRetry: this.onRetry(job) },
         );
