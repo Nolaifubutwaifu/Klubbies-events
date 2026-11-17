@@ -6,8 +6,8 @@
 -- previous overlapping behaviour, so a deploy does not have to wait on it.
 --
 -- Apply in the Supabase SQL editor (project yfdglvhhakbuahyfrihs). Do not
--- apply it from the app, and do not apply 037 or 038 as part of this unless
--- you mean to: this file does not depend on them.
+-- apply it from the app. 037 and 038 are already applied in production;
+-- this file does not depend on them.
 
 create table public.worker_leases (
   name text primary key,
@@ -52,7 +52,7 @@ begin
     set holder = excluded.holder,
         locked_until = excluded.locked_until,
         updated_at = now()
-    where l.locked_until < now()
+    where l.locked_until <= now()
        or l.holder = excluded.holder
   returning l.holder into got;
   return got is not distinct from p_holder;
