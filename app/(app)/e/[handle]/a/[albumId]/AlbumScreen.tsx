@@ -71,7 +71,10 @@ export async function AlbumScreen({
           .from("media")
           .select("id, original_filename, created_at, status")
           .eq("album_id", album.id)
-          .neq("status", "ready")
+          // Failed, or silent for an hour. An upload still moving (a video
+          // takes a while) isn't unfinished yet, and "Upload again" would
+          // only start it twice.
+          .or(`status.eq.failed,and(status.eq.processing,updated_at.lt."${stuckCutoffIso()}")`)
           .order("created_at", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: [] }),

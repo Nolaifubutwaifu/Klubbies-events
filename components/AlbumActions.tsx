@@ -7,8 +7,11 @@ import { setAlbumPublishedAction } from "@/app/(app)/admin/actions";
 import { MoreButton, MoreLink, MoreMenu, MoreSeparator } from "@/components/MoreMenu";
 import { formatBytes } from "@/lib/format";
 import { nativeSaveToPhotos } from "@/lib/native-app";
+import { isUploadRetryable, withBackoff } from "@/lib/retry";
 
 const SHARE_BATCH = 8;
+/** Safari reports a dropped connection as a TypeError ("Load failed"), which is worth another go. */
+const fetchRetryable = (error: unknown) => error instanceof TypeError || isUploadRetryable(error);
 /** Fired by the Select button; the album grid below listens and starts selecting. */
 export const SELECT_EVENT = "kb:album-select";
 const subscribeNever = () => () => {};
@@ -70,6 +73,8 @@ export function AlbumActions({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+  /** A downloaded batch waiting for a tap, because iOS wouldn't share it without one. */
+  const [waiting, setWaiting] = useState<{ files: File[]; next: number; skippedVideos: number } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const ready = mediaIds.length;
@@ -77,37 +82,56 @@ export function AlbumActions({
   const editHref = editing ? albumHref : `${albumHref}?edit=1`;
   const zipHref = (part: number) => `/api/albums/${albumId}/zip${parts > 1 ? `?part=${part}` : ""}`;
 
-  async function saveToPhotos() {
+  /**
+   * Saves from batch `from` on. iOS only opens the share sheet within a few
+   * seconds of a tap, and downloading a video takes longer than that, so when
+   * Safari refuses, the downloaded batch waits behind a "Save N items" button
+   * and the next tap shares it straight away.
+   */
+  async function saveToPhotos(from = 0, skippedBefore = 0) {
     setBusy(true);
     setError("");
+    setWaiting(null);
     const native = nativeSaveToPhotos();
     let saved = 0;
-    let skippedVideos = 0;
+    let skippedVideos = skippedBefore;
     try {
-      for (let i = 0; i < mediaIds.length; i += SHARE_BATCH) {
+      for (let i = from; i < mediaIds.length; i += SHARE_BATCH) {
         const batch = mediaIds.slice(i, i + SHARE_BATCH);
-        setProgress(`Preparing ${i + 1} to ${Math.min(i + SHARE_BATCH, mediaIds.length)} of ${mediaIds.length}`);
-        const res = await fetch("/api/media/sign", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          // The app saves the real files, videos included. The share sheet
-          // gets display copies of photos and the real file of each video:
-          // a video's display copy is its poster, a still image.
-          body: JSON.stringify({ mediaIds: batch, variant: native ? "original" : "share" }),
-        });
-        const { urls }: { urls: Record<string, string>; kinds?: Record<string, string> } = await res.json();
+        const last = Math.min(i + SHARE_BATCH, mediaIds.length);
+        setProgress(`Preparing ${i + 1} to ${last} of ${mediaIds.length}`);
+        const urls = await withBackoff(
+          async () => {
+            const res = await fetch("/api/media/sign", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              // The app saves the real files, videos included. The share sheet
+              // gets display copies of photos and the real file of each video:
+              // a video's display copy is its poster, a still image.
+              body: JSON.stringify({ mediaIds: batch, variant: native ? "original" : "share" }),
+            });
+            if (!res.ok) throw Object.assign(new Error(`sign ${res.status}`), { status: res.status });
+            return ((await res.json()) as { urls: Record<string, string> }).urls;
+          },
+          fetchRetryable,
+        );
         if (native) {
           const batchUrls = batch.map((id) => urls[id]).filter((url): url is string => Boolean(url));
-          setProgress(`Saving ${Math.min(i + SHARE_BATCH, mediaIds.length)} of ${mediaIds.length}… keep the app open`);
+          setProgress(`Saving ${last} of ${mediaIds.length}… keep the app open`);
           const result = (await native.postMessage({ urls: batchUrls })) as { saved?: number };
           saved += result?.saved ?? 0;
           continue;
         }
         const files: File[] = [];
-        for (const id of batch) {
+        for (const [n, id] of batch.entries()) {
           const url = urls[id];
           if (!url) continue;
-          const blob = await (await fetch(url)).blob();
+          setProgress(`Downloading ${i + n + 1} of ${mediaIds.length}…`);
+          const blob = await withBackoff(async () => {
+            const res = await fetch(url);
+            if (!res.ok) throw Object.assign(new Error(`download ${res.status}`), { status: res.status });
+            return res.blob();
+          }, fetchRetryable);
           const file = shareFile(blob, id);
           // A phone that can't take this video in the share sheet still
           // saves the photos; the video is left for Download.
@@ -119,25 +143,68 @@ export function AlbumActions({
         }
         if (files.length === 0) continue;
         setProgress(`Saving ${files.length} ${files.length === 1 ? "item" : "items"}…`);
-        await navigator.share({ files, title: "Klubbies Events" });
+        try {
+          await navigator.share({ files, title: "Klubbies Events" });
+        } catch (shareError) {
+          // The tap is too long ago (or this is a later batch, with no tap at
+          // all). Keep the files and ask for one.
+          if (shareError instanceof Error && shareError.name === "NotAllowedError") {
+            setWaiting({ files, next: i + SHARE_BATCH, skippedVideos });
+            setProgress(`Downloaded ${last} of ${mediaIds.length}. Tap below to save them to Photos.`);
+            return;
+          }
+          throw shareError;
+        }
       }
-      setProgress(
-        native
-          ? saved === mediaIds.length
-            ? `Saved all ${saved} to Photos`
-            : `Saved ${saved} of ${mediaIds.length} to Photos. The rest couldn't be saved; try Download all on a computer.`
-          : skippedVideos > 0
-            ? `Done. ${skippedVideos === 1 ? "1 video" : `${skippedVideos} videos`} couldn't go to Photos from here: open ${skippedVideos === 1 ? "it" : "each one"} and tap Download.`
-            : "Done",
-      );
+      finish(native ? saved : null, skippedVideos);
     } catch (shareError) {
-      const message = shareError instanceof Error ? shareError.message : String(shareError);
-      if (/photos access/i.test(message)) setError(message);
-      else if (!/abort/i.test(message)) setError("Saving stopped. You can also use Download all.");
-      setProgress("");
+      fail(shareError);
     } finally {
       setBusy(false);
     }
+  }
+
+  /** The tap that opens the share sheet for a batch that is already downloaded. */
+  async function shareWaiting() {
+    if (!waiting) return;
+    const { files, next, skippedVideos } = waiting;
+    setBusy(true);
+    setError("");
+    try {
+      // No await before this: it has to run inside the tap.
+      await navigator.share({ files, title: "Klubbies Events" });
+      setWaiting(null);
+      if (next < mediaIds.length) await saveToPhotos(next, skippedVideos);
+      else finish(null, skippedVideos);
+    } catch (shareError) {
+      // Cancelling the sheet leaves the button, so they can try again.
+      if (!(shareError instanceof Error && shareError.name === "AbortError")) {
+        setWaiting(null);
+        fail(shareError);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function finish(nativeSaved: number | null, skippedVideos: number) {
+    setProgress(
+      nativeSaved !== null
+        ? nativeSaved === mediaIds.length
+          ? `Saved all ${nativeSaved} to Photos`
+          : `Saved ${nativeSaved} of ${mediaIds.length} to Photos. The rest couldn't be saved; try Download all on a computer.`
+        : skippedVideos > 0
+          ? `Done. ${skippedVideos === 1 ? "1 video" : `${skippedVideos} videos`} couldn't go to Photos from here: open ${skippedVideos === 1 ? "it" : "each one"} and tap Download.`
+          : "Done",
+    );
+  }
+
+  function fail(shareError: unknown) {
+    const message = shareError instanceof Error ? shareError.message : String(shareError);
+    const name = shareError instanceof Error ? shareError.name : "";
+    if (/photos access/i.test(message)) setError(message);
+    else if (name !== "AbortError" && !/abort/i.test(message)) setError("Saving stopped. Tap Save to Photos to try again, or use Download all.");
+    setProgress("");
   }
 
   function setPublished(next: boolean) {
@@ -166,7 +233,7 @@ export function AlbumActions({
     );
   } else if (download && canShareFiles) {
     primary = (
-      <button type="button" className="btn btn-primary !min-h-[48px] flex-1 sm:flex-none" onClick={saveToPhotos} disabled={busy}>
+      <button type="button" className="btn btn-primary !min-h-[48px] flex-1 sm:flex-none" onClick={() => void saveToPhotos()} disabled={busy}>
         <DownloadIcon />
         {busy ? "Saving…" : "Save to Photos"}
       </button>
@@ -184,7 +251,7 @@ export function AlbumActions({
   const menuItems: React.ReactNode[] = [];
   if (canManage && !published && canAdd) menuItems.push(<MoreLink key="add" href={addHref}>Add photos</MoreLink>);
   if (canManage) menuItems.push(<MoreLink key="edit" href={editHref}>{editing ? "Close details" : "Edit details and cover"}</MoreLink>);
-  if (download && canShareFiles && !primaryIsDownload) menuItems.push(<MoreButton key="save" onClick={saveToPhotos}>Save to Photos</MoreButton>);
+  if (download && canShareFiles && !primaryIsDownload) menuItems.push(<MoreButton key="save" onClick={() => void saveToPhotos()}>Save to Photos</MoreButton>);
   if (download) {
     const from = primaryIsDownload && !canShareFiles ? 1 : 0;
     for (let i = from; i < parts; i++) {
@@ -225,6 +292,12 @@ export function AlbumActions({
       </div>
       {canManage && !published && ready === 0 ? <span className="kb-help">Upload something first</span> : null}
       {progress ? <span className="kb-help">{progress}</span> : null}
+      {waiting ? (
+        <button type="button" className="btn btn-primary !min-h-[48px] self-start" onClick={() => void shareWaiting()} disabled={busy}>
+          <DownloadIcon />
+          Save {waiting.files.length} {waiting.files.length === 1 ? "item" : "items"} to Photos
+        </button>
+      ) : null}
       {error ? <span className="kb-error">{error}</span> : null}
     </div>
   );
