@@ -378,7 +378,7 @@ export function AlbumGrid({
           // status ready), so a link here 404s. The badge stays on the tile.
           if (item.status !== "ready") {
             return (
-              <div key={item.id} aria-label={labelFor(item)} style={style} className="soft-tile relative block">
+              <div key={item.id} role="img" aria-label={labelFor(item)} style={style} className="soft-tile relative block">
                 {tile}
               </div>
             );

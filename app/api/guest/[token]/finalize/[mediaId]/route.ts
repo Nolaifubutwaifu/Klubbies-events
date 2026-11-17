@@ -64,7 +64,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   }
 
   const paths = derivativePaths(folder);
-  const byteSize = objects.get(originalName) || media.byte_size || 0;
+  const byteSize = objects.get(originalName) ?? media.byte_size ?? 0;
   const kind = media.kind === "video" ? "video" : "photo";
   if (byteSize > maxBytesForKind(kind)) {
     await admin.from("media").update({ status: "failed" }).eq("id", mediaId).neq("status", "ready");

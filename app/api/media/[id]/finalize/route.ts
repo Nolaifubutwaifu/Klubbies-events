@@ -66,7 +66,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   }
 
   const paths = derivativePaths(folder);
-  const byteSize = objects.get(originalName) || media.byte_size || 0;
+  const byteSize = objects.get(originalName) ?? media.byte_size ?? 0;
   const kind = media.kind === "video" ? "video" : "photo";
   if (byteSize > maxBytesForKind(kind)) {
     await supabase.from("media").update({ status: "failed" }).eq("id", id).neq("status", "ready");

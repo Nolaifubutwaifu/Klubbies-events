@@ -267,7 +267,7 @@ export function Viewer({
       if (e.key === "Escape" && sheet !== "none") return setSheet("none");
       if (e.key === "ArrowLeft") go("prev");
       if (e.key === "ArrowRight") go("next");
-      if (e.key === "Escape") router.push(albumHref);
+      if (e.key === "Escape") router.push(albumHref, { scroll: false });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -374,6 +374,7 @@ export function Viewer({
       <div className="flex h-16 flex-none items-center justify-between gap-2 px-2 sm:px-4">
         <Link
           href={albumHref}
+          scroll={false}
           aria-label="Close photo"
           className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-white no-underline hover:bg-[#22252c]"
         >
