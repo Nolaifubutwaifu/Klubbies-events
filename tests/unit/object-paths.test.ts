@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimAllowed, ownedAvatarPath, ownedMediaObjectPath } from "@/lib/storage/object-paths";
+import { claimAllowed, ownedAvatarPath, ownedMediaObjectPath, ownedSelfiePath } from "@/lib/storage/object-paths";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
@@ -26,6 +26,15 @@ describe("owned media paths", () => {
   it("rejects traversal and unknown names", () => {
     expect(ownedMediaObjectPath(A, ALBUM, MEDIA, `events/${A}/albums/${ALBUM}/${MEDIA}/../${OTHER}/original.jpg`)).toBe(false);
     expect(ownedMediaObjectPath(A, ALBUM, MEDIA, `events/${A}/albums/${ALBUM}/${MEDIA}/secret.bin`)).toBe(false);
+  });
+});
+
+describe("owned selfie paths", () => {
+  it("rejects a query string on an otherwise valid selfie", () => {
+    const id = "66666666-6666-4666-8666-666666666666";
+    expect(ownedSelfiePath(`faces/${id}/selfie.jpg`)).toBe(true);
+    expect(ownedSelfiePath(`faces/${id}/selfie.jpg?token=secret`)).toBe(false);
+    expect(ownedSelfiePath(`faces/${id}/selfie.jpg#x`)).toBe(false);
   });
 });
 

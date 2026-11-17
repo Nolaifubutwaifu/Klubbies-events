@@ -106,7 +106,7 @@ export async function sendContactMessage(to: string, message: ContactMessage): P
   await deliver(to, subject, () =>
     resend().emails.send(
       { from: serverEnv().EMAIL_FROM, replyTo: message.from, to, subject, text },
-      { idempotencyKey: idempotencyKey(["contact", to, subject, message.from]) },
+      { idempotencyKey: idempotencyKey(["contact", to, subject, message.from, message.body]) },
     ),
   );
 }

@@ -51,7 +51,7 @@ export function ownedEventAssetPath(eventId: string, path: string): boolean {
 
 /** A selfie the server stored at faces/{membership id}/file. */
 export function ownedSelfiePath(path: string): boolean {
-  if (hasPathTraversal(path)) return false;
+  if (hasPathTraversal(path) || path.includes("?") || path.includes("#")) return false;
   return /^faces\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[^/]+$/i.test(path);
 }
 
