@@ -11,6 +11,7 @@ export type SavedItem = {
   ratio: number;
   albumId: string | null;
   durationSeconds: number | null;
+  byteSize: number | null;
 };
 
 export type SavedGroup = {
@@ -24,7 +25,7 @@ export type SavedGroup = {
 export async function listFavourites(supabase: UserClient, eventId: string, userId: string): Promise<SavedGroup[]> {
   const { data: rows, error } = await supabase
     .from("favourites")
-    .select("media_id, created_at, media(id, kind, album_id, thumb_path, poster_path, width, height, duration_seconds, status)")
+    .select("media_id, created_at, media(id, kind, album_id, thumb_path, poster_path, width, height, duration_seconds, byte_size, status)")
     .eq("event_id", eventId)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -66,6 +67,7 @@ export async function listFavourites(supabase: UserClient, eventId: string, user
       ratio: tileRatio(item.width, item.height),
       albumId: item.album_id,
       durationSeconds: item.duration_seconds,
+      byteSize: item.byte_size,
     });
     groups.set(item.album_id, group);
   }

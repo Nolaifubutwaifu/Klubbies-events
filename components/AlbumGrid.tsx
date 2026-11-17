@@ -9,6 +9,7 @@ import { deleteMediaAction, restoreMediaAction, setAlbumCoverAction } from "@/ap
 import { Dialog } from "@/components/Dialog";
 import { UndoBar } from "@/components/UndoBar";
 import type { GridItem } from "@/lib/media/queries";
+import { planZipParts } from "@/lib/media/zip-parts";
 import { SELECT_EVENT } from "@/components/AlbumActions";
 import { Segmented } from "@/components/Segmented";
 import { tileRatio } from "@/lib/media/ratio";
@@ -153,6 +154,8 @@ export function AlbumGrid({
     });
 
   const selectedIds = [...selected];
+  const known = new Map([...items, ...mineItems].map((item) => [item.id, item.byteSize]));
+  const downloadParts = planZipParts(selectedIds.map((id) => ({ id, byteSize: known.get(id) ?? null })));
   const shown =
     kind === "all"
       ? items
@@ -252,17 +255,24 @@ export function AlbumGrid({
           </button>
 
           {canDownload ? (
-            <a
-              // No href with nothing selected, so Enter can't start a
-              // download of the whole album's first part.
-              href={selected.size ? `/api/albums/${albumId}/zip?only=${selectedIds.join(",")}` : undefined}
-              aria-disabled={!selected.size}
-              className={`flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline ${
-                selected.size ? "" : "pointer-events-none opacity-50"
-              }`}
-            >
-              Download
-            </a>
+            downloadParts.length === 0 ? (
+              <a
+                aria-disabled
+                className="pointer-events-none flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline opacity-50"
+              >
+                Download
+              </a>
+            ) : (
+              downloadParts.map((part, index) => (
+                <a
+                  key={part.map((item) => item.id).join(",")}
+                  href={`/api/albums/${albumId}/zip?only=${part.map((item) => item.id).join(",")}`}
+                  className="flex min-h-[40px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline"
+                >
+                  {downloadParts.length > 1 ? `Download part ${index + 1}` : "Download"}
+                </a>
+              ))
+            )
           ) : null}
 
           {canManage && selected.size === 1 ? (

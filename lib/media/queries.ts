@@ -19,6 +19,7 @@ export type AlbumCard = Pick<
 
 export type GridItem = Pick<Media, "id" | "kind" | "width" | "height" | "duration_seconds" | "status" | "original_filename"> & {
   thumbUrl: string | null;
+  byteSize: number | null;
 };
 
 function escapeLike(value: string): string {
@@ -109,7 +110,7 @@ export async function listAlbumMedia(
   if (opts.onlyIds && opts.onlyIds.length === 0) return { items: [], hasMore: false };
   let query = supabase
     .from("media")
-    .select("id, kind, width, height, duration_seconds, status, original_filename, thumb_path, poster_path, updated_at")
+    .select("id, kind, width, height, duration_seconds, status, original_filename, thumb_path, poster_path, updated_at, byte_size")
     .eq("album_id", albumId)
     .order("sort_at", { ascending: true })
     .order("id", { ascending: true })
@@ -142,6 +143,7 @@ export async function listAlbumMedia(
         status: m.status === "processing" && Date.parse(m.updated_at) < Date.now() - STUCK_AFTER_MS ? "failed" : m.status,
         original_filename: m.original_filename,
         thumbUrl: path ? (urls.get(path) ?? null) : null,
+        byteSize: m.byte_size,
       };
     }),
   };
