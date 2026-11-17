@@ -6,6 +6,8 @@ const PAGE = 1000;
 
 export type ZipSource = {
   id: string;
+  event_id: string;
+  album_id: string | null;
   storage_path: string;
   original_filename: string | null;
   backed_up_at: string | null;
@@ -35,7 +37,7 @@ export async function albumZipItems(supabase: UserClient, albumId: string): Prom
   const rows = await eachPage<ZipSource>((from, to) =>
     supabase
       .from("media")
-      .select("id, storage_path, original_filename, backed_up_at, byte_size")
+      .select("id, event_id, album_id, storage_path, original_filename, backed_up_at, byte_size")
       .eq("album_id", albumId)
       .eq("status", "ready")
       .order("sort_at", { ascending: true })
@@ -63,6 +65,8 @@ export async function albumZipPartCounts(supabase: UserClient, albumId: string):
 type YourPhotoRow = {
   media: {
     id: string;
+    event_id: string;
+    album_id: string | null;
     storage_path: string;
     original_filename: string | null;
     status: string;
@@ -86,7 +90,7 @@ export async function yourPhotosZipItems(
     supabase
       .from("face_matches")
       .select(
-        "media_id, media!inner(id, storage_path, original_filename, status, content_hash, backed_up_at, byte_size, albums!media_album_id_fkey(allow_download))",
+        "media_id, media!inner(id, event_id, album_id, storage_path, original_filename, status, content_hash, backed_up_at, byte_size, albums!media_album_id_fkey(allow_download))",
       )
       .eq("event_id", eventId)
       .eq("state", "confirmed")

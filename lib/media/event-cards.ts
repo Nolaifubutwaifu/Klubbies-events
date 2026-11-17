@@ -1,5 +1,5 @@
 import "server-only";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths, type PathClaim } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 const TILES_PER_EVENT = 3;
@@ -96,18 +96,28 @@ export async function listEventCards(
 
   const mediaIds = [...picks.values()].flat().flatMap((p) => (p.mediaId ? [p.mediaId] : []));
   const { data: thumbs } = mediaIds.length
-    ? await supabase.from("media").select("id, thumb_path, poster_path").in("id", mediaIds)
+    ? await supabase.from("media").select("id, event_id, album_id, thumb_path, poster_path").in("id", mediaIds)
     : { data: [] };
   const thumbById = new Map((thumbs ?? []).map((m) => [m.id, m.thumb_path ?? m.poster_path]));
-
+  const claims: PathClaim[] = [];
   const pathsByEvent = new Map<string, string[]>();
   for (const [eventId, list] of picks) {
-    pathsByEvent.set(
-      eventId,
-      list.map((p) => p.path ?? (p.mediaId ? thumbById.get(p.mediaId) : null)).filter((p): p is string => Boolean(p)),
-    );
+    const paths: string[] = [];
+    for (const pick of list) {
+      if (pick.path) {
+        claims.push({ kind: "event", path: pick.path, eventId });
+        paths.push(pick.path);
+      }
+      const row = pick.mediaId ? (thumbs ?? []).find((m) => m.id === pick.mediaId) : undefined;
+      const thumb = row ? (row.thumb_path ?? row.poster_path) : pick.mediaId ? thumbById.get(pick.mediaId) : null;
+      if (row && thumb) {
+        claims.push(...mediaClaims([{ ...row, paths: [thumb] }]));
+        paths.push(thumb);
+      }
+    }
+    pathsByEvent.set(eventId, paths);
   }
-  const urls = await signPaths(supabase, [...pathsByEvent.values()].flat(), SIGNED_URL_TTL.thumb);
+  const urls = await signPaths(supabase, claims, SIGNED_URL_TTL.thumb);
 
   for (const eventId of eventIds) {
     const own = (albums ?? []).filter((a) => a.event_id === eventId);

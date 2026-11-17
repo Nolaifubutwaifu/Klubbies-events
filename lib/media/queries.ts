@@ -2,7 +2,7 @@ import "server-only";
 import { STUCK_AFTER_MS } from "@/lib/media/constants";
 import type { Album, Media } from "@/lib/db/types";
 import { r2Url } from "@/lib/backup/r2";
-import { SIGNED_URL_TTL, signedUrlLifetime, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaim, mediaClaims, signedUrlLifetime, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 export const ALBUM_PAGE_SIZE = 48;
@@ -63,12 +63,12 @@ export async function listAlbums(
     .map((a) => a.cover_media_id ?? countByAlbum.get(a.id)?.first_media_id ?? null)
     .filter((id): id is string => Boolean(id));
   const { data: covers } = coverIds.length
-    ? await supabase.from("media").select("id, thumb_path, poster_path").in("id", coverIds)
+    ? await supabase.from("media").select("id, event_id, album_id, thumb_path, poster_path").in("id", coverIds)
     : { data: [] };
   const coverPath = new Map((covers ?? []).map((c) => [c.id, c.thumb_path ?? c.poster_path]));
   const urls = await signPaths(
     supabase,
-    [...coverPath.values()].filter((p): p is string => Boolean(p)),
+    mediaClaims((covers ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
     SIGNED_URL_TTL.thumb,
   );
 
@@ -110,7 +110,7 @@ export async function listAlbumMedia(
   if (opts.onlyIds && opts.onlyIds.length === 0) return { items: [], hasMore: false };
   let query = supabase
     .from("media")
-    .select("id, kind, width, height, duration_seconds, status, original_filename, thumb_path, poster_path, updated_at, byte_size")
+    .select("id, event_id, album_id, kind, width, height, duration_seconds, status, original_filename, thumb_path, poster_path, updated_at, byte_size")
     .eq("album_id", albumId)
     .order("sort_at", { ascending: true })
     .order("id", { ascending: true })
@@ -124,7 +124,7 @@ export async function listAlbumMedia(
   const pageRows = rows.slice(0, MEDIA_PAGE_SIZE);
   const urls = await signPaths(
     supabase,
-    pageRows.map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
+    mediaClaims(pageRows.map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
     SIGNED_URL_TTL.thumb,
   );
 
@@ -180,7 +180,7 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
   const at = `"${media.sort_at}"`;
   const before = `sort_at.lt.${at},and(sort_at.eq.${at},id.lt.${media.id})`;
   const after = `sort_at.gt.${at},and(sort_at.eq.${at},id.gt.${media.id})`;
-  const stripColumns = "id, kind, thumb_path, poster_path, display_path, storage_path";
+  const stripColumns = "id, event_id, album_id, kind, thumb_path, poster_path, display_path, storage_path";
 
   const [prevRows, nextRows, beforeCount, totalCount] = await Promise.all([
     supabase
@@ -221,18 +221,20 @@ export async function getViewerData(supabase: UserClient, albumId: string, media
   const [thumbUrls, displayUrls, videoUrls, besideUrls] = await Promise.all([
     signPaths(
       supabase,
-      stripRows.map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
+      mediaClaims(stripRows.map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
       SIGNED_URL_TTL.thumb,
     ),
     signPaths(
       supabase,
-      [isVideo ? media.poster_path : (media.display_path ?? media.storage_path)].filter((p): p is string => Boolean(p)),
+      [mediaClaim(media, isVideo ? media.poster_path : (media.display_path ?? media.storage_path))].filter((c) => c !== null),
       SIGNED_URL_TTL.display,
     ),
-    isVideo ? signPaths(supabase, [media.storage_path], SIGNED_URL_TTL.video) : Promise.resolve(new Map<string, string>()),
+    isVideo
+      ? signPaths(supabase, [mediaClaim(media, media.storage_path)].filter((c) => c !== null), SIGNED_URL_TTL.video)
+      : Promise.resolve(new Map<string, string>()),
     signPaths(
       supabase,
-      besides.map(slidePath).filter((p): p is string => Boolean(p)),
+      mediaClaims(besides.map((m) => ({ ...m, paths: [slidePath(m)] }))),
       SIGNED_URL_TTL.display,
     ),
   ]);

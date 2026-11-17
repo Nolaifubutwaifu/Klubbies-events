@@ -68,6 +68,19 @@ export function claimAllowed(claim: PathClaim): boolean {
   return ownedSelfiePath(claim.path);
 }
 
+export function mediaClaims(
+  rows: { event_id: string; album_id: string | null; id: string; paths: (string | null | undefined)[] }[],
+): PathClaim[] {
+  const claims: PathClaim[] = [];
+  for (const row of rows) {
+    for (const path of row.paths) {
+      const claim = mediaClaim(row, path);
+      if (claim) claims.push(claim);
+    }
+  }
+  return claims;
+}
+
 export function mediaClaim(
   row: { event_id: string; album_id: string | null; id: string },
   path: string | null | undefined,

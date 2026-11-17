@@ -30,7 +30,9 @@ export default async function AccountPage(props: PageProps<"/account">) {
 
   const supabase = await createClient();
   const [avatar, signed, deletion] = await Promise.all([
-    profile.avatar_url ? signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display) : new Map<string, string>(),
+    profile.avatar_url
+      ? signPaths(supabase, [{ kind: "avatar", path: profile.avatar_url, userId: profile.id }], SIGNED_URL_TTL.display)
+      : new Map<string, string>(),
     signLogoMarks(supabase, events.map((event) => event.logoPath)),
     planAccountDeletion(user.id),
   ]);

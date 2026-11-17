@@ -39,7 +39,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/albums/[id]/
   if (only.length) {
     const { data, error } = await supabase
       .from("media")
-      .select("id, storage_path, original_filename, backed_up_at, byte_size")
+      .select("id, event_id, album_id, storage_path, original_filename, backed_up_at, byte_size")
       .eq("album_id", album.id)
       .eq("status", "ready")
       .in("id", only);

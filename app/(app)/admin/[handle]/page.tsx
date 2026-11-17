@@ -15,7 +15,7 @@ import { formatDate, formatDateTime, formatEventDates, formatLongDate, plural } 
 import { listStackedAlbums } from "@/lib/media/album-list";
 import { EXPIRE_AFTER_DAYS, STUCK_AFTER_MS } from "@/lib/media/constants";
 import { eventLink, eventQrSvg } from "@/lib/share";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { setupState } from "@/lib/events/setup";
@@ -240,14 +240,14 @@ export default async function OrganiserOverview(props: PageProps<"/admin/[handle
   // The newest finished uploads, for the strip at the foot.
   const { data: latest } = await supabase
     .from("media")
-    .select("id, album_id, thumb_path, poster_path, photographer_name, created_at, albums!media_album_id_fkey(title)")
+    .select("id, event_id, album_id, thumb_path, poster_path, photographer_name, created_at, albums!media_album_id_fkey(title)")
     .eq("event_id", eventId)
     .eq("status", "ready")
     .order("created_at", { ascending: false })
     .limit(12);
   const latestUrls = await signPaths(
     supabase,
-    (latest ?? []).map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
+    mediaClaims((latest ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
     SIGNED_URL_TTL.thumb,
   );
   const newest = latest?.[0];

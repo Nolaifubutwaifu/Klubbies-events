@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getEventContext } from "@/lib/auth/session";
 import { listFavourites } from "@/lib/media/favourites";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { SavedTabs, type DownloadedItem } from "./SavedTabs";
 
@@ -45,14 +45,14 @@ export default async function SavedPage(props: PageProps<"/e/[handle]/saved">) {
   const { data: downloadedMedia } = downloadedIds.length
     ? await supabase
         .from("media")
-        .select("id, album_id, thumb_path, poster_path, width, height, albums!media_album_id_fkey(title)")
+        .select("id, event_id, album_id, thumb_path, poster_path, width, height, albums!media_album_id_fkey(title)")
         .in("id", downloadedIds)
         .eq("status", "ready")
     : { data: [] };
 
   const downloadUrls = await signPaths(
     supabase,
-    (downloadedMedia ?? []).map((m) => m.thumb_path ?? m.poster_path ?? "").filter(Boolean),
+    mediaClaims((downloadedMedia ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
     SIGNED_URL_TTL.thumb,
   );
   const whenByMedia = new Map((downloadEvents ?? []).map((e) => [e.media_id, e.occurred_at]));

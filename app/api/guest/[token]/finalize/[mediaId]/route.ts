@@ -4,7 +4,7 @@ import { eventFacesEnabled } from "@/lib/faces/collections";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { recordGuestUpload, resolveGuestLink } from "@/lib/guest/links";
 import { kickVideoPreviews } from "@/lib/media/video-previews";
-import { derivativePaths, folderObjects } from "@/lib/storage";
+import { derivativePaths, folderObjects, ownedMediaObjectPath } from "@/lib/storage";
 import { kickPlanNotices } from "@/lib/billing/notices";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   // The link may only finish files it started: the guest_link_id is the check.
   const { data: media } = await admin
     .from("media")
-    .select("id, event_id, storage_path, byte_size, guest_link_id, status, kind, poster_path, duration_seconds")
+    .select("id, event_id, album_id, storage_path, byte_size, guest_link_id, status, kind, poster_path, duration_seconds")
     .eq("id", mediaId)
     .eq("guest_link_id", session.linkId)
     .maybeSingle();
@@ -48,9 +48,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
     return NextResponse.json({ ok: true });
   }
 
+  if (!media.album_id || !ownedMediaObjectPath(media.event_id, media.album_id, media.id, media.storage_path)) {
+    console.error("refusing to finish a guest upload whose path is outside its row", mediaId);
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const folder = media.storage_path.slice(0, media.storage_path.lastIndexOf("/"));
   const originalName = media.storage_path.slice(folder.length + 1);
-  const objects = await folderObjects(folder, [originalName, "thumb.webp", "display.webp", "poster.jpg"]);
+  const objects = await folderObjects(
+    { eventId: media.event_id, albumId: media.album_id, mediaId: media.id },
+    [originalName, "thumb.webp", "display.webp", "poster.jpg"],
+  );
   if (!objects.has(originalName)) {
     return NextResponse.json({ error: "The original file has not finished uploading" }, { status: 409 });
   }

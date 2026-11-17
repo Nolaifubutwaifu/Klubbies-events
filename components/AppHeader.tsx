@@ -34,7 +34,9 @@ export async function AppHeader({
 
   const [logos, avatars] = await Promise.all([
     signLogoMarks(supabase, [event.logo_path]),
-    profile?.avatar_url ? signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display) : Promise.resolve(new Map<string, string>()),
+    profile?.avatar_url
+      ? signPaths(supabase, [{ kind: "avatar", path: profile.avatar_url, userId: profile.id }], SIGNED_URL_TTL.display)
+      : Promise.resolve(new Map<string, string>()),
   ]);
   const logoUrl = event.logo_path ? (logos.get(event.logo_path) ?? null) : null;
   const avatarUrl = profile?.avatar_url ? (avatars.get(profile.avatar_url) ?? null) : null;

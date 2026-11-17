@@ -99,7 +99,7 @@ export default async function AdminLayout(props: LayoutProps<"/admin/[handle]">)
   };
   const [displayName, profile] = await Promise.all([displayNameFor(ctx), getProfile()]);
   const avatarUrl = profile?.avatar_url
-    ? ((await signPaths(supabase, [profile.avatar_url], SIGNED_URL_TTL.display)).get(profile.avatar_url) ?? null)
+    ? ((await signPaths(supabase, [{ kind: "avatar", path: profile.avatar_url, userId: profile.id }], SIGNED_URL_TTL.display)).get(profile.avatar_url) ?? null)
     : null;
 
   return (

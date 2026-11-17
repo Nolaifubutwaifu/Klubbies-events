@@ -9,7 +9,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Narrow storage interface (masterfile §8.1). Swapping Supabase Storage for S3
 // or R2 should only touch this module.
 
+import { MEDIA_OBJECT_NAMES, claimAllowed, ownedMediaObjectPath, type PathClaim } from "./object-paths";
 import { BUCKET, logoMarkPath } from "./paths";
+
+export type { PathClaim } from "./object-paths";
+export { claimAllowed, mediaClaim, mediaClaims, ownedAvatarPath, ownedMediaObjectPath } from "./object-paths";
 
 export { BUCKET, logoMarkPath } from "./paths";
 
@@ -103,8 +107,19 @@ function pruneCache(now: number) {
  *
  * `client` scopes the in-memory cache to that session. It is not the signer.
  */
-export async function signPaths(client: Client, paths: string[], seconds: number): Promise<Map<string, string>> {
-  const unique = [...new Set(paths.filter(Boolean))];
+export async function signPaths(client: Client, claims: PathClaim[], seconds: number): Promise<Map<string, string>> {
+  const unique = [
+    ...new Set(
+      claims
+        .filter((claim) => {
+          if (!claim.path) return false;
+          if (claimAllowed(claim)) return true;
+          console.error("refusing to sign a path outside its owner", claim.kind, claim.path);
+          return false;
+        })
+        .map((claim) => claim.path),
+    ),
+  ];
   const result = new Map<string, string>();
   if (unique.length === 0) return result;
 
@@ -143,7 +158,16 @@ export async function signPaths(client: Client, paths: string[], seconds: number
  */
 export async function signLogoMarks(client: Client, logoPaths: (string | null | undefined)[]): Promise<Map<string, string>> {
   const logos = [...new Set(logoPaths.filter((p): p is string => Boolean(p)))];
-  const signed = await signPaths(client, [...logos, ...logos.map(logoMarkPath)], SIGNED_URL_TTL.display);
+  const claims: PathClaim[] = [];
+  for (const logo of logos) {
+    const eventId = logo.match(/^events\/([0-9a-f-]{36})\/logo\//i)?.[1];
+    if (!eventId) {
+      console.error("refusing to sign a logo outside events/{id}/logo", logo);
+      continue;
+    }
+    claims.push({ kind: "event", path: logo, eventId }, { kind: "event", path: logoMarkPath(logo), eventId });
+  }
+  const signed = await signPaths(client, claims, SIGNED_URL_TTL.display);
   const result = new Map<string, string>();
   for (const logo of logos) {
     const url = signed.get(logoMarkPath(logo)) ?? signed.get(logo);
@@ -152,13 +176,19 @@ export async function signLogoMarks(client: Client, logoPaths: (string | null | 
   return result;
 }
 
-export async function signDownload(client: Client, path: string, filename: string): Promise<string | null> {
-  // Same rule as signPaths. `client` is part of the call so the route still
-  // reads as "this session's download"; the media row was already authorised.
+export async function signDownload(
+  client: Client,
+  claim: Extract<PathClaim, { kind: "media" }>,
+  filename: string,
+): Promise<string | null> {
   void client;
+  if (!ownedMediaObjectPath(claim.eventId, claim.albumId, claim.mediaId, claim.path)) {
+    console.error("refusing to sign a download outside its photo", claim.path);
+    return null;
+  }
   const { data, error } = await createAdminClient()
     .storage.from(BUCKET)
-    .createSignedUrl(path, ttl(SIGNED_URL_TTL.download), { download: filename });
+    .createSignedUrl(claim.path, ttl(SIGNED_URL_TTL.download), { download: filename });
   if (error || !data) return null;
   return data.signedUrl;
 }
@@ -192,12 +222,20 @@ export async function signedUploadTokens(paths: string[]): Promise<Record<string
  * and pass only that row's folder. info() under the user JWT re-ran storage
  * RLS per file and was part of the 544 timeouts.
  */
-export async function folderObjects(folder: string, names: string[]): Promise<Map<string, number>> {
+export async function folderObjects(
+  owner: { eventId: string; albumId: string; mediaId: string },
+  names: string[],
+): Promise<Map<string, number>> {
   const sizes = new Map<string, number>();
+  const folder = mediaFolder(owner.eventId, owner.albumId, owner.mediaId);
+  const known = names.filter((name) => (MEDIA_OBJECT_NAMES as readonly string[]).includes(name) && !name.includes("/"));
+  if (known.length !== names.length) console.error("refusing to list a name outside this photo", owner.mediaId);
   const admin = createAdminClient();
   await Promise.all(
-    names.map(async (name) => {
-      const { data, error } = await admin.storage.from(BUCKET).info(`${folder}/${name}`);
+    known.map(async (name) => {
+      const path = `${folder}/${name}`;
+      if (!ownedMediaObjectPath(owner.eventId, owner.albumId, owner.mediaId, path)) return;
+      const { data, error } = await admin.storage.from(BUCKET).info(path);
       if (error) {
         // A file that was never uploaded (no poster for a photo) is expected.
         const status = (error as { status?: number; statusCode?: string | number }).status ?? Number((error as { statusCode?: string | number }).statusCode);

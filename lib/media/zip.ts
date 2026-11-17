@@ -3,14 +3,21 @@ import { PassThrough, Readable } from "node:stream";
 import { ZipArchive } from "archiver";
 import { NextResponse } from "next/server";
 import { r2Stream } from "@/lib/backup/r2";
-import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
+import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
 import { ZIP_PART_SIZE } from "./zip-parts";
 
 export const PART_SIZE = ZIP_PART_SIZE;
 
-type ZipItem = { id: string; storage_path: string; original_filename: string | null; backed_up_at: string | null };
+type ZipItem = {
+  id: string;
+  event_id: string;
+  album_id: string | null;
+  storage_path: string;
+  original_filename: string | null;
+  backed_up_at: string | null;
+};
 
 /**
  * Streams originals into a zip as they download. Callers pick the items with
@@ -26,7 +33,7 @@ type ZipItem = { id: string; storage_path: string; original_filename: string | n
 export async function zipResponse(supabase: UserClient, media: ZipItem[], filename: string): Promise<NextResponse> {
   const urls = await signPaths(
     supabase,
-    media.filter((m) => !m.backed_up_at).map((m) => m.storage_path),
+    mediaClaims(media.filter((m) => !m.backed_up_at).map((m) => ({ ...m, paths: [m.storage_path] }))),
     SIGNED_URL_TTL.download,
   );
 
@@ -52,7 +59,8 @@ export async function zipResponse(supabase: UserClient, media: ZipItem[], filena
       const fallback = item.storage_path.split("/").pop() ?? `${item.id}.jpg`;
       let body = await r2Stream(item);
       if (!body) {
-        const url = urls.get(item.storage_path) ?? (await signPaths(supabase, [item.storage_path], SIGNED_URL_TTL.download)).get(item.storage_path);
+            const again = mediaClaims([{ ...item, paths: [item.storage_path] }]);
+            const url = urls.get(item.storage_path) ?? (again.length ? (await signPaths(supabase, again, SIGNED_URL_TTL.download)).get(item.storage_path) : undefined);
         const response = url ? await fetch(url).catch(() => null) : null;
         if (!response?.ok || !response.body) {
           missing.push(item.original_filename || fallback);

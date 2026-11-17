@@ -284,5 +284,5 @@ async function ownSelfie(eventId: string, userId: string): Promise<string | null
   const admin = createAdminClient();
   const { data } = await admin.from("member_face_profiles").select("selfie_path").eq("event_id", eventId).eq("user_id", userId).maybeSingle();
   if (!data?.selfie_path) return null;
-  return (await signPaths(admin, [data.selfie_path], SIGNED_URL_TTL.display)).get(data.selfie_path) ?? null;
+  return (await signPaths(admin, [{ kind: "selfie", path: data.selfie_path }], SIGNED_URL_TTL.display)).get(data.selfie_path) ?? null;
 }
