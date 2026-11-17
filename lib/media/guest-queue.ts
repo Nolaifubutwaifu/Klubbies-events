@@ -1,6 +1,7 @@
 import { contentHash } from "@/lib/media/content-hash";
 import { UPLOAD_MAX_BYTES, resolveMimeType, tooBigWarning } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
+import { watchUploadStall } from "@/lib/media/signed-put";
 import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { supabaseUrl } from "@/lib/supabase/config";
 
@@ -187,18 +188,33 @@ export class GuestUploadQueue {
     return new Promise<void>((resolve, reject) => {
       const url = `${supabaseUrl}/storage/v1/object/upload/sign/${job.ticket!.bucket}/${signed.path}?token=${encodeURIComponent(signed.token)}`;
       const request = new XMLHttpRequest();
+      let stalled = false;
+      let settled = false;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        stall.stop();
+        if (error) reject(error);
+        else resolve();
+      };
+      const stall = watchUploadStall(() => {
+        stalled = true;
+        request.abort();
+      });
       request.open("PUT", url);
       request.setRequestHeader("content-type", contentType);
       request.setRequestHeader("x-upsert", "true");
       request.upload.onprogress = (ev) => {
+        stall.bump();
         if (!ev.lengthComputable) return;
         this.patch(job, { progress: base + (ev.loaded / ev.total) * weight });
       };
       request.onload = () =>
         request.status >= 200 && request.status < 300
-          ? resolve()
-          : reject(Object.assign(new Error(`${request.status} ${request.responseText.slice(0, 120)}`), { status: request.status }));
-      request.onerror = () => reject(Object.assign(new Error("network"), { status: 0 }));
+          ? finish()
+          : finish(Object.assign(new Error(`${request.status} ${request.responseText.slice(0, 120)}`), { status: request.status }));
+      request.onerror = () => finish(Object.assign(new Error("network"), { status: 0 }));
+      request.onabort = () => finish(Object.assign(new Error(stalled ? "network" : "aborted"), { status: 0 }));
       request.send(blob);
     });
   }
@@ -244,7 +260,10 @@ export class GuestUploadQueue {
       }
 
       if (!job.originalDone) {
-        await this.putSigned(job, ticket.signed[ticket.storagePath], job.file, ticket.mimeType, 0.85, 0);
+        await withBackoff(
+          () => this.putSigned(job, ticket!.signed[ticket!.storagePath], job.file, ticket!.mimeType, 0.85, 0),
+          isUploadRetryable,
+        );
         this.patch(job, { originalDone: true, progress: 0.85 });
       }
 
