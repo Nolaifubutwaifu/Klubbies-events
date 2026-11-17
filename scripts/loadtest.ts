@@ -333,6 +333,19 @@ async function main() {
     return finish(t0);
   }
 
+  if (process.env.KBLT_BROWSE) {
+    // Reading only, so this machine's upload link can't be the bottleneck.
+    stage = "browse: 150 guests sign in at 10 at a time";
+    await pool(10, guests, (g) => timed("sign_in", () => g.signIn()));
+    printStage(stage);
+    stage = "browse: 150 guests open event, album, viewer, twice";
+    uploaded.push(...(process.env.KBLT_MEDIA_IDS ?? "").split(",").filter(Boolean));
+    const signedIn = guests.filter((g) => g.cookies.size > 0);
+    await pool(50, [...signedIn, ...signedIn], (g) => browse(g));
+    printStage(stage);
+    return finish(t0);
+  }
+
   stage = "1: 10 guests, 20 photos";
   console.log(`\n${stage}`);
   await pool(5, guests.slice(0, 10), (g) => timed("sign_in", () => g.signIn()));
@@ -355,11 +368,14 @@ async function main() {
   ]);
   printStage(stage);
   if (overLimit(stage)) return finish(t0);
+  // Stage 3 uploads as guests 1 to 70, so they must be signed in first. The
+  // 17 Nov run raced this and counted 20 "Album not found" as failures.
+  await pool(10, guests.slice(50, 70), (g) => timed("sign_in", () => g.signIn()));
 
   stage = "3: 150 guests, 70 uploading, 240 photos, 12 videos, 15 zips";
   console.log(`\n${stage}`);
   await Promise.all([
-    pool(25, guests.slice(50, 150), (g) => timed("sign_in", () => g.signIn())),
+    pool(25, guests.slice(70, 150), (g) => timed("sign_in", () => g.signIn())),
     pool(70, photos.slice(120, 260), (p, i) => memberUpload(guests[i % 70], p)),
     pool(6, photos.slice(260, 360), (p, i) => photographerUpload(links[i % 3], p)),
     pool(3, videos, (v, i) => photographerUpload(links[i % 3], v)),
