@@ -42,7 +42,7 @@ export default async function CodePage(props: PageProps<"/signin/code">) {
       <p className="mt-3 text-[16px] text-[color:var(--kb-ink-2)]">
         {/* Only an open-link event can say so plainly: anywhere else the
             answer stays neutral, so a guest list can't be probed. */}
-        {openLink ? "We sent an 8 digit code to " : "If that address can open the event, an 8 digit code is on its way to "}
+        {openLink ? "An 8 digit code is on its way to " : "If that address can open the event, an 8 digit code is on its way to "}
         <strong className="font-semibold text-[color:var(--kb-ink)]">{email}</strong>.
       </p>
 

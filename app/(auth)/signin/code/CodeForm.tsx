@@ -48,7 +48,7 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
       const res = await fetch("/api/auth/resend_code", { method: "POST" });
       const body: { error?: string } = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(body.error ?? "That didn't work. Try again.");
+        setError(body.error ?? "We couldn't send a new code. Check your signal and try again.");
         setCooldown(0);
         return;
       }

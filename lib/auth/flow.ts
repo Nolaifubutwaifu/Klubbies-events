@@ -125,9 +125,9 @@ async function issueOtp(email: string): Promise<string> {
  * Does the real work of a code request. Callers run it after the response
  * has been sent, so neither timing nor status reveals roster membership.
  */
-export async function processCodeRequest(input: RequestCodeInput): Promise<void> {
+export async function processCodeRequest(input: RequestCodeInput): Promise<boolean> {
   const email = normaliseEmail(input.email);
-  if (!isValidEmail(email)) return;
+  if (!isValidEmail(email)) return false;
 
   let eventName: string | null = null;
   let eventId: string | null = null;
@@ -136,18 +136,18 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
     // mode only an address already on this event's list gets a code. Either
     // way the caller has already had the same neutral answer.
     const event = input.event ? await findJoinableEvent(input.event) : null;
-    if (!event) return;
+    if (!event) return false;
     const memberships = await findEligibleMemberships(email);
     const mine = memberships.find((m) => m.event_id === event.id);
-    if (event.access_mode !== "link" && !mine) return;
+    if (event.access_mode !== "link" && !mine) return false;
     // A full event sends no code to someone who hasn't joined yet; the join
     // screen already said it's full. Guests who joined still sign in.
-    if (!mine?.first_seen_at && (await eventIsFull(event.id))) return;
+    if (!mine?.first_seen_at && (await eventIsFull(event.id))) return false;
     eventName = event.name;
     eventId = event.id;
   } else if (input.flow === "member") {
     const memberships = await findEligibleMemberships(email);
-    if (memberships.length === 0) return;
+    if (memberships.length === 0) return false;
     eventName = memberships.length === 1 ? memberships[0].events.name : null;
   }
 
@@ -165,6 +165,7 @@ export async function processCodeRequest(input: RequestCodeInput): Promise<void>
   if (error) throw error;
 
   await sendSignInCode(email, { code, name: input.fullName, eventName });
+  return true;
 }
 
 /**
@@ -183,19 +184,19 @@ export async function codeRequestLimit(rawEmail: string, ip: string): Promise<st
  * "Send a new code" from the code screen: repeats the request that's waiting
  * for this address, with the name and event it was made with.
  */
-export async function resendCode(rawEmail: string): Promise<void> {
+export async function resendCode(rawEmail: string): Promise<boolean> {
   const email = normaliseEmail(rawEmail);
   const admin = createAdminClient();
   const { data: pending } = await admin.from("pending_sign_ins").select("claimed_name, flow, event_id").eq("email", email).maybeSingle();
   // No waiting request means the first one didn't qualify, and neither would this.
-  if (!pending) return;
+  if (!pending) return false;
   let event: string | undefined;
   if (pending.event_id) {
     const { data } = await admin.from("events").select("handle").eq("id", pending.event_id).maybeSingle();
     event = data?.handle ?? undefined;
   }
   const flow = requestCodeSchema.shape.flow.safeParse(pending.flow);
-  await processCodeRequest({ fullName: pending.claimed_name ?? "", email, flow: flow.success ? flow.data : "member", event });
+  return processCodeRequest({ fullName: pending.claimed_name ?? "", email, flow: flow.success ? flow.data : "member", event });
 }
 
 export const EMAIL_LIMITED =
