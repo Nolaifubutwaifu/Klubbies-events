@@ -131,6 +131,20 @@ export class GuestUploadQueue {
     this.pump();
   }
 
+  retryFailed() {
+    for (const job of this.jobs.values()) if (job.status === "failed") this.retry(job.key);
+  }
+
+  /** Gives up on every failed file: they leave the list. */
+  clearFailed() {
+    for (const [key, job] of this.jobs) {
+      if (job.status !== "failed") continue;
+      if (job.previewUrl) URL.revokeObjectURL(job.previewUrl);
+      this.jobs.delete(key);
+    }
+    this.emit();
+  }
+
   private emit() {
     this.snapshot = [...this.jobs.values()].map((j) => ({
       key: j.key,
