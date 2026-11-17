@@ -7,7 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
   mediaIds: z.array(z.uuid()).min(1).max(200),
-  variant: z.enum(["thumb", "display", "video", "original"]).default("thumb"),
+  // "share" is what Safari's Save to Photos hands the share sheet: the display
+  // copy of a photo (always JPEG or WebP, which Photos reads), and the real
+  // file of a video. The poster of a video is not the video.
+  variant: z.enum(["thumb", "display", "video", "original", "share"]).default("thumb"),
 });
 
 export async function POST(request: Request) {
@@ -33,13 +36,18 @@ export async function POST(request: Request) {
     if (variant === "original") return savesAsOriginal(m) ? m.storage_path : (m.display_path ?? m.storage_path);
     if (variant === "thumb") return m.thumb_path ?? m.poster_path;
     if (variant === "video") return m.kind === "video" ? m.storage_path : null;
+    if (variant === "share") return m.kind === "video" ? m.storage_path : (m.display_path ?? m.storage_path);
     return m.kind === "video" ? m.poster_path : (m.display_path ?? m.storage_path);
   };
   const ttl =
-    variant === "video" ? SIGNED_URL_TTL.video : variant === "original" ? SIGNED_URL_TTL.video : variant === "display" ? SIGNED_URL_TTL.display : SIGNED_URL_TTL.thumb;
+    variant === "video" || variant === "original" || variant === "share"
+      ? SIGNED_URL_TTL.video
+      : variant === "display"
+        ? SIGNED_URL_TTL.display
+        : SIGNED_URL_TTL.thumb;
 
   let rows = data ?? [];
-  if (variant === "original") {
+  if (variant === "original" || variant === "share") {
     // Same rule as single downloads: an album with downloads off is only
     // saved by the people who run the event.
     const managed = new Map<string, boolean>();
@@ -69,5 +77,9 @@ export async function POST(request: Request) {
       if (fromR2) result[m.id] = fromR2;
     }
   }
-  return NextResponse.json({ urls: result, expiresIn: ttl });
+  // "share" stays on Supabase: the browser downloads it with fetch(), which
+  // needs CORS, and Supabase Storage allows it while the R2 bucket may not.
+  const kinds: Record<string, string> = {};
+  if (variant === "share") for (const m of rows) if (result[m.id]) kinds[m.id] = m.kind;
+  return NextResponse.json({ urls: result, kinds, expiresIn: ttl });
 }
