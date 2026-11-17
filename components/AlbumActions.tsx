@@ -82,6 +82,7 @@ export function AlbumActions({
     setError("");
     const native = nativeSaveToPhotos();
     let saved = 0;
+    let skippedVideos = 0;
     try {
       for (let i = 0; i < mediaIds.length; i += SHARE_BATCH) {
         const batch = mediaIds.slice(i, i + SHARE_BATCH);
@@ -89,11 +90,12 @@ export function AlbumActions({
         const res = await fetch("/api/media/sign", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          // The app saves the real files, videos included; the share sheet
-          // takes images only, so it keeps the display copies.
-          body: JSON.stringify({ mediaIds: batch, variant: native ? "original" : "display" }),
+          // The app saves the real files, videos included. The share sheet
+          // gets display copies of photos and the real file of each video:
+          // a video's display copy is its poster, a still image.
+          body: JSON.stringify({ mediaIds: batch, variant: native ? "original" : "share" }),
         });
-        const { urls }: { urls: Record<string, string> } = await res.json();
+        const { urls }: { urls: Record<string, string>; kinds?: Record<string, string> } = await res.json();
         if (native) {
           const batchUrls = batch.map((id) => urls[id]).filter((url): url is string => Boolean(url));
           setProgress(`Saving ${Math.min(i + SHARE_BATCH, mediaIds.length)} of ${mediaIds.length}… keep the app open`);
@@ -106,11 +108,17 @@ export function AlbumActions({
           const url = urls[id];
           if (!url) continue;
           const blob = await (await fetch(url)).blob();
-          const ext = blob.type === "image/png" ? "png" : blob.type.includes("webp") ? "webp" : "jpg";
-          files.push(new File([blob], `klubbies-${id.slice(0, 8)}.${ext}`, { type: blob.type || "image/jpeg" }));
+          const file = shareFile(blob, id);
+          // A phone that can't take this video in the share sheet still
+          // saves the photos; the video is left for Download.
+          if (file.type.startsWith("video/") && !navigator.canShare?.({ files: [file] })) {
+            skippedVideos++;
+            continue;
+          }
+          files.push(file);
         }
         if (files.length === 0) continue;
-        setProgress(`Saving ${files.length} photos…`);
+        setProgress(`Saving ${files.length} ${files.length === 1 ? "item" : "items"}…`);
         await navigator.share({ files, title: "Klubbies Events" });
       }
       setProgress(
@@ -118,7 +126,9 @@ export function AlbumActions({
           ? saved === mediaIds.length
             ? `Saved all ${saved} to Photos`
             : `Saved ${saved} of ${mediaIds.length} to Photos. The rest couldn't be saved; try Download all on a computer.`
-          : "Done",
+          : skippedVideos > 0
+            ? `Done. ${skippedVideos === 1 ? "1 video" : `${skippedVideos} videos`} couldn't go to Photos from here: open ${skippedVideos === 1 ? "it" : "each one"} and tap Download.`
+            : "Done",
       );
     } catch (shareError) {
       const message = shareError instanceof Error ? shareError.message : String(shareError);
@@ -218,6 +228,20 @@ export function AlbumActions({
       {error ? <span className="kb-error">{error}</span> : null}
     </div>
   );
+}
+
+const SHARE_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/jpeg": "jpg",
+  "video/quicktime": "mov",
+  "video/mp4": "mp4",
+};
+
+/** Names a downloaded file by its real type, so Photos files a video as a video. */
+function shareFile(blob: Blob, id: string): File {
+  const type = blob.type in SHARE_EXT ? blob.type : blob.type.startsWith("video/") ? "video/mp4" : "image/jpeg";
+  return new File([blob], `klubbies-${id.slice(0, 8)}.${SHARE_EXT[type]}`, { type });
 }
 
 function DownloadIcon() {
