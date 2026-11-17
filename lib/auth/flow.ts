@@ -6,6 +6,7 @@ import { kickPlanNotices } from "@/lib/billing/notices";
 import { eventIsFull, GUESTS_FULL } from "@/lib/billing/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { AUTH_BUSY, withAuthRetry } from "./auth-busy";
 import { namesLooselyMatch } from "./names";
 import { LIMITS, RATE_LIMITED, hitRateLimit } from "./rate-limit";
 
@@ -202,7 +203,8 @@ export async function resendCode(rawEmail: string): Promise<boolean> {
 export const EMAIL_LIMITED =
   "You've asked for a few codes already. Use the newest email (check spam too), or wait a few minutes and try again.";
 
-export type VerifyResult = { ok: true; redirectTo: string } | { ok: false; error: string };
+/** `busy`: Supabase was rate limiting, the code wasn't checked and the attempt wasn't counted. */
+export type VerifyResult = { ok: true; redirectTo: string } | { ok: false; error: string; busy?: boolean };
 
 export async function verifyCode(rawEmail: string, code: string, eventHandle?: string): Promise<VerifyResult> {
   const email = normaliseEmail(rawEmail);
@@ -212,10 +214,22 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   if (!pending || pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
     return { ok: false, error: CODE_REJECTED };
   }
+  // Counted before asking Supabase, so parallel guesses can't all slip past
+  // the limit. Handed back below if Supabase never got to check the code.
   await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+  const { data, error, busy } = await withAuthRetry(() => supabase.auth.verifyOtp({ email, token: code, type: "email" }));
+  if (busy) {
+    // Only if nothing else counted an attempt in the meantime.
+    await admin
+      .from("pending_sign_ins")
+      .update({ attempts: pending.attempts })
+      .eq("email", email)
+      .eq("attempts", pending.attempts + 1);
+    console.warn("verify_code: Supabase Auth still rate limited after retries");
+    return { ok: false, error: AUTH_BUSY, busy: true };
+  }
   if (error || !data.user) return { ok: false, error: CODE_REJECTED };
   const userId = data.user.id;
 

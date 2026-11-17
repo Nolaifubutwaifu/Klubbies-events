@@ -75,6 +75,9 @@ export function CodeForm({ event, help }: { event?: string; help: React.ReactNod
       if (!res.ok || !body.redirectTo) {
         setError(body.error ?? "That code didn't work.");
         setPending(false);
+        // 503: Supabase was busy and never checked the code, so keep it for
+        // another try.
+        if (res.status === 503) return;
         // Clear and go back to the first box: retyping beats hunting for the
         // wrong digit.
         setDigits(Array(LENGTH).fill(""));
