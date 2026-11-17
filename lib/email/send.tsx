@@ -78,15 +78,10 @@ async function send(to: string, subject: string, element: React.ReactElement): P
   const env = serverEnv();
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   await deliver(to, subject, () =>
-    resend().emails.send({
-      from: env.EMAIL_FROM,
-      ...replyTo(),
-      to,
-      subject,
-      html,
-      text,
-      idempotencyKey: idempotencyKey(["send", to, subject]),
-    }),
+    resend().emails.send(
+      { from: env.EMAIL_FROM, ...replyTo(), to, subject, html, text },
+      { idempotencyKey: idempotencyKey(["send", to, subject]) },
+    ),
   );
 }
 
@@ -109,14 +104,10 @@ export async function sendContactMessage(to: string, message: ContactMessage): P
     return;
   }
   await deliver(to, subject, () =>
-    resend().emails.send({
-      from: serverEnv().EMAIL_FROM,
-      replyTo: message.from,
-      to,
-      subject,
-      text,
-      idempotencyKey: idempotencyKey(["contact", to, subject, message.from]),
-    }),
+    resend().emails.send(
+      { from: serverEnv().EMAIL_FROM, replyTo: message.from, to, subject, text },
+      { idempotencyKey: idempotencyKey(["contact", to, subject, message.from]) },
+    ),
   );
 }
 
