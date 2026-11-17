@@ -350,38 +350,52 @@ export function AlbumGrid({
         className={`kb-jgrid w-full pb-2 pt-2 ${inset ? "px-[3px] sm:px-10" : "kb-jgrid-compact"}`}
       >
         {kind !== "saved" && kind !== "mine" ? <ProcessingTiles count={processingCount} /> : null}
-        {shown.map((item) =>
-          selecting ? (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => toggle(item.id)}
-              aria-pressed={selected.has(item.id)}
-              aria-label={labelFor(item)}
-              // The selection ring sits on a layer above the photo, so the
-              // focus ring stays the global one instead of being overridden.
-              style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
-              className={`relative block overflow-hidden border-0 bg-bg p-0 ${
-                selected.has(item.id)
-                  ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[4px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
-                  : ""
-              }`}
-            >
-              <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />
-            </button>
-          ) : (
+        {shown.map((item) => {
+          const tile = <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />;
+          const style = { "--r": tileRatio(item.width, item.height) } as React.CSSProperties;
+          if (selecting) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => toggle(item.id)}
+                aria-pressed={selected.has(item.id)}
+                aria-label={labelFor(item)}
+                // The selection ring sits on a layer above the photo, so the
+                // focus ring stays the global one instead of being overridden.
+                style={style}
+                className={`relative block overflow-hidden border-0 bg-bg p-0 ${
+                  selected.has(item.id)
+                    ? "after:pointer-events-none after:absolute after:inset-0 after:rounded-[4px] after:shadow-[inset_0_0_0_3px_var(--color-accent)] after:content-['']"
+                    : ""
+                }`}
+              >
+                {tile}
+              </button>
+            );
+          }
+          // Processing and failed rows are not in the viewer (it only loads
+          // status ready), so a link here 404s. The badge stays on the tile.
+          if (item.status !== "ready") {
+            return (
+              <div key={item.id} aria-label={labelFor(item)} style={style} className="soft-tile relative block">
+                {tile}
+              </div>
+            );
+          }
+          return (
             <Link
               key={item.id}
               href={`${hrefBase}/${item.id}`}
               aria-label={labelFor(item)}
-              style={{ "--r": tileRatio(item.width, item.height) } as React.CSSProperties}
+              style={style}
               className="soft-tile relative block"
               scroll={false}
             >
-              <Tile item={item} cover={item.id === coverMediaId} saved={saved.has(item.id)} />
+              {tile}
             </Link>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {shown.length === 0 ? (
