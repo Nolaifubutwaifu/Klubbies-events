@@ -151,9 +151,13 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
           {busy ? <span className="text-[14px] text-[color:var(--kb-ink-3)]">Keep this tab open. You can move around the app.</span> : null}
           {failed.length ? (
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn btn-secondary" onClick={() => queue.retryFailed()}>
-                {failed.length === 1 ? "Retry it" : `Retry all ${failed.length}`}
-              </button>
+              {failed.some((job) => job.retryable !== false) ? (
+                <button type="button" className="btn btn-secondary" onClick={() => queue.retryFailed()}>
+                  {failed.filter((job) => job.retryable !== false).length === 1
+                    ? "Retry it"
+                    : `Retry all ${failed.filter((job) => job.retryable !== false).length}`}
+                </button>
+              ) : null}
               <button type="button" className="btn btn-ghost" onClick={() => queue.clearFailed()}>
                 Clear failed
               </button>
@@ -192,7 +196,7 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
                       </span>
                     ) : null}
                   </span>
-                  {job.status === "failed" ? (
+                  {job.status === "failed" && job.retryable !== false ? (
                     <button type="button" className="btn btn-secondary btn-sm" aria-label={`Retry ${job.name}`} onClick={() => queue.retry(job.key)}>
                       Retry now
                     </button>

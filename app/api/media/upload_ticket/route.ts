@@ -6,7 +6,7 @@ import { ACTIVATE_MESSAGE, canWrite } from "@/lib/billing/status";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
 import { ACCEPTED_TYPES, maxBytesForKind, oversizeMessage, resolveMimeType } from "@/lib/media/constants";
 import { BINNED_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation, type ExistingUpload } from "@/lib/media/dedupe";
-import { BUCKET, derivativePaths, mediaFolder, signedUploadTokens } from "@/lib/storage";
+import { BUCKET, derivativePaths, mediaFolder, ownedMediaObjectPath, signedUploadTokens } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,15 +40,22 @@ export async function POST(request: Request) {
   if (!canWrite(ctx.event)) return NextResponse.json({ error: ACTIVATE_MESSAGE }, { status: 402 });
 
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
-  if (byteSize > maxBytesForKind(kind)) return NextResponse.json({ error: oversizeMessage(kind) }, { status: 413 });
+  if (byteSize > maxBytesForKind(kind)) return NextResponse.json({ error: oversizeMessage(filename, kind) }, { status: 413 });
   const answer = async (existing: ExistingUpload) => {
+    if (!ownedMediaObjectPath(album.event_id, album.id, existing.id, existing.storagePath)) {
+      console.error("refusing to resume an upload whose path is outside its row", existing.id);
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     // Already here and finished: the second copy is the bug this prevents.
     if (existing.status === "ready") return NextResponse.json({ duplicate: true, mediaId: existing.id });
     // Started before and never finished: carry on into the same row, so the
     // retry fixes the stuck file instead of sitting beside it.
     const folder = existing.storagePath.slice(0, existing.storagePath.lastIndexOf("/"));
     const derivatives = derivativePaths(folder);
-    const signed = await derivativeUploads(derivatives);
+    const signed = await derivativeUploads(
+      { eventId: album.event_id, albumId: album.id, mediaId: existing.id },
+      derivatives,
+    );
     if (!signed) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
     return NextResponse.json({
       mediaId: existing.id,
@@ -102,7 +109,7 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
 
   const derivatives = derivativePaths(folder);
-  const signed = await derivativeUploads(derivatives);
+  const signed = await derivativeUploads({ eventId: album.event_id, albumId: album.id, mediaId: id }, derivatives);
   if (!signed) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
   return NextResponse.json({
     mediaId: id,
@@ -116,9 +123,12 @@ export async function POST(request: Request) {
 }
 
 /** Signed PUTs for the three derivatives. The original still goes up with TUS. */
-async function derivativeUploads(derivatives: { thumb: string; display: string; poster: string }) {
+async function derivativeUploads(
+  owner: { eventId: string; albumId: string; mediaId: string },
+  derivatives: { thumb: string; display: string; poster: string },
+) {
   try {
-    return await signedUploadTokens([derivatives.thumb, derivatives.display, derivatives.poster]);
+    return await signedUploadTokens(owner, [derivatives.thumb, derivatives.display, derivatives.poster]);
   } catch (error) {
     console.error("could not sign derivative uploads", error);
     return null;

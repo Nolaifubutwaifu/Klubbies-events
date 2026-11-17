@@ -3,8 +3,9 @@ import { z } from "zod";
 import { eventFacesEnabled } from "@/lib/faces/collections";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
 import { recordGuestUpload, resolveGuestLink } from "@/lib/guest/links";
+import { maxBytesForKind, oversizeMessage } from "@/lib/media/constants";
 import { kickVideoPreviews } from "@/lib/media/video-previews";
-import { derivativePaths, folderObjects, ownedMediaObjectPath } from "@/lib/storage";
+import { derivativePaths, folderObjects, ownedMediaObjectPath, removeObjects } from "@/lib/storage";
 import { kickPlanNotices } from "@/lib/billing/notices";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -30,7 +31,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   // The link may only finish files it started: the guest_link_id is the check.
   const { data: media } = await admin
     .from("media")
-    .select("id, event_id, album_id, storage_path, byte_size, guest_link_id, status, kind, poster_path, duration_seconds")
+    .select("id, event_id, album_id, storage_path, byte_size, guest_link_id, status, kind, poster_path, duration_seconds, original_filename")
     .eq("id", mediaId)
     .eq("guest_link_id", session.linkId)
     .maybeSingle();
@@ -64,6 +65,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
 
   const paths = derivativePaths(folder);
   const byteSize = objects.get(originalName) || media.byte_size || 0;
+  const kind = media.kind === "video" ? "video" : "photo";
+  if (byteSize > maxBytesForKind(kind)) {
+    await admin.from("media").update({ status: "failed" }).eq("id", mediaId).neq("status", "ready");
+    await removeObjects([
+      media.storage_path,
+      ...(objects.has("thumb.webp") ? [paths.thumb] : []),
+      ...(objects.has("display.webp") ? [paths.display] : []),
+      ...(objects.has("poster.jpg") ? [paths.poster] : []),
+    ]);
+    return NextResponse.json({ error: oversizeMessage(media.original_filename || "This file", kind) }, { status: 413 });
+  }
   const { data: updated, error } = await admin
     .from("media")
     .update({

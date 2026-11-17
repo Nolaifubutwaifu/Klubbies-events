@@ -4,7 +4,7 @@ import { resolveGuestLink } from "@/lib/guest/links";
 import { PHOTOGRAPHER_FULL_MESSAGE, PHOTOS_FULL } from "@/lib/billing/usage";
 import { ACCEPTED_TYPES, maxBytesForKind, oversizeMessage, resolveMimeType } from "@/lib/media/constants";
 import { BINNED_GUEST_MESSAGE, contentHashSchema, findExistingUpload, isUniqueViolation } from "@/lib/media/dedupe";
-import { BUCKET, derivativePaths, mediaFolder } from "@/lib/storage";
+import { BUCKET, derivativePaths, mediaFolder, ownedMediaObjectPath } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const schema = z.object({
@@ -40,7 +40,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   const admin = createAdminClient();
   const { kind, ext } = ACCEPTED_TYPES[mimeType];
   if (parsed.data.byteSize > maxBytesForKind(kind)) {
-    return NextResponse.json({ error: oversizeMessage(kind) }, { status: 413 });
+    return NextResponse.json({ error: oversizeMessage(parsed.data.filename, kind) }, { status: 413 });
   }
 
   // The same file twice is one photo. A guest learns nothing from this beyond
@@ -58,6 +58,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   let storagePath = existing?.storagePath ?? `${mediaFolder(session.eventId, session.albumId, id)}/original.${ext}`;
 
   if (existing) {
+    if (!ownedMediaObjectPath(session.eventId, session.albumId, existing.id, existing.storagePath)) {
+      console.error("refusing to resume a guest upload whose path is outside its row", existing.id);
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    storagePath = existing.storagePath;
     await admin.from("media").update({ status: "processing" }).eq("id", existing.id);
   } else {
     const { error } = await admin.from("media").insert({
@@ -81,6 +86,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
       if (!winner || winner.status === "ready" || winner.guestLinkId !== session.linkId) {
         return NextResponse.json({ duplicate: true });
       }
+      if (!ownedMediaObjectPath(session.eventId, session.albumId, winner.id, winner.storagePath)) {
+        console.error("refusing to resume a guest upload whose path is outside its row", winner.id);
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
       id = winner.id;
       storagePath = winner.storagePath;
     } else if (error?.code === PHOTOS_FULL) {
@@ -96,6 +105,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/guest/[toke
   const paths = [storagePath, derivatives.thumb, derivatives.display, derivatives.poster];
   const signed: Record<string, { path: string; token: string }> = {};
   for (const path of paths) {
+    if (!ownedMediaObjectPath(session.eventId, session.albumId, id, path)) {
+      console.error("refusing to sign a guest upload outside its photo", path);
+      return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
+    }
     const { data, error: signError } = await admin.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
     if (signError || !data) return NextResponse.json({ error: "Could not start the upload" }, { status: 500 });
     signed[path] = { path: data.path, token: data.token };

@@ -38,22 +38,15 @@ export const EVENT_MEDIA_MIME_TYPES = [
 ] as const;
 
 /**
- * Photos stay at 50 MB. A phone photo is well under that. Videos are separate:
- * a 20–30s iPhone clip is often larger than 50 MB, and the load test rejected
- * every one of them. 200 MB covers a normal phone video. The product ceiling
- * is still 500 MB (pricing handoff §4).
- *
- * NEXT_PUBLIC_UPLOAD_MAX_MB overrides the video ceiling only, and is capped at
- * 500. Leave it unset to use 200. It is inlined at build time, so a change in
- * Vercel needs a new deployment. Photos do not follow this variable.
+ * Photos stay at 50 MB. Videos are 200 MB. A 20–30s iPhone clip is often
+ * larger than 50 MB. These ceilings are the code, not an env var:
+ * NEXT_PUBLIC_UPLOAD_MAX_MB is 500 in Vercel, and reading it made the client,
+ * the ticket routes and this copy promise 500 MB while a larger file still
+ * died in Storage. Anything above these two numbers is refused up front.
  */
-const PRODUCT_MAX_MB = 500;
-const VIDEO_DEFAULT_MB = 200;
-const configuredMb = Number(process.env.NEXT_PUBLIC_UPLOAD_MAX_MB);
 export const PHOTO_MAX_MB = 50;
 export const PHOTO_MAX_BYTES = PHOTO_MAX_MB * 1024 * 1024;
-export const UPLOAD_MAX_MB =
-  Number.isFinite(configuredMb) && configuredMb > 0 ? Math.min(configuredMb, PRODUCT_MAX_MB) : VIDEO_DEFAULT_MB;
+export const UPLOAD_MAX_MB = 200;
 export const VIDEO_MAX_BYTES = UPLOAD_MAX_MB * 1024 * 1024;
 
 /**
@@ -68,17 +61,24 @@ export function maxBytesForKind(kind: UploadKind): number {
   return kind === "photo" ? PHOTO_MAX_BYTES : VIDEO_MAX_BYTES;
 }
 
-export function oversizeMessage(kind: UploadKind): string {
-  if (kind === "photo") return `Photos can be up to ${PHOTO_MAX_MB} MB.`;
-  return `Videos can be up to ${UPLOAD_MAX_MB} MB. Trim the video or export it smaller (on iPhone: Edit, then trim), then try again.`;
+/** Shown when a file is over the limit, including a Storage 413. Retrying will not make it smaller. */
+export function oversizeMessage(name: string, kind: UploadKind): string {
+  if (kind === "photo") {
+    return `${name} is over ${PHOTO_MAX_MB} MB, so it wasn't added. Photos can be up to ${PHOTO_MAX_MB} MB. Choose a smaller photo, or reduce it in Photos and add it again.`;
+  }
+  return `${name} is over ${UPLOAD_MAX_MB} MB, so it wasn't added. Videos can be up to ${UPLOAD_MAX_MB} MB. Trim it or export it smaller (on iPhone: Edit, then trim), then add it again.`;
+}
+
+export function isOversizeError(error: unknown): boolean {
+  const text = error instanceof Error ? error.message : String(error);
+  const record = error as { status?: unknown; statusCode?: unknown };
+  const status = record.status ?? record.statusCode;
+  return status === 413 || status === "413" || /413|too large|maximum allowed size|is over \d+ MB/i.test(text);
 }
 
 /** Said before a file is even queued, so nobody waits for an upload that can't finish. */
 export function tooBigWarning(name: string, kind: UploadKind): string {
-  if (kind === "photo") {
-    return `${name} is over ${PHOTO_MAX_MB} MB, so it wasn't added. Photos can be up to ${PHOTO_MAX_MB} MB.`;
-  }
-  return `${name} is over ${UPLOAD_MAX_MB} MB, so it wasn't added. Videos can be up to ${UPLOAD_MAX_MB} MB: trim the video and add it again.`;
+  return oversizeMessage(name, kind);
 }
 
 /**

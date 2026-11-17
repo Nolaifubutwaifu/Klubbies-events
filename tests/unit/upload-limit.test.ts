@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONTENT_HASH_FULL_BYTES, contentHashReadsWholeFile } from "@/lib/media/content-hash";
 import {
   PHOTO_MAX_BYTES,
@@ -20,21 +20,37 @@ describe("upload size limits", () => {
     expect(maxBytesForKind("photo")).toBe(50 * MB);
     expect(maxBytesForKind("video")).toBe(VIDEO_MAX_BYTES);
     expect(VIDEO_MAX_BYTES).toBe(UPLOAD_MAX_MB * MB);
+    expect(UPLOAD_MAX_MB).toBe(200);
     expect(VIDEO_MAX_BYTES).toBeGreaterThan(PHOTO_MAX_BYTES);
-    // Unset NEXT_PUBLIC_UPLOAD_MAX_MB uses 200. A set value is capped at 500.
-    const configured = Number(process.env.NEXT_PUBLIC_UPLOAD_MAX_MB);
-    const expected = Number.isFinite(configured) && configured > 0 ? Math.min(configured, 500) : 200;
-    expect(UPLOAD_MAX_MB).toBe(expected);
     expect(50 * MB + 1).toBeLessThanOrEqual(VIDEO_MAX_BYTES);
     expect(VIDEO_MAX_BYTES + 1).toBeGreaterThan(maxBytesForKind("video"));
     expect(PHOTO_MAX_BYTES + 1).toBeGreaterThan(maxBytesForKind("photo"));
   });
 
-  it("says which kind is too big", () => {
-    expect(oversizeMessage("video")).toContain(`${UPLOAD_MAX_MB} MB`);
-    expect(oversizeMessage("photo")).toContain("50 MB");
-    expect(tooBigWarning("clip.mov", "video")).toContain("Videos can be up to");
-    expect(tooBigWarning("shot.jpg", "photo")).toContain("Photos can be up to");
+  it("says which kind is too big, and names the file", () => {
+    expect(tooBigWarning("shot.jpg", "photo")).toBe(
+      "shot.jpg is over 50 MB, so it wasn't added. Photos can be up to 50 MB. Choose a smaller photo, or reduce it in Photos and add it again.",
+    );
+    expect(tooBigWarning("clip.mov", "video")).toBe(
+      "clip.mov is over 200 MB, so it wasn't added. Videos can be up to 200 MB. Trim it or export it smaller (on iPhone: Edit, then trim), then add it again.",
+    );
+    expect(oversizeMessage("clip.mov", "video")).toBe(tooBigWarning("clip.mov", "video"));
+  });
+
+  it("keeps videos at 200 MB and photos at 50 MB when NEXT_PUBLIC_UPLOAD_MAX_MB is 500", async () => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_UPLOAD_MAX_MB", "500");
+    const loaded = await import("@/lib/media/constants");
+    expect(loaded.UPLOAD_MAX_MB).toBe(200);
+    expect(loaded.PHOTO_MAX_MB).toBe(50);
+    expect(loaded.VIDEO_MAX_BYTES).toBe(200 * MB);
+    expect(loaded.PHOTO_MAX_BYTES).toBe(50 * MB);
+    expect(loaded.oversizeMessage("clip.mov", "video")).toContain("200 MB");
+    expect(loaded.oversizeMessage("shot.jpg", "photo")).toContain("50 MB");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("splits a 200 MB video into 6 MB TUS chunks, with a short last chunk", () => {

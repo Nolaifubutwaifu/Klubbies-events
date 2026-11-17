@@ -1,5 +1,5 @@
 import { contentHash } from "@/lib/media/content-hash";
-import { ACCEPTED_TYPES, maxBytesForKind, oversizeMessage, resolveMimeType, tooBigWarning, type UploadKind } from "@/lib/media/constants";
+import { ACCEPTED_TYPES, isOversizeError, maxBytesForKind, oversizeMessage, resolveMimeType, tooBigWarning, type UploadKind } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
 import { watchUploadStall } from "@/lib/media/signed-put";
 import { httpStatus, isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
@@ -20,6 +20,8 @@ export type GuestJobView = Readonly<{
   status: GuestJobStatus;
   progress: number;
   error?: string;
+  /** False when Retry would fail the same way. Absent means it can be retried. */
+  retryable?: boolean;
   previewUrl?: string;
   retryAttempt?: number;
   retryOf?: number;
@@ -46,6 +48,7 @@ type Job = {
   status: GuestJobStatus;
   progress: number;
   error?: string;
+  retryable?: boolean;
   previewUrl?: string;
   retryAttempt?: number;
   retryOf?: number;
@@ -66,10 +69,10 @@ const PREPARED_AHEAD = 6;
 
 export const EMPTY_GUEST_SNAPSHOT: readonly GuestJobView[] = [];
 
-function friendlyError(error: unknown, kind: UploadKind): string {
+function friendlyError(error: unknown, kind: UploadKind, name: string): string {
   const text = error instanceof Error ? error.message : String(error);
   const status = httpStatus(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return oversizeMessage(kind);
+  if (isOversizeError(error)) return oversizeMessage(name, kind);
   // The organiser's link itself is gone. A 403 from a signed upload URL is
   // just that try's token, and a new ticket replaces it.
   if (/this link (has expired|isn't valid)|isn't valid any more|link stopped working/i.test(text)) {
@@ -122,7 +125,7 @@ export class GuestUploadQueue {
 
   retry(key: string) {
     const job = this.jobs.get(key);
-    if (!job || job.status !== "failed") return;
+    if (!job || job.status !== "failed" || job.retryable === false) return;
     // A ticket from a stalled upload may have expired. A fresh one carries on
     // in the same row (matched by content), so nothing is uploaded twice.
     // Drop derivative URLs when the original is already in: they are
@@ -133,7 +136,7 @@ export class GuestUploadQueue {
   }
 
   retryFailed() {
-    for (const job of this.jobs.values()) if (job.status === "failed") this.retry(job.key);
+    for (const job of this.jobs.values()) if (job.status === "failed" && job.retryable !== false) this.retry(job.key);
   }
 
   /** Gives up on every failed file: they leave the list. */
@@ -154,6 +157,7 @@ export class GuestUploadQueue {
       status: j.status,
       progress: j.progress,
       error: j.error,
+      retryable: j.retryable,
       previewUrl: j.previewUrl,
       retryAttempt: j.retryAttempt,
       retryOf: j.retryOf,
@@ -166,6 +170,15 @@ export class GuestUploadQueue {
     for (const job of this.jobs.values()) {
       if (job.status === "queued") this.patch(job, { status: "failed", error: message });
     }
+  }
+
+  private recordFailure(job: Job, error: unknown) {
+    const kind = this.isVideo(job) ? "video" : "photo";
+    this.patch(job, {
+      status: "failed",
+      error: friendlyError(error, kind, job.file.name),
+      retryable: isOversizeError(error) ? false : true,
+    });
   }
 
   private patch(job: Job, changes: Partial<Job>) {
@@ -272,7 +285,7 @@ export class GuestUploadQueue {
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
+      this.recordFailure(job, error);
     }
   }
 
@@ -361,7 +374,7 @@ export class GuestUploadQueue {
       }
       this.patch(job, { status: "done", progress: 1 });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
+      this.recordFailure(job, error);
     }
   }
 }

@@ -22,6 +22,7 @@ export function UploadTray() {
   const { retryAll, clearAll } = useFailedActions();
   const busy = jobs.filter((j) => j.status !== "done" && j.status !== "failed");
   const failed = jobs.filter((j) => j.status === "failed");
+  const retryable = failed.filter((j) => j.retryable !== false);
 
   useEffect(() => {
     if (busy.length === 0) return;
@@ -59,9 +60,11 @@ export function UploadTray() {
       </p>
       {failed.length ? (
         <div className="flex gap-2 px-3 pb-3">
-          <button type="button" className="btn btn-secondary btn-sm flex-1" onClick={retryAll}>
-            Retry {failed.length === 1 ? "it" : `all ${failed.length}`}
-          </button>
+          {retryable.length ? (
+            <button type="button" className="btn btn-secondary btn-sm flex-1" onClick={retryAll}>
+              Retry {retryable.length === 1 ? "it" : `all ${retryable.length}`}
+            </button>
+          ) : null}
           <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={clearAll}>
             Clear failed
           </button>

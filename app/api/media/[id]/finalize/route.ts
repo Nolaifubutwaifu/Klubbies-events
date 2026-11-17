@@ -7,8 +7,9 @@ import { mediaUnits } from "@/lib/billing/plans";
 import { PHOTOS_FULL } from "@/lib/billing/usage";
 import { formatDuration } from "@/lib/format";
 import { enqueueMediaJob, kickFaceJobs } from "@/lib/faces/jobs";
+import { maxBytesForKind, oversizeMessage } from "@/lib/media/constants";
 import { kickVideoPreviews } from "@/lib/media/video-previews";
-import { derivativePaths, folderObjects, ownedMediaObjectPath } from "@/lib/storage";
+import { derivativePaths, folderObjects, ownedMediaObjectPath, removeObjects } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -65,6 +66,18 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
   }
 
   const paths = derivativePaths(folder);
+  const byteSize = objects.get(originalName) || media.byte_size || 0;
+  const kind = media.kind === "video" ? "video" : "photo";
+  if (byteSize > maxBytesForKind(kind)) {
+    await supabase.from("media").update({ status: "failed" }).eq("id", id).neq("status", "ready");
+    await removeObjects([
+      media.storage_path,
+      ...(objects.has("thumb.webp") ? [paths.thumb] : []),
+      ...(objects.has("display.webp") ? [paths.display] : []),
+      ...(objects.has("poster.jpg") ? [paths.poster] : []),
+    ]);
+    return NextResponse.json({ error: oversizeMessage(media.original_filename || "This file", kind) }, { status: 413 });
+  }
   const { width, height, durationSeconds, capturedAt } = parsed.data;
   const { data: updated, error } = await supabase
     .from("media")
@@ -74,7 +87,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/media/[id]/
       height,
       duration_seconds: durationSeconds,
       captured_at: capturedAt,
-      byte_size: objects.get(originalName) || media.byte_size,
+      byte_size: byteSize,
       thumb_path: objects.has("thumb.webp") ? paths.thumb : null,
       display_path: objects.has("display.webp") ? paths.display : null,
       poster_path: objects.has("poster.jpg") ? paths.poster : null,

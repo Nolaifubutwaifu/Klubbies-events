@@ -200,10 +200,17 @@ export async function signDownload(
  * so storage INSERT/UPDATE policies (and their per-file database lookups)
  * are not evaluated for every derivative.
  */
-export async function signedUploadTokens(paths: string[]): Promise<Record<string, { signedUrl: string; path: string; token: string }>> {
+export async function signedUploadTokens(
+  owner: { eventId: string; albumId: string; mediaId: string },
+  paths: string[],
+): Promise<Record<string, { signedUrl: string; path: string; token: string }>> {
   const admin = createAdminClient();
   const signed: Record<string, { signedUrl: string; path: string; token: string }> = {};
   for (const path of paths) {
+    if (!ownedMediaObjectPath(owner.eventId, owner.albumId, owner.mediaId, path)) {
+      console.error("refusing to sign an upload outside its photo", path);
+      throw new Error("refusing to sign an upload outside its photo");
+    }
     const { data, error } = await admin.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
     if (error || !data) throw error ?? new Error(`could not sign ${path}`);
     signed[path] = { signedUrl: data.signedUrl, path: data.path, token: data.token };

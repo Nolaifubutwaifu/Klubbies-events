@@ -3,6 +3,7 @@ import { contentHash } from "@/lib/media/content-hash";
 import {
   ACCEPTED_TYPES,
   TUS_CHUNK_BYTES,
+  isOversizeError,
   maxBytesForKind,
   oversizeMessage,
   resolveMimeType,
@@ -46,6 +47,8 @@ type Job = {
   status: JobStatus;
   uploaded: number;
   error?: string;
+  /** False when another try cannot succeed, such as a file that is too big. */
+  retryable?: boolean;
   note?: string;
   previewUrl?: string;
   retryAttempt?: number;
@@ -64,6 +67,8 @@ export type JobView = Readonly<{
   status: JobStatus;
   uploaded: number;
   error?: string;
+  /** False when Retry would fail the same way. Absent means it can be retried. */
+  retryable?: boolean;
   /** Set when a file was skipped rather than uploaded, and why. */
   note?: string;
   previewUrl?: string;
@@ -82,9 +87,9 @@ const PREPARED_AHEAD = 6;
 const CHUNK_SIZE = TUS_CHUNK_BYTES;
 const RESUMABLE_ENDPOINT = `${supabaseUrl.replace(".supabase.co", ".storage.supabase.co")}/storage/v1/upload/resumable`;
 
-function friendlyError(error: unknown, kind: UploadKind): string {
+function friendlyError(error: unknown, kind: UploadKind, name: string): string {
   const text = error instanceof Error ? error.message : String(error);
-  if (/413|too large|maximum allowed size/i.test(text)) return oversizeMessage(kind);
+  if (isOversizeError(error)) return oversizeMessage(name, kind);
   if (/401|403|jwt|unauthor/i.test(text)) return "Your session expired. Refresh the page and retry.";
   if (/network|failed to fetch|offline/i.test(text)) return "Connection lost. Retry when you're back online.";
   return text.slice(0, 160);
@@ -140,7 +145,7 @@ export class UploadQueue {
 
   retry(key: string) {
     const job = this.jobs.get(key);
-    if (!job || job.status !== "failed") return;
+    if (!job || job.status !== "failed" || job.retryable === false) return;
     // A ticket from a stalled upload may have expired. A fresh one carries on
     // in the same row (matched by content), so nothing is uploaded twice.
     // Drop derivative URLs: they are short-lived, and a retry after a long
@@ -154,7 +159,7 @@ export class UploadQueue {
   }
 
   retryFailed() {
-    for (const job of this.jobs.values()) if (job.status === "failed") this.retry(job.key);
+    for (const job of this.jobs.values()) if (job.status === "failed" && job.retryable !== false) this.retry(job.key);
   }
 
   /** Gives up on every failed file: they leave the list (the server already knows they failed). */
@@ -176,6 +181,7 @@ export class UploadQueue {
       status: j.status,
       uploaded: j.uploaded,
       error: j.error,
+      retryable: j.retryable,
       note: j.note,
       previewUrl: j.previewUrl,
       retryAttempt: j.retryAttempt,
@@ -189,6 +195,16 @@ export class UploadQueue {
     for (const job of this.jobs.values()) {
       if (job.status === "queued") this.patch(job, { status: "failed", error: message });
     }
+  }
+
+  private recordFailure(job: Job, error: unknown) {
+    const kind = this.isVideo(job) ? "video" : "photo";
+    const oversize = isOversizeError(error);
+    this.patch(job, {
+      status: "failed",
+      error: friendlyError(error, kind, job.file.name),
+      retryable: oversize ? false : true,
+    });
   }
 
   private patch(job: Job, changes: Partial<Job>) {
@@ -301,7 +317,7 @@ export class UploadQueue {
         previewUrl: job.previewUrl ?? (prepared.thumb ? URL.createObjectURL(prepared.thumb) : undefined),
       });
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
+      this.recordFailure(job, error);
     }
   }
 
@@ -395,7 +411,7 @@ export class UploadQueue {
       this.patch(job, { status: "done" });
       this.onItemDone();
     } catch (error) {
-      this.patch(job, { status: "failed", error: friendlyError(error, this.isVideo(job) ? "video" : "photo") });
+      this.recordFailure(job, error);
       // Tell the server, so the row stops showing as "processing" to guests
       // and stops counting against the allowance. Upload again revives it.
       if (job.ticket && !job.ticket.duplicate) {
