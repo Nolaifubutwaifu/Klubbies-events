@@ -848,6 +848,13 @@
     background: var(--kb-line);
   }
 
+  /* A table's scroll box holds its screen-reader labels too: they are
+     absolutely positioned, and without this they sit past the box's edge and
+     widen the whole page on a phone. */
+  .overflow-x-auto:has(> .table, > .kb-table) {
+    position: relative;
+  }
+
   /* Organiser tables: a quiet header band, roomy rows, no line under the last. */
   .table,
   .kb-table {

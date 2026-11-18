@@ -123,14 +123,15 @@ export function AuthShell({
           </div>
         ) : event ? (
           <div className="-mx-5 -mt-5 sm:-mx-10 sm:-mt-8 lg:hidden">
-            <div className="relative h-[150px] bg-[color:var(--kb-ember)]">
+            {/* Shorter on phones, so "Get my photos" shows above Safari's toolbar without scrolling. */}
+            <div className="relative h-24 bg-[color:var(--kb-ember)] sm:h-[150px]">
               <span className="absolute -bottom-8 left-5 rounded-[18px] bg-[color:var(--kb-cream)] p-1 sm:left-10">
                 <EventMark name={event.name} logoUrl={event.logoUrl} accentColour={event.accentColour} size={72} />
               </span>
             </div>
             <div className="mx-auto flex max-w-[440px] flex-col gap-2 px-5 pt-12 sm:px-0">
               {event.accessMode === "guest_list" ? <GuestListLabel /> : null}
-              <span className="serif text-[44px] leading-[1.02]">{event.name}</span>
+              <span className="serif text-[38px] leading-[1.02] sm:text-[44px]">{event.name}</span>
               {meta ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">{meta}</span> : null}
               {event.organisation ? <span className="text-[15px] text-[color:var(--kb-ink-2)]">Hosted by {event.organisation}</span> : null}
             </div>
