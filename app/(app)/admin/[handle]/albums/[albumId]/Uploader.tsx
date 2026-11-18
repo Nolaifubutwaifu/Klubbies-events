@@ -101,6 +101,10 @@ export function Uploader({ albumId, albumTitle }: { albumId: string; albumTitle?
           <span className="font-semibold text-[color:var(--kb-brand-deep)] underline underline-offset-4">choose files</span> · JPEG, HEIC, PNG, WebP, MP4,
           MOV
         </span>
+        {/* iOS converts every picked file before the page sees any of them, so a big pick looks frozen. */}
+        <span className="hidden text-[13px] text-[color:var(--kb-ink-2)] [@media(pointer:coarse)]:inline">
+          Picked a lot? Your phone gets them ready first, so uploads can take a minute to start.
+        </span>
         <input
           ref={input}
           type="file"
