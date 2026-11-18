@@ -51,3 +51,6 @@ design/source-photos/
 # Real faces, gathered once to tune the recognition thresholds. The method is
 # in docs/face-tuning.md; the photos themselves are never committed.
 tuning-photos/
+
+# Private local drafts
+*.local-draft.md

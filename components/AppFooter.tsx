@@ -22,9 +22,10 @@ export function FooterRow({ width = "wide" }: { width?: "wide" | "gallery" }) {
       }`}
     >
       <span>Klubbies Events · Private event photos</span>
-      <span className="flex flex-wrap gap-x-4 gap-y-2 sm:ml-auto">
+      <span className="flex flex-wrap gap-x-4 sm:ml-auto">
         {LINKS.map(([href, label]) => (
-          <Link key={href} href={href} className="text-[color:var(--ink-55)] no-underline hover:text-ink">
+          // 40px tall so each one is easy to hit with a thumb.
+          <Link key={href} href={href} className="inline-flex min-h-[40px] items-center text-[color:var(--ink-55)] no-underline hover:text-ink">
             {label}
           </Link>
         ))}

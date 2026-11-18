@@ -52,7 +52,8 @@ export default async function SharePage(props: PageProps<"/admin/[handle]/share"
         <h2 id="link-title" className="text-[17px] font-semibold">
           Event link
         </h2>
-        <span className="mono min-w-0 flex-1 break-all text-[15px]">{link.replace(/^https?:\/\//, "")}</span>
+        {/* Its own line on phones, so the address isn't squeezed and split mid-word. */}
+        <span className="mono min-w-0 basis-full break-all text-[15px] sm:flex-1 sm:basis-0">{link.replace(/^https?:\/\//, "")}</span>
         <CopyButton value={link} label="Copy link" className="btn btn-secondary" />
       </section>
 

@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev", "--port", "3300"],
       "port": 3300
+    },
+    {
+      "name": "events-dev-live-links",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["APP_URL=https://events.klubbies.app", "pnpm", "dev", "--port", "3300"],
+      "port": 3300
     }
   ]
 }

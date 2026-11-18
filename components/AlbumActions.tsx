@@ -206,7 +206,7 @@ export function AlbumActions({
 
   return (
     <div className="flex w-full flex-col gap-1">
-      <div className="flex w-full items-center gap-2">
+      <div className="flex w-full items-center gap-2 max-[359px]:gap-1.5">
         {primary}
         {ready > 0 ? (
           <button type="button" className="btn btn-secondary !min-h-[48px]" onClick={() => window.dispatchEvent(new Event(SELECT_EVENT))}>
