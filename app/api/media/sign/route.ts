@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEventContextById, getSessionUser } from "@/lib/auth/session";
 import { r2Url } from "@/lib/backup/r2";
+import type { EventContext } from "@/lib/auth/session";
+import { logDownloads } from "@/lib/media/access";
 import { SIGNED_URL_TTL, mediaClaims, signedUrlLifetime, signPaths } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -47,14 +49,14 @@ export async function POST(request: Request) {
         : SIGNED_URL_TTL.thumb;
 
   let rows = data ?? [];
+  const contexts = new Map<string, EventContext | null>();
   if (variant === "original" || variant === "share") {
     // Same rule as single downloads: an album with downloads off is only
     // saved by the people who run the event.
-    const managed = new Map<string, boolean>();
     for (const eventId of new Set(rows.map((m) => m.event_id))) {
-      managed.set(eventId, Boolean((await getEventContextById(eventId))?.perms.manage_albums));
+      contexts.set(eventId, await getEventContextById(eventId));
     }
-    rows = rows.filter((m) => m.albums?.allow_download !== false || managed.get(m.event_id));
+    rows = rows.filter((m) => m.albums?.allow_download !== false || contexts.get(m.event_id)?.perms.manage_albums);
   }
   const urls = await signPaths(
     supabase,
@@ -67,6 +69,11 @@ export async function POST(request: Request) {
     const path = pathFor(m);
     const url = path ? urls.get(path) : undefined;
     if (url) result[m.id] = url;
+  }
+  // Save to Photos is a download like any other: it shows under Saved ›
+  // Downloaded and in the organiser's activity, as the Download link does.
+  for (const [eventId, eventCtx] of contexts) {
+    if (eventCtx) await logDownloads(eventCtx, rows.filter((m) => m.event_id === eventId && result[m.id]).map((m) => m.id));
   }
   // Video plays from the R2 copy once it has one: full size files are where
   // the download bill is. RLS above already decided these rows are visible.

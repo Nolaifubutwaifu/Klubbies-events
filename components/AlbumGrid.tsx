@@ -12,6 +12,7 @@ import type { GridItem } from "@/lib/media/queries";
 import { formatBytes } from "@/lib/format";
 import { planZipParts } from "@/lib/media/zip-parts";
 import { SELECT_EVENT } from "@/components/AlbumActions";
+import { PhotosIcon, useCanSaveToPhotos, useSaveToPhotos } from "@/components/SaveToPhotos";
 import { Segmented } from "@/components/Segmented";
 import { tileRatio } from "@/lib/media/ratio";
 
@@ -157,6 +158,10 @@ export function AlbumGrid({
   const selectedIds = [...selected];
   const known = new Map([...items, ...mineItems].map((item) => [item.id, item.byteSize]));
   const downloadParts = planZipParts(selectedIds.map((id) => ({ id, byteSize: known.get(id) ?? null })));
+  // On a phone the selection goes into Photos; a zip there lands in Files.
+  const canSaveToPhotos = useCanSaveToPhotos();
+  const save = useSaveToPhotos(selectedIds);
+  const saveStatus = save.error || save.progress;
   const shown =
     kind === "all"
       ? items
@@ -231,7 +236,7 @@ export function AlbumGrid({
   return (
     <div className="flex flex-col gap-3">
       {selecting ? (
-        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
+        <div className={`sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 ${saveStatus || save.waiting ? "rounded-[22px]" : "rounded-[999px]"} bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6`}>
           <strong className="text-[14px] font-bold">
             {selected.size} selected
           </strong>
@@ -255,7 +260,17 @@ export function AlbumGrid({
             Favourite
           </button>
 
-          {canDownload ? (
+          {canDownload && canSaveToPhotos ? (
+            <button
+              type="button"
+              className="flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-full border-0 bg-white px-4 text-[14px] font-bold text-accent-800 disabled:opacity-50"
+              disabled={save.busy || !selected.size}
+              onClick={save.start}
+            >
+              <PhotosIcon />
+              {save.busy ? "Saving…" : "Save to Photos"}
+            </button>
+          ) : canDownload ? (
             downloadParts.length === 0 ? (
               <a
                 aria-disabled
@@ -308,7 +323,8 @@ export function AlbumGrid({
 
           <button
             type="button"
-            className="min-h-[40px] cursor-pointer rounded-full border-0 bg-transparent px-3 text-[14px] font-bold text-white/80"
+            className="min-h-[40px] cursor-pointer rounded-full border-0 bg-transparent px-3 text-[14px] font-bold text-white/80 disabled:opacity-50"
+            disabled={save.busy}
             onClick={() => {
               setSelected(new Set());
               setSelecting(false);
@@ -316,6 +332,23 @@ export function AlbumGrid({
           >
             Done
           </button>
+
+          {saveStatus ? (
+            <span className={`w-full text-[14px] ${save.error ? "text-[#ffb4a8]" : "text-white/80"}`} role="status">
+              {saveStatus}
+            </span>
+          ) : null}
+          {save.waiting ? (
+            <button
+              type="button"
+              className="flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border-0 bg-white px-4 text-[14px] font-bold text-accent-800 disabled:opacity-50"
+              disabled={save.busy}
+              onClick={save.shareWaiting}
+            >
+              <PhotosIcon />
+              Save {save.waiting.files.length === 1 ? "it" : `${save.waiting.files.length} items`} to Photos
+            </button>
+          ) : null}
         </div>
       ) : null}
 

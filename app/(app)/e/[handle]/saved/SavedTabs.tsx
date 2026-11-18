@@ -8,6 +8,7 @@ import type { SavedGroup } from "@/lib/media/favourites";
 import { formatDate } from "@/lib/format";
 import { formatBytes } from "@/lib/format";
 import { planZipParts } from "@/lib/media/zip-parts";
+import { SaveToPhotosButton } from "@/components/SaveToPhotos";
 
 export type DownloadedItem = {
   id: string;
@@ -110,6 +111,17 @@ export function SavedTabs({
           { value: "downloads", label: "Downloaded", count: downloads.length },
         ]}
       />
+
+      {tab === "favourites" && favouriteCount > 0 ? (
+        // On a phone, straight into Photos: a zip there lands in Files.
+        <div className="flex flex-col items-start gap-1.5 empty:hidden">
+          <SaveToPhotosButton
+            mediaIds={groups.flatMap((group) => group.items.map((item) => item.id))}
+            label={favouriteCount === 1 ? "Save it to Photos" : `Save all ${favouriteCount.toLocaleString("en-AU")} to Photos`}
+            className="btn btn-primary !min-h-[48px]"
+          />
+        </div>
+      ) : null}
 
       {tab === "favourites" && favouriteCount === 0 ? (
         <p className="text-center text-[14px] text-[color:var(--kb-ink-3)]">Tap the heart on any photo to keep it here.</p>

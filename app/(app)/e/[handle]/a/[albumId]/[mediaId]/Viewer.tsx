@@ -7,6 +7,7 @@ import { decideFaceMatchAction } from "@/app/(app)/face-actions";
 import { requestRemovalAction } from "@/app/(app)/removal-actions";
 import { toggleFavouriteAction } from "@/app/(app)/e/[handle]/actions";
 import { nativeSaveToPhotos, socialInAppBrowser } from "@/lib/native-app";
+import { useCanSaveToPhotos, useSaveToPhotos } from "@/components/SaveToPhotos";
 
 type Current = {
   id: string;
@@ -151,6 +152,11 @@ export function Viewer({
   const [sheet, setSheet] = useState<"none" | "removal" | "more" | "social">("none");
   const env = useSyncExternalStore(subscribeNever, downloadEnv, () => "web");
   const [saving, setSaving] = useState(false);
+  // Phone browsers: the share sheet's "Save Image" puts it in Photos. A
+  // download link there only reaches the Files app.
+  const canShare = useCanSaveToPhotos(current.kind);
+  const share = useSaveToPhotos([current.id]);
+  const shareToPhotos = env === "web" && canShare;
   const swiped = useSyncExternalStore(subscribeNever, hasSwiped, () => true);
   const stripRef = useRef<HTMLDivElement>(null);
   const [asked, setAsked] = useState(alreadyAsked);
@@ -564,11 +570,11 @@ export function Viewer({
       <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5 md:justify-center md:gap-2 md:border-t-0 md:pb-4 md:pt-1">
         {canDownload ? (
           <Action
-            label={saving ? "Saving…" : env === "app" ? "Save to Photos" : "Download"}
-            href={env === "web" ? `/api/media/${current.id}/download` : undefined}
-            onClick={env === "app" ? saveToPhotos : env !== "web" ? () => setSheet("social") : undefined}
+            label={saving || share.busy ? "Saving…" : env === "app" || shareToPhotos ? "Save to Photos" : "Download"}
+            href={env === "web" && !shareToPhotos ? `/api/media/${current.id}/download` : undefined}
+            onClick={env === "app" ? saveToPhotos : shareToPhotos ? () => !share.busy && share.start() : env !== "web" ? () => setSheet("social") : undefined}
           >
-            {env === "app" ? (
+            {env === "app" || shareToPhotos ? (
               <>
                 <rect x="3" y="4" width="18" height="16" rx="2" />
                 <circle cx="9" cy="10" r="2" />
@@ -590,7 +596,25 @@ export function Viewer({
         ) : null}
       </nav>
 
-      {message ? (
+      {share.waiting ? (
+        // iOS wouldn't open the share sheet this long after the tap (a video
+        // takes a while to download). The file is ready: one more tap.
+        <button
+          type="button"
+          onClick={share.shareWaiting}
+          disabled={share.busy}
+          className="absolute bottom-[170px] left-1/2 z-10 min-h-[48px] -translate-x-1/2 cursor-pointer whitespace-nowrap rounded-full border-0 bg-white px-5 text-[15px] font-bold text-ink shadow-lg"
+        >
+          Tap to save to Photos
+        </button>
+      ) : share.busy || share.error || (share.progress && share.progress !== "Done.") ? (
+        <div
+          role="status"
+          className="pointer-events-none absolute bottom-[170px] left-1/2 max-w-[90vw] -translate-x-1/2 rounded-full bg-white px-4 py-2 text-center text-[14px] font-bold text-ink shadow-lg"
+        >
+          {share.error || share.progress}
+        </div>
+      ) : message ? (
         <div
           role="status"
           className="pointer-events-none absolute bottom-[170px] left-1/2 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-[14px] font-bold text-ink shadow-lg"

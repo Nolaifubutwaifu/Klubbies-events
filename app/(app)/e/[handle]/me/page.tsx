@@ -15,6 +15,7 @@ import {
   type Suggestion,
 } from "@/lib/faces/queries";
 import { zipPartSummaries } from "@/lib/media/zip-parts";
+import { SaveToPhotosButton } from "@/components/SaveToPhotos";
 import { yourPhotosZipItems } from "@/lib/media/zip-index";
 import { SIGNED_URL_TTL, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -193,6 +194,16 @@ export default async function PhotosOfYouPage(props: PageProps<"/e/[handle]/me">
                 </span>
                 <ZipParts href={`/api/events/${ctx.event.id}/me/zip`} count={total} partSummaries={zipParts} label="Download all" className="btn btn-light !min-h-[48px] no-underline" />
               </section>
+            ) : null}
+            {total > 0 && zipItems.length > 0 ? (
+              // On a phone, straight into Photos: a zip there lands in Files.
+              <div className="mx-5 flex flex-col items-start gap-1.5 empty:hidden sm:mx-10">
+                <SaveToPhotosButton
+                  mediaIds={zipItems.map((item) => item.id)}
+                  label={zipItems.length === 1 ? "Save it to Photos" : `Save all ${zipItems.length.toLocaleString("en-AU")} to Photos`}
+                  className="btn btn-primary !min-h-[48px]"
+                />
+              </div>
             ) : null}
 
             <div className="px-5 sm:px-10 empty:hidden">

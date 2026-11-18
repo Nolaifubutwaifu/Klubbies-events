@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { deleteMediaAction } from "@/app/(app)/admin/actions";
 import { formatDateTime } from "@/lib/format";
 import { EXPIRE_AFTER_DAYS } from "@/lib/media/constants";
@@ -20,6 +20,8 @@ export function UnfinishedUploads({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   return (
     <div className="flex flex-col gap-3 border-b-2 border-divider border-l-4 border-l-accent bg-accent-100 px-6 py-4">
@@ -39,18 +41,32 @@ export function UnfinishedUploads({
               type="button"
               className="btn btn-ghost text-[14px]"
               disabled={pending}
-              onClick={() =>
+              onClick={() => {
+                setError("");
+                setRemoving(item.id);
                 startTransition(async () => {
-                  await deleteMediaAction([item.id]);
-                  router.refresh();
-                })
-              }
+                  try {
+                    const res = await deleteMediaAction([item.id]);
+                    if (res.error) setError(`Couldn't remove ${item.original_filename ?? "it"}: ${res.error}. Try again.`);
+                    else router.refresh();
+                  } catch {
+                    setError("Couldn't remove it. Check your connection and try again.");
+                  } finally {
+                    setRemoving(null);
+                  }
+                });
+              }}
             >
-              Remove it
+              {removing === item.id ? "Removing…" : "Remove it"}
             </button>
           </li>
         ))}
       </ul>
+      {error ? (
+        <span className="kb-error" role="alert">
+          {error}
+        </span>
+      ) : null}
       <Link href={addHref} className="btn btn-primary self-start text-[14px]">
         Upload again
       </Link>

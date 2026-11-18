@@ -25,6 +25,36 @@ const UploadContext = createContext<{
   clearAllFailed: () => void;
 } | null>(null);
 
+type ScreenLock = { release(): Promise<void>; addEventListener(type: "release", listener: () => void): void };
+type WakeLockApi = { request(type: "screen"): Promise<ScreenLock> };
+
+/**
+ * A phone that locks mid-upload pauses the page, and the transfer with it.
+ * While anything is uploading the screen stays on, as a video app's does.
+ * iOS lets go of the lock whenever the page is hidden, so it is taken again
+ * on the way back.
+ */
+function holdScreenOn(lockRef: { current: ScreenLock | null }, stillBusy: () => boolean, on: boolean) {
+  if (!on) {
+    void lockRef.current?.release().catch(() => undefined);
+    lockRef.current = null;
+    return;
+  }
+  if (lockRef.current || document.visibilityState !== "visible") return;
+  const api = (navigator as Navigator & { wakeLock?: WakeLockApi }).wakeLock;
+  if (!api) return;
+  api
+    .request("screen")
+    .then((lock) => {
+      if (!stillBusy()) return void lock.release().catch(() => undefined);
+      lockRef.current = lock;
+      lock.addEventListener("release", () => {
+        if (lockRef.current === lock) lockRef.current = null;
+      });
+    })
+    .catch(() => undefined); // Low Power Mode, or not allowed: uploads still run.
+}
+
 export function UploadProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,6 +79,28 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     }, wait);
   };
 
+  const wakeLock = useRef<ScreenLock | null>(null);
+  const holdScreen = (on: boolean) => holdScreenOn(wakeLock, () => registry.current.busy, on);
+
+  // Back on the page, or back online: files the drop stopped carry on by
+  // themselves instead of waiting for Retry.
+  useEffect(() => {
+    const resume = () => {
+      if (document.visibilityState !== "visible") return;
+      registry.current.queues.forEach((queue) => queue.resumeInterrupted());
+      if (registry.current.busy) holdScreenOn(wakeLock, () => registry.current.busy, true);
+    };
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("online", resume);
+    window.addEventListener("pageshow", resume);
+    return () => {
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("pageshow", resume);
+      holdScreenOn(wakeLock, () => false, false);
+    };
+  }, []);
+
   const recompute = () => {
     const all: JobView[] = [];
     for (const queue of registry.current.queues.values()) all.push(...queue.getSnapshot());
@@ -57,6 +109,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (busy !== registry.current.busy) {
       registry.current.busy = busy;
       tellAppBusy(busy);
+      holdScreen(busy);
     }
     for (const listener of registry.current.listeners) listener();
   };

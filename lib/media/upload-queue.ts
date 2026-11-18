@@ -12,7 +12,7 @@ import {
 } from "@/lib/media/constants";
 import { prepareVideo, preparePhoto, type Prepared } from "@/lib/media/prepare";
 import { putSignedObject } from "@/lib/media/signed-put";
-import { isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
+import { isConnectionDrop, isUploadRetryable, postJson, withBackoff } from "@/lib/retry";
 import { createClient } from "@/lib/supabase/client";
 import { supabaseUrl } from "@/lib/supabase/config";
 
@@ -49,6 +49,10 @@ type Job = {
   error?: string;
   /** False when another try cannot succeed, such as a file that is too big. */
   retryable?: boolean;
+  /** The connection dropped (or the phone paused the page), rather than the server refusing. */
+  interrupted?: boolean;
+  /** Retries started on the member's behalf, so a file that keeps failing stops. */
+  autoRetries?: number;
   note?: string;
   previewUrl?: string;
   retryAttempt?: number;
@@ -86,6 +90,9 @@ const PREPARING_AT_ONCE = 2;
 const PREPARED_AHEAD = 6;
 const CHUNK_SIZE = TUS_CHUNK_BYTES;
 const RESUMABLE_ENDPOINT = `${supabaseUrl.replace(".supabase.co", ".storage.supabase.co")}/storage/v1/upload/resumable`;
+
+/** Most retries started for the member when they come back, per file. */
+const AUTO_RETRIES = 3;
 
 function friendlyError(error: unknown, kind: UploadKind, name: string): string {
   const text = error instanceof Error ? error.message : String(error);
@@ -154,8 +161,25 @@ export class UploadQueue {
     // Drop the in-memory TUS handle when the original is unfinished. A new
     // Upload with the same fingerprint resumes the same object, not a
     // different album's file.
-    this.patch(job, { status: "queued", error: undefined, ticket, tus: job.originalDone ? job.tus : undefined });
+    // A Retry tapped by hand earns the automatic ones back.
+    job.autoRetries = 0;
+    this.patch(job, { status: "queued", error: undefined, interrupted: false, ticket, tus: job.originalDone ? job.tus : undefined });
     this.pump();
+  }
+
+  /**
+   * Back on the page, or back online: start again every file that stopped
+   * because the connection went, as if Retry were tapped. TUS carries on from
+   * the last chunk the server has.
+   */
+  resumeInterrupted() {
+    for (const job of this.jobs.values()) {
+      if (job.status !== "failed" || !job.interrupted || job.retryable === false) continue;
+      const tries = job.autoRetries ?? 0;
+      if (tries >= AUTO_RETRIES) continue;
+      this.retry(job.key);
+      job.autoRetries = tries + 1;
+    }
   }
 
   retryFailed() {
@@ -200,10 +224,14 @@ export class UploadQueue {
   private recordFailure(job: Job, error: unknown) {
     const kind = this.isVideo(job) ? "video" : "photo";
     const oversize = isOversizeError(error);
+    const interrupted = !oversize && isConnectionDrop(error);
     this.patch(job, {
       status: "failed",
-      error: friendlyError(error, kind, job.file.name),
+      error: interrupted
+        ? "Paused when the connection dropped. It carries on when you're back on this page, or tap Retry."
+        : friendlyError(error, kind, job.file.name),
       retryable: oversize ? false : true,
+      interrupted,
     });
   }
 

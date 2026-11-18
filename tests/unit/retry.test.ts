@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { emailDelayMs, emailLogLabel, exponentialDelayMs, isEmailRetryable, isUploadRetryable, withBackoff } from "@/lib/retry";
+import { emailDelayMs, emailLogLabel, exponentialDelayMs, isConnectionDrop, isEmailRetryable, isUploadRetryable, withBackoff } from "@/lib/retry";
 
 describe("upload retry schedule", () => {
   it("spaces four attempts over about 30 seconds", () => {
@@ -71,5 +71,29 @@ describe("withBackoff", () => {
     await expect(withBackoff(run, isUploadRetryable, { sleep })).rejects.toThrow(/fetch/i);
     expect(run).toHaveBeenCalledTimes(4);
     expect(sleep).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("isConnectionDrop", () => {
+  // tus-js-client's DetailedError carries the request, and the response when there was one.
+  const tusError = (status: number | null) =>
+    Object.assign(new Error("tus: failed to upload chunk"), {
+      originalRequest: {},
+      originalResponse: status === null ? null : { getStatus: () => status },
+    });
+
+  it("treats a lost connection as a drop: Safari's TypeError, or TUS with no response", () => {
+    expect(isConnectionDrop(new TypeError("Load failed"))).toBe(true);
+    expect(isConnectionDrop(tusError(null))).toBe(true);
+    expect(isConnectionDrop(tusError(0))).toBe(true);
+    expect(isConnectionDrop(new Error("The network connection was lost."))).toBe(true);
+  });
+
+  it("starts a 5xx again, but not a refusal", () => {
+    expect(isConnectionDrop(tusError(503))).toBe(true);
+    expect(isConnectionDrop(tusError(403))).toBe(false);
+    expect(isConnectionDrop(tusError(413))).toBe(false);
+    expect(isConnectionDrop(Object.assign(new Error("full"), { status: 409 }))).toBe(false);
+    expect(isConnectionDrop(new Error("This event is full."))).toBe(false);
   });
 });

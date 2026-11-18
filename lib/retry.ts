@@ -41,6 +41,24 @@ export function isUploadRetryable(error: unknown): boolean {
 }
 
 /**
+ * The connection dropped, rather than the server refusing. Locking the phone
+ * or switching apps pauses the page, and whatever was in flight fails like
+ * this: worth starting again by itself when the member is back. A TUS error
+ * with no response, or a 5xx, is the same thing; a 4xx is a refusal.
+ */
+export function isConnectionDrop(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  if (error && typeof error === "object" && "originalRequest" in error) {
+    const res = (error as { originalResponse?: { getStatus(): number } | null }).originalResponse;
+    if (!res) return true;
+    const status = res.getStatus();
+    return status === 0 || status >= 500;
+  }
+  const text = error instanceof Error ? error.message : String(error);
+  return isUploadRetryable(error) || /load failed|network connection was lost/i.test(text);
+}
+
+/**
  * Resend: only a definite 429 or 5xx. A network error has no status, and
  * retrying it can deliver the same sign-in code twice.
  */
