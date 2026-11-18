@@ -360,8 +360,9 @@ export function Viewer({
   const nextSlide = neighbours?.next ?? (nextId ? { id: nextId, kind: "photo", url: strip.find((s) => s.id === nextId)?.thumbUrl ?? null } : null);
   const sideImage = (slide: Slide | null) =>
     slide?.url ? (
+      // Low priority: on a slow phone link the neighbours otherwise share bandwidth with the photo being looked at.
       // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-      <img src={stableUrl(slide.id, slide.url) ?? undefined} alt="" className="max-h-full w-auto max-w-full object-contain" draggable={false} />
+      <img src={stableUrl(slide.id, slide.url) ?? undefined} alt="" fetchPriority="low" className="max-h-full w-auto max-w-full object-contain" draggable={false} />
     ) : null;
 
   const round =
@@ -455,6 +456,7 @@ export function Viewer({
             className="max-h-full w-auto max-w-full object-contain"
             width={current.width ?? undefined}
             height={current.height ?? undefined}
+            fetchPriority="high"
             draggable={false}
           />
         ) : (

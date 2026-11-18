@@ -15,10 +15,10 @@ describe("Supabase Auth rate limit retry", () => {
     expect(isAuthRateLimited(null)).toBe(false);
   });
 
-  it("waits 6 seconds at most across all retries", () => {
-    const most = [0, 1, 2].map((i) => authBusyDelayMs(i, () => 1)).reduce((a, b) => a + b, 0);
-    expect([0, 1, 2].map((i) => authBusyDelayMs(i, () => 0))).toEqual([800, 1_600, 2_400]);
-    expect(most).toBeLessThanOrEqual(6_000);
+  it("waits 10 seconds at most across all retries", () => {
+    const most = [0, 1, 2, 3].map((i) => authBusyDelayMs(i, () => 1)).reduce((a, b) => a + b, 0);
+    expect([0, 1, 2, 3].map((i) => authBusyDelayMs(i, () => 0))).toEqual([800, 1_600, 2_400, 3_200]);
+    expect(most).toBeLessThanOrEqual(10_000);
   });
 
   it("tries again while rate limited and returns the first real answer", async () => {
@@ -41,12 +41,12 @@ describe("Supabase Auth rate limit retry", () => {
     expect(result.error).toBe(wrongCode);
   });
 
-  it("gives up after 3 retries and says it was busy", async () => {
+  it("gives up after 4 retries and says it was busy", async () => {
     const run = vi.fn().mockResolvedValue({ data: { user: null }, error: limited });
     const waits: number[] = [];
     const result = await withAuthRetry(run, { sleep: async (ms) => void waits.push(ms), delayMs: (i) => i });
-    expect(run).toHaveBeenCalledTimes(4);
-    expect(waits).toEqual([0, 1, 2]);
+    expect(run).toHaveBeenCalledTimes(5);
+    expect(waits).toEqual([0, 1, 2, 3]);
     expect(result.busy).toBe(true);
   });
 });

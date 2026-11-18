@@ -231,14 +231,25 @@ export function AlbumGrid({
   return (
     <div className="flex flex-col gap-3">
       {selecting ? (
-        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[999px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6">
+        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[22px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6 sm:rounded-[999px]">
           <strong className="text-[14px] font-bold">
             {selected.size} selected
           </strong>
+          <button
+            type="button"
+            className="ml-auto min-h-[40px] cursor-pointer rounded-full border-0 bg-transparent px-3 text-[14px] font-bold text-white/80 sm:order-last sm:ml-0"
+            onClick={() => {
+              setSelected(new Set());
+              setSelecting(false);
+            }}
+          >
+            Done
+          </button>
+          <span className="-mt-2.5 h-0 basis-full sm:hidden" aria-hidden />
 
           <button
             type="button"
-            className="ml-auto min-h-[40px] cursor-pointer rounded-full border-0 bg-white/[0.16] px-4 text-[14px] font-bold text-white disabled:opacity-50"
+            className="min-h-[40px] flex-1 cursor-pointer rounded-full border-0 bg-white/[0.16] px-4 text-[14px] font-bold text-white disabled:opacity-50 sm:ml-auto sm:flex-none"
             disabled={pending || !selected.size}
             onClick={() =>
               startTransition(async () => {
@@ -259,7 +270,7 @@ export function AlbumGrid({
             downloadParts.length === 0 ? (
               <a
                 aria-disabled
-                className="pointer-events-none flex min-h-[44px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline opacity-50"
+                className="pointer-events-none flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline opacity-50 sm:flex-none"
               >
                 Download
               </a>
@@ -268,7 +279,7 @@ export function AlbumGrid({
                 <a
                   key={part.map((item) => item.id).join(",")}
                   href={`/api/albums/${albumId}/zip?only=${part.map((item) => item.id).join(",")}`}
-                  className="flex min-h-[44px] items-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline"
+                  className="flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-white px-4 text-[14px] font-bold text-accent-800 no-underline sm:flex-none"
                 >
                   {downloadParts.length > 1
                     ? `Part ${index + 1} of ${downloadParts.length}, ${formatBytes(part.reduce((sum, item) => sum + Math.max(0, item.byteSize ?? 0), 0))}`
@@ -306,16 +317,6 @@ export function AlbumGrid({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="min-h-[40px] cursor-pointer rounded-full border-0 bg-transparent px-3 text-[14px] font-bold text-white/80"
-            onClick={() => {
-              setSelected(new Set());
-              setSelecting(false);
-            }}
-          >
-            Done
-          </button>
         </div>
       ) : null}
 

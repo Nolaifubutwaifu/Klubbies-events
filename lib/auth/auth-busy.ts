@@ -12,8 +12,12 @@ import { sleep } from "@/lib/retry";
 /** Shown when Supabase is still refusing after every retry. Not counted as a wrong code. */
 export const AUTH_BUSY = "Lots of people are signing in right now. Wait a few seconds and tap Continue again.";
 
-/** Retries after the first try. About 0.8 s, 1.6 s and 2.4 s, plus up to 0.4 s each: 6 s at most. */
-export const AUTH_BUSY_RETRIES = 3;
+/**
+ * Retries after the first try. About 0.8, 1.6, 2.4 and 3.2 s, plus up to 0.4 s
+ * each: 10 s at most. Three retries still lost 2 of 150 at 10 in flight on
+ * 18 Nov 2026; the fourth gives a burst time to pass.
+ */
+export const AUTH_BUSY_RETRIES = 4;
 
 export function authBusyDelayMs(retryIndex: number, random: () => number = Math.random): number {
   const base = 800 * (retryIndex + 1);
