@@ -86,7 +86,7 @@ export default async function EventHomePage(props: PageProps<"/e/[handle]">) {
       >
         {cover ? (
           <>
-            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={cover} alt="" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" />
             <span
               aria-hidden
               className="absolute inset-0"

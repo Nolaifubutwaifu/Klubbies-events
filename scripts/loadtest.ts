@@ -14,11 +14,18 @@
  *
  * lt-secrets.json: { "password": "...", "links": [{ "token": "...", "hash": "..." }] }
  * ltmedia: p000.jpg..p359.jpg, v00.mp4..v11.mp4, thumb.webp, display.webp, poster.jpg
+ * Optional per photo: p0000.thumb.webp + p0000.display.webp and manifest.json
+ * { "p0000.jpg": [width, height] }. Face search indexes the display copy, so a
+ * face test needs real per-photo derivatives, not the shared display.webp.
+ *
+ * KBLT_BULK=1: every photo in KBLT_MEDIA through the photographer links (6 at a
+ * time per link) while 150 guests browse every 2 minutes, then every zip part
+ * of the album downloaded in full to KBLT_ZIP_DIR (check with unzip -t).
  *
  * Stop rule: a stage with more than 1% failures in any operation ends the run.
  */
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { Upload } from "tus-js-client";
 
 const BASE = process.env.KBLT_BASE ?? "https://events.klubbies.app";
@@ -182,10 +189,26 @@ const thumb = readFileSync(`${MEDIA}/thumb.webp`);
 const display = readFileSync(`${MEDIA}/display.webp`);
 const poster = readFileSync(`${MEDIA}/poster.jpg`);
 const uploaded: string[] = [];
+const manifest: Record<string, [number, number]> = files.includes("manifest.json")
+  ? JSON.parse(readFileSync(`${MEDIA}/manifest.json`, "utf8"))
+  : {};
 
 function load(name: string) {
   const bytes = readFileSync(`${MEDIA}/${name}`);
-  return { name, bytes, hash: createHash("sha256").update(bytes).digest("hex") };
+  const own = (kind: string) => {
+    const file = name.replace(/\.jpg$/, `.${kind}.webp`);
+    return files.includes(file) ? readFileSync(`${MEDIA}/${file}`) : null;
+  };
+  const [width, height] = manifest[name] ?? [2400, 1800];
+  return {
+    name,
+    bytes,
+    hash: createHash("sha256").update(bytes).digest("hex"),
+    thumb: own("thumb") ?? thumb,
+    display: own("display") ?? display,
+    width,
+    height,
+  };
 }
 
 async function putSigned(url: string, bytes: Buffer, type: string) {
@@ -227,9 +250,9 @@ async function memberUpload(guest: Guest, name: string) {
     });
     if (ticket.duplicate) return;
     await tus(file.bytes, ticket, guest.accessToken());
-    await putSigned(ticket.signed[ticket.derivatives.thumb].signedUrl, thumb, "image/webp");
-    await putSigned(ticket.signed[ticket.derivatives.display].signedUrl, display, "image/webp");
-    await guest.json(`/api/media/${ticket.mediaId}/finalize`, { width: 2400, height: 1800, durationSeconds: null, capturedAt: null });
+    await putSigned(ticket.signed[ticket.derivatives.thumb].signedUrl, file.thumb, "image/webp");
+    await putSigned(ticket.signed[ticket.derivatives.display].signedUrl, file.display, "image/webp");
+    await guest.json(`/api/media/${ticket.mediaId}/finalize`, { width: file.width, height: file.height, durationSeconds: null, capturedAt: null });
     uploaded.push(ticket.mediaId);
   });
 }
@@ -260,11 +283,11 @@ async function photographerUpload(token: string, name: string) {
       `${STORAGE}/storage/v1/object/upload/sign/${ticket.bucket}/${ticket.signed[path].path}?token=${ticket.signed[path].token}`;
     await putSigned(signedUrl(ticket.storagePath), file.bytes, ticket.mimeType);
     if (video) await putSigned(signedUrl(ticket.derivatives.poster), poster, "image/jpeg");
-    await putSigned(signedUrl(ticket.derivatives.thumb), thumb, "image/webp");
-    await putSigned(signedUrl(ticket.derivatives.display), display, "image/webp");
+    await putSigned(signedUrl(ticket.derivatives.thumb), video ? thumb : file.thumb, "image/webp");
+    await putSigned(signedUrl(ticket.derivatives.display), video ? display : file.display, "image/webp");
     await post(`/api/guest/${token}/finalize/${ticket.mediaId}`, {
-      width: video ? 1920 : 2400,
-      height: video ? 1080 : 1800,
+      width: video ? 1920 : file.width,
+      height: video ? 1080 : file.height,
       durationSeconds: video ? 20 : null,
       capturedAt: null,
     });
@@ -306,6 +329,23 @@ async function zip(guest: Guest, seconds: number) {
   });
 }
 
+/** Every zip part of the album, read to the end and saved, as an attendee's "Download all" would. */
+async function fullZip(guest: Guest, dir: string) {
+  mkdirSync(dir, { recursive: true });
+  for (let part = 0; ; part++) {
+    const start = Date.now();
+    const res = await guest.fetch(`/api/albums/${ALBUM}/zip?part=${part}`);
+    if (res.status !== 200 || !res.body) {
+      console.log(`zip part ${part}: ${res.status}, stopping`);
+      return;
+    }
+    const bytes = Buffer.from(await res.arrayBuffer());
+    writeFileSync(`${dir}/part-${String(part).padStart(2, "0")}.zip`, bytes);
+    samples.push({ op: "zip_full_part", ms: Date.now() - start, ok: bytes.length > 0, stage, at: start });
+    console.log(`zip part ${part}: ${(bytes.length / 1e6).toFixed(0)} MB in ${((Date.now() - start) / 1000).toFixed(0)} s`);
+  }
+}
+
 function overLimit(name: string) {
   const bad = summary((s) => s.stage === name && s.op !== "zip_mb_per_s").filter((r) => r.failRate > 0.01);
   if (bad.length) console.log(`STOP: ${bad.map((r) => `${r.op} ${r.failed}/${r.count}`).join(", ")}`);
@@ -343,6 +383,49 @@ async function main() {
     const signedIn = guests.filter((g) => g.cookies.size > 0);
     await pool(50, [...signedIn, ...signedIn], (g) => browse(g));
     printStage(stage);
+    return finish(t0);
+  }
+
+  if (process.env.KBLT_BULK) {
+    stage = "bulk: 150 guests sign in at 10 at a time";
+    await pool(10, guests, (g) => timed("sign_in", () => g.signIn()));
+    printStage(stage);
+    const signedIn = guests.filter((g) => g.cookies.size > 0);
+    stage = `bulk: ${photos.length} photos via ${links.length} photographer links, 150 guests browsing`;
+    console.log(`\n${stage}`);
+    let uploading = true;
+    const sleep = async (ms: number) => {
+      for (const end = Date.now() + ms; uploading && Date.now() < end; ) await new Promise((r) => setTimeout(r, 2000));
+    };
+    await Promise.all([
+      (async () => {
+        let done = 0;
+        await pool(6 * links.length, photos, async (p, i) => {
+          await photographerUpload(links[i % links.length], p);
+          if (++done % 100 === 0) console.log(`${done}/${photos.length} uploaded, ${((Date.now() - t0) / 60000).toFixed(1)} min`);
+        });
+        uploading = false;
+      })(),
+      (async () => {
+        while (uploading) {
+          await pool(50, signedIn, (g) => browse(g));
+          await sleep(120_000);
+        }
+      })(),
+      (async () => {
+        await sleep(600_000);
+        if (uploading) await Promise.all(guests.slice(0, 10).map((g) => zip(g, 45)));
+      })(),
+    ]);
+    printStage(stage);
+    stage = "bulk: 150 guests browse the finished album";
+    await pool(50, signedIn, (g) => browse(g));
+    printStage(stage);
+    if (process.env.KBLT_ZIP_DIR) {
+      stage = "bulk: full album zip";
+      await fullZip(guests[0], process.env.KBLT_ZIP_DIR);
+      printStage(stage);
+    }
     return finish(t0);
   }
 
