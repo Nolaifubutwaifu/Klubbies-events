@@ -231,7 +231,7 @@ export function AlbumGrid({
   return (
     <div className="flex flex-col gap-3">
       {selecting ? (
-        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-2.5 rounded-[22px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6 sm:rounded-[999px]">
+        <div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] z-20 mx-4 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-[22px] bg-ink px-4 py-2.5 text-white shadow-[0_18px_36px_-10px_rgba(43,34,40,0.5)] sm:bottom-4 sm:mx-6 sm:gap-y-2.5 sm:rounded-[999px]">
           <strong className="text-[14px] font-bold">
             {selected.size} selected
           </strong>
@@ -245,7 +245,7 @@ export function AlbumGrid({
           >
             Done
           </button>
-          <span className="-mt-2.5 h-0 basis-full sm:hidden" aria-hidden />
+          <span className="h-0 basis-full sm:hidden" aria-hidden />
 
           <button
             type="button"

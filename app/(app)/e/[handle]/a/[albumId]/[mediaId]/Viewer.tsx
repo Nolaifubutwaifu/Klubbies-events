@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from
 import { decideFaceMatchAction } from "@/app/(app)/face-actions";
 import { requestRemovalAction } from "@/app/(app)/removal-actions";
 import { toggleFavouriteAction } from "@/app/(app)/e/[handle]/actions";
+import { shareFile } from "@/components/AlbumActions";
 import { nativeSaveToPhotos, socialInAppBrowser } from "@/lib/native-app";
 
 type Current = {
@@ -44,10 +45,21 @@ function stableUrl(id: string, url: string | null): string | null {
   return url;
 }
 
-/** "app" inside the iPhone app, a social app's name in its browser, else "web". */
+/**
+ * "app" inside the iPhone app, a social app's name in its browser, "share" in
+ * iPhone Safari (a plain download lands in Files there, the share sheet has
+ * Save Image), else "web".
+ */
 function downloadEnv(): string {
   if (nativeSaveToPhotos()) return "app";
-  return socialInAppBrowser(navigator.userAgent) ?? "web";
+  const social = socialInAppBrowser(navigator.userAgent);
+  if (social) return social;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  try {
+    const probe = new File([new Uint8Array([1])], "probe.jpg", { type: "image/jpeg" });
+    if (ios && navigator.canShare?.({ files: [probe] })) return "share";
+  } catch {}
+  return "web";
 }
 
 function megabytes(bytes: number | null | undefined): string {
@@ -206,6 +218,54 @@ export function Viewer({
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       setMessage(/photos access|Couldn't get/i.test(text) ? text : `Couldn't save this ${noun}. Try again.`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /** The original, fetched once, so a second tap can open the share sheet straight away. */
+  const prepared = useRef<{ id: string; file: File } | null>(null);
+
+  /**
+   * iPhone Safari: the original goes to the share sheet, where Save Image puts
+   * it in Photos. Safari only opens the sheet soon after a tap, and a big file
+   * can take longer to arrive; then the file waits for a second tap.
+   */
+  async function shareToPhotos() {
+    if (saving) return;
+    const noun = current.kind === "video" ? "video" : "photo";
+    try {
+      let file = prepared.current?.id === current.id ? prepared.current.file : null;
+      if (!file) {
+        setSaving(true);
+        const res = await fetch(`/api/media/${current.id}/download?as=json`);
+        const body: { url?: string; bytes?: number | null; error?: string } = await res.json().catch(() => ({}));
+        if (!res.ok || !body.url) throw new Error(body.error ?? "Couldn't get the file. Try again.");
+        setMessage(`Getting the ${noun}${megabytes(body.bytes)}…`);
+        file = shareFile(await (await fetch(body.url)).blob(), current.id);
+        prepared.current = { id: current.id, file };
+      }
+      if (!navigator.canShare?.({ files: [file] })) {
+        // Too big or a format the share sheet won't take: a plain download still works.
+        prepared.current = null;
+        const link = document.createElement("a");
+        link.href = `/api/media/${current.id}/download`;
+        link.click();
+        return;
+      }
+      setSaving(false);
+      setMessage("");
+      await navigator.share({ files: [file] });
+      prepared.current = null;
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      if (name === "AbortError") return; // closed the share sheet
+      if (name === "NotAllowedError" && prepared.current) {
+        setMessage(`Your ${noun} is ready. Tap Save to Photos again.`);
+        return;
+      }
+      const text = error instanceof Error ? error.message : String(error);
+      setMessage(/Couldn't get|turned off/i.test(text) ? text : `Couldn't save this ${noun}. Try again.`);
     } finally {
       setSaving(false);
     }
@@ -566,11 +626,11 @@ export function Viewer({
       <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5 md:justify-center md:gap-2 md:border-t-0 md:pb-4 md:pt-1">
         {canDownload ? (
           <Action
-            label={saving ? "Saving…" : env === "app" ? "Save to Photos" : "Download"}
+            label={saving ? "Saving…" : env === "app" || env === "share" ? "Save to Photos" : "Download"}
             href={env === "web" ? `/api/media/${current.id}/download` : undefined}
-            onClick={env === "app" ? saveToPhotos : env !== "web" ? () => setSheet("social") : undefined}
+            onClick={env === "app" ? saveToPhotos : env === "share" ? shareToPhotos : env !== "web" ? () => setSheet("social") : undefined}
           >
-            {env === "app" ? (
+            {env === "app" || env === "share" ? (
               <>
                 <rect x="3" y="4" width="18" height="16" rx="2" />
                 <circle cx="9" cy="10" r="2" />
