@@ -28,8 +28,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   const filename = media.original_filename || `klubbies-${media.id}.${ext}`;
   // Full quality comes from the R2 copy, which costs nothing to download;
   // anything not copied yet still comes from Supabase.
+  // as=share is iPhone Safari fetching the file itself for the share sheet; the
+  // page may only fetch from Supabase storage (lib/security/csp.ts), not R2.
+  const as = new URL(request.url).searchParams.get("as");
   const url =
-    (await r2Url(media, signedUrlLifetime(SIGNED_URL_TTL.download), filename)) ??
+    (as === "share" ? null : await r2Url(media, signedUrlLifetime(SIGNED_URL_TTL.download), filename)) ??
     (media.album_id
       ? await signDownload(supabase, { kind: "media", path: media.storage_path, eventId: media.event_id, albumId: media.album_id, mediaId: media.id }, filename)
       : null);
@@ -38,7 +41,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/media/[id]/d
   await logAccess(event, media.id, "download");
   // The iPhone app saves into Photos itself, so it asks for the address
   // rather than following a redirect to a storage host it can't download.
-  if (new URL(request.url).searchParams.get("as") === "json") {
+  if (as === "share") return NextResponse.json({ url, filename, kind: media.kind, bytes: media.byte_size });
+  if (as === "json") {
     // The shipped app names saved photos .jpg or .png, so a HEIC original
     // goes as its full-size display copy, which Photos reads either way.
     const photosReadable = media.kind === "video" || /^image\/(jpeg|png)$/.test(media.mime_type ?? "");
