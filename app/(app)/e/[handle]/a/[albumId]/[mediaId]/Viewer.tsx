@@ -225,6 +225,8 @@ export function Viewer({
 
   /** The original, fetched once, so a second tap can open the share sheet straight away. */
   const prepared = useRef<{ id: string; file: File } | null>(null);
+  /** Which photo is fetched and waiting for its second tap; the button says so. */
+  const [readyId, setReadyId] = useState<string | null>(null);
 
   /**
    * iPhone Safari: the original goes to the share sheet, where Save Image puts
@@ -255,13 +257,14 @@ export function Viewer({
       }
       setSaving(false);
       setMessage("");
+      setReadyId(null);
       await navigator.share({ files: [file] });
       prepared.current = null;
     } catch (error) {
       const name = error instanceof Error ? error.name : "";
       if (name === "AbortError") return; // closed the share sheet
       if (name === "NotAllowedError" && prepared.current) {
-        setMessage(`Your ${noun} is ready. Tap Save to Photos again.`);
+        setReadyId(prepared.current.id);
         return;
       }
       const text = error instanceof Error ? error.message : String(error);
@@ -626,7 +629,7 @@ export function Viewer({
       <nav aria-label="Photo actions" className="flex flex-none gap-1 border-t border-[#1e2026] px-2 pb-[max(22px,env(safe-area-inset-bottom))] pt-1.5 md:justify-center md:gap-2 md:border-t-0 md:pb-4 md:pt-1">
         {canDownload ? (
           <Action
-            label={saving ? "Saving…" : env === "app" || env === "share" ? "Save to Photos" : "Download"}
+            label={saving ? "Saving…" : readyId === current.id ? "Tap to save" : env === "app" || env === "share" ? "Save to Photos" : "Download"}
             href={env === "web" ? `/api/media/${current.id}/download` : undefined}
             onClick={env === "app" ? saveToPhotos : env === "share" ? shareToPhotos : env !== "web" ? () => setSheet("social") : undefined}
           >

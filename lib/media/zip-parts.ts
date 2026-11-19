@@ -50,3 +50,23 @@ export function zipPartSummaries(items: readonly ZipSized[]): ZipPartSummary[] {
 export function zipPartFileCounts(items: readonly ZipSized[]): number[] {
   return zipPartSummaries(items).map((part) => part.files);
 }
+
+/**
+ * Files a zip requests ahead of the one being written, and the bytes they may
+ * add up to. A file opened ahead sits unread until its turn, and storage drops
+ * a connection left idle too long, so big originals get little or no lookahead.
+ */
+export const ZIP_LOOKAHEAD = 6;
+export const ZIP_LOOKAHEAD_BYTES = 25 * 1024 * 1024;
+
+/** Indexes to have requested while file `i` is written: `i` itself, then as many after it as fit. Unknown sizes count as the whole budget. */
+export function zipLookahead(sizes: readonly (number | null | undefined)[], i: number): number[] {
+  const out = [i];
+  let queued = 0;
+  for (let ahead = i + 1; ahead < Math.min(sizes.length, i + 1 + ZIP_LOOKAHEAD); ahead++) {
+    queued += sizes[ahead] ?? ZIP_LOOKAHEAD_BYTES;
+    if (queued > ZIP_LOOKAHEAD_BYTES) break;
+    out.push(ahead);
+  }
+  return out;
+}

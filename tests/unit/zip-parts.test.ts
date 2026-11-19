@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ZIP_PART_BYTES, ZIP_PART_SIZE, planZipParts, zipPartFileCounts, zipPartSummaries } from "@/lib/media/zip-parts";
+import { ZIP_LOOKAHEAD_BYTES, ZIP_PART_BYTES, ZIP_PART_SIZE, planZipParts, zipLookahead, zipPartFileCounts, zipPartSummaries } from "@/lib/media/zip-parts";
 
 const mb = (n: number) => n * 1024 * 1024;
 
@@ -38,5 +38,23 @@ describe("zip parts", () => {
   it("treats an unknown size as zero and still counts the file", () => {
     const items = Array.from({ length: ZIP_PART_SIZE + 1 }, () => ({ byteSize: null }));
     expect(zipPartFileCounts(items)).toEqual([ZIP_PART_SIZE, 1]);
+  });
+});
+
+describe("zip lookahead", () => {
+  const MB = 1024 * 1024;
+  it("requests up to six small files ahead", () => {
+    expect(zipLookahead(Array(20).fill(1 * MB), 0)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+  it("stops at the byte budget, so big originals sit unread for less", () => {
+    expect(zipLookahead([15 * MB, 15 * MB, 15 * MB], 0)).toEqual([0, 1]);
+    expect(zipLookahead([1, 30 * MB, 1], 0)).toEqual([0]);
+  });
+  it("treats an unknown size as the whole budget: it can go ahead, nothing after it", () => {
+    expect(zipLookahead([1, null, 1], 0)).toEqual([0, 1]);
+    expect(zipLookahead([1, ZIP_LOOKAHEAD_BYTES], 0)).toEqual([0, 1]);
+  });
+  it("never runs past the end", () => {
+    expect(zipLookahead([1, 1, 1], 2)).toEqual([2]);
   });
 });
