@@ -238,7 +238,7 @@ export function Viewer({
       let file = prepared.current?.id === current.id ? prepared.current.file : null;
       if (!file) {
         setSaving(true);
-        const res = await fetch(`/api/media/${current.id}/download?as=json`);
+        const res = await fetch(`/api/media/${current.id}/download?as=share`);
         const body: { url?: string; bytes?: number | null; error?: string } = await res.json().catch(() => ({}));
         if (!res.ok || !body.url) throw new Error(body.error ?? "Couldn't get the file. Try again.");
         setMessage(`Getting the ${noun}${megabytes(body.bytes)}…`);
