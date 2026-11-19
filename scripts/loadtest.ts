@@ -21,6 +21,7 @@
  * KBLT_BULK=1: every photo in KBLT_MEDIA through the photographer links (6 at a
  * time per link) while 150 guests browse every 2 minutes, then every zip part
  * of the album downloaded in full to KBLT_ZIP_DIR (check with unzip -t).
+ * KBLT_ZIP_PARTS=8,12: only those zip parts, timed and saved to KBLT_ZIP_DIR.
  *
  * Stop rule: a stage with more than 1% failures in any operation ends the run.
  */
@@ -330,9 +331,10 @@ async function zip(guest: Guest, seconds: number) {
 }
 
 /** Every zip part of the album, read to the end and saved, as an attendee's "Download all" would. */
-async function fullZip(guest: Guest, dir: string) {
+async function fullZip(guest: Guest, dir: string, only?: number[]) {
   mkdirSync(dir, { recursive: true });
-  for (let part = 0; ; part++) {
+  for (let i = 0; only ? i < only.length : true; i++) {
+    const part = only ? only[i] : i;
     const start = Date.now();
     const res = await guest.fetch(`/api/albums/${ALBUM}/zip?part=${part}`);
     if (res.status !== 200 || !res.body) {
@@ -370,6 +372,15 @@ async function main() {
     await new Promise((r) => setTimeout(r, 6000));
     printStage(stage);
     for (const s of samples.filter((x) => !x.ok)) console.log(s.op, s.error);
+    return finish(t0);
+  }
+
+  if (process.env.KBLT_ZIP_PARTS) {
+    // Times chosen zip parts only (e.g. "8,12"), to compare zip speed after a change.
+    stage = `zip parts ${process.env.KBLT_ZIP_PARTS}`;
+    await timed("sign_in", () => guests[0].signIn());
+    await fullZip(guests[0], process.env.KBLT_ZIP_DIR ?? "zip-parts", process.env.KBLT_ZIP_PARTS.split(",").map(Number));
+    printStage(stage);
     return finish(t0);
   }
 
