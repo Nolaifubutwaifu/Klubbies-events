@@ -239,7 +239,7 @@ const SHARE_EXT: Record<string, string> = {
 };
 
 /** Names a downloaded file by its real type, so Photos files a video as a video. */
-function shareFile(blob: Blob, id: string): File {
+export function shareFile(blob: Blob, id: string): File {
   const type = blob.type in SHARE_EXT ? blob.type : blob.type.startsWith("video/") ? "video/mp4" : "image/jpeg";
   return new File([blob], `klubbies-${id.slice(0, 8)}.${SHARE_EXT[type]}`, { type });
 }

@@ -31,7 +31,9 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
     const trigger = menuButton.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    sheet.current?.querySelector<HTMLElement>("a, button")?.focus();
+    // The panel itself, not its first link: a screen reader lands in the menu and
+    // Tab goes on to the links, but no focus ring is drawn on the logo for a tap.
+    sheet.current?.focus();
 
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") {
@@ -43,7 +45,7 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
       const items = Array.from(sheet.current.querySelectorAll<HTMLElement>("a, button"));
       const first = items[0];
       const last = items[items.length - 1];
-      if (ev.shiftKey && document.activeElement === first) {
+      if (ev.shiftKey && (document.activeElement === first || document.activeElement === sheet.current)) {
         ev.preventDefault();
         last.focus();
       } else if (!ev.shiftKey && document.activeElement === last) {
@@ -117,7 +119,8 @@ export function SiteNav({ current = null, inApp = false }: { current?: SiteSecti
               role="dialog"
               aria-modal="true"
               aria-label="Menu"
-              className="theme-soft kb-branded fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] lg:hidden"
+              tabIndex={-1}
+              className="theme-soft kb-branded fixed inset-0 z-50 flex flex-col bg-[color:var(--kb-white)] outline-none lg:hidden"
             >
               <div className="kb-wrap flex h-16 flex-none items-center">
                 <span onClick={() => setOpen(false)}>

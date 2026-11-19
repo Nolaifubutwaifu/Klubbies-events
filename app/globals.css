@@ -1741,3 +1741,16 @@ html.kb-splash .kb-rise {
     animation: none;
   }
 }
+
+/* With viewport-fit=cover, content scrolled up runs under the iPhone's clock
+   and battery. A strip the colour of the page sits over that band. Its height
+   is 0 where there is no notch or status bar, so desktops never see it. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: env(safe-area-inset-top);
+  background: inherit;
+  z-index: 45; /* over sticky bars (40), under dialogs and the viewer (50) */
+  pointer-events: none;
+}

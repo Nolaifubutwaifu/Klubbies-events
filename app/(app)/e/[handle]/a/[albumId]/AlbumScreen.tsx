@@ -72,6 +72,8 @@ export async function AlbumScreen({
           .select("id, original_filename, created_at, status")
           .eq("album_id", album.id)
           .neq("status", "ready")
+          // Failed, or no progress for an hour: a file still uploading is not "didn't finish".
+          .or(`status.eq.failed,updated_at.lt.${stuckCutoffIso()}`)
           .order("created_at", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: [] }),
