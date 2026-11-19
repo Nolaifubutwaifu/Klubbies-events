@@ -28,6 +28,11 @@ async function eachPage<T>(
   return rows;
 }
 
+/** PostgREST's answer when a function isn't deployed yet: the app can ship before its migration. */
+function isMissingRpc(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST202" || /could not find the function|schema cache/i.test(error.message ?? "");
+}
+
 function sized(row: ZipSource): ZipSource & ZipSized {
   return { ...row, byteSize: row.byte_size };
 }
@@ -47,8 +52,11 @@ export async function albumZipItems(supabase: UserClient, albumId: string): Prom
   return rows.map(sized);
 }
 
-/** File counts per zip part, for the download links. */
+/** File counts per zip part, for the download links. One call (migration 44); paged reads if it isn't there yet. */
 export async function albumZipPartCounts(supabase: UserClient, albumId: string): Promise<ZipPartSummary[]> {
+  const { data: sizes, error } = await supabase.rpc("album_media_sizes", { p_album_id: albumId });
+  if (!error) return zipPartSummaries((sizes ?? []).map((byteSize) => ({ byteSize })));
+  if (!isMissingRpc(error)) throw new Error(error.message);
   const rows = await eachPage<{ byte_size: number | null }>((from, to) =>
     supabase
       .from("media")

@@ -789,6 +789,9 @@ isOneToOne: false
             "album_credits":
 { Args: { "p_album_id": string }; Returns: { "photographer_names": string[], "uploader_ids": string[] }[]
                            },
+            "album_media_sizes":
+{ Args: { "p_album_id": string }; Returns: (number | null)[]
+                           },
             "event_photographers":
 { Args: { "p_event_id": string }; Returns: string[]
                            },

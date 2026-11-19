@@ -6,9 +6,11 @@ import { r2Stream } from "@/lib/backup/r2";
 import { SIGNED_URL_TTL, mediaClaims, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
-import { ZIP_PART_SIZE } from "./zip-parts";
+import { ZIP_PART_SIZE, zipLookahead } from "./zip-parts";
 
 export const PART_SIZE = ZIP_PART_SIZE;
+
+
 
 type ZipItem = {
   id: string;
@@ -17,6 +19,7 @@ type ZipItem = {
   storage_path: string;
   original_filename: string | null;
   backed_up_at: string | null;
+  byte_size?: number | null;
 };
 
 /**
@@ -26,9 +29,11 @@ type ZipItem = {
  * signed for paths on those rows.
  *
  * The archive is piped through a stream the response reads. A slow phone
- * pauses that stream, which pauses the archive, and the next file is not
- * fetched until the current one has been written. Nothing is buffered ahead
- * of what has been sent.
+ * pauses that stream, which pauses the archive. Files are written one at a
+ * time, but the next LOOKAHEAD are already requested: each storage request
+ * costs a round trip before its first byte, and paid one after another that
+ * wait made a part of 150 small photos crawl (2 MB/s on 18 Nov). An opened
+ * file holds only its socket buffer until its turn.
  */
 export async function zipResponse(supabase: UserClient, media: ZipItem[], filename: string): Promise<NextResponse> {
   const urls = await signPaths(
@@ -52,28 +57,44 @@ export async function zipResponse(supabase: UserClient, media: ZipItem[], filena
     if (!finished) archive.abort();
   });
 
+  /** The file's bytes from R2, or from Supabase when it has no copy there yet. */
+  const open = async (item: ZipItem): Promise<ReadableStream<Uint8Array> | null> => {
+    const fromR2 = await r2Stream(item);
+    if (fromR2) return fromR2;
+    const again = mediaClaims([{ ...item, paths: [item.storage_path] }]);
+    const url = urls.get(item.storage_path) ?? (again.length ? (await signPaths(supabase, again, SIGNED_URL_TTL.download)).get(item.storage_path) : undefined);
+    const response = url ? await fetch(url).catch(() => null) : null;
+    return response?.ok && response.body ? response.body : null;
+  };
+  const opened = new Map<number, Promise<ReadableStream<Uint8Array> | null>>();
+  const start = (i: number) => {
+    if (i < media.length && !opened.has(i)) opened.set(i, open(media[i]).catch(() => null));
+  };
+
   void (async () => {
     const used = new Set<string>();
     const missing: string[] = [];
-    for (const item of media) {
-      const fallback = item.storage_path.split("/").pop() ?? `${item.id}.jpg`;
-      let body = await r2Stream(item);
-      if (!body) {
-            const again = mediaClaims([{ ...item, paths: [item.storage_path] }]);
-            const url = urls.get(item.storage_path) ?? (again.length ? (await signPaths(supabase, again, SIGNED_URL_TTL.download)).get(item.storage_path) : undefined);
-        const response = url ? await fetch(url).catch(() => null) : null;
-        if (!response?.ok || !response.body) {
+    try {
+      for (let i = 0; i < media.length; i++) {
+        for (const index of zipLookahead(media.map((m) => m.byte_size), i)) start(index);
+        const body = await opened.get(i)!;
+        opened.delete(i);
+        const item = media[i];
+        const fallback = item.storage_path.split("/").pop() ?? `${item.id}.jpg`;
+        if (!body) {
           missing.push(item.original_filename || fallback);
           continue;
         }
-        body = response.body;
+
+        let name = item.original_filename?.replace(/[/\\]/g, "-") || fallback;
+        if (used.has(name)) name = `${item.id.slice(0, 8)}-${name}`;
+        used.add(name);
+
+        await appendEntry(archive, Readable.fromWeb(body as Parameters<typeof Readable.fromWeb>[0]), name);
       }
-
-      let name = item.original_filename?.replace(/[/\\]/g, "-") || fallback;
-      if (used.has(name)) name = `${item.id.slice(0, 8)}-${name}`;
-      used.add(name);
-
-      await appendEntry(archive, Readable.fromWeb(body as Parameters<typeof Readable.fromWeb>[0]), name);
+    } finally {
+      // A phone that gave up leaves files requested ahead: close them.
+      for (const pending of opened.values()) void pending.then((body) => body?.cancel().catch(() => {}));
     }
     // A zip that quietly comes up short looks complete; say what's missing.
     if (missing.length) {
