@@ -34,10 +34,10 @@ Background: `docs/reports/2026-11-17-load-test.md` and `docs/reports/2026-11-18-
 3. **Consent checkbox on a real phone.** In the simulator a tap on the box itself didn't tick it; a tap on the text did. Check on a real iPhone (face notice gate on the join page). Fix if it reproduces.
 4. **Clean up the test data** when Max says go (see the last section).
 
-### Waiting on Max (from the 20 Nov audit, branch `claude/audit-fixes`)
+### From the 20 Nov audit (PR 53, branch `claude/audit-fixes`): both done
 
 - ~~Apply migration 46~~ Done 20 Nov 2026 on Max's yes (`atomic_purchase_and_tally`): `apply_keep_year` and `record_guest_upload` are live, and the two load-test link tallies now read 1,000 and 999.
-- **Production sign-in code expiry**: Supabase Auth, Email, OTP expiry. The email promises 10 minutes; the local config was 60 and is now 600 seconds. Set production to 600 and check codes are 8 digits.
+- ~~Production sign-in code expiry~~ Done 20 Nov 2026 on Max's yes: Supabase Auth email OTP expiry 3600 to 600 seconds, matching the 10 minutes the email promises. Codes are 8 digits.
 
 ### 2. Speed under load
 
