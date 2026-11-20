@@ -49,7 +49,7 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
     <div className="poster-screen flex min-h-dvh flex-col items-center gap-6 bg-[#e9e9e5] py-8 print:block print:bg-white print:p-0">
       <style>{`
         @page { size: A4; margin: 0; }
-        @media print { .no-print { display: none !important; } .poster-sheet { box-shadow: none !important; } .poster-fit { zoom: 1 !important; } }
+        @media print { .no-print { display: none !important; } .poster-sheet { box-shadow: none !important; } .poster-fit { width: auto !important; height: auto !important; } .poster-fit > div { transform: none !important; } }
       `}</style>
       <div className="no-print flex flex-wrap items-center justify-center gap-3 px-4 text-center">
         <PrintButton />
