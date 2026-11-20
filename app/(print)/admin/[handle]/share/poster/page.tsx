@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- short-lived signed URL */
 import type { Metadata } from "next";
+import { PosterFit } from "@/components/PosterFit";
 import { PrintButton } from "@/components/PrintButton";
 import { requireAdminContext } from "@/lib/auth/admin-context";
 import { formatEventDates } from "@/lib/format";
@@ -48,13 +49,14 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
     <div className="poster-screen flex min-h-dvh flex-col items-center gap-6 bg-[#e9e9e5] py-8 print:block print:bg-white print:p-0">
       <style>{`
         @page { size: A4; margin: 0; }
-        @media print { .no-print { display: none !important; } .poster-sheet { box-shadow: none !important; } }
+        @media print { .no-print { display: none !important; } .poster-sheet { box-shadow: none !important; } .poster-fit { zoom: 1 !important; } }
       `}</style>
-      <div className="no-print flex items-center gap-3">
+      <div className="no-print flex flex-wrap items-center justify-center gap-3 px-4 text-center">
         <PrintButton />
         <span className="text-[14px] text-[color:var(--kb-ink-2)]">A4, no margins. Turn off headers and footers in the print dialog.</span>
       </div>
 
+      <PosterFit>
       <article
         className="poster-sheet flex flex-col overflow-hidden bg-white text-[#16181d] shadow-[0_20px_60px_-20px_rgb(0_0_0/0.35)]"
         style={{ width: "210mm", height: "297mm", printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
@@ -113,6 +115,7 @@ export default async function PosterPage(props: PageProps<"/admin/[handle]/share
           </span>
         </div>
       </article>
+      </PosterFit>
     </div>
   );
 }

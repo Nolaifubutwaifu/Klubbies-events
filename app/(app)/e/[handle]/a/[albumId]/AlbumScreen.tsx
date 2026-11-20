@@ -1,4 +1,4 @@
-import { albumCredits } from "@/lib/media/credits";
+import { albumPageSummary } from "@/lib/media/credits";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Uploader } from "@/app/(app)/admin/[handle]/albums/[albumId]/Uploader";
@@ -11,8 +11,6 @@ import { faceStateFor, photosOfYouInAlbum } from "@/lib/faces/queries";
 import { formatDate } from "@/lib/format";
 import { favouritedIds } from "@/lib/media/favourites";
 import { listAlbumMedia } from "@/lib/media/queries";
-import { albumZipPartCounts } from "@/lib/media/zip-index";
-import type { ZipPartSummary } from "@/lib/media/zip-parts";
 import { ProcessingBanner } from "@/components/ProcessingBanner";
 import { SIGNED_URL_TTL, mediaClaim, signPaths } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -65,7 +63,6 @@ export async function AlbumScreen({
   // they start together and the page waits for two rounds rather than eight.
   const firstPage = Promise.all([
     listAlbumMedia(supabase, album.id, 0, { includeProcessing: canManage }),
-    supabase.from("album_media_counts").select("*").eq("album_id", album.id).maybeSingle(),
     canManage
       ? supabase
           .from("media")
@@ -77,6 +74,7 @@ export async function AlbumScreen({
           .order("created_at", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: [] }),
+    // The first 240 ready files, for "Save to Photos" on a phone.
     supabase
       .from("media")
       .select("id")
@@ -84,16 +82,22 @@ export async function AlbumScreen({
       .eq("status", "ready")
       .order("sort_at", { ascending: true })
       .limit(240),
+    // The caller's saved photos in this album, for "Saved (4)".
+    supabase
+      .from("favourites")
+      .select("media_id, media!inner(album_id)", { count: "exact", head: true })
+      .eq("event_id", ctx.event.id)
+      .eq("user_id", ctx.userId)
+      .eq("media.album_id", album.id),
   ]);
 
-  // "Added by Mahi and 1 guest", and the credit line: who took these. One
-  // call for the distinct names and uploaders (lib/media/credits.ts).
-  const creditsQuery = albumCredits(supabase, album.id);
-  const guestFilesQuery = supabase
-    .from("media")
-    .select("id", { count: "exact", head: true })
-    .eq("album_id", album.id)
-    .not("guest_link_id", "is", null);
+  // Counts, zip part sizes, credits and "a photographer" in one pass over the
+  // album (lib/media/credits.ts). It used to be four reads of every row.
+  // A failure costs the figures, not the page.
+  const summaryQuery = albumPageSummary(supabase, album.id).catch((error) => {
+    console.error("album_page_summary", album.id, error);
+    return { photoCount: 0, videoCount: 0, zipParts: [], credits: [] as string[], uploaderIds: [] as string[], hasGuestFiles: false };
+  });
 
   // Members can't read an unfinished row, so the count comes from the service
   // role — after the membership check above, never before it. It's a tally of
@@ -153,29 +157,13 @@ export async function AlbumScreen({
   })();
 
   const [
-    [{ items, hasMore }, { data: counts }, { data: unfinished }, { data: readyIds }],
-    { count: guestFiles },
+    [{ items, hasMore }, { data: unfinished }, { data: readyIds }, { count: savedTotal }],
     { photos: processingPhotos, videos: processingVideos },
     cover,
     mineItems,
-    { credits, uploaderIds },
-    zipPartCounts,
-  ] = await Promise.all([
-    firstPage,
-    guestFilesQuery,
-    processing,
-    chosenCover,
-    mine,
-    creditsQuery,
-    albumZipPartCounts(supabase, album.id).catch(() => [] as ZipPartSummary[]),
-  ]);
-  const [{ count: savedTotal }, savedIds, { data: uploaderNames }] = await Promise.all([
-    supabase
-      .from("favourites")
-      .select("media_id", { count: "exact", head: true })
-      .eq("event_id", ctx.event.id)
-      .eq("user_id", ctx.userId)
-      .in("media_id", (readyIds ?? []).map((m) => m.id)),
+    { photoCount, videoCount, zipParts: zipPartCounts, credits, uploaderIds, hasGuestFiles },
+  ] = await Promise.all([firstPage, processing, chosenCover, mine, summaryQuery]);
+  const [savedIds, { data: uploaderNames }] = await Promise.all([
     favouritedIds(supabase, ctx.userId, items.map((item) => item.id)),
     uploaderIds.length
       ? supabase
@@ -189,14 +177,13 @@ export async function AlbumScreen({
   const firstNames = (uploaderNames ?? [])
     .map((m) => personName({ displayName: m.users?.display_name, claimedName: m.claimed_name, rosterName: m.roster_name }).split(/\s+/)[0])
     .filter(Boolean);
-  const guestCount = guestFiles ?? 0;
   const addedBy = [
     firstNames.length === 1
       ? firstNames[0]
       : firstNames.length > 1
         ? `${firstNames.slice(0, 2).join(" and ")}${firstNames.length > 2 ? ` +${firstNames.length - 2}` : ""}`
         : null,
-    guestCount > 0 ? "a photographer" : null,
+    hasGuestFiles ? "a photographer" : null,
   ]
     .filter(Boolean)
     .join(" and ");
@@ -204,8 +191,6 @@ export async function AlbumScreen({
   const coverUrl = cover ? cover.url : (items[0]?.thumbUrl ?? null);
   const coverSource = cover?.source ?? "The first photo in the album is used until you choose one.";
 
-  const photoCount = counts?.photo_count ?? 0;
-  const videoCount = counts?.video_count ?? 0;
   // Organisers see how the album is doing.
   const engagement = organiser
     ? (await supabase.from("album_engagement").select("view_count, download_count").eq("album_id", album.id).maybeSingle()).data

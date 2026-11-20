@@ -792,6 +792,9 @@ isOneToOne: false
             "album_media_sizes":
 { Args: { "p_album_id": string }; Returns: (number | null)[]
                            },
+            "album_page_summary":
+{ Args: { "p_album_id": string }; Returns: { "photo_count": number, "video_count": number, "sizes": (number | null)[], "photographer_names": string[], "uploader_ids": string[], "has_guest_files": boolean }[]
+                           },
             "event_photographers":
 { Args: { "p_event_id": string }; Returns: string[]
                            },

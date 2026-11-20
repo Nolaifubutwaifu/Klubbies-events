@@ -1,5 +1,6 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
+import { zipPartSummaries } from "./zip-parts";
 
 type UserClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -8,22 +9,21 @@ function distinctNames(rows: { photographer_name: string | null }[] | null): str
 }
 
 /**
- * Who took an album's photos and who uploaded them, as distinct values from
- * the database (migration 38). Until that migration is applied the function
- * doesn't exist, so this falls back to reading the rows, as it always did.
+ * What the album page counts, in one pass over the album (migration 45):
+ * ready photos and videos, the zip part sizes, who took and who uploaded the
+ * files, and whether a photographer link added any.
  */
-export async function albumCredits(supabase: UserClient, albumId: string): Promise<{ credits: string[]; uploaderIds: string[] }> {
-  const { data, error } = await supabase.rpc("album_credits", { p_album_id: albumId });
+export async function albumPageSummary(supabase: UserClient, albumId: string) {
+  const { data, error } = await supabase.rpc("album_page_summary", { p_album_id: albumId });
+  if (error) throw new Error(error.message);
   const row = Array.isArray(data) ? data[0] : data;
-  if (!error && row) return { credits: [...(row.photographer_names ?? [])].sort(), uploaderIds: row.uploader_ids ?? [] };
-
-  const [{ data: creditRows }, { data: uploaders }] = await Promise.all([
-    supabase.from("media").select("photographer_name").eq("album_id", albumId).not("photographer_name", "is", null).limit(1000),
-    supabase.from("media").select("uploaded_by").eq("album_id", albumId).not("uploaded_by", "is", null).limit(400),
-  ]);
   return {
-    credits: distinctNames(creditRows),
-    uploaderIds: [...new Set((uploaders ?? []).map((m) => m.uploaded_by).filter((id): id is string => Boolean(id)))],
+    photoCount: row?.photo_count ?? 0,
+    videoCount: row?.video_count ?? 0,
+    zipParts: zipPartSummaries((row?.sizes ?? []).map((byteSize) => ({ byteSize }))),
+    credits: [...(row?.photographer_names ?? [])].sort(),
+    uploaderIds: row?.uploader_ids ?? [],
+    hasGuestFiles: row?.has_guest_files ?? false,
   };
 }
 
