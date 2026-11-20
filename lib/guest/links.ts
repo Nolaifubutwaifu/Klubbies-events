@@ -85,23 +85,12 @@ export async function resolveGuestLink(
   };
 }
 
-/** Counts a finished upload against the link, so the organiser sees the tally. */
+/**
+ * Counts a finished upload against the link, so the organiser sees the tally.
+ * One UPDATE (migration 46): uploads finishing together used to overwrite
+ * each other's count.
+ */
 export async function recordGuestUpload(linkId: string, bytes: number): Promise<void> {
-  const admin = createAdminClient();
-  const { data: link } = await admin
-    .from("album_guest_links")
-    .select("file_count, byte_total, first_used_at")
-    .eq("id", linkId)
-    .maybeSingle();
-  if (!link) return;
-  const now = new Date().toISOString();
-  await admin
-    .from("album_guest_links")
-    .update({
-      file_count: link.file_count + 1,
-      byte_total: link.byte_total + Math.max(0, bytes),
-      first_used_at: link.first_used_at ?? now,
-      last_used_at: now,
-    })
-    .eq("id", linkId);
+  const { error } = await createAdminClient().rpc("record_guest_upload", { p_link_id: linkId, p_bytes: Math.max(0, bytes) });
+  if (error) console.error("could not count guest upload", linkId, error);
 }

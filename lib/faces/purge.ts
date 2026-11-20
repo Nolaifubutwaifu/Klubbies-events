@@ -15,7 +15,7 @@ export type PurgeResult = { queued: number; deleted: number; failed: number };
 /**
  * Drains face_purge_queue against Rekognition. A face id that no longer
  * exists comes back as a success, so re-running is always safe. Rows are
- * removed only after AWS confirms.
+ * removed only after AWS confirms, and retried until it does.
  */
 export async function drainFacePurgeQueue(limit = PURGE_BATCH_SIZE * 4): Promise<PurgeResult> {
   const client = faceClient();
@@ -25,7 +25,9 @@ export async function drainFacePurgeQueue(limit = PURGE_BATCH_SIZE * 4): Promise
   const { data: rows } = await admin
     .from("face_purge_queue")
     .select("id, collection_id, rekognition_face_id, attempts")
-    .lt("attempts", 5)
+    // No give-up: a faceprint left in AWS is the failure this file exists to
+    // prevent. Fewest tries first, so rows that keep failing can't block new ones.
+    .order("attempts")
     .order("id")
     .limit(limit);
 
@@ -76,7 +78,7 @@ export async function drainFacePurgeQueue(limit = PURGE_BATCH_SIZE * 4): Promise
           continue;
         }
         failed += chunk.length;
-        console.error("face purge failed", collectionId, error);
+        console.error("face purge failed", collectionId, `attempt ${Math.max(...chunk.map((row) => row.attempts)) + 1}`, error);
         for (const row of chunk) {
           await admin
             .from("face_purge_queue")

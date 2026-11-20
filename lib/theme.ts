@@ -93,10 +93,6 @@ function darkenUntil(rgb: Rgb, ratio: number): Rgb {
   return out;
 }
 
-export function isValidAccent(hex: string | null | undefined): boolean {
-  return Boolean(hex && parse(hex));
-}
-
 /** The accent an event's pages will actually use, after the contrast fix. */
 export function readableAccent(hex: string | null | undefined): string {
   const rgb = (hex && parse(hex)) || parse(DEFAULT_ACCENT)!;

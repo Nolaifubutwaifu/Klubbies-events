@@ -36,16 +36,6 @@ export function appUrl(): string {
   return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
 
-/**
- * "klubbies.example/e/uq_vb": the event's shareable address as people see it.
- * Everything that shows the address calls this, so the rail, the setup
- * checklist and Settings can't drift apart again (the rail once hardcoded a
- * domain the app wasn't served from).
- */
-export function eventAddress(handle: string): string {
-  return `${appUrl().replace(/^https?:\/\//, "")}/e/${handle}`;
-}
-
 let cached: ServerEnv | undefined;
 
 export function serverEnv(): ServerEnv {

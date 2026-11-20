@@ -281,19 +281,3 @@ export function kickFaceJobs(): void {
     void drain();
   }
 }
-
-export type FaceQueueStats = { pending: number; running: number; failed: number };
-
-export async function faceQueueStats(eventId: string): Promise<FaceQueueStats> {
-  const admin = createAdminClient();
-  const counts = await Promise.all(
-    (["pending", "running", "failed"] as const).map((status) =>
-      admin
-        .from("face_jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("status", status),
-    ),
-  );
-  return { pending: counts[0].count ?? 0, running: counts[1].count ?? 0, failed: counts[2].count ?? 0 };
-}
