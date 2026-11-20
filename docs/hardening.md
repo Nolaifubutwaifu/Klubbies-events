@@ -36,7 +36,7 @@ Background: `docs/reports/2026-11-17-load-test.md` and `docs/reports/2026-11-18-
 
 ### Waiting on Max (from the 20 Nov audit, branch `claude/audit-fixes`)
 
-- **Apply migration 46** (`20261120000046_atomic_purchase_and_tally.sql`) before that code goes live. It adds `apply_keep_year` and `record_guest_upload`, and raises photographer tallies that lost counts (the two load-test links: 929 and 930 shown for 1,000 and 999). Until it's applied, a "Keep another year" webhook fails and Stripe retries it, and new uploads aren't counted on the link tally.
+- ~~Apply migration 46~~ Done 20 Nov 2026 on Max's yes (`atomic_purchase_and_tally`): `apply_keep_year` and `record_guest_upload` are live, and the two load-test link tallies now read 1,000 and 999.
 - **Production sign-in code expiry**: Supabase Auth, Email, OTP expiry. The email promises 10 minutes; the local config was 60 and is now 600 seconds. Set production to 600 and check codes are 8 digits.
 
 ### 2. Speed under load
