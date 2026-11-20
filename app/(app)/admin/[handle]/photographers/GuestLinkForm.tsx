@@ -52,6 +52,16 @@ export function GuestLinkForm({
       .then((res: ActionState) => setMailed(res.error ? { text: res.error } : { ok: true, text: res.message ?? `Sent to ${mailTo}` }));
   }, [state.url, mailTo, eventId]);
 
+  // The new link appears under the form, below the fold on a phone: bring it
+  // into view and move focus there, so it's seen (and read out) straight away.
+  const card = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!state.url || !card.current) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    card.current.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
+    card.current.focus({ preventScroll: true });
+  }, [state.url]);
+
   // The link is shown once, so give every way to hand it over: copy, the
   // phone's share sheet, and a QR the photographer can scan off this screen.
   useEffect(() => {
@@ -133,7 +143,11 @@ export function GuestLinkForm({
       </form>
 
       {state.url ? (
-        <div className="flex flex-col gap-3 rounded-[12px] border-[1.5px] border-[color:var(--kb-brand)] bg-white p-5">
+        <div
+          ref={card}
+          tabIndex={-1}
+          className="flex scroll-mt-24 flex-col gap-3 rounded-[12px] border-[1.5px] border-[color:var(--kb-brand)] bg-white p-5 outline-none"
+        >
           <span className="text-[14px] font-medium">Copy this link now and send it to the photographer. It isn&apos;t shown again.</span>
           <div className="flex flex-wrap items-center gap-2">
             <code className="mono min-w-0 flex-1 break-all rounded-[8px] border border-[color:var(--kb-line)] bg-[color:var(--kb-cream)] px-3 py-2.5 text-[14px]">
