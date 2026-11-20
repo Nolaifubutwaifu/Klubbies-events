@@ -29,15 +29,20 @@ Background: `docs/reports/2026-11-17-load-test.md` and `docs/reports/2026-11-18-
 
 ### 1. Before an event with more than about 100 guests
 
-1. **Resend is on the free plan: 100 sign-in emails a day.** An event with more than about 100 guests signing in by emailed code on one day will hit it. Fix: paid plan (Max's call). Check the dashboard first; it may already be done.
+1. **Resend is on the free plan: 100 emails a day, shared by everything.** Sign-in codes, the "new album" email, organiser announcements and the "gallery closes in a week" email all count. One album published during a 150-guest event uses the whole day, and after that nobody gets a sign-in code. Fix: paid plan (Max's call). Check the dashboard first; it may already be done.
 2. **Sign-in bursts.** Supabase Auth sees every sign-in as coming from the server's IP, so a burst trips its rate limit and guests get the friendly "Lots of people are signing in" message (2 of 150 on 19 Nov, 8 of 300 in back-to-back runs on 20 Nov, all retries from one Mac). Retries already cover small bursts (4 attempts). Real fix: forward the guest's IP to Supabase Auth so limits apply per guest. Planned for after the Christmas season; research the supported header first.
 3. **Consent checkbox on a real phone.** In the simulator a tap on the box itself didn't tick it; a tap on the text did. Check on a real iPhone (face notice gate on the join page). Fix if it reproduces.
 4. **Clean up the test data** when Max says go (see the last section).
 
+### From the 20 Nov audit (PR 53, branch `claude/audit-fixes`): both done
+
+- ~~Apply migration 46~~ Done 20 Nov 2026 on Max's yes (`atomic_purchase_and_tally`): `apply_keep_year` and `record_guest_upload` are live, and the two load-test link tallies now read 1,000 and 999.
+- ~~Production sign-in code expiry~~ Done 20 Nov 2026 on Max's yes: Supabase Auth email OTP expiry 3600 to 600 seconds, matching the 10 minutes the email promises. Codes are 8 digits.
+
 ### 2. Speed under load
 
 5. **Event page and viewer under load.** Profile them the way the album page was: reset `pg_stat_statements`, load the page once as a test guest (`scripts/one-page.mjs`), list the `public.*` queries by time. Look for reads that scan a whole album or event with RLS on every row; the album page fix (migration 45, `album_page_summary`) is the pattern.
-6. **Other callers of the `album_media_counts` view**: `lib/media/event-cards.ts`, `lib/media/album-list.ts`, `lib/media/queries.ts`, `lib/notify.ts`. Each scans every ready file of the albums it counts. Fine at today's sizes; check with the method above if an event page with several big albums gets slow.
+6. **Other callers of the `album_media_counts` view**: `lib/media/event-cards.ts`, `lib/media/album-list.ts`, `lib/notify.ts`. Each scans every ready file of the albums it counts. Fine at today's sizes; check with the method above if an event page with several big albums gets slow.
 7. **Heavy images on slow links.** On slow 4G the event page took 5.3 s and the viewer 10.1 s, because the event cover is the 2,000 px display copy (about 480 KB) and the viewer loads both neighbours at display size. `fetchPriority` already helps. Next step if needed: a smaller cover variant or `srcset`.
 8. **Database compute.** Postgres CPU was the limit under load. If a much bigger crowd (several hundred guests at once) is expected, the next lever is a bigger Supabase compute size (billing, Max).
 

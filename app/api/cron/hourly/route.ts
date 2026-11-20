@@ -49,12 +49,14 @@ export async function GET(request: Request) {
   const deadline = Date.now() + 280_000;
   const left = (cap: number) => Math.max(0, Math.min(cap, deadline - Date.now()));
 
-  const scheduled = await runScheduledPublishJob();
-  const removals = await runRemovalSweep();
-  const accessEnding = await runAccessEndingJob();
-  await prunePendingSignIns();
-  const unfinished = await runUnfinishedSweep();
-  const bin = await runBinPurge(new Date(), left(45_000));
+  // Every job catches its own error, so one failure (a timeout, a renamed
+  // column) can't skip the rest: faceprint deletion and retention included.
+  const scheduled = await runScheduledPublishJob().catch((error) => (console.error("scheduled publish", error), null));
+  const removals = await runRemovalSweep().catch((error) => (console.error("removal sweep", error), null));
+  const accessEnding = await runAccessEndingJob().catch((error) => (console.error("access ending", error), null));
+  await prunePendingSignIns().catch((error) => console.error("prune sign-ins", error));
+  const unfinished = await runUnfinishedSweep().catch((error) => (console.error("unfinished sweep", error), null));
+  const bin = await runBinPurge(new Date(), left(45_000)).catch((error) => (console.error("bin purge", error), null));
   const overflowClosed = (await closeOverflowWindows().catch((error) => (console.error("overflow windows", error), []))).length;
   const planNotices = await runPlanNotices().catch((error) => (console.error("plan notices", error), 0));
   const backup = await runBackupDrain(left(70_000)).catch((error) => (console.error("backup drain", error), null));
@@ -68,7 +70,7 @@ export async function GET(request: Request) {
   const retention = await runRetentionJob(left(40_000)).catch((error) => (console.error("retention", error), null));
   // Posters, sizes and lengths for videos the uploader's browser couldn't read.
   const videoPreviews = await runVideoPreviewBackfill(left(VIDEO_PREVIEW_CRON_BUDGET_MS)).catch((error) => (console.error("video previews", error), 0));
-  const faces = await runFaceJobs({ budgetMs: left(240_000) });
-  await pruneRateEvents();
+  const faces = await runFaceJobs({ budgetMs: left(240_000) }).catch((error) => (console.error("face jobs", error), null));
+  await pruneRateEvents().catch((error) => console.error("prune rate events", error));
   return NextResponse.json({ scheduled, removals, accessEnding, unfinished, bin, overflowClosed, planNotices, backup, backupPurged, backupCheck, usageRows, retention, videoPreviews, faces });
 }

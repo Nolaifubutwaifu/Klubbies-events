@@ -1,105 +1,16 @@
 import "server-only";
 import { STUCK_AFTER_MS } from "@/lib/media/constants";
-import type { Album, Media } from "@/lib/db/types";
+import type { Media } from "@/lib/db/types";
 import { r2Url } from "@/lib/backup/r2";
 import { SIGNED_URL_TTL, mediaClaim, mediaClaims, signedUrlLifetime, signPaths } from "@/lib/storage";
 import type { UserClient } from "@/lib/supabase/server";
 
-export const ALBUM_PAGE_SIZE = 48;
 export const MEDIA_PAGE_SIZE = 60;
-
-export type AlbumCard = Pick<
-  Album,
-  "id" | "title" | "description" | "album_date" | "status" | "created_at" | "allow_download" | "published_at"
-> & {
-  photoCount: number;
-  videoCount: number;
-  coverUrl: string | null;
-};
 
 export type GridItem = Pick<Media, "id" | "kind" | "width" | "height" | "duration_seconds" | "status" | "original_filename"> & {
   thumbUrl: string | null;
   byteSize: number | null;
 };
-
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-export async function listAlbums(
-  supabase: UserClient,
-  eventId: string,
-  opts: { q?: string; kind?: "photo" | "video"; includeDrafts?: boolean; page?: number },
-): Promise<{ albums: AlbumCard[]; hasMore: boolean }> {
-  const page = Math.max(0, opts.page ?? 0);
-  let query = supabase
-    .from("albums")
-    .select("id, title, description, album_date, status, created_at, published_at, allow_download, cover_media_id")
-    .eq("event_id", eventId)
-    .order("album_date", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .range(page * ALBUM_PAGE_SIZE, (page + 1) * ALBUM_PAGE_SIZE); // one extra row to detect more
-
-  if (!opts.includeDrafts) query = query.eq("status", "published");
-  if (opts.q) query = query.ilike("title", `%${escapeLike(opts.q)}%`);
-
-  const { data, error } = await query;
-  if (error) throw error;
-  const rows = data ?? [];
-  const hasMore = rows.length > ALBUM_PAGE_SIZE;
-  const albums = rows.slice(0, ALBUM_PAGE_SIZE);
-  if (albums.length === 0) return { albums: [], hasMore: false };
-
-  const { data: counts } = await supabase
-    .from("album_media_counts")
-    .select("*")
-    .in(
-      "album_id",
-      albums.map((a) => a.id),
-    );
-  const countByAlbum = new Map((counts ?? []).map((c) => [c.album_id, c]));
-
-  const coverIds = albums
-    .map((a) => a.cover_media_id ?? countByAlbum.get(a.id)?.first_media_id ?? null)
-    .filter((id): id is string => Boolean(id));
-  const { data: covers } = coverIds.length
-    ? await supabase.from("media").select("id, event_id, album_id, thumb_path, poster_path").in("id", coverIds)
-    : { data: [] };
-  const coverPath = new Map((covers ?? []).map((c) => [c.id, c.thumb_path ?? c.poster_path]));
-  const urls = await signPaths(
-    supabase,
-    mediaClaims((covers ?? []).map((m) => ({ ...m, paths: [m.thumb_path ?? m.poster_path] }))),
-    SIGNED_URL_TTL.thumb,
-  );
-
-  const cards = albums.map((a) => {
-    const count = countByAlbum.get(a.id);
-    const coverId = a.cover_media_id ?? count?.first_media_id ?? null;
-    const path = coverId ? coverPath.get(coverId) : null;
-    return {
-      id: a.id,
-      title: a.title,
-      description: a.description,
-      album_date: a.album_date,
-      status: a.status,
-      created_at: a.created_at,
-      published_at: a.published_at,
-      allow_download: a.allow_download,
-      photoCount: count?.photo_count ?? 0,
-      videoCount: count?.video_count ?? 0,
-      coverUrl: path ? (urls.get(path) ?? null) : null,
-    };
-  });
-
-  const filtered =
-    opts.kind === "photo"
-      ? cards.filter((c) => c.photoCount > 0)
-      : opts.kind === "video"
-        ? cards.filter((c) => c.videoCount > 0)
-        : cards;
-
-  return { albums: filtered, hasMore };
-}
 
 export async function listAlbumMedia(
   supabase: UserClient,

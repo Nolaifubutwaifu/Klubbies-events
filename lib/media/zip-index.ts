@@ -1,6 +1,6 @@
 import "server-only";
 import type { UserClient } from "@/lib/supabase/server";
-import { planZipParts, zipPartSummaries, type ZipPartSummary, type ZipSized } from "./zip-parts";
+import { zipPartSummaries, type ZipPartSummary, type ZipSized } from "./zip-parts";
 
 const PAGE = 1000;
 
@@ -117,8 +117,4 @@ export async function yourPhotosZipItems(
     items.push(sized(media));
   }
   return items;
-}
-
-export function zipPartAt<T extends ZipSized>(items: readonly T[], part: number): T[] {
-  return planZipParts(items)[part] ?? [];
 }

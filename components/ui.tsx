@@ -52,10 +52,6 @@ export function BrandTile({ size = 24, tone = "dark" }: { size?: number; tone?: 
   );
 }
 
-export function Kicker({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <span className={`soft-chip ${className}`}>{children}</span>;
-}
-
 /** Page heading for the organiser screens: Geist, dense, one line of help.
     The event's name sits in the top bar's breadcrumb from 1024px, so the
     kicker above the title only shows on smaller screens. */
@@ -94,38 +90,6 @@ export function EmptyState({
       <span className="text-[17px] font-semibold">{title}</span>
       {children ? <span className="max-w-[52ch] text-[14px] text-[color:var(--ink-70)]">{children}</span> : null}
       {action ? <div className="mt-1">{action}</div> : null}
-    </div>
-  );
-}
-
-export function StatusTag({ status, firstSeenAt }: { status: string; firstSeenAt?: string | null }) {
-  if (status === "revoked") return <span className="soft-chip soft-chip-muted">Removed</span>;
-  if (status === "active" || firstSeenAt) return <span className="soft-chip">Joined</span>;
-  return <span className="soft-chip soft-chip-muted">Not joined yet</span>;
-}
-
-/**
- * One figure on the committee dashboard. `hint` carries the movement under it
- * — the thing that makes a number worth looking at.
- */
-export function Stat({
-  value,
-  label,
-  hint,
-  tone = "plain",
-}: {
-  value: ReactNode;
-  label: ReactNode;
-  hint?: ReactNode;
-  tone?: "plain" | "good" | "attention";
-}) {
-  const hintColour =
-    tone === "good" ? "text-[#1f6b3a]" : tone === "attention" ? "text-[#b42318]" : "text-[color:var(--ink-55)]";
-  return (
-    <div className="soft-card flex flex-col gap-1.5 p-4">
-      <span className="text-[14px] text-[color:var(--ink-70)]">{label}</span>
-      <span className="text-[30px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{value}</span>
-      {hint ? <span className={`text-[14px] font-medium ${hintColour}`}>{hint}</span> : null}
     </div>
   );
 }

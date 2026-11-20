@@ -1,5 +1,5 @@
 import "server-only";
-import { CreateCollectionCommand, DescribeCollectionCommand } from "@aws-sdk/client-rekognition";
+import { CreateCollectionCommand } from "@aws-sdk/client-rekognition";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectionIdFor, faceClient } from "./client";
 
@@ -19,17 +19,6 @@ export async function ensureEventCollection(eventId: string): Promise<string | n
     if ((error as { name?: string })?.name !== "ResourceAlreadyExistsException") throw error;
   }
   return collectionId;
-}
-
-export async function collectionFaceCount(collectionId: string): Promise<number | null> {
-  const client = faceClient();
-  if (!client) return null;
-  try {
-    const out = await client.send(new DescribeCollectionCommand({ CollectionId: collectionId }));
-    return out.FaceCount ?? 0;
-  } catch {
-    return null;
-  }
 }
 
 export type EventFaceState = {

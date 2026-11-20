@@ -214,9 +214,17 @@ export async function verifyCode(rawEmail: string, code: string, eventHandle?: s
   if (!pending || pending.expires_at < nowIso() || pending.attempts >= MAX_VERIFY_ATTEMPTS) {
     return { ok: false, error: CODE_REJECTED };
   }
-  // Counted before asking Supabase, so parallel guesses can't all slip past
-  // the limit. Handed back below if Supabase never got to check the code.
-  await admin.from("pending_sign_ins").update({ attempts: pending.attempts + 1 }).eq("email", email);
+  // Counted before asking Supabase, and only if nobody else counted this
+  // attempt first, so parallel guesses can't all slip past the limit: of
+  // several requests that read the same count, one wins and the rest are
+  // refused. Handed back below if Supabase never got to check the code.
+  const { data: counted } = await admin
+    .from("pending_sign_ins")
+    .update({ attempts: pending.attempts + 1 })
+    .eq("email", email)
+    .eq("attempts", pending.attempts)
+    .select("email");
+  if (!counted?.length) return { ok: false, error: CODE_REJECTED };
 
   const supabase = await createClient();
   const { data, error, busy } = await withAuthRetry(() => supabase.auth.verifyOtp({ email, token: code, type: "email" }));

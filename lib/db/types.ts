@@ -827,6 +827,12 @@ isOneToOne: false
 "overflow_closed_at": string | null
             }[]
                            },
+            "apply_keep_year":
+{ Args: { "p_event_id": string, "p_session_id": string, "p_amount_cents": number, "p_list_amount_cents": number, "p_currency": string, "p_customer_id": string | null }; Returns: boolean
+                           },
+            "record_guest_upload":
+{ Args: { "p_link_id": string, "p_bytes": number }; Returns: undefined
+                           },
             "try_worker_lease":
 { Args: { "p_name": string, "p_holder": string, "p_seconds": number }; Returns: boolean
                            },

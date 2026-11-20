@@ -222,12 +222,14 @@ async function applyTierPurchase(eventId: string, session: Stripe.Checkout.Sessi
     promotion_code: typeof session.discounts?.[0]?.promotion_code === "string" ? session.discounts[0].promotion_code : null,
     stripe_session_id: session.id,
   });
-  if (purchaseError?.code === "23505") return; // already applied
-  if (purchaseError) throw purchaseError;
+  // A duplicate is a retry, and the earlier run may have died before the plan
+  // moved. Carry on: the steps below are safe to repeat (the plan only moves up).
+  if (purchaseError && purchaseError.code !== "23505") throw purchaseError;
 
-  const { data: event } = await admin.from("events").select("plan, paid_at").eq("id", eventId).maybeSingle();
+  const { data: event, error: readError } = await admin.from("events").select("plan, paid_at").eq("id", eventId).maybeSingle();
+  if (readError) throw readError;
   if (!event) return;
-  await admin
+  const { error: updateError } = await admin
     .from("events")
     .update({
       billing_status: "active",
@@ -237,6 +239,7 @@ async function applyTierPurchase(eventId: string, session: Stripe.Checkout.Sessi
     })
     .eq("id", eventId)
     .neq("billing_status", "comped");
+  if (updateError) throw updateError;
 
   // Only ever up: a late, out-of-order session for a smaller tier is recorded
   // (it was paid for) but doesn't shrink the event.
@@ -255,25 +258,21 @@ async function applyTierPurchase(eventId: string, session: Stripe.Checkout.Sessi
   await checkPlanNotices(eventId).catch((noticeError) => console.error("let-in emails after upgrade", eventId, noticeError));
 }
 
-/** Adds a year: the database trigger moves the deletion date, the closing date with it, and clears the warnings. */
+/**
+ * Adds a year: the purchase and the extra year are saved in one transaction
+ * (migration 46), so a retry after a failure can't skip the year. The
+ * database trigger then moves the deletion date, the closing date with it,
+ * and clears the warnings.
+ */
 async function applyKeepYear(eventId: string, session: Stripe.Checkout.Session): Promise<void> {
-  const admin = createAdminClient();
-  const { error: purchaseError } = await admin.from("event_purchases").insert({
-    event_id: eventId,
-    kind: "keep_year",
-    amount_cents: session.amount_total ?? 0,
-    list_amount_cents: KEEP_YEAR_AUD * 100,
-    currency: session.currency ?? "aud",
-    stripe_session_id: session.id,
+  const { error } = await createAdminClient().rpc("apply_keep_year", {
+    p_event_id: eventId,
+    p_session_id: session.id,
+    p_amount_cents: session.amount_total ?? 0,
+    p_list_amount_cents: KEEP_YEAR_AUD * 100,
+    p_currency: session.currency ?? "aud",
+    p_customer_id: idOf(session.customer),
   });
-  if (purchaseError?.code === "23505") return; // already applied
-  if (purchaseError) throw purchaseError;
-  const { data: event } = await admin.from("events").select("extra_years, photos_deleted_at").eq("id", eventId).maybeSingle();
-  if (!event || event.photos_deleted_at) return; // too late: nothing left to keep
-  const { error } = await admin
-    .from("events")
-    .update({ extra_years: event.extra_years + 1, stripe_customer_id: idOf(session.customer) })
-    .eq("id", eventId);
   if (error) throw error;
 }
 

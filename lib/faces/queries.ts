@@ -225,36 +225,6 @@ export async function listFaceSuggestions(
 }
 
 /**
- * "12 photos of you" on an album card. One grouped count for every album on
- * screen, in the same batched style as the cover lookups in album-list.ts —
- * never one query per card.
- */
-export async function countPhotosOfYouByAlbum(
-  supabase: UserClient,
-  eventId: string,
-  albumIds: string[],
-): Promise<Map<string, number>> {
-  const counts = new Map<string, number>();
-  if (albumIds.length === 0) return counts;
-  const { data } = await supabase
-    .from("face_matches")
-    .select("media_id, media!inner(id, album_id, content_hash, original_filename, byte_size)")
-    .eq("event_id", eventId)
-    .eq("state", "confirmed")
-    .in("media.album_id", albumIds);
-  const seen = new Set<string>();
-  for (const row of data ?? []) {
-    const albumId = row.media?.album_id;
-    if (!albumId) continue;
-    const key = `${albumId}|${dupeKey(row.media)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    counts.set(albumId, (counts.get(albumId) ?? 0) + 1);
-  }
-  return counts;
-}
-
-/**
  * The photos in one album you are confirmed in, one per picture. Drives the
  * "You" filter on the album page, which is where members usually start.
  */

@@ -4,16 +4,6 @@ export const PERMISSIONS = ["manage_event", "manage_members", "manage_albums", "
 export type Permission = (typeof PERMISSIONS)[number];
 export type Perms = Record<Permission, boolean>;
 
-/** The three fixed roles every event gets (supabase/migrations/…_events.sql). */
-export const ROLE_KEYS = ["admin", "photographer", "member"] as const;
-export type RoleKey = (typeof ROLE_KEYS)[number];
-
-export const ROLE_LABELS: Record<RoleKey, { label: string; hint: string }> = {
-  admin: { label: "Organiser", hint: "Everything: settings, attendees, albums, billing and activity." },
-  photographer: { label: "Photographer", hint: "Uploads into albums. Sees what attendees see." },
-  member: { label: "Attendee", hint: "Views and downloads photos, finds their own." },
-};
-
 export const NO_PERMS: Perms = {
   manage_event: false,
   manage_members: false,

@@ -21,27 +21,31 @@ export async function deleteEventEverywhere(eventId: string): Promise<void> {
   }
 
   // Files first, a page at a time: a big event has far more than one
-  // request's worth of rows.
+  // request's worth of rows. Any failed read or removal stops here with the
+  // row still in place, so the next try (the hourly bin purge, or the button
+  // again) can find the files. Deleting the row first left them orphaned.
   const paths: string[] = [];
   for (let from = 0; ; from += 1000) {
-    const { data: media } = await admin
+    const { data: media, error } = await admin
       .from("media")
       .select("storage_path, thumb_path, display_path, poster_path")
       .eq("event_id", eventId)
       .order("id")
       .range(from, from + 999);
-    for (const m of media ?? []) paths.push(...[m.storage_path, m.thumb_path, m.display_path, m.poster_path].filter((p): p is string => Boolean(p)));
-    if (!media || media.length < 1000) break;
+    if (error) throw error;
+    for (const m of media) paths.push(...[m.storage_path, m.thumb_path, m.display_path, m.poster_path].filter((p): p is string => Boolean(p)));
+    if (media.length < 1000) break;
   }
-  const { data: albums } = await admin.from("albums").select("cover_path").eq("event_id", eventId);
-  for (const a of albums ?? []) if (a.cover_path) paths.push(a.cover_path);
-  const { data: selfies } = await admin.from("member_face_profiles").select("selfie_path").eq("event_id", eventId);
-  for (const s of selfies ?? []) if (s.selfie_path) paths.push(s.selfie_path);
+  const { data: albums, error: albumsError } = await admin.from("albums").select("cover_path").eq("event_id", eventId);
+  if (albumsError) throw albumsError;
+  for (const a of albums) if (a.cover_path) paths.push(a.cover_path);
+  const { data: selfies, error: selfiesError } = await admin.from("member_face_profiles").select("selfie_path").eq("event_id", eventId);
+  if (selfiesError) throw selfiesError;
+  for (const s of selfies) if (s.selfie_path) paths.push(s.selfie_path);
   if (event.logo_path) paths.push(event.logo_path, logoMarkPath(event.logo_path));
 
+  // removeObjects throws on a failed batch and queues the R2 copies.
+  await removeObjects(paths);
   const { error } = await admin.from("events").delete().eq("id", eventId);
   if (error) throw error;
-  for (let i = 0; i < paths.length; i += 500) {
-    await removeObjects(paths.slice(i, i + 500)).catch((removeError) => console.error("could not remove files of deleted event", eventId, removeError));
-  }
 }
