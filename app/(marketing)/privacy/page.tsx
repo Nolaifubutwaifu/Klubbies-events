@@ -67,7 +67,7 @@ const SECTIONS: [string, string][] = [
   ],
   [
     "Face search: who else sees it",
-    "Amazon Web Services processes faceprints on our behalf, in the ap-southeast-2 (Sydney) region. We do not sell face data and we do not share it with anyone else.",
+    "Amazon Web Services processes faceprints on our behalf, in the ap-southeast-2 (Sydney) region. Your selfie is stored by Supabase, our database and storage provider, also in Sydney. We do not sell face data and we do not share it with anyone else.",
   ],
   [
     "The iPhone app",
@@ -90,7 +90,7 @@ export default function PrivacyPage() {
       doc="privacy"
       title="Privacy at Klubbies Events"
       summary="In short: only people the organiser lets in see an event's photos, face search is your choice, and photos, attendee details and faceprints are stored in Sydney."
-      updated="27 September 2026"
+      updated="25 November 2026"
       minutes={Math.max(1, Math.round(words / 220))}
       sections={SECTIONS.map(([title, body]) => ({ title, body: <p>{body}</p> }))}
     />

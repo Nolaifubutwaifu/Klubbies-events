@@ -52,7 +52,7 @@ https://events.klubbies.app/privacy, sections "Face search: what we collect", "F
 
 "Face search: how long we keep it": "A faceprint made from a photo is deleted when that photo is deleted for good. [...] Your selfie and the faceprint made from it are deleted when you turn face search off, when your access to the event ends, or when the organiser turns the feature off: within 24 hours in each case. When an organiser turns it off, every faceprint for that event is deleted."
 
-"Face search: who else sees it": "Amazon Web Services processes faceprints on our behalf, in the ap-southeast-2 (Sydney) region. We do not sell face data and we do not share it with anyone else."
+"Face search: who else sees it": "Amazon Web Services processes faceprints on our behalf, in the ap-southeast-2 (Sydney) region. Your selfie is stored by Supabase, our database and storage provider, also in Sydney. We do not sell face data and we do not share it with anyone else."
 
 "Where data lives": "Selfies and faceprints are never copied: they stay in Sydney."
 
