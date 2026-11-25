@@ -22,7 +22,7 @@ export const MEMBER_CONSENT = {
     "You can turn it off whenever you like. That deletes your selfie, your faceprint and every match within 24 hours.",
   ],
   tickbox:
-    "I consent to Klubbies Events creating and storing a faceprint from my selfie, so it can be matched against faces in this event's photos.",
+    "I consent to Klubbies Events sending my selfie to Amazon Web Services in Sydney to create and store a faceprint from it, so it can be matched against faces in this event's photos.",
 } as const;
 
 /**

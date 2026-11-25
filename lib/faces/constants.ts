@@ -116,7 +116,7 @@ export const PURGE_BATCH_SIZE = 1000;
  * Bumped whenever the consent wording changes materially, so we can tell who
  * agreed to which text and re-prompt when it matters.
  */
-export const CONSENT_VERSION = "events-2026-09-27";
+export const CONSENT_VERSION = "events-2026-11-25";
 export const EVENT_NOTICE_VERSION = "events-2026-09-27";
 /** Bumped with MEMBER_NOTICE; a change re-asks every member to acknowledge. */
 export const MEMBER_NOTICE_VERSION = "events-2026-09-27";
